@@ -16,7 +16,7 @@ def load_tracker():
 	tracker_file = "statistics/" + calendar.month_name[m.month].lower() + str(m.year)
 	tracker = load_file(tracker_file)
 	is_dirty = False
-	
+
 def load_file(tracker_file):
 	c = Counter()
 	try:
@@ -29,7 +29,7 @@ def load_file(tracker_file):
 		d.close()
 	except FileNotFoundError: open(tracker_file, "w+").close()
 	return c
-	
+
 def save_tracker():
 	global tracker, tracker_file, is_dirty
 	if is_dirty:
@@ -38,22 +38,22 @@ def save_tracker():
 			file.write(item + "%" + str(count) + "\n")
 		file.close()
 	is_dirty = False
-	
+
 def add(song, n=1):
 	global tracker, is_dirty
 	tracker[song] += n
 	is_dirty = True
 	save_tracker()
 	for l in listeners: l(song, n)
-	
-def get_songlist(month=True):
-	if month: return tracker
-	
+
+def get_songlist(alltime=False):
+	if not alltime: return tracker
+
 	songlist = Counter()
 	for item in os.listdir("statistics"):
 		if item != "player": songlist.update(load_file(item))
 	return songlist
-	
+
 def get_freq(song, monthly=True):
 	ls = get_songlist(monthly)
 	if song in ls: return ls[song]

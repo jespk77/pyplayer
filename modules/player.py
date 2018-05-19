@@ -24,10 +24,10 @@ autoplay = Autoplay.OFF
 def parse_song(arg):
 	if len(arg) > 0:
 		dir = interpreter.configuration.get("directory", {})
-		if arg[0] in dir: 
+		if arg[0] in dir:
 			path = dir[arg[0]]
 			arg = arg[1:]
-		else: 
+		else:
 			path = dir.get(dir["default"])
 			if path == None: return (None, None)
 		song = media_player.find_song(path=path, keyword=arg)
@@ -42,30 +42,30 @@ def parse_song(arg):
 
 def get_displayname(song):
 	return os.path.splitext(song)[0]
-	
+
 # ===== MAIN COMMANDS =====
 # - configure autoplay
 def command_autoplay_info(arg, argc):
 	return messagetypes.Info("'autoplay' ['on', 'off', 'queue']")
 
-def command_autoplay_off(arg, argc):	
+def command_autoplay_off(arg, argc):
 	if argc == 0:
 		global autoplay
 		autoplay = Autoplay.OFF
 		return messagetypes.Reply("Autoplay is off")
-	
+
 def command_autoplay_on(arg, argc):
 	if argc == 0:
 		global autoplay
 		autoplay = Autoplay.ON
 		return messagetypes.Reply("Autoplay is turned on")
-	
+
 def command_autoplay_queue(arg, argc):
 	if argc == 0:
 		global autoplay
 		autoplay = Autoplay.QUEUE
 		return messagetypes.Reply("Autoplay is enabled for queued songs")
-		
+
 def command_autoplay_next(arg, argc):
 	if argc == 0:
 		global autoplay
@@ -84,7 +84,7 @@ def command_filter_clear(arg, argc):
 		dir = interpreter.configuration.get("directory", {})
 		media_player.set_filter(dir.get(dir.get("default"), ""), "")
 		return messagetypes.Reply("Filter cleared")
-	
+
 def command_filter(arg, argc):
 	if argc > 0:
 		dirs = interpreter.configuration.get("directory")
@@ -111,27 +111,27 @@ def command_info_added(arg, argc):
 			time = datetime.fromtimestamp(time)
 			return messagetypes.Reply("'" + get_displayname(song) + "' was added on " + str(time.strftime("%b %d, %Y")))
 		else: return messagetypes.Reply("That song doesn't even exist")
-			
+
 def command_info_played(arg, argc):
 	monthly = True
-	if arg[-1] == "all": 
+	if arg[-1] == "all":
 		monthly = False
 		arg = arg[:-1]
-			
+
 	(path, song) = parse_song(arg)
 	if path != None and song != None:
 		freq = song_tracker.get_freq(song=get_displayname(song), monthly=monthly)
-		if freq > 0: 
+		if freq > 0:
 			if monthly: return messagetypes.Reply("'" + get_displayname(song) + "' played " + str(freq) + " times this month")
 			else: return messagetypes.Reply("'" + get_displayname(song) + "' played " + str(freq) + " times overall")
 		else: return messagetypes.Reply("'" + get_displayname(song) + " has not been played")
 	else: return messagetypes.Reply("That song doesn't even exist")
-	
+
 def command_info_reload(arg, argc):
 	if argc == 0:
 		song_tracker.load_tracker()
 		return messagetypes.Reply("Song tracker reloaded")
-		
+
 def command_music(arg, argc):
 	if argc > 0: return messagetypes.Reply("We no longer listen to that command, you probably meant 'player' instead?")
 
@@ -140,7 +140,7 @@ def command_pause(arg, argc):
 	if argc == 0:
 		media_player.pause_player()
 		return messagetypes.Empty()
-			
+
 def command_play(arg, argc):
 	if argc > 0:
 		(path, song) = parse_song(arg)
@@ -156,31 +156,31 @@ def command_play(arg, argc):
 				reply += "\n - " + get_displayname(s)
 			return messagetypes.Reply(reply)
 		else: return messagetypes.Reply("Cannot find that song")
-		
+
 def command_prev_song(arg, argc):
 	if argc == 0:
 		item = song_history.get()
 		if item != None: media_player.play_song(item[0], item[1])
 		return messagetypes.Empty()
-		
+
 def command_next_song(arg, argc):
 	if argc == 0:
 		if not song_queue.empty(): return command_queue_next([], 0)
 		else: return command_random([], 0)
-		
+
 def command_queue_clear(arg, argc):
 	if argc == 0:
 		while not song_queue.empty(): song_queue.get_nowait()
 		return messagetypes.Reply("Queue cleared")
-		
+
 def command_queue_next(arg, argc):
-	if argc == 0:	
+	if argc == 0:
 		if not song_queue.empty():
 			item = song_queue.get_nowait()
 			media_player.play_song(path=item[0], song=item[1])
 			return messagetypes.Empty()
 		else: return messagetypes.Reply("Queue is empty")
-		
+
 def command_queue(arg, argc):
 	if argc > 0:
 		(path, song) = parse_song(arg)
@@ -188,7 +188,7 @@ def command_queue(arg, argc):
 			song_queue.put_nowait((path, song))
 			return messagetypes.Reply("'" + get_displayname(song) + "' added to queue")
 		else: return messagetypes.Reply("There is not a song like that around")
-		
+
 def command_random(arg, argc):
 	dirs = interpreter.configuration.get("directory", {})
 	if argc > 0 and arg[0] in dirs: path = dirs[arg[0]]; arg = arg[1:]
@@ -196,7 +196,7 @@ def command_random(arg, argc):
 
 	if path != None: return messagetypes.Reply(media_player.random_song(path=path, keyword=" ".join(arg)))
 	else: return messagetypes.Reply("I've never heard of that path")
-		
+
 def command_stop(arg, argc):
 	if argc == 0:
 		media_player.stop_player()
@@ -249,5 +249,9 @@ def on_pos_change(event, player):
 
 def on_player_update(event, player):
 	md = event.data
-	if md.path == interpreter.configuration.get("directory", {}).get("default"): song_tracker.add(md.display_name)
+	directory = interpreter.configuration.get("directory", {})
+	default_directory = directory.get(directory.get("default"), "")
+	if not default_directory.endswith("/"): default_directory += "/"
+
+	if md.path == default_directory: song_tracker.add(md.display_name)
 	song_history.add((md.path, md.song))

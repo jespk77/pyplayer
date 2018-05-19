@@ -19,27 +19,27 @@ class PyPlayer(tkinter.Frame):
 		self.progressbar_style.configure(style="Horizontal.TProgressbar")
 		self.progressbar = ttk.Progressbar(self.root, style="Horizontal.TProgressbar", orient="horizontal", mode="determinate", maximum=1.0)
 		self.last_cmd = None
-		
+
 		self.header.pack(fill="x")
 		self.progressbar.pack(fill="x")
 		self.console.pack(fill="both", expand=True)
 		self.pack()
 		self.console.focus()
 		self.update_label()
-		
+
 	def update_label(self):
 		self.date = datetime.datetime.today()
 		self.header.configure(text="PyPlayer " + self.date.strftime("- %a %b %d, %Y %I:%M %p -"))
 		self.after(1000, self.update_label)
-		
+
 	def update_title(self, title):
 		self.root.title(title)
-		
+
 	def update_progressbar(self, progress):
 		if progress > self.progressbar["maximum"]: progress = self.progressbar["maximum"]
 		elif progress < 0: progress = 0
 		self.progressbar["value"] = progress
-		
+
 	def set_configuration(self, cfg):
 		if isinstance(cfg, dict):
 			self.console.set_configuration(cfg.get("console"))
@@ -47,18 +47,18 @@ class PyPlayer(tkinter.Frame):
 			try: self.progressbar_style.configure(style="Horizontal.TProgressbar", **progressbar_options)
 			except Exception as e: print("Error setting progressbar configuration:", e)
 		else: print("[PyPlayer] got invalid configuration", cfg)
-		
+
 	def parse_command(self, cmd):
 		try: interp.queue.put_nowait(cmd)
-		except Exception as e: self.console.add_reply(args="Cannot send command: " + str(e)) 
-		
+		except Exception as e: self.console.add_reply(args="Cannot send command: " + str(e))
+
 	def add_reply(self, ms=100, args=None):
 		if args == None: self.after(ms, self.console.set_reply)
 		else: self.after(ms, self.console.set_reply, *args)
-		
+
 	def add_message(self, args, ms=100):
 		self.after(ms, self.console.set_notification, *args)
-		
+
 class PyLog:
 	filename = "log"
 	def __init__(self):
@@ -71,7 +71,14 @@ class PyLog:
 		file.write(str)
 		file.close()
 
+	def flush(self):
+		pass
+
 if __name__ == "__main__":
+	if "console" not in sys.argv:
+		sys.stdout = PyLog()
+		print("PyPlayer: file logging enabled")
+
 	print("initializing client...")
 	client = PyPlayer()
 	interp = Interpreter(client)
@@ -82,9 +89,6 @@ if __name__ == "__main__":
 			interp.mem_tracker = tracker.SummaryTracker()
 			interp.mem_tracker.print_diff()
 		except Exception as e: print("error getting memory tracker:", e)
-	if "console" not in sys.argv:
-		sys.stdout = PyLog()
-		print("PyPlayer: file logging enabled")
 	client.mainloop()
 	print("client closed, destroying client...")
 	if interp != None and interp.is_alive(): interp.queue.put(False)

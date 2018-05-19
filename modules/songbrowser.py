@@ -14,7 +14,7 @@ def on_destroy(arg=None, argc=0):
 	if argc == 0:
 		client.songbrowser.on_destroy()
 		client.console.pack_forget()
-		client.console.pack(fill="both", expand = True)
+		client.console.pack(fill="both", expand=True)
 		return messagetypes.Reply("Songbrowser closed")
 
 def parse_path(arg, argc):
@@ -26,6 +26,17 @@ def parse_path(arg, argc):
 		path = dir.get("default")
 		if isinstance(path, str): return (path, dir[path])
 		else: return ("No default directory set",)
+
+def bind_events():
+	client.songbrowser.bind_event("<Double-Button-1>", on_browser_doubleclick)
+	client.songbrowser.bind_event("<Button-3>", on_browser_rightclick)
+
+def on_browser_doubleclick(event):
+	interpreter.queue.put_nowait("player {path} {song}.".format(path=client.songbrowser.path[0], song=client.songbrowser.get_song_from_event(event)))
+
+def on_browser_rightclick(event):
+	interpreter.queue.put_nowait("player queue {path} {song}.".format(path=client.songbrowser.path[0], song=client.songbrowser.get_song_from_event(event)))
+
 
 # ===== MAIN COMMANDS =====
 # - browser configure
@@ -45,6 +56,7 @@ def command_browser_played_month(arg, argc):
 			client.console.pack_forget()
 			client.songbrowser.pack(fill="both", expand=True)
 			client.console.pack(fill="x")
+			bind_events()
 			return messagetypes.Reply("Browser enabled on plays per month in '{}'".format(path[0]))
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
@@ -64,6 +76,7 @@ def command_browser_played_all(arg, argc):
 			client.console.pack_forget()
 			client.songbrowser.pack(fill="both", expand=True)
 			client.console.pack(fill="x")
+			bind_events()
 			return messagetypes.Reply("Browser enabled on all time plays in '{}'".format(path[0]))
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
@@ -81,6 +94,7 @@ def command_browser_recent(arg, argc):
 			client.console.pack_forget()
 			client.songbrowser.pack(fill="both", expand=True)
 			client.console.pack(fill="x")
+			bind_events()
 			return messagetypes.Reply("Browser enabled on recent songs in '{}'".format(path[0]))
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
@@ -98,6 +112,7 @@ def command_browser_name(arg, argc):
 			client.console.pack_forget()
 			client.songbrowser.pack(fill="both", expand=True)
 			client.console.pack(fill="x")
+			bind_events()
 			return messagetypes.Reply("Browser enabled for songs in '{}'".format(path[0]))
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
