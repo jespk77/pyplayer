@@ -69,10 +69,10 @@ def command_autoplay_queue(arg, argc):
 def command_autoplay_next(arg, argc):
 	if argc == 0:
 		global autoplay
-		if autoplay > 0 and not song_queue.empty():
+		if autoplay.value > 0 and not song_queue.empty():
 			song = song_queue.get_nowait()
 			media_player.play_song(path=song[0], song=song[1])
-		elif autoplay > 1: media_player.random_song()
+		elif autoplay.value > 1: media_player.random_song()
 		return messagetypes.Empty()
 
 # - configure random song filter
@@ -89,8 +89,8 @@ def command_filter(arg, argc):
 	if argc > 0:
 		dirs = interpreter.configuration.get("directory")
 		if isinstance(dirs, dict):
-			if arg[0] in dirs: path = arg[0]; arg = arg[1:]
-			else: path = dirs.get("default")
+			if arg[0] in dirs: path = dirs[arg[0]]; arg = arg[1:]
+			else: path = dirs.get(dirs.get("default"))
 
 			if path != None:
 				arg = " ".join(arg)
@@ -204,6 +204,7 @@ def command_stop(arg, argc):
 
 commands = {
 	"autoplay": {
+		"next": command_autoplay_next,
 		"info": command_autoplay_info,
 		"off": command_autoplay_off,
 		"on": command_autoplay_on,
@@ -236,7 +237,10 @@ def initialize():
 	media_player.attach_event("media_changed", on_media_change)
 	media_player.attach_event("pos_changed", on_pos_change)
 	media_player.attach_event("player_updated", on_player_update)
+	media_player.attach_event("end_reached", on_end_reached)
 	if not song_tracker.is_loaded(): song_tracker.load_tracker()
+	dr = interpreter.configuration.get("directory", {})
+	media_player.set_filter(path=dr.get(dr.get("default")))
 
 def on_destroy():
 	media_player.on_destroy()
@@ -255,3 +259,7 @@ def on_player_update(event, player):
 
 	if md.path == default_directory: song_tracker.add(md.display_name)
 	song_history.add((md.path, md.song))
+
+def on_end_reached(event, player):
+	print("end_reached")
+	interpreter.queue.put_nowait("autoplay next")
