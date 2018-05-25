@@ -35,7 +35,7 @@ def on_browser_doubleclick(event):
 	interpreter.queue.put_nowait("player {path} {song}.".format(path=client.songbrowser.path[0], song=client.songbrowser.get_song_from_event(event)))
 
 def on_browser_rightclick(event):
-	interpreter.queue.put_nowait("player queue {path} {song}.".format(path=client.songbrowser.path[0], song=client.songbrowser.get_song_from_event(event)))
+	interpreter.queue.put_nowait("queue {path} {song}.".format(path=client.songbrowser.path[0], song=client.songbrowser.get_song_from_event(event)))
 
 
 # ===== MAIN COMMANDS =====
