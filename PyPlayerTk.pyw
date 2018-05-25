@@ -25,6 +25,7 @@ class PyPlayer(tkinter.Frame):
 		self.console.pack(fill="both", expand=True)
 		self.pack()
 		self.console.focus()
+		self.tk_focusFollowsMouse()
 		self.update_label()
 
 	def update_label(self):
@@ -50,7 +51,7 @@ class PyPlayer(tkinter.Frame):
 
 	def parse_command(self, cmd):
 		try: interp.queue.put_nowait(cmd)
-		except Exception as e: self.console.add_reply(args="Cannot send command: " + str(e))
+		except Exception as e: self.console.set_reply(msg="Cannot send command: " + str(e))
 
 	def add_reply(self, ms=100, args=None):
 		if args == None: self.after(ms, self.console.set_reply)

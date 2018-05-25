@@ -246,6 +246,7 @@ def on_destroy():
 	media_player.on_destroy()
 
 def on_media_change(event, player):
+	song_history.reset_index()
 	client.after(1, client.update_title, media_player.get_current_media().display_name)
 
 def on_pos_change(event, player):
@@ -257,9 +258,11 @@ def on_player_update(event, player):
 	default_directory = directory.get(directory.get("default"), "")
 	if not default_directory.endswith("/"): default_directory += "/"
 
-	if md.path == default_directory: song_tracker.add(md.display_name)
+	if md.path == default_directory:
+		song_tracker.add(md.display_name)
+		try: client.songbrowser.add_count(md.display_name)
+		except AttributeError: pass
 	song_history.add((md.path, md.song))
 
 def on_end_reached(event, player):
-	print("end_reached")
 	interpreter.queue.put_nowait("autoplay next")
