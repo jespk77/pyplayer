@@ -8,7 +8,7 @@ from PIL import Image
 from PIL.ImageTk import PhotoImage
 
 import re, threading, time
-import io, socket, requests
+import io, socket, requests, random
 
 class IRCClient(threading.Thread):
 	def __init__(self, message_queue):
@@ -58,7 +58,7 @@ class IRCClient(threading.Thread):
 					time.sleep(2)
 					continue
 
-				for data in rec: print(data); self.message_queue.put_nowait(data.split(" ", maxsplit=4))
+				for data in rec: self.message_queue.put_nowait(data.split(" ", maxsplit=4))
 			except UnicodeDecodeError: pass
 			except socket.error: pass
 
@@ -81,6 +81,7 @@ class TwitchChat(tkinter.Text):
 		self.client = None
 		self.chat_size = 0
 		self.enable_scroll = True
+		self.enable_triggers = True
 		self.emote_cache = dict()
 		self.bttv_emotes = dict()
 
@@ -91,18 +92,19 @@ class TwitchChat(tkinter.Text):
 		self.bind("<Leave>", self.set_scroll)
 
 	def set_configuration(self, configuration):
-		print("[TwitchChat] updating configuration")
+		print("[TwitchChat] updating configuration", configuration.keys())
 		self.configuration = configuration
-		configuration = configuration.get("chat", {})
-		self.configure(**configuration.get("global", {}))
-		fonts = configuration.get("font", {})
+		self.configure(**self.configuration.get("style", {}).get("global", {}))
+		fonts = self.configuration.get("font", {})
 		self.normal_font = Font(**fonts)
 		self.bold_font = Font(**fonts)
 		self.bold_font.config(weight="bold")
 		self.configure(font=self.normal_font)
-		self.max_size = configuration.get("max-size", 150)
+		self.max_size = self.configuration.get("max-size", 150)
+		self.enable_triggers = self.configuration.get("enable-triggers", self.enable_triggers)
+		self.blacklist = self.configuration.get("blacklist", [])
 
-		for key, value in configuration.items():
+		for key, value in self.configuration.get("style", {}).items():
 			if key.startswith("tag_"): self.tag_configure(key[4:], **value)
 
 	def set_command_queue_callback(self, callback):
@@ -115,16 +117,16 @@ class TwitchChat(tkinter.Text):
 	def set_scroll(self, event):
 		self.enable_scroll = (event.x < 0 or event.x > event.widget.winfo_width()) or (event.y < 0 or event.y > event.widget.winfo_height())
 
-	def connect(self, channel_meta):
-		if self.client is None and "login" in self.configuration:
+	def connect(self, channel_meta, login):
+		if self.client is None and login is not None:
 			self.channel_meta = channel_meta
 			self.client = IRCClient(self.message_queue)
-			self.client.start_client(self.chat_server, self.chat_port, self.configuration["login"]["username"], self.configuration["login"]["oauth"], self.channel_meta["name"])
+			self.client.start_client(self.chat_server, self.chat_port, login["username"], login["oauth"], self.channel_meta["name"])
 
-			self.load_badges()
+			self.load_badges(login)
 			self.load_local_emote()
 			self.load_bttv()
-			self.load_bits()
+			self.load_bits(login)
 			self.add_text(text=" - Joined channel: {} -".format(self.channel_meta["display_name"]), tags=("notice",))
 
 	def disconnect(self):
@@ -156,9 +158,9 @@ class TwitchChat(tkinter.Text):
 					return
 			return self.bttv_emotes[name]
 
-	def load_bits(self):
+	def load_bits(self, login):
 		self.bit_cache = {}
-		bit_motes = requests.get(self.bit_url.format(client_id=self.configuration["login"]["client-id"],channel_id=self.channel_meta["_id"])).json()
+		bit_motes = requests.get(self.bit_url.format(client_id=login["client-id"],channel_id=self.channel_meta["_id"])).json()
 		self.tag_configure("cheer1", font=self.bold_font, foreground="gray")
 		self.tag_configure("cheer100", font=self.bold_font, foreground="purple")
 		self.tag_configure("cheer1000", font=self.bold_font, foreground="cyan")
@@ -193,8 +195,8 @@ class TwitchChat(tkinter.Text):
 				return None
 		return (emote[0], self.bit_cache[name][emote[0]])
 
-	def load_badges(self):
-		badges = requests.get(self.twitch_badge_url.format(channel=self.channel_meta["name"], client_id=self.configuration["login"]["client-id"])).json()
+	def load_badges(self, login):
+		badges = requests.get(self.twitch_badge_url.format(channel=self.channel_meta["name"], client_id=login["client-id"])).json()
 		self.badge_cache = dict()
 		self.badge_cache["global_mod"] = badges["global_mod"]["alpha"]
 		self.badge_cache["admin"] = badges["admin"]["alpha"]
@@ -219,9 +221,12 @@ class TwitchChat(tkinter.Text):
 	def on_privmsg(self, meta, data):
 		if meta is None: return
 
+		for line in self.blacklist:
+			if line in data: return
+
 		user = meta["display-name"]
 		color = meta["color"]
-		if color == "": color = "green4"
+		if color == "": "".join("{:02x}".format(n) for n in [random.randrange(75,255), random.randrange(75,255), random.randrange(75,255)])
 
 		emotes = meta["emotes"].split("/")
 		emote_list = {}
@@ -271,7 +276,7 @@ class TwitchChat(tkinter.Text):
 
 		text = text.split(" ")
 		for word in text:
-			if word in self.configuration.get("triggers", {}):
+			if self.enable_triggers and word in self.configuration.get("triggers", {}):
 				if self.queue_callback is not None: self.queue_callback(self.configuration["triggers"][word])
 
 			if word in emote_map:
