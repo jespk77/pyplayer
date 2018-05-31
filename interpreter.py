@@ -1,6 +1,6 @@
 from threading import Thread
 from multiprocessing import Queue
-import os, sys, importlib
+import os, importlib
 
 from utilities import messagetypes
 
@@ -51,7 +51,7 @@ class Interpreter(Thread):
 		except AttributeError: pass
 
 	def run(self):
-		if self.configuration != None: self.set_configuration(self.configuration)
+		if self.configuration is not None: self.set_configuration(self.configuration)
 		while True:
 			cmd = self.queue.get()
 			if cmd is False or len(cmd) == 0:
@@ -62,16 +62,16 @@ class Interpreter(Thread):
 			op = None
 			self.print_additional_debug()
 			if cmd[0] == "reload": op = self.reload_module(" ".join(cmd[1:]))
-			if op == None:
+			if op is None:
 				res = None
 				try: res = self.parse_cmd(cmd)
 				except Exception as e: res = messagetypes.Error(e, "Error parsing command")
 
-				if res != None and not isinstance(res, messagetypes.Empty):
+				if res is not None and not isinstance(res, messagetypes.Empty):
 					op = messagetypes.Error(TypeError("expected a 'messagetype' object here, not the " + str(type(res)) + " that you're giving me!"), "Invalid response from command")
 				else: op = res
 
-			if op == None: op = messagetypes.Reply("No answer :(").get_contents()
+			if op is None: op = messagetypes.Reply("No answer :(").get_contents()
 			elif op is False: op = messagetypes.Reply("Invalid command").get_contents()
 			else: op = op.get_contents()
 			self.print_additional_debug()
@@ -86,13 +86,13 @@ class Interpreter(Thread):
 			while isinstance(cl, dict):
 				if len(cmd) == 0: break
 				c = cl.get(cmd[0])
-				if c != None: cl = c
+				if c is not None: cl = c
 				else: break
 				cmd = cmd[1:]
 
 			if isinstance(cl, dict): cl = cl.get("", None)
 
-			if cl != None: return cl(cmd, len(cmd))
+			if cl is not None: return cl(cmd, len(cmd))
 
 	def reload_module(self, module):
 		md_list = []
@@ -100,7 +100,8 @@ class Interpreter(Thread):
 		for md in self.modules:
 			if module == md.__name__.split(".")[-1]:
 				try: md.on_destroy()
-				except Exception as e: print(e)
+				except AttributeError: pass
+				except Exception as e: print("[Interpreter] error cleaning up module '{!s}':".format(md), e)
 
 				try: importlib.reload(md)
 				except Exception as e: return messagetypes.Error(e, "Error reloading '" + module + "'")

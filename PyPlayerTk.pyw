@@ -4,7 +4,13 @@ import sys, tkinter, datetime
 from console import TextConsole
 from interpreter import Interpreter
 
+client = None
 interp = None
+class PyPlayerEvent:
+	def __init__(self, **kwargs):
+		for key, value in kwargs:
+			setattr(self, key, value)
+
 class PyPlayer(tkinter.Frame):
 	def __init__(self):
 		self.root = tkinter.Tk()
@@ -28,18 +34,41 @@ class PyPlayer(tkinter.Frame):
 		self.tk_focusFollowsMouse()
 		self.update_label()
 
+		self.event_handlers = {
+			"progressbar_update": [], #parameters [ progress: int ]
+			"tick_second": [], #parameters [ date: datetime ]
+			"title_update": [] #parameters [ title: str ]
+		}
+
+	def subscribe_event(self, name, callback):
+		if name in self.event_handlers and callable(callback):
+			self.event_handlers[name].append(callback)
+
+	def unsubscribe_event(self, name, callback):
+		if name in self.event_handlers:
+			self.event_handlers[name].remove(callback)
+
+	def post_event(self, name, data):
+		if name in self.event_handlers:
+			for c in self.event_handlers[name]:
+				try: c(self, data)
+				except Exception as e: print("An error occured while processing event", name, "->", e)
+
 	def update_label(self):
 		self.date = datetime.datetime.today()
 		self.header.configure(text="PyPlayer " + self.date.strftime("- %a %b %d, %Y %I:%M %p -"))
+		self.post_event("tick_second", PyPlayerEvent(date=self.date))
 		self.after(1000, self.update_label)
 
 	def update_title(self, title):
 		self.root.title(title)
+		self.post_event("title_update", PyPlayerEvent(title=title))
 
 	def update_progressbar(self, progress):
 		if progress > self.progressbar["maximum"]: progress = self.progressbar["maximum"]
 		elif progress < 0: progress = 0
 		self.progressbar["value"] = progress
+		self.post_event("progressbar_update", PyPlayerEvent(progress=progress))
 
 	def set_configuration(self, cfg):
 		if isinstance(cfg, dict):
@@ -54,7 +83,7 @@ class PyPlayer(tkinter.Frame):
 		except Exception as e: self.console.set_reply(msg="Cannot send command: " + str(e))
 
 	def add_reply(self, ms=100, args=None):
-		if args == None: self.after(ms, self.console.set_reply)
+		if args is None: self.after(ms, self.console.set_reply)
 		else: self.after(ms, self.console.set_reply, *args)
 
 	def add_message(self, args, ms=100):
@@ -92,5 +121,5 @@ if __name__ == "__main__":
 		except Exception as e: print("error getting memory tracker:", e)
 	client.mainloop()
 	print("client closed, destroying client...")
-	if interp != None and interp.is_alive(): interp.queue.put(False)
+	if interp is not None and interp.is_alive(): interp.queue.put(False)
 	interp.join()

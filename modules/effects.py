@@ -1,12 +1,13 @@
 from vlc import MediaPlayer
-import os, json, time
-
+import os, json
 from utilities import messagetypes, keyboard_intercept
 
-#initialized after import
-interpreter = None
-
+# DEFAULT MODULE VARIABLES
 priority = 4
+interpreter = None
+client = None
+
+# MODULE SPECIFIC VARIABLES
 trigger_file = "keytriggers"
 hook_running = False
 key_cache = {}
@@ -32,10 +33,10 @@ def on_key_down(key):
 	verify_key_cache()
 	key = str(key)
 	item = key_cache.get(key)
-	if item != None:
+	if item is not None:
 		desc = item.get("description", "(no description provided)")
 		cmd = item.get("command")
-		if cmd != None: interpreter.queue.put_nowait(cmd)
+		if cmd is not None: interpreter.queue.put_nowait(cmd)
 	else: print("[Interception] no entry found for keycode", key)
 
 class SoundEffectPlayer:
@@ -59,8 +60,8 @@ class SoundEffectPlayer:
 				return
 
 		sound_path = interpreter.configuration.get("directory", {}).get("sounds")
-		if sound_path != None and not sound_path.endswith("/"): sound_path += "/"
-		if sound_path == None or not os.path.isdir(sound_path): print("[EffectPlayer] invalid sound folder:", sound_path); return
+		if sound_path is not None and not sound_path.endswith("/"): sound_path += "/"
+		if sound_path is None or not os.path.isdir(sound_path): print("[EffectPlayer] invalid sound folder:", sound_path); return
 		effects = [file for file in os.listdir(sound_path) if arg == os.path.splitext(file)[0]]
 		if len(effects) == 1:
 			if loop: self.player.set_mrl(sound_path + effects[0], "input-repeat=-1")
