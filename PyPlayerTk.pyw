@@ -19,7 +19,6 @@ class PyPlayer(tkinter.Frame):
 		self.header = tkinter.Label(self.root, background="black", foreground="white")
 		try: self.root.iconbitmap("icon.ico")
 		except: pass
-		self.root.title("PyPlayerTk")
 		self.progressbar_style = ttk.Style()
 		self.progressbar_style.theme_use("default")
 		self.progressbar_style.configure(style="Horizontal.TProgressbar")
@@ -61,7 +60,9 @@ class PyPlayer(tkinter.Frame):
 		self.after(1000, self.update_label)
 
 	def update_title(self, title):
-		self.root.title(title)
+		prefix = ""
+		for c in interp.checks: prefix += "[" + str(c) + "] "
+		self.root.title(prefix + title)
 		self.post_event("title_update", PyPlayerEvent(title=title))
 
 	def update_progressbar(self, progress):
@@ -112,13 +113,7 @@ if __name__ == "__main__":
 	print("initializing client...")
 	client = PyPlayer()
 	interp = Interpreter(client)
-	if "memory" in sys.argv:
-		print("memory checks enabled")
-		try:
-			from pympler import tracker
-			interp.mem_tracker = tracker.SummaryTracker()
-			interp.mem_tracker.print_diff()
-		except Exception as e: print("error getting memory tracker:", e)
+	interp.set_sys_arg(sys.argv)
 	client.mainloop()
 	print("client closed, destroying client...")
 	if interp is not None and interp.is_alive(): interp.queue.put(False)

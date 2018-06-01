@@ -8,6 +8,8 @@ client = None
 
 # MODULE SPECIFIC VARIABLES
 cfg_file = "cfg"
+last_drink = 0
+drink_delay = 0
 
 def initialize():
 	interpreter.configuration = load_configuration()
@@ -33,6 +35,7 @@ def save_configuration():
 
 def update_configuration(key, value=0):
 	cfg = interpreter.configuration
+	print("update")
 	while isinstance(key, dict):
 		try:
 			k = next(iter(key.keys()))
@@ -54,7 +57,7 @@ def command_cfg_get(arg, argc):
 	if argc == 1:
 		arg = values.parse(arg[0])
 		s = update_configuration(arg.get_value())
-		if s != None: return messagetypes.Reply(str(arg) + " is set to " + str(s))
+		if s is not None: return messagetypes.Reply(str(arg) + " is set to " + str(s))
 
 def command_cfg_reload(arg, argc):
 	if argc == 0:

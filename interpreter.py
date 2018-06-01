@@ -27,6 +27,7 @@ class Interpreter(Thread):
 		self.modules = sorted([ importlib.import_module(name="modules." + module[:-3]) for module in os.listdir("modules") if module.endswith(".py") ], key=lambda module: module.priority)
 		self.queue = Queue()
 		self.configuration = None
+		self.checks = []
 		for md in self.modules:
 			try:
 				md.interpreter = self
@@ -35,6 +36,20 @@ class Interpreter(Thread):
 			except AttributeError: pass
 			except Exception as e: self.client.add_message(args=messagetypes.Error(e, "Error initializing '" + md.__name__ + "'").get_contents())
 		self.start()
+
+	def set_sys_arg(self, argv):
+		if "console" in argv: self.checks.append("ConsoleLog")
+
+		if "memory" in argv:
+			print("memory checks enabled")
+			try:
+				from pympler import tracker
+				self.mem_tracker = tracker.SummaryTracker()
+				self.mem_tracker.print_diff()
+				self.checks.append("MemoryLog")
+			except Exception as e:
+				print("error getting memory tracker:", e)
+		self.client.update_title("PyPlayerTk")
 
 	def set_configuration(self, cfg):
 		if isinstance(cfg, dict):
@@ -47,8 +62,7 @@ class Interpreter(Thread):
 		else: print("[Interpreter] got invalid configuration: ", cfg)
 
 	def print_additional_debug(self):
-		try: self.mem_tracker.print_diff()
-		except AttributeError: pass
+		if "MemoryLog" in self.checks: self.mem_tracker.print_diff()
 
 	def run(self):
 		if self.configuration is not None: self.set_configuration(self.configuration)
