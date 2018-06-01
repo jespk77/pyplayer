@@ -9,6 +9,8 @@ client = None
 
 # MODULE SPECIFIC VARIABLES
 cfg_file = "cfg"
+timer = None
+second_time = datetime.timedelta(seconds=1)
 last_drink = 0
 drink_delay = 0
 
@@ -40,7 +42,6 @@ def save_configuration():
 
 def update_configuration(key, value=0):
 	cfg = interpreter.configuration
-	print("update")
 	while isinstance(key, dict):
 		try:
 			k = next(iter(key.keys()))
