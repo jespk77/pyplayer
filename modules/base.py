@@ -1,4 +1,5 @@
-import json
+import json, datetime
+from tkinter import Label
 from utilities import values, messagetypes
 
 # DEFAULT MODULE VARIABLES
@@ -13,6 +14,10 @@ drink_delay = 0
 
 def initialize():
 	interpreter.configuration = load_configuration()
+	client.subscribe_event("tick_second", on_tick)
+
+def on_destroy():
+	client.unsubscribe_event("tick_second", on_tick)
 
 def load_configuration():
 	try:
@@ -51,6 +56,42 @@ def update_configuration(key, value=0):
 		else: cfg[key] = value
 	return cfg.get(key)
 
+def get_time_from_string(delay):
+	try:
+		hour = delay.split("h")
+		if len(hour) > 1:
+			delay = "".join(hour[1:])
+			hour = int(hour[0])
+		else: hour = 0
+
+		min = delay.split("m")
+		if len(min) > 1:
+			delay = "".join(min[1:])
+			min = int(min[0])
+		else: min = 0
+
+		sec = delay.split("s")
+		if len(sec) > 0 and sec[0] != "": sec = int(sec[0])
+		else: sec = 0
+	except ValueError: return None
+	if hour == min == sec == 0: return None
+	return datetime.timedelta(hours=hour, minutes=min, seconds=sec)
+
+def on_tick(client, event):
+	timer_check()
+
+def timer_check():
+	global timer
+	if timer is not None:
+		timer -= second_time
+		if timer.total_seconds() == 0:
+			timer = None
+			client.timer.pack_forget()
+			del client.timer
+			interpreter.queue.put_nowait("effect ftl_distress_beacon")
+		else: client.timer.configure(text="\u23f2 " + str(timer))
+
+
 # ===== MAIN COMMANDS =====
 # - cfg commmand
 def command_cfg_get(arg, argc):
@@ -81,8 +122,18 @@ def command_cfg_set(arg, argc, save=True):
 			return messagetypes.Reply(str(id) + " has been updated to '" + str(s) + "'")
 		except TypeError as e: return messagetypes.Reply(str(e))
 
-def command_timer(arg, size):
-	return messagetypes.Pass()
+def command_timer(arg, argc):
+	if argc == 1:
+		time = get_time_from_string(arg[0])
+		if time is not None:
+			if isinstance(time, datetime.timedelta):
+				global timer
+				timer = time
+				client.timer = Label(master=client.header, foreground="cyan", background="black")
+				client.timer.pack(side="left")
+				return messagetypes.Reply("Timer set")
+			else: return messagetypes.Reply(str(time))
+		else: return messagetypes.Reply("Cannot decode time syntax, try again...")
 
 commands = {
 	"cfg": {
