@@ -8,7 +8,7 @@ client = None
 interp = None
 class PyPlayerEvent:
 	def __init__(self, **kwargs):
-		for key, value in kwargs:
+		for key, value in kwargs.items():
 			setattr(self, key, value)
 
 class PyPlayer(tkinter.Frame):
@@ -24,7 +24,13 @@ class PyPlayer(tkinter.Frame):
 		self.progressbar_style.theme_use("default")
 		self.progressbar_style.configure(style="Horizontal.TProgressbar")
 		self.progressbar = ttk.Progressbar(self.root, style="Horizontal.TProgressbar", orient="horizontal", mode="determinate", maximum=1.0)
+
 		self.last_cmd = None
+		self.event_handlers = {
+			"progressbar_update": [],  # parameters [ progress: int ]
+			"tick_second": [],  # parameters [ date: datetime ]
+			"title_update": []  # parameters [ title: str ]
+		}
 
 		self.header.pack(fill="x")
 		self.progressbar.pack(fill="x")
@@ -34,15 +40,9 @@ class PyPlayer(tkinter.Frame):
 		self.tk_focusFollowsMouse()
 		self.update_label()
 
-		self.event_handlers = {
-			"progressbar_update": [], #parameters [ progress: int ]
-			"tick_second": [], #parameters [ date: datetime ]
-			"title_update": [] #parameters [ title: str ]
-		}
-
 	def subscribe_event(self, name, callback):
 		if name in self.event_handlers and callable(callback):
-			self.event_handlers[name].append(callback)
+			if callback not in self.event_handlers[name]: self.event_handlers[name].append(callback)
 
 	def unsubscribe_event(self, name, callback):
 		if name in self.event_handlers:
