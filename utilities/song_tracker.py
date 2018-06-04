@@ -18,6 +18,8 @@ def load_tracker():
 	is_dirty = False
 
 def load_file(tracker_file):
+	if not tracker_file.startswith("statistics/"): tracker_file = "statistics/" + tracker_file
+
 	c = Counter()
 	try:
 		d = open(tracker_file, "r")
