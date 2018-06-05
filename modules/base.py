@@ -1,5 +1,6 @@
 import json, datetime
 from tkinter import Label
+from tkinter.font import Font
 from utilities import values, messagetypes
 
 # DEFAULT MODULE VARIABLES
@@ -90,7 +91,7 @@ def timer_check():
 			client.timer.pack_forget()
 			del client.timer
 			interpreter.queue.put_nowait("effect ftl_distress_beacon")
-		else: client.timer.configure(text="\u23f2 " + str(timer))
+		else: client.timer.configure(text="\u23f0 " + str(timer))
 
 
 # ===== MAIN COMMANDS =====
