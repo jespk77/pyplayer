@@ -107,6 +107,7 @@ def stop_listener(arg, argc):
 def initialize():
 	try: start_listener(None, 0)
 	except: pass
+	interpreter.queue.put_nowait("effect startup")
 
 def set_configuration(cfg):
 	effect_player.set_configuration(cfg)
