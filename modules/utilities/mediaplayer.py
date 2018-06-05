@@ -136,7 +136,7 @@ class MediaPlayer():
 		file = path + song
 		print("preparing to play", file)
 		if not os.path.isfile(file): return
-		if self.paused: self.stop()
+		if self.paused: self.stop_player()
 
 		self.media = self.vlc.media_new(file)
 		self.media_data = MediaPlayerData(path, song)
