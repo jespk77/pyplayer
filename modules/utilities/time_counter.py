@@ -3,7 +3,6 @@ import tkinter
 background_color = "gray25"
 foreground_color = "white"
 highlight_color = "cyan"
-highlight_time = 420
 
 class TimeCount(tkinter.Toplevel):
 	def __init__(self, root):
@@ -13,7 +12,8 @@ class TimeCount(tkinter.Toplevel):
 		self.timer = 0
 		self.timer_callback = None
 		self.flashes = 0
-		self.countdown = highlight_time
+		self.highlight_time = 420
+		self.countdown = self.highlight_time
 		self.noise = tkinter.PhotoImage(file="noise.png")
 		self.label = tkinter.Label(self, text="initializing...", background=background_color, foreground=foreground_color)
 		self.update_button = tkinter.Button(self, image=self.noise, state="disabled", command=self.reset_noise, background=background_color)
@@ -23,10 +23,16 @@ class TimeCount(tkinter.Toplevel):
 		self.reset_button.pack(fill="x")
 		self.after(1000, self.on_update)
 
-	def set_properties(self, title="Catching noises", icon="noise.ico", geometry="200x100"):
+	def set_delay_time(self, seconds):
+		self.highlight_time = seconds
+
+	def set_properties(self, title="Catching noises", icon="noise", geometry="200x100"):
+		print(title, icon, geometry)
 		self.title(title)
-		if len(icon) > 0 and not icon.endswith(".ico"): icon += ".ico"
-		try: self.iconbitmap(icon)
+		try:
+			self.iconbitmap(icon + ".ico")
+			self.noise = tkinter.PhotoImage(file=icon + ".png")
+			self.update_button.configure(image=self.noise)
 		except: pass
 		self.geometry(geometry)
 		self.wm_attributes("-topmost", 1)
@@ -41,7 +47,7 @@ class TimeCount(tkinter.Toplevel):
 	def update_label(self, time, countdown):
 		self.timer = time
 		if countdown <= 0:
-			self.countdown = highlight_time
+			self.countdown = self.highlight_time
 			self.enable_highlight()
 			self.flashes = 3
 			if self.timer_callback is not None: self.timer_callback()
@@ -55,7 +61,7 @@ class TimeCount(tkinter.Toplevel):
 		self.disable_highlight()
 
 	def reset_timer(self):
-		self.update_label(0, highlight_time)
+		self.update_label(0, self.highlight_time)
 		self.flashes = 0
 		self.disable_highlight()
 
