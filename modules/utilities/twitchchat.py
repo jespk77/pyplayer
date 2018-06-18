@@ -93,7 +93,7 @@ class TwitchChat(tkinter.Text):
 		self.bind("<Leave>", self.set_scroll)
 		self.pack(fill="both", expand=True)
 		self.chat_text = TwitchChatTalker(self.master, self.send_message)
-		self.chat_text.configure(highlightcolor="white", insertbackground="white")
+		self.chat_text.configure(highlightbackground="gray50", highlightcolor="white", insertbackground="white", wrap="word", spacing1=3, padx=5)
 		self.chat_text.pack(fill="x")
 
 	def set_configuration(self, configuration):
@@ -102,12 +102,14 @@ class TwitchChat(tkinter.Text):
 		style = self.configuration.get("style", {}).get("global", {})
 		self.configure(**style)
 		self.chat_text.configure(**style)
+
 		fonts = self.configuration.get("font", {})
 		self.normal_font = Font(**fonts)
 		self.bold_font = Font(**fonts)
 		self.bold_font.config(weight="bold")
 		self.configure(font=self.normal_font)
-		self.chat_text.configure(font=self.normal_font, wrap="word", spacing1=3, padx=5)
+		self.chat_text.configure(font=self.normal_font, height=5)
+
 		self.max_size = self.configuration.get("max-size", 150)
 		self.enable_triggers = self.configuration.get("enable-triggers", self.enable_triggers)
 		self.enable_timestamp = self.configuration.get("enable-timestamp", self.enable_timestamp)
@@ -125,6 +127,7 @@ class TwitchChat(tkinter.Text):
 
 	def set_scroll(self, event):
 		self.enable_scroll = (event.x < 0 or event.x > event.widget.winfo_width()) or (event.y < 0 or event.y > event.widget.winfo_height())
+		if self.enable_scroll: self.adjust_scroll(event)
 
 	def connect(self, channel_meta, login):
 		if self.client is None and login is not None:
@@ -240,7 +243,7 @@ class TwitchChat(tkinter.Text):
 
 		user = meta["display-name"]
 		color = meta["color"]
-		if color == "": "".join("{:02x}".format(n) for n in [random.randrange(75,255), random.randrange(75,255), random.randrange(75,255)])
+		if color == "": "#" + "".join("{:02x}".format(n) for n in [random.randrange(75,255), random.randrange(75,255), random.randrange(75,255)])
 
 		emotes = meta["emotes"].split("/")
 		emote_list = {}
@@ -251,7 +254,7 @@ class TwitchChat(tkinter.Text):
 		badges = meta["badges"].split(",")
 		self.configure(state="normal")
 		self.insert("end", "\n")
-		if self.enable_timestamp: self.insert("end", datetime.datetime.today().strftime("%I:%M %p "), ("notice",))
+		if self.enable_timestamp: self.insert("end", datetime.datetime.today().strftime("%I:%M "), ("notice",))
 		for badge in badges:
 			if not badge.startswith("subscriber"): badge = badge.split("/")[0]
 
@@ -381,7 +384,7 @@ class TwitchChat(tkinter.Text):
 
 class TwitchChatTalker(tkinter.Text):
 	def __init__(self, root, send_message_callback):
-		super().__init__(root)
+		super().__init__(root, height=100)
 		self.bind("<Escape>", self.clear_text)
 		self.bind("<Return>", self.on_send_message)
 		self.message_callback = send_message_callback
