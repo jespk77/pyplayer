@@ -7,7 +7,7 @@ from tkinter.font import Font
 from PIL import Image
 from PIL.ImageTk import PhotoImage
 
-import re, threading, time
+import re, threading, time, datetime
 import io, socket, requests, random
 
 class IRCClient(threading.Thread):
@@ -82,6 +82,7 @@ class TwitchChat(tkinter.Text):
 		self.chat_size = 0
 		self.enable_scroll = True
 		self.enable_triggers = True
+		self.enable_timestamp = True
 		self.emote_cache = dict()
 		self.bttv_emotes = dict()
 
@@ -90,18 +91,26 @@ class TwitchChat(tkinter.Text):
 		self.bind("<End>", self.adjust_scroll)
 		self.bind("<Enter>", self.set_scroll)
 		self.bind("<Leave>", self.set_scroll)
+		self.pack(fill="both", expand=True)
+		self.chat_text = TwitchChatTalker(self.master, self.send_message)
+		self.chat_text.configure(highlightcolor="white", insertbackground="white")
+		self.chat_text.pack(fill="x")
 
 	def set_configuration(self, configuration):
 		print("[TwitchChat] updating configuration", configuration.keys())
 		self.configuration = configuration
-		self.configure(**self.configuration.get("style", {}).get("global", {}))
+		style = self.configuration.get("style", {}).get("global", {})
+		self.configure(**style)
+		self.chat_text.configure(**style)
 		fonts = self.configuration.get("font", {})
 		self.normal_font = Font(**fonts)
 		self.bold_font = Font(**fonts)
 		self.bold_font.config(weight="bold")
 		self.configure(font=self.normal_font)
+		self.chat_text.configure(font=self.normal_font, wrap="word", spacing1=3, padx=5)
 		self.max_size = self.configuration.get("max-size", 150)
 		self.enable_triggers = self.configuration.get("enable-triggers", self.enable_triggers)
+		self.enable_timestamp = self.configuration.get("enable-timestamp", self.enable_timestamp)
 		self.blacklist = self.configuration.get("blacklist", [])
 
 		for key, value in self.configuration.get("style", {}).items():
@@ -216,7 +225,12 @@ class TwitchChat(tkinter.Text):
 			except Exception: del self.badge_cache[badge_id]
 
 	def send_message(self, msg):
-		if self.client is not None: self.client.send("PRIVMSG #" + self.channel_meta["name"] + " :" + msg)
+		if self.client is not None:
+			self.client.send("PRIVMSG #" + self.channel_meta["name"] + " :" + msg)
+			self.configure(state="normal")
+			self.insert("end", "\n You: ", ("notice",))
+			self.insert("end", msg.rstrip("\n"))
+			self.configure(state="disabled")
 
 	def on_privmsg(self, meta, data):
 		if meta is None: return
@@ -237,6 +251,7 @@ class TwitchChat(tkinter.Text):
 		badges = meta["badges"].split(",")
 		self.configure(state="normal")
 		self.insert("end", "\n")
+		if self.enable_timestamp: self.insert("end", datetime.datetime.today().strftime("%I:%M %p "), ("notice",))
 		for badge in badges:
 			if not badge.startswith("subscriber"): badge = badge.split("/")[0]
 
@@ -363,3 +378,21 @@ class TwitchChat(tkinter.Text):
 			elif data[2] == "USERNOTICE": self.on_usernotice(meta=self.get_meta(data[0]), data="".join(data[4:])[1:])
 			elif data[2] == "CLEARCHAT": self.on_clearchat(data[4][1:])
 		except IndexError: pass
+
+class TwitchChatTalker(tkinter.Text):
+	def __init__(self, root, send_message_callback):
+		super().__init__(root)
+		self.bind("<Escape>", self.clear_text)
+		self.bind("<Return>", self.on_send_message)
+		self.message_callback = send_message_callback
+
+	def on_send_message(self, event):
+		if callable(self.message_callback):
+			message = self.get("0.0", "end")
+			if len(message) > 1: self.message_callback(message)
+			self.clear_text(event)
+		return "break"
+
+	def clear_text(self, event):
+		self.delete("0.0", "end")
+		self.mark_set("insert", "0.0")

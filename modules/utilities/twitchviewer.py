@@ -23,10 +23,9 @@ class TwitchViewer(tkinter.Toplevel):
 			print("no errors, starting chat...")
 			self.bind("<Destroy>", self.disconnect)
 			self.attributes("-topmost", "true")
-			self.geometry("390x500")
+			self.geometry("390x600")
 			self.chat = TwitchChat(self)
 			self.set_configuration(configuration)
-			self.chat.pack(side="right", fill="both", expand=True)
 			self.set_title()
 			self.start()
 		else:
