@@ -59,9 +59,9 @@ class PyPlayer(tkinter.Frame):
 		self.post_event("tick_second", PyPlayerEvent(date=self.date))
 		self.after(1000, self.update_label)
 
-	def update_title(self, title):
+	def update_title(self, title, checks=None):
 		prefix = ""
-		for c in interp.checks: prefix += "[" + str(c) + "] "
+		for c in (checks if checks is not None else interp.checks): prefix += "[" + str(c) + "] "
 		self.root.title(prefix + title)
 		self.post_event("title_update", PyPlayerEvent(title=title))
 
@@ -112,8 +112,7 @@ if __name__ == "__main__":
 
 	print("initializing client...")
 	client = PyPlayer()
-	interp = Interpreter(client)
-	interp.set_sys_arg(sys.argv)
+	interp = Interpreter(client, sys.argv)
 	client.mainloop()
 	print("client closed, destroying client...")
 	if interp is not None and interp.is_alive(): interp.queue.put(False)

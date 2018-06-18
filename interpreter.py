@@ -21,13 +21,14 @@ class Interpreter(Thread):
 					- use "" for default commands and "info" to display help messages, the top level cannot have a default command
 					- after processing a command the module must return an instance of 'messagetypes', if nothing is returned the interpreter will continue to next module
 	"""
-	def __init__(self, client):
+	def __init__(self, client, argv=""):
 		super().__init__(name="InterpreterThread")
 		self.client = client
 		self.modules = sorted([ importlib.import_module(name="modules." + module[:-3]) for module in os.listdir("modules") if module.endswith(".py") ], key=lambda module: module.priority)
 		self.queue = Queue()
 		self.configuration = None
 		self.checks = []
+		self.set_sys_arg(argv)
 		for md in self.modules:
 			try:
 				md.interpreter = self
@@ -49,7 +50,7 @@ class Interpreter(Thread):
 				self.checks.append("MemoryLog")
 			except Exception as e:
 				print("error getting memory tracker:", e)
-		self.client.update_title("PyPlayerTk")
+		self.client.update_title("PyPlayerTk", self.checks)
 
 	def set_configuration(self, cfg):
 		if isinstance(cfg, dict):
