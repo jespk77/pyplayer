@@ -1,6 +1,4 @@
-import json, datetime
-from tkinter import Label
-from tkinter.font import Font
+import json, datetime, tkinter
 from utilities import values, messagetypes
 
 # DEFAULT MODULE VARIABLES
@@ -11,6 +9,7 @@ client = None
 # MODULE SPECIFIC VARIABLES
 cfg_file = "cfg"
 timer = None
+time_str = ""
 second_time = datetime.timedelta(seconds=1)
 last_drink = 0
 drink_delay = 0
@@ -83,7 +82,7 @@ def on_tick(client, event):
 	timer_check()
 
 def timer_check():
-	global timer
+	global timer, time_str
 	if timer is not None:
 		timer -= second_time
 		if timer.total_seconds() == 0:
@@ -91,7 +90,7 @@ def timer_check():
 			client.timer.pack_forget()
 			del client.timer
 			interpreter.queue.put_nowait("effect ftl_distress_beacon")
-		else: client.timer.configure(text="\u23f0 " + str(timer))
+		else: time_str.set("\u23f0 " + str(timer))
 
 
 # ===== MAIN COMMANDS =====
@@ -129,9 +128,11 @@ def command_timer(arg, argc):
 		time = get_time_from_string(arg[0])
 		if time is not None:
 			if isinstance(time, datetime.timedelta):
-				global timer
+				global timer, time_str
 				timer = time
-				client.timer = Label(master=client.header, foreground="cyan", background="black")
+				time_str = tkinter.StringVar()
+				time_str.set("\u23f0 " + str(timer))
+				client.timer = tkinter.Label(master=client.header, foreground="cyan", background="black", textvariable=time_str)
 				client.timer.pack(side="left")
 				return messagetypes.Reply("Timer set")
 			else: return messagetypes.Reply(str(time))
