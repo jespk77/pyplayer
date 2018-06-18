@@ -17,7 +17,7 @@ class TwitchViewer(tkinter.Toplevel):
 		super().__init__(root)
 		self.root = root
 		self.title("PyPlayer - TwitchViewer")
-		self.iconbitmap("icon.ico")
+		self.iconbitmap("assets/icon.ico")
 		self.bind("<Destroy>", self.on_destroy)
 		if self.error is None:
 			print("no errors, starting chat...")

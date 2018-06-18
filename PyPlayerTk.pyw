@@ -17,7 +17,7 @@ class PyPlayer(tkinter.Frame):
 		super().__init__(self.root)
 		self.console = TextConsole(root=self.root, command_callback=self.parse_command)
 		self.header = tkinter.Label(self.root, background="black", foreground="white")
-		try: self.root.iconbitmap("icon.ico")
+		try: self.root.iconbitmap("assets/icon.ico")
 		except: pass
 		self.progressbar_style = ttk.Style()
 		self.progressbar_style.theme_use("default")

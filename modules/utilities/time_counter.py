@@ -14,7 +14,7 @@ class TimeCount(tkinter.Toplevel):
 		self.flashes = 0
 		self.highlight_time = 420
 		self.countdown = self.highlight_time
-		self.noise = tkinter.PhotoImage(file="noise.png")
+		self.noise = tkinter.PhotoImage(file="assets/noise.png")
 		self.label = tkinter.Label(self, text="initializing...", background=background_color, foreground=foreground_color)
 		self.update_button = tkinter.Button(self, image=self.noise, state="disabled", command=self.reset_noise, background=background_color)
 		self.reset_button = tkinter.Button(self, text="Reset", command=self.reset_timer, background=background_color, foreground=foreground_color)
@@ -26,7 +26,7 @@ class TimeCount(tkinter.Toplevel):
 	def set_delay_time(self, seconds):
 		self.highlight_time = seconds
 
-	def set_properties(self, title="Catching noises", icon="noise", geometry="200x100"):
+	def set_properties(self, title="Catching noises", icon="assets/noise", geometry="200x100"):
 		print(title, icon, geometry)
 		self.title(title)
 		try:
