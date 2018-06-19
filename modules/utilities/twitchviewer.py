@@ -16,9 +16,11 @@ class TwitchViewer(tkinter.Toplevel):
 
 		super().__init__(root)
 		self.root = root
-		self.title("PyPlayer - TwitchViewer")
-		self.iconbitmap("assets/icon.ico")
+		self.title("TwitchViewer")
+		try: self.iconbitmap("assets/icon_twitchviewer.ico")
+		except Exception as e: print("error setting window icon: ", e)
 		self.bind("<Destroy>", self.on_destroy)
+
 		if self.error is None:
 			print("no errors, starting chat...")
 			self.bind("<Destroy>", self.disconnect)
@@ -35,8 +37,10 @@ class TwitchViewer(tkinter.Toplevel):
 
 	def set_title(self):
 		title = self.channel_meta["display_name"]
-		if self.channel_meta["status"] is not None: title += " - " + self.channel_meta["status"]
-		if self.channel_meta["game"] is not None: title += " [" + self.channel_meta["game"] + "]"
+		if self.channel_meta["status"] is not None:
+			title += " - " + self.channel_meta["status"]
+			if self.channel_meta["game"] is not None: title += " [" + self.channel_meta["game"] + "]"
+		else: title = "TwitchViewer - " + title
 		self.title(title)
 
 	def set_configuration(self, configuration):
