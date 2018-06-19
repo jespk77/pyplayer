@@ -83,6 +83,7 @@ class TwitchChat(tkinter.Text):
 		self.enable_scroll = True
 		self.enable_triggers = True
 		self.enable_timestamp = True
+		self.update_time()
 		self.emote_cache = dict()
 		self.bttv_emotes = dict()
 
@@ -121,6 +122,10 @@ class TwitchChat(tkinter.Text):
 	def set_command_queue_callback(self, callback):
 		if callable(callback): self.queue_callback = callback
 		else: print("[TwitchChat] tried to set queue callback to non-callable type", callback)
+
+	def update_time(self):
+		self.timestamp = datetime.datetime.today()
+		self.after(60000, self.update_time)
 
 	def adjust_scroll(self, event):
 		self.see("end")
@@ -242,8 +247,11 @@ class TwitchChat(tkinter.Text):
 			if line in data: return
 
 		user = meta["display-name"]
-		color = meta["color"]
-		if color == "": "#" + "".join("{:02x}".format(n) for n in [random.randrange(75,255), random.randrange(75,255), random.randrange(75,255)])
+		if len(meta["color"]) == 0:
+			try: color = self.tag_cget(user.lower(), "foreground")
+			except: color = "#" + "".join("{:02x}".format(n) for n in [random.randrange(75,255), random.randrange(75,255), random.randrange(75,255)])
+		else: color = meta["color"]
+		self.tag_configure(user.lower(), foreground=color, font=self.bold_font)
 
 		emotes = meta["emotes"].split("/")
 		emote_list = {}
@@ -254,7 +262,7 @@ class TwitchChat(tkinter.Text):
 		badges = meta["badges"].split(",")
 		self.configure(state="normal")
 		self.insert("end", "\n")
-		if self.enable_timestamp: self.insert("end", datetime.datetime.today().strftime("%I:%M "), ("notice",))
+		if self.enable_timestamp: self.insert("end", self.timestamp.strftime("%I:%M "), ("notice",))
 		for badge in badges:
 			if not badge.startswith("subscriber"): badge = badge.split("/")[0]
 
@@ -262,7 +270,6 @@ class TwitchChat(tkinter.Text):
 				self.image_create(index="end", image=self.badge_cache[badge])
 				self.insert("end", " ")
 
-		self.tag_config(user.lower(), foreground=color, font=self.bold_font)
 		self.add_text(user=user, text=data, emotes=emote_list, bits="bits" in meta)
 
 	def add_text(self, text, user="", emotes=None, bits=False, tags=()):
