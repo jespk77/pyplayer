@@ -75,7 +75,6 @@ class TwitchChat(tkinter.Text):
 
 	def __init__(self, master):
 		super().__init__(master, state="disabled")
-		self.root = master
 		self.configuration = dict()
 		self.queue_callback = None
 		self.client = None
@@ -86,6 +85,7 @@ class TwitchChat(tkinter.Text):
 		self.update_time()
 		self.emote_cache = dict()
 		self.bttv_emotes = dict()
+		self.versioned_badges = []
 
 		self.configure(highlightbackground="gray50", highlightcolor="white", cursor="left_ptr", wrap="word", spacing1=3, padx=5)
 		self.message_queue = Queue()
@@ -220,10 +220,19 @@ class TwitchChat(tkinter.Text):
 		self.badge_cache["broadcaster"] = badges["broadcaster"]["alpha"]
 		self.badge_cache["staff"] = badges["staff"]["alpha"]
 		self.badge_cache["moderator"] = badges["mod"]["alpha"]
+
 		if self.channel_meta["partner"]:
 			badges = requests.get(self.channel_badge_url.format(channel_id=self.channel_meta["_id"])).json()
-			for version, url in badges["badge_sets"]["subscriber"]["versions"].items():
-				self.badge_cache["subscriber/" + version] = url["image_url_1x"]
+			badge_set = badges["badge_sets"]
+			if "subscriber" in badge_set:
+				self.versioned_badges.append("subscriber")
+				for version, url in badge_set["subscriber"]["versions"].items():
+					self.badge_cache["subscriber/" + version] = url["image_url_1x"]
+
+			if "bits" in badge_set:
+				self.versioned_badges.append("bits")
+				for version, url in badge_set["bits"]["versions"].items():
+					self.badge_cache["bits/" + version] = url["image_url_1x"]
 
 		for badge_id, badge_url in self.badge_cache.items():
 			try:
@@ -264,7 +273,11 @@ class TwitchChat(tkinter.Text):
 		self.insert("end", "\n")
 		if self.enable_timestamp: self.insert("end", self.timestamp.strftime("%I:%M "), ("notice",))
 		for badge in badges:
-			if not badge.startswith("subscriber"): badge = badge.split("/")[0]
+			is_versioned = False
+			for b in self.versioned_badges:
+				if badge.startswith(b): is_versioned = True; break
+
+			if not is_versioned: badge = badge.split("/")[0]
 
 			if badge in self.badge_cache:
 				self.image_create(index="end", image=self.badge_cache[badge])
@@ -377,7 +390,7 @@ class TwitchChat(tkinter.Text):
 
 	def run(self):
 		if self.client is not None:
-			self.root.after(500, self.run)
+			self.master.after(500, self.run)
 			if not self.message_queue.empty():
 				self.process_data(self.message_queue.get_nowait())
 
