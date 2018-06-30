@@ -52,10 +52,8 @@ def refill_drink(arg, argc):
 		global drink_reminder, drink_count
 		if drink_reminder is not None:
 			res = drink_reminder.refill()
-			if res:
-				drink_count += 1
-				return messagetypes.Reply("Drink refilled")
-			else: return messagetypes.Reply("Please wait until your drink is empty, you can't (read: shouldn't) drink that fast!")
+			if res: drink_count += 1
+			return messagetypes.Reply("Drink refilled")
 		else: return start_drink_reminder(arg, argc)
 
 commands = {
