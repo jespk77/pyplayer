@@ -17,6 +17,7 @@ class PyPlayer(tkinter.Frame):
 		super().__init__(self.root)
 		self.console = TextConsole(root=self.root, command_callback=self.parse_command)
 		self.header = tkinter.Label(self.root, background="black", foreground="white")
+		self.title_song = ""
 		try: self.root.iconbitmap("assets/icon.ico")
 		except: pass
 		self.progressbar_style = ttk.Style()
@@ -51,7 +52,7 @@ class PyPlayer(tkinter.Frame):
 		if name in self.event_handlers:
 			for c in self.event_handlers[name]:
 				try: c(self, data)
-				except Exception as e: print("An error occured while processing event", name, "->", e)
+				except Exception as e: print("An error occured while processing event '", name, "' ->", e)
 
 	def update_label(self):
 		self.date = datetime.datetime.today()
@@ -62,6 +63,7 @@ class PyPlayer(tkinter.Frame):
 	def update_title(self, title, checks=None):
 		prefix = ""
 		for c in (checks if checks is not None else interp.checks): prefix += "[" + str(c) + "] "
+		self.title_song = title
 		self.root.title(prefix + title)
 		self.post_event("title_update", PyPlayerEvent(title=title))
 
