@@ -3,35 +3,50 @@ from collections import Counter
 import tkinter, os
 
 class SongBrowser(tkinter.Listbox):
-	prefix = "  "
-
-	def __init__(self, root):
-		self.root = root
+	""" Can list all items (songs) from a directory in a specified order
+		possible orderings: frequency(counter), creation time, name
+	"""
+	def __init__(self, client):
 		self.listvar = tkinter.StringVar()
-		super().__init__(root, listvariable=self.listvar, activestyle="none", border=0, selectmode="single")
+		super().__init__(client.master, listvariable=self.listvar, activestyle="none", border=0, selectmode="single")
+		self.client = client
 		self.font = Font(family="terminal", size=10)
 		self.configure(font=self.font, highlightthickness=0)
-		self.current_options = {}
-		self.queue_options = {}
-		self.path = None
+		self._path = None
+		self.path_valid = False
 		self.bind("<Enter>", self.set_focus, True)
 		self.bind("<Leave>", self.set_focus)
 
-	def set_path(self, path):
-		try:
-			if not path[1].endswith("/"):
-				self.path = (path[0], path[1] + "/")
-			else:
-				self.path = path
-		except Exception as e:
-			print("got invalid path:", e)
+	@property
+	def path(self):
+		return self._path
 
-	def check_path(self):
-		if self.path is None or not os.path.isdir(self.path[1]):
-			self.insert("end", "Invalid path selected")
-			return False
-		else:
-			return True
+	""" Path secifies the directory in which items need to be sorted
+			this can be defined as a tuple where (displayname, path name)
+			or a string to a path name (in this case the displayname is equal to path name)
+	"""
+	@path.setter
+	def path(self, path):
+		if isinstance(path, tuple) and len(path) > 1:
+			self._path = (path[0], path[1] if path[1].endswith("/") else path[1] + "/")
+		elif isinstance(path, str): self._path = (path, path if path.endswith("/") else path + "/")
+		else: self._path = None
+
+		self.path_valid = self._path is not None and os.path.isdir(self._path[1])
+		if not self.path_valid:
+			self.insert(0, "Invalid path selected: " + str(self._path))
+
+	def select_song(self, song=None):
+		if song is None: song = self.client.title_song
+
+		index = -1
+		for s in self.songlist:
+			if s == song: index = max(0, index + 1); break
+			else: index += 1
+
+		if index >= 0:
+			self.selection_clear(0, "end")
+			self.selection_set(index)
 
 	def set_configuration(self, configuration):
 		if isinstance(configuration, dict):
@@ -41,11 +56,7 @@ class SongBrowser(tkinter.Listbox):
 					if len(name) == 1:
 						self.configure({name[0]: value})
 					elif len(name) == 2:
-						if name[0] == "current":
-							self.current_options[name[1]] = value
-						elif name[0] == "queue":
-							self.queue_options[name[1]] = value
-						elif name[0] == "font":
+						if name[0] == "font":
 							self.font[name[1]] = value; self.configure(font=self.font)
 				except Exception as e:
 					print("[SongBrowser] error setting browser configuration:", e)
@@ -53,8 +64,8 @@ class SongBrowser(tkinter.Listbox):
 			print("[SongBrowser] got invalid configuration:", configuration)
 
 	def create_list_from_frequency(self, path, songcounter):
-		self.set_path(path)
-		if self.check_path():
+		self.path = path
+		if self.path_valid:
 			self.is_dynamic = True
 			self.songcounter = Counter()
 			self.songlist = None
@@ -63,11 +74,12 @@ class SongBrowser(tkinter.Listbox):
 					song = os.path.splitext(entry.name)[0]
 					self.songcounter[song] += songcounter[song]
 
-			self.listvar.set([el[0] for el in self.songcounter.most_common()])
+			self.songlist = [i[0] for i in self.songcounter.most_common()]
+			self.listvar.set(self.songlist)
 
 	def create_list_from_recent(self, path):
-		self.set_path(path)
-		if self.check_path():
+		self.path = path
+		if self.path_valid:
 			self.is_dynamic = False
 			self.songcounter = Counter()
 			self.songlist = None
@@ -75,20 +87,20 @@ class SongBrowser(tkinter.Listbox):
 				if entry.is_file():
 					song = os.path.splitext(entry.name)[0]
 					self.songcounter[song] = entry.stat().st_ctime
-			self.listvar.set([el[0] for el in self.songcounter.most_common()])
+
+			self.songlist = [i[0] for i in self.songcounter.most_common()]
+			self.listvar.set(self.songlist)
 
 	def create_list_from_name(self, path):
-		self.set_path(path)
-		if self.check_path():
+		self.path = path
+		if self.path_valid:
 			self.is_dynamic = False
 			self.songcounter = None
 			self.songlist = [os.path.splitext(entry.name)[0] for entry in os.scandir(self.path[1]) if entry.is_file()]
 			self.listvar.set(self.songlist)
 
 	def get_song_from_event(self, event):
-		index = self.nearest(event.y)
-		if self.songlist is not None: return self.songlist[index].replace(" - ", " ")
-		elif self.songcounter is not None: return self.get(index).replace(" - ", " ")
+		return self.songlist[self.nearest(event.y)].replace(" - ", " ") if self.path_valid else None
 
 	def bind_event(self, event, callback):
 		self.bind(event, callback)
@@ -98,9 +110,11 @@ class SongBrowser(tkinter.Listbox):
 		else: event.widget.focus()
 
 	def add_count(self, song, add=1):
-		if self.is_dynamic:
+		if self.path_valid:
 			self.songcounter[song] += add
-			self.listvar.set([el[0] for el in self.songcounter.most_common()])
+			self.songlist = [i[0] for i in self.songcounter.most_common()]
+			self.listvar.set(self.songlist)
+			self.select_song(song)
 			return True
 		else: return False
 
