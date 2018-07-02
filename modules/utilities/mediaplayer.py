@@ -110,9 +110,10 @@ class MediaPlayer():
 		if len(res1) > 0: return res1
 		else: return res2
 
-	def find_song(self, path, keyword=[]):
+	def find_song(self, path, keyword=None):
 		""" Same as list_songs but checks for an index at the end of the keyword for faster option selection
 		"""
+		if keyword is None: keyword = []
 		print("find songs in", path, "with keyword", keyword)
 		id = keyword[-1]
 		if len(keyword) > 1 and id.isdigit():
