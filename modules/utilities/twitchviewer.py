@@ -7,6 +7,7 @@ class TwitchViewer(tkinter.Toplevel):
 
 	def __init__(self, root, configuration, channel):
 		self.is_alive = True
+		self.limited_mode = False
 		if "login" in configuration:
 			print("getting metadata for channel", channel)
 			self.channel_meta = requests.get(self.channel_meta_url.format(channel=channel, client_id=configuration["login"]["client-id"])).json()
@@ -42,6 +43,10 @@ class TwitchViewer(tkinter.Toplevel):
 			if self.channel_meta["game"] is not None: title += " [" + self.channel_meta["game"] + "]"
 		else: title = "TwitchViewer - " + title
 		self.title(title)
+
+	def set_limited(self, limited_mode):
+		self.limited_mode = limited_mode
+		self.chat.set_limited_mode(limited_mode)
 
 	def set_configuration(self, configuration):
 		if isinstance(configuration, dict):

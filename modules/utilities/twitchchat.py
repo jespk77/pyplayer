@@ -73,7 +73,7 @@ class TwitchChat(tkinter.Text):
 	bttv_emote_list = "https://api.betterttv.net/2/emotes"
 	bttv_emote_url = "https://cdn.betterttv.net/emote/{id}/1x"
 
-	def __init__(self, master):
+	def __init__(self, master, limited_mode = False):
 		super().__init__(master, state="disabled")
 		self.configuration = dict()
 		self.queue_callback = None
@@ -86,6 +86,7 @@ class TwitchChat(tkinter.Text):
 		self.emote_cache = dict()
 		self.bttv_emotes = dict()
 		self.versioned_badges = []
+		self.limited = False
 
 		self.configure(highlightbackground="gray50", highlightcolor="white", cursor="left_ptr", wrap="word", spacing1=3, padx=5)
 		self.message_queue = Queue()
@@ -122,6 +123,9 @@ class TwitchChat(tkinter.Text):
 	def set_command_queue_callback(self, callback):
 		if callable(callback): self.queue_callback = callback
 		else: print("[TwitchChat] tried to set queue callback to non-callable type", callback)
+
+	def set_limited_mode(self, limited_mode):
+		self.limited = limited_mode
 
 	def update_time(self):
 		self.timestamp = datetime.datetime.today()
@@ -247,6 +251,7 @@ class TwitchChat(tkinter.Text):
 			self.configure(state="normal")
 			self.insert("end", "\n You: ", ("notice",))
 			self.insert("end", msg.rstrip("\n"))
+			self.see("end")
 			self.configure(state="disabled")
 
 	def on_privmsg(self, meta, data):
@@ -256,6 +261,8 @@ class TwitchChat(tkinter.Text):
 			if line in data: return
 
 		user = meta["display-name"]
+		if user.lower() == "moobot": return
+
 		if len(meta["color"]) == 0:
 			try: color = self.tag_cget(user.lower(), "foreground")
 			except: color = "#" + "".join("{:02x}".format(n) for n in [random.randrange(75,255), random.randrange(75,255), random.randrange(75,255)])
@@ -314,7 +321,7 @@ class TwitchChat(tkinter.Text):
 
 		text = text.split(" ")
 		for word in text:
-			if self.enable_triggers and word in self.configuration.get("triggers", {}):
+			if not self.limited and self.enable_triggers and word in self.configuration.get("triggers", {}):
 				if self.queue_callback is not None: self.queue_callback(self.configuration["triggers"][word])
 
 			if word in emote_map:
@@ -366,7 +373,7 @@ class TwitchChat(tkinter.Text):
 		return res
 
 	def on_usernotice(self, meta, data):
-		if meta is None: return
+		if meta is None or self.limited: return
 		type = meta["msg-id"]
 		if type == "resub": text = meta["display-name"] + " resubscribed for " + meta["msg-param-months"] + " months"
 		elif type == "sub": text = meta["display-name"] + " subscribed"
@@ -390,7 +397,7 @@ class TwitchChat(tkinter.Text):
 
 	def run(self):
 		if self.client is not None:
-			self.master.after(500, self.run)
+			self.master.after(100, self.run)
 			if not self.message_queue.empty():
 				self.process_data(self.message_queue.get_nowait())
 

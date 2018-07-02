@@ -28,14 +28,18 @@ def check_active_viewer():
 	return False
 
 # MODULE COMMANDS
-def command_twitch(arg, argc):
+def command_twitch(arg, argc, limit=False):
 	global twitchviewer
 	if argc == 1:
 		if not check_active_viewer():
 			twitchviewer = TwitchViewer(client, get_configuration(), arg[0])
+			twitchviewer.set_limited(limit)
 			twitchviewer.chat.set_command_queue_callback(interpreter.queue.put_nowait)
 			return messagetypes.Reply("Twitch viewer for '"+ arg[0] + "' started")
 		else: return messagetypes.Reply("Twitch viewer already open, close that one first")
+
+def command_twitch_limited(arg, argc):
+	if argc == 1: return command_twitch(arg, argc, limit=True)
 
 def command_twitch_reload(arg, argc):
 	if argc == 0:
@@ -66,6 +70,7 @@ def command_twitch_say(arg, argc):
 commands = {
 	"twitch": {
 		"": command_twitch,
+		"limited": command_twitch_limited,
 		"reload": command_twitch_reload,
 		"trigger": {
 			"disable": command_twitch_trigger_disable,
