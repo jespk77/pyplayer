@@ -112,10 +112,9 @@ class DrinkReminderWindow(tkinter.Toplevel):
 		self.background.coords(self.water_rect, self.water.x, self.water.y, self.water.width, self.water.height)
 
 	def refill(self):
-		if self.water.level > 0: return False
 		self.is_filling = True
 		self.after(50, self.update_fill)
-		return True
+		return self.water.level == 0
 
 	def update_fill(self):
 		if self.is_filling:
