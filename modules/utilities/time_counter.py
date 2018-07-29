@@ -5,7 +5,7 @@ foreground_color = "white"
 highlight_color = "cyan"
 
 class TimeCount(tkinter.Toplevel):
-	highlight_delay = 20
+	highlight_delay = 420
 
 	def __init__(self, root):
 		super().__init__(root, background=background_color)
