@@ -11,10 +11,11 @@ import re, threading, time, datetime
 import io, socket, requests, random
 
 class IRCClient(threading.Thread):
-	def __init__(self, message_queue):
+	def __init__(self, message_queue, extra_info=False):
 		super().__init__()
 		self.socket = None
 		self.message_queue = message_queue
+		self.extra_info = extra_info
 
 	def start_client(self, server, port, username, auth, channel):
 		self.server = server
@@ -30,8 +31,9 @@ class IRCClient(threading.Thread):
 		self.socket.connect((self.server, self.port))
 		self.send("PASS {!s}".format(self.auth))
 		self.send("NICK {!s}".format(self.username))
-		self.send("CAP REQ :twitch.tv/tags")
-		self.send("CAP REQ :twitch.tv/commands")
+		if self.extra_info:
+			self.send("CAP REQ :twitch.tv/tags")
+			self.send("CAP REQ :twitch.tv/commands")
 		self.send("JOIN #{}".format(self.channel_name))
 
 	def disconnect(self):
@@ -73,11 +75,12 @@ class TwitchChat(tkinter.Text):
 	bttv_emote_list = "https://api.betterttv.net/2/emotes"
 	bttv_emote_url = "https://cdn.betterttv.net/emote/{id}/1x"
 
-	def __init__(self, master, limited_mode = False):
+	def __init__(self, master):
 		super().__init__(master, state="disabled")
 		self.configuration = dict()
 		self.queue_callback = None
 		self.client = None
+		self.user_meta = None
 		self.chat_size = 0
 		self.enable_scroll = True
 		self.enable_triggers = True
@@ -141,7 +144,7 @@ class TwitchChat(tkinter.Text):
 	def connect(self, channel_meta, login):
 		if self.client is None and login is not None:
 			self.channel_meta = channel_meta
-			self.client = IRCClient(self.message_queue)
+			self.client = IRCClient(self.message_queue, extra_info=True)
 			self.client.start_client(self.chat_server, self.chat_port, login["username"], login["oauth"], self.channel_meta["name"])
 
 			self.load_badges(login)
@@ -248,11 +251,13 @@ class TwitchChat(tkinter.Text):
 	def send_message(self, msg):
 		if self.client is not None:
 			self.client.send("PRIVMSG #" + self.channel_meta["name"] + " :" + msg)
-			self.configure(state="normal")
-			self.insert("end", "\n You: ", ("notice",))
-			self.insert("end", msg.rstrip("\n"))
-			self.see("end")
-			self.configure(state="disabled")
+			if self.user_meta is None:
+				self.configure(state="normal")
+				self.insert("end", "\n You: ", ("notice",))
+				self.insert("end", msg.rstrip("\n"))
+				self.see("end")
+				self.configure(state="disabled")
+			else: self.on_privmsg(self.user_meta, msg.rstrip("\n"))
 
 	def on_privmsg(self, meta, data):
 		if meta is None: return
@@ -269,7 +274,7 @@ class TwitchChat(tkinter.Text):
 		else: color = meta["color"]
 		self.tag_configure(user.lower(), foreground=color, font=self.bold_font)
 
-		emotes = meta["emotes"].split("/")
+		emotes = meta.get("emotes", "").split("/")
 		emote_list = {}
 		for emote in emotes:
 			emote = emote.split(":")
@@ -395,23 +400,26 @@ class TwitchChat(tkinter.Text):
 		try: self.tag_add("deleted", tag, tag + " lineend")
 		except: pass
 
+	def on_userstate(self, meta):
+		if meta is not None: self.user_meta = meta
+
 	def run(self):
 		if self.client is not None:
+			if not self.message_queue.empty(): self.process_data(self.message_queue.get_nowait())
 			self.master.after(100, self.run)
-			if not self.message_queue.empty():
-				self.process_data(self.message_queue.get_nowait())
 
 	def process_data(self, data):
 		try:
 			if data[0] == "PING": self.client.send("PONG " + "".join(data[1:]))
 			elif data[2] == "PRIVMSG": self.on_privmsg(meta=self.get_meta(data[0]), data=data[4][1:])
-			elif data[2] == "USERNOTICE": self.on_usernotice(meta=self.get_meta(data[0]), data="".join(data[4:])[1:])
+			elif data[2] == "USERNOTICE": self.on_usernotice(meta=self.get_meta(data[0]), data="".join(data[4])[1:])
 			elif data[2] == "CLEARCHAT": self.on_clearchat(data[4][1:])
+			elif data[2] == "USERSTATE": self.on_userstate(self.get_meta(data[0]))
 		except IndexError: pass
 
 class TwitchChatTalker(tkinter.Text):
 	def __init__(self, root, send_message_callback):
-		super().__init__(root, height=100)
+		super().__init__(root, height=250)
 		self.bind("<Escape>", self.clear_text)
 		self.bind("<Return>", self.on_send_message)
 		self.message_callback = send_message_callback
