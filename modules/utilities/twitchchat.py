@@ -412,7 +412,7 @@ class TwitchChat(tkinter.Text):
 		try:
 			if data[0] == "PING": self.client.send("PONG " + "".join(data[1:]))
 			elif data[2] == "PRIVMSG": self.on_privmsg(meta=self.get_meta(data[0]), data=data[4][1:])
-			elif data[2] == "USERNOTICE": self.on_usernotice(meta=self.get_meta(data[0]), data="".join(data[4])[1:])
+			elif data[2] == "USERNOTICE": self.on_usernotice(meta=self.get_meta(data[0]), data="".join(data[4:])[1:])
 			elif data[2] == "CLEARCHAT": self.on_clearchat(data[4][1:])
 			elif data[2] == "USERSTATE": self.on_userstate(self.get_meta(data[0]))
 		except IndexError: pass
