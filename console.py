@@ -1,50 +1,29 @@
-from tkinter.font import Font
-import tkinter
+from ui import pywindow, pyelement
 
-class TextConsole(tkinter.Text):
+class TextConsole(pyelement.PyTextfield):
 	current_start = "end-1l linestart+2c"
 	current_end = "end lineend-1c"
 
-	def __init__(self, root, configuration=None, command_callback=print):
-		self.root = root
-		self.font = Font(family="terminal", size=10)
-		super().__init__(self.root, background="black", insertbackground="white", selectbackground="gray30", foreground="white", font=self.font)
+	def __init__(self, root, command_callback=print):
+		#self.font = Font(family="terminal", size=10)
+		pyelement.PyTextfield.__init__(self, root)
 		self.cmd_history = []
 		self.cmd_history_index = -1
 		self.last_action = None
 		self.last_line = None
 		self.cmd_cache = ""
 		self.cmd_callback = command_callback
-		if configuration is not None: self.set_configuration(configuration)
 
-		self.bind("<Key>", self.on_key_press)
-		self.bind("<Left>", self.on_left_key)
-		self.bind("<BackSpace>", self.on_backspace_key)
-		self.bind("<Return>", self.on_command_confirm)
-		self.bind("<Up>", self.on_set_command_from_history)
-		self.bind("<Down>", self.on_set_command_from_history)
-		self.bind("<Escape>", self.clear_current_line)
-		self.bind("<Home>", self.on_home_key)
-		self.bind("<Button-1>", self.block_action)
-		self.bind("<B1-Motion>", self.block_action)
+		self.bind("<Key>", self.on_key_press).bind("<Button-1>", self.block_action).bind("<B1-Motion>", self.block_action)
+		self.bind("<BackSpace>", self.on_backspace_key).bind("<Return>", self.on_command_confirm).bind("<Escape>", self.clear_current_line).bind("<Home>", self.on_home_key)
+		self.bind("<Left>", self.on_left_key).bind("<Up>", self.on_set_command_from_history).bind("<Down>", self.on_set_command_from_history)
 		self.insert("end", "> ")
-
-	def set_configuration(self, configuration):
-		if isinstance(configuration, dict):
-			for tag, value in configuration.items():
-				tag = tag.split(".")
-				if len(tag) > 1:
-					try:
-						if tag[0] == "font": self.font[tag[1]] = value
-						else: self.tag_configure(tag[0], {tag[1]:value})
-					except: pass
-		else: print("[Console] got invalid configuration:", configuration)
 
 	def clear_current_line(self, event=None):
 		if event is not None: self.last_line = None
-		self.mark_set("insert", "end")
+		self.current_pos = self.back
 		self.delete(self.current_start, self.current_end)
-		return self.block_action(event)
+		return self.block_action
 
 	def set_current_line(self, text):
 		self.clear_current_line()
@@ -52,10 +31,7 @@ class TextConsole(tkinter.Text):
 
 	def get_focused(self, event):
 		self.focus_set()
-		return self.block_action(event)
-
-	def block_action(self, event):
-		return "break"
+		return self.block_action
 
 	def on_command_confirm(self, event):
 		self.last_action = "send"
@@ -69,7 +45,7 @@ class TextConsole(tkinter.Text):
 			self.insert("end", "\n")
 			self.configure(state="disabled")
 			if self.cmd_callback is not None: self.cmd_callback(cmd)
-		return self.block_action(event)
+		return self.block_action
 
 	def on_set_command_from_history(self, event):
 		last_index = len(self.cmd_history) - 1
@@ -91,11 +67,10 @@ class TextConsole(tkinter.Text):
 					self.set_current_line(self.last_line)
 					self.last_line = None
 				self.last_action = "down"
-		return self.block_action(event)
+		return self.block_action
 
 	def set_reply(self, msg=None, tags=()):
-		if self.cget("state") == "disabled":
-			self.configure(state="normal")
+		if not self.can_user_interact():
 			if msg is not None: self.insert("end", msg + "\n", tags)
 			self.insert("end", "> " + self.cmd_cache)
 			self.see("end")
@@ -108,23 +83,18 @@ class TextConsole(tkinter.Text):
 
 	def on_left_key(self, event):
 		if str(self.index("insert")).endswith(".2"):
-			return self.block_action(event)
+			return self.block_action
 
 	def on_backspace_key(self, event):
 		if str(self.index("insert")).endswith(".2"):
 			try: self.selection_get()
-			except: return self.block_action(event)
+			except: return self.block_action
 
 	def on_home_key(self, event):
 		self.mark_set("insert", self.current_start)
-		return self.block_action(event)
+		return self.block_action
 
 	def on_key_press(self, event):
 		self.focus_set()
 		if self.cget("state") == "disabled" and event.char != "":
 			self.cmd_cache += event.char
-
-if __name__ == "__main__":
-	options = {"reply.foreground": "gray50"}
-	console = TextConsole(options)
-	console.mainloop()

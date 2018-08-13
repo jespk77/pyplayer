@@ -1,6 +1,6 @@
 from threading import Thread
 from multiprocessing import Queue
-import os, importlib
+import os, importlib, sys
 
 from utilities import messagetypes
 
@@ -21,14 +21,14 @@ class Interpreter(Thread):
 					- use "" for default commands and "info" to display help messages, the top level cannot have a default command
 					- after processing a command the module must return an instance of 'messagetypes', if nothing is returned the interpreter will continue to next module
 	"""
-	def __init__(self, client, argv=""):
+	def __init__(self, client):
 		super().__init__(name="InterpreterThread")
 		self.client = client
 		self.modules = sorted([ importlib.import_module(name="modules." + module[:-3]) for module in os.listdir("modules") if module.endswith(".py") ], key=lambda module: module.priority)
 		self.queue = Queue()
 		self.configuration = None
 		self.checks = []
-		self.set_sys_arg(argv)
+		self.set_sys_arg()
 		for md in self.modules:
 			try:
 				md.interpreter = self
@@ -38,10 +38,10 @@ class Interpreter(Thread):
 			except Exception as e: self.client.add_message(args=messagetypes.Error(e, "Error initializing '" + md.__name__ + "'").get_contents())
 		self.start()
 
-	def set_sys_arg(self, argv):
-		if "console" in argv: self.checks.append("ConsoleLog")
+	def set_sys_arg(self):
+		if "console" in sys.argv: self.checks.append("ConsoleLog")
 
-		if "memory" in argv:
+		if "memory" in sys.argv:
 			print("memory checks enabled")
 			try:
 				from pympler import tracker
@@ -53,14 +53,15 @@ class Interpreter(Thread):
 		self.client.update_title("PyPlayerTk", self.checks)
 
 	def set_configuration(self, cfg):
-		if isinstance(cfg, dict):
-			self.configuration = cfg
-			self.client.set_configuration(cfg.get("window"))
-			for md in self.modules:
-				try: md.set_configuration(cfg)
-				except AttributeError: pass
-				except Exception as e: self.client.add_message(args=messagetypes.Error(e, "Error updating configuration for '" + md.__name__ + "'").get_contents())
-		else: print("[Interpreter] got invalid configuration: ", cfg)
+		raise RuntimeError("update yo program!!!")
+		#if isinstance(cfg, dict):
+		#	self.configuration = cfg
+		#	self.client.set_configuration(cfg.get("window"))
+		#	for md in self.modules:
+		#		try: md.set_configuration(cfg)
+		#		except AttributeError: pass
+		#		except Exception as e: self.client.add_message(args=messagetypes.Error(e, "Error updating configuration for '" + md.__name__ + "'").get_contents())
+		#else: print("[Interpreter] got invalid configuration: ", cfg)
 
 	def print_additional_debug(self):
 		if "MemoryLog" in self.checks: self.mem_tracker.print_diff()
