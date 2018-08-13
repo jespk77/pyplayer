@@ -152,10 +152,10 @@ class PyTextfield(PyElement, tkinter.Text):
 
 class PyProgressbar(PyElement, ttk.Progressbar):
 	def __init__(self, window, horizontal=True):
-		PyElement.__init__(self)
 		self._progress_var = tkinter.IntVar()
 		self._style = ttk.Style()
 		ttk.Progressbar.__init__(self, window.root, mode="determinate", variable=self._progress_var)
+		PyElement.__init__(self)
 		self.horizontal = horizontal
 
 	@property
@@ -172,8 +172,10 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 	def determinate(self, value): self.configure(mode="determinate" if value else "indeterminate")
 
 	def _load_configuration(self, cfg):
-		super()._load_configuration(cfg)
 		self._style.theme_use(cfg.get("theme", "default"))
+		style = "Horizontal.TProgressbar" if self.horizontal else "Vertical.TProgressbar"
+		self._style.configure(style, **cfg)
+		self.configure(style=style)
 
 	@property
 	def maximum(self):
@@ -185,7 +187,7 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 	@property
 	def horizontal(self):
 		""" Returns whether the orientation is horizontal or vertical """
-		return self.cget("horizontal")
+		return self.cget("orient") == "horizontal"
 	@horizontal.setter
 	def horizontal(self, value):
 		style = "Horizontal.TProgressbar" if value else "Vertical.TProgressbar"
