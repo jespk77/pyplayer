@@ -1,4 +1,5 @@
 from tkinter import ttk
+from traceback import format_exception
 import sys, datetime
 
 from ui import pywindow, pyelement
@@ -47,7 +48,7 @@ class PyPlayer(pywindow.RootPyWindow):
 		if name in self.event_handlers:
 			for c in self.event_handlers[name]:
 				try: c(self, data)
-				except Exception as e: print("An error occured while processing event '", name, "' ->", e)
+				except Exception as e: print("[PyPlayer] An error occured while processing event '", name, "' -> ", "\n".join(format_exception(None, e, e.__traceback__)), sep="")
 
 	def update_label(self):
 		self.date = datetime.datetime.today()
