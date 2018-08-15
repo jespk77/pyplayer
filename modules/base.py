@@ -1,5 +1,6 @@
-import json, datetime, tkinter
-from utilities import values, messagetypes
+import datetime
+from utilities import messagetypes
+from ui import pyelement
 
 # DEFAULT MODULE VARIABLES
 priority = 0
@@ -13,49 +14,6 @@ time_str = ""
 second_time = datetime.timedelta(seconds=1)
 last_drink = 0
 drink_delay = 0
-
-def initialize():
-	interpreter.configuration = load_configuration()
-	client.subscribe_event("tick_second", on_tick)
-
-def on_destroy():
-	client.unsubscribe_event("tick_second", on_tick)
-
-def load_configuration():
-	try:
-		print("reading configuration file:", cfg_file)
-		file = open(cfg_file, "r")
-		configuration = json.load(file)
-		file.close()
-		print("configuration file loaded as:", configuration)
-		return configuration
-	except Exception as e:
-		print(messagetypes.Error(e).get_contents()[0])
-		return {}
-
-def save_configuration():
-	print("writing configuration:", interpreter.configuration)
-	file = open(cfg_file, "w")
-	json.dump(interpreter.configuration, file, indent=5, sort_keys=True)
-	file.close()
-	print("written to file:", cfg_file)
-
-def update_configuration(key, value=0):
-	cfg = interpreter.configuration
-	while isinstance(key, dict):
-		try:
-			k = next(iter(key.keys()))
-			cfg = cfg.get(k, cfg)
-			key = key[k]
-		except: break
-
-	if value != 0:
-		if value is None:
-			try: del cfg[key]
-			except: pass
-		elif isinstance(cfg.get(key), dict): raise TypeError("Cannot directly update dictionary to string")
-		else: cfg[key] = value
-	return cfg.get(key)
 
 def get_time_from_string(delay):
 	try:
@@ -82,58 +40,62 @@ def on_tick(client, event):
 	timer_check()
 
 def timer_check():
-	global timer, time_str
-	if timer is not None:
+	global timer
+	time_widget = client.widgets.get("timer")
+	if timer is not None and time_widget is not None:
 		timer -= second_time
 		if timer.total_seconds() == 0:
 			timer = None
-			client.timer.pack_forget()
-			del client.timer
+			client.remove_widget("timer")
+			client.unsubscribe_event("tick_second", on_tick)
 			interpreter.queue.put_nowait("effect ftl_distress_beacon")
-		else: time_str.set("\u23f0 " + str(timer))
+		else: client.widgets["timer"].display_text = "\u23f0 " + str(timer)
+	else: timer = None
 
+def widget_get(name=None):
+	if name is None: return client
+	return client.children.get(name)
 
 # ===== MAIN COMMANDS =====
 # - cfg commmand
-def command_cfg_get(arg, argc):
-	if argc == 1:
-		arg = values.parse(arg[0])
-		s = update_configuration(arg.get_value())
-		if s is not None: return messagetypes.Reply(str(arg) + " is set to " + str(s))
+def command_cfg(arg, argc):
+	pass
 
-def command_cfg_reload(arg, argc):
-	if argc == 0:
-		interpreter.configuration = load_configuration()
-		return messagetypes.Reply("Configuration file reloaded")
+def command_cfg_get(arg, argc):
+	if 1 <= argc <= 2:
+		wd = widget_get(arg.pop(0) if argc == 2 else None)
+		if wd is None: return None
+
+		value = wd[arg[0]]
+		if len(str(value)) == 0: return messagetypes.Reply("Unknown option '{}'".format(arg[0]))
+		return messagetypes.Reply("'{}' is set to '{}'".format(arg[0], value))
 
 def command_cfg_remove(arg, argc):
-	if argc == 1:
-		arg = values.parse(arg[0])
-		update_configuration(arg.get_value, None)
-		save_configuration()
-		return messagetypes.Reply("Entry " + str(arg) + " has been deleted")
+	if 1 <= argc <= 2:
+		wd = widget_get(arg.pop(0) if argc == 2 else None)
+		if wd is None: return None
+
+		del wd[arg[0]]
+		return messagetypes.Reply("'{}' has been deleted")
 
 def command_cfg_set(arg, argc, save=True):
-	if argc == 2:
-		try:
-			id = values.parse(arg[0])
-			s = update_configuration(id.get_value(), values.parse(arg[1]).get_value())
-			interpreter.set_configuration(interpreter.configuration)
-			save_configuration()
-			return messagetypes.Reply(str(id) + " has been updated to '" + str(s) + "'")
-		except TypeError as e: return messagetypes.Reply(str(e))
+	if 2 <= argc <= 3:
+		wd = widget_get(arg.pop(0) if argc == 3 else None)
+		if wd is None: return None
+		elif not isinstance(wd.configuration.get(arg[0], ""), str): return messagetypes.Reply("Cannot set a nested configuration option")
+
+		wd[arg[0]] = arg[1]
+		return messagetypes.Reply("'{}' has been updated to '{}'".format(arg[0], wd[arg[0]]))
 
 def command_timer(arg, argc):
 	if argc == 1:
 		time = get_time_from_string(arg[0])
 		if time is not None:
 			if isinstance(time, datetime.timedelta):
-				global timer, time_str
+				global timer
 				timer = time
-				time_str = tkinter.StringVar()
-				time_str.set("\u23f0 " + str(timer))
-				client.timer = tkinter.Label(master=client.header, foreground="cyan", background="black", textvariable=time_str)
-				client.timer.pack(side="left")
+				client.add_widget("timer", pyelement.PyTextlabel(client.widgets["header"]), side="left").display_text = "\u23f0 {}".format(timer)
+				client.subscribe_event("tick_second", on_tick)
 				return messagetypes.Reply("Timer set")
 			else: return messagetypes.Reply(str(time))
 		else: return messagetypes.Reply("Cannot decode time syntax, try again...")
@@ -141,8 +103,8 @@ def command_timer(arg, argc):
 commands = {
 	"cfg": {
 		"": command_cfg_get,
-		"reload": command_cfg_reload,
+		"set": command_cfg_set,
 		"remove": command_cfg_remove,
-		"set": command_cfg_set
+		"list": 0
 	}, "timer": command_timer
 }
