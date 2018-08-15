@@ -266,8 +266,6 @@ class TwitchChat(tkinter.Text):
 			if line in data: return
 
 		user = meta["display-name"]
-		if user.lower() == "moobot": return
-
 		if len(meta["color"]) == 0:
 			try: color = self.tag_cget(user.lower(), "foreground")
 			except: color = "#" + "".join("{:02x}".format(n) for n in [random.randrange(75,255), random.randrange(75,255), random.randrange(75,255)])
