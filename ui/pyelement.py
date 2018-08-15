@@ -75,24 +75,52 @@ class PyFrame(PyElement, tkinter.Frame):
 		tkinter.Frame.__init__(self, root.root)
 
 class PyTextlabel(PyElement, tkinter.Label):
-	""" Element for displaying a line of text
-		*Use 'display_text' attribute to change label text (all other common options can be set with 'configure') """
+	""" Element for displaying a line of text """
 	def __init__(self, window):
 		PyElement.__init__(self)
-		self._string_var = tkinter.StringVar()
-		tkinter.Label.__init__(self, window.root, textvariable=self._string_var)
+		tkinter.Label.__init__(self, window.root)
+		self._string_var = None
 
 	@property
-	def display_text(self): return self._string_var.get()
+	def display_text(self):
+		return self._string_var.get() if not self._string_var is None else self.cget("text")
 	@display_text.setter
-	def display_text(self, value): self._string_var.set(value)
+	def display_text(self, value):
+		if self._string_var is None:
+			self._string_var = tkinter.StringVar()
+			self.configure(textvariable=self._string_var)
+		self._string_var.set(value)
 
 class PyButton(PyElement, tkinter.Button):
-	""" Element to create a clickable button
-		*Configurable with 'callback' and 'text' options (in addition to all common options) """
+	""" Element to create a clickable button  """
 	def __init__(self, window):
 		PyElement.__init__(self)
 		tkinter.Button.__init__(self, window.root)
+		self._string_var = None
+		self._callback = None
+
+	@property
+	def text(self):
+		""" Returns the string that is currently displayed on the element """
+		return self._string_var.get() if self._string_var is not None else self.cget("text")
+	@text.setter
+	def text(self, value):
+		""" Set the display string of this element (once this is set, using configure 'text' no longer has effect) """
+		if self._string_var is None:
+			self._string_var = tkinter.StringVar()
+			self.configure(textvariable=self._string_var)
+		self._string_var.set(value)
+
+	@property
+	def callback(self):
+		""" Returns the callback that is currently assigned to when the button is pressed or None if nothing bound (or if it cannot be called) """
+		if not callable(self._callback): self._callback = None
+		return self._callback
+	@callback.setter
+	def callback(self, value):
+		""" Set the callback that gets called when the button is pressed """
+		self._callback = value
+		self.configure(command=value)
 
 class PyTextfield(PyElement, tkinter.Text):
 	""" Element to display multiple lines of text, includes support for user input, images and markers/tags
@@ -151,6 +179,7 @@ class PyTextfield(PyElement, tkinter.Text):
 		else: PyElement.__setitem__(self, key, value)
 
 class PyProgressbar(PyElement, ttk.Progressbar):
+	""" Widget that displays a bar indicating progress made by the application """
 	def __init__(self, window, horizontal=True):
 		self._progress_var = tkinter.IntVar()
 		self._style = ttk.Style()
@@ -159,7 +188,11 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 		self.horizontal = horizontal
 
 	@property
-	def progress(self): return self._progress_var.get()
+	def progress(self, actual=True):
+		""" Gets the current progress of the bar
+			Set 'actual' to false to return progress in relation to maximum (value between 0 and 1), otherwise it returns the absolute progress """
+		p = self._progress_var.get()
+		return p if actual else p / self.maximum
 	@progress.setter
 	def progress(self, value): self._progress_var.set(value)
 
@@ -183,13 +216,3 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 		return self.cget("maximum")
 	@maximum.setter
 	def maximum(self, value): self.configure(maximum=value)
-
-	@property
-	def horizontal(self):
-		""" Returns whether the orientation is horizontal or vertical """
-		return self.cget("orient") == "horizontal"
-	@horizontal.setter
-	def horizontal(self, value):
-		style = "Horizontal.TProgressbar" if value else "Vertical.TProgressbar"
-		self._style.configure(style=style)
-		self.configure(orient="horizontal" if value else "vertical", style=style)

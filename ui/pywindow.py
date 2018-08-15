@@ -5,15 +5,13 @@ from ui import pyelement
 class BaseWindow:
 	""" Framework class for PyWindow and RootPyWindow, should not be created on its own """
 	default_title = "PyWindow"
+	invalid_cfg_keys = ["geometry"]
 
 	def __init__(self, id):
 		self._windowid = id
 		self._elements = {}
 		self._children = None
 		self._dirty = False
-
-		self._autosave = None
-		self._autosave_delay = 0
 
 		self.last_position = -1
 		self.last_size = -1
@@ -22,6 +20,8 @@ class BaseWindow:
 
 	@property
 	def root(self): return None
+	@property
+	def configuration(self): return self._configuration_cache
 	@property
 	def window_id(self):
 		""" The (unique) identifier for this window, this cannot change once the window is created """
@@ -59,11 +59,6 @@ class BaseWindow:
 	@property
 	def always_on_top(self): return False
 
-	@property
-	def autosave_delay(self):
-		""" Time (in minutes) when the configuration file for this window will be writtem to file (if dirty) """
-		return self._autosave_delay
-
 	def mark_dirty(self, event=None):
 		""" Mark this window as dirty, event parameter only used for tkinter event handling """
 		if event is not None:
@@ -100,9 +95,8 @@ class BaseWindow:
 
 			try:
 				if not os.path.exists("cfg"): os.mkdir("cfg")
-				self._configuration_cache["geometry"] = self.geometry
-				self._configuration_cache["autosave_delay"] = self.autosave_delay
 				print("writing configuration:", self._configuration_cache)
+				self._configuration_cache["geometry"] = self.geometry
 				file = open(self.cfg_filename, "w+")
 				json.dump(self._configuration_cache, file, indent=5, sort_keys=True)
 				file.close()
@@ -157,9 +151,49 @@ class BaseWindow:
 			except: return False
 		return True
 
+	def _cfg_lookup(self, key, value=""):
+		if self._configuration_error: return ""
+
+		k = key.split("::")
+		if k[0] in self.widgets:
+			d = self.widgets[k[0]]
+			k = k[1:]
+		else: d = self._configuration_cache
+
+		while len(k) > 1:
+			item = k.pop(0)
+			if item in d: d = d[item]
+			else: break
+
+		key = k[0]
+		if value is None:
+			if key in d and not isinstance(d[key], str): return False
+			del d[key]
+			self.mark_dirty()
+			return None
+		elif value != "":
+			if key in d and not isinstance(d[key], str): return False
+			d[key] = value
+			self.mark_dirty()
+		try: return d.cget(key)
+		except AttributeError: return d.get(key, "")
+
 	def __getitem__(self, item):
-		""" Get configuration option for this window or empty string if no such value was stored """
-		return self._configuration_cache.get(item, "")
+		""" Get configuration option for this window/widget in this window or empty string if no such value was stored
+		 	For a nested search in configuration seperate keys with '::' """
+		return self._cfg_lookup(item)
+
+	def __setitem__(self, key, value):
+		""" Set configuration option for this window/widget in this window, the change will be updated in the configuration file """
+		if not self._configuration_error:
+			if key in BaseWindow.invalid_cfg_keys: raise ValueError("Tried to set option '{}' which should not be changed manually".format(key))
+			self._cfg_lookup(key, value)
+		else: print("[BaseWindow.WARNING] Configuration was not loaded properly therefore any configuration updates are ignored")
+
+	def __delitem__(self, key):
+		""" Delete the configuration option for this window/widget in this window from the configuration file
+		 	(the change will only be visible next time the window is created) """
+		self.__setitem__(key, None)
 
 class PyWindow(BaseWindow):
 	""" Separate window that can be created on top of another window """
@@ -177,20 +211,23 @@ class PyWindow(BaseWindow):
 		""" (Re)load configuration from file """
 		BaseWindow.load_configuration(self)
 		self.geometry = self._configuration_cache.get("geometry")
-		self.autosave_delay = self._configuration_cache.get("autosave_delay", 5)
+		try: self.autosave_delay = int(self._configuration_cache.get("autosave_delay", "5"))
+		except ValueError: self.autosave_delay = 5
 		self.root.bind("<Configure>", self.mark_dirty)
 		self.root.bind("<Destroy>", self.write_configuration)
 
 	@property
 	def autosave_delay(self):
 		""" Time interval (in minutes) between automatic save of window configuration to file, returns 0 if disabled """
-		return int(self._autosave_delay / 60000)
+		try: return int(self._autosave_delay / 60000)
+		except AttributeError: return 0
 	@autosave_delay.setter
 	def autosave_delay(self, value):
 		""" Set time interval (in minutes) between autosaves (if dirty), set to 0 to disable """
 		if self.autosave_delay != value:
 			self._autosave_delay = max(0, value * 60000)
-			if self._autosave is not None: self.root.after_cancel(self._autosave)
+			try: self.root.after_cancel(self._autosave)
+			except (TypeError, AttributeError): pass
 
 			if value > 0: self._autosave = self.root.after(self._autosave_delay, self.try_autosave)
 			else: self._autosave = None
@@ -246,6 +283,9 @@ class PyWindow(BaseWindow):
 	def try_autosave(self):
 		""" Autosave configuration to file (if dirty) """
 		self.write_configuration()
+		try: self.autosave_delay = int(self._configuration_cache.get("autosave_delay", ""))
+		except ValueError: pass
+
 		if self.autosave_delay > 0: self._autosave = self.root.after(self._autosave_delay, self.try_autosave)
 		else: self._autosave = None
 
