@@ -72,13 +72,15 @@ class PyFrame(PyElement, tkinter.Frame):
 	""" Use as container for a collection of elements """
 	def __init__(self, root):
 		PyElement.__init__(self)
-		tkinter.Frame.__init__(self, root.root)
+		try: tkinter.Frame.__init__(self, root.root)
+		except AttributeError: tkinter.Frame.__init__(self, root)
 
 class PyTextlabel(PyElement, tkinter.Label):
 	""" Element for displaying a line of text """
 	def __init__(self, window):
 		PyElement.__init__(self)
-		tkinter.Label.__init__(self, window.root)
+		try: tkinter.Label.__init__(self, window.root)
+		except AttributeError: tkinter.Label.__init__(self, window)
 		self._string_var = None
 
 	@property
@@ -95,7 +97,8 @@ class PyButton(PyElement, tkinter.Button):
 	""" Element to create a clickable button  """
 	def __init__(self, window):
 		PyElement.__init__(self)
-		tkinter.Button.__init__(self, window.root)
+		try: tkinter.Button.__init__(self, window.root)
+		except AttributeError: tkinter.Button.__init__(window)
 		self._string_var = None
 		self._callback = None
 
@@ -130,7 +133,8 @@ class PyTextfield(PyElement, tkinter.Text):
 
 	def __init__(self, window):
 		PyElement.__init__(self)
-		tkinter.Text.__init__(self, window.root)
+		try: tkinter.Text.__init__(self, window.root)
+		except AttributeError: tkinter.Text.__init__(self, window)
 		self.accept_input = True
 
 	@property
