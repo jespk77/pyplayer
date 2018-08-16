@@ -105,10 +105,12 @@ class BaseWindow:
 
 	def add_widget(self, id, widget, **pack_args):
 		""" Add new 'pyelement' widget to this window using passed (unique) identifier, add all needed pack parameters for this widget to the end
-		 	(any widget already assigned to this identifier will be destroyed) """
+		 	(any widget already assigned to this identifier will be destroyed)
+		 	Returns the bound widget if successful, False otherwise"""
 		id = id.lower()
 		if not isinstance(widget, pyelement.PyElement):
-			return print("[BaseWindow.ERROR] tried to create widget with id '{}' but it is not a valid widget: ".format(id), widget)
+			print("[BaseWindow.ERROR] tried to create widget with id '{}' but it is not a valid widget: ".format(id), widget)
+			return False
 
 		self.remove_widget(id)
 		self.widgets[id] = widget
@@ -119,20 +121,25 @@ class BaseWindow:
 		return self.widgets[id]
 
 	def remove_widget(self, id):
-		""" Destroy and removes widget that was assigned to the passed identifier (has no effect if identifier was not bound) """
+		""" Destroy and removes widget that was assigned to the passed identifier (has no effect if identifier was not bound)
+		 	Returns true if the identifier was bound and the widget has been removed """
 		id = id.lower()
 		if id in self.widgets:
 			if id != self.window_id:
 				self.widgets[id].destroy()
 				del self.widgets[id]
+				return True
 			else: raise NameError("[BaseWindow.ERROR] Cannot remove self from widgets!")
+		return False
 
 	def add_window(self, id, window):
 		""" Adds new child window to this window using passed (unique) identifier
-		 	(any window already assigned to this identifier will be destroyed) """
+		 	(any window already assigned to this identifier will be destroyed)
+		 	Returns the bound window if successful, False otherwise """
 		id = id.lower()
 		if not isinstance(window, BaseWindow):
-			return print("[BaseWindow.ERROR] tried to create window with id '{}' but it is not a valid widget: {}".format(id, window))
+			print("[BaseWindow.ERROR] tried to create window with id '{}' but it is not a valid widget: {}".format(id, window))
+			return False
 
 		if self._children is None: self._children = {}
 		success = self.remove_window(id)
