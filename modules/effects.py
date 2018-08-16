@@ -34,7 +34,6 @@ def on_key_down(key):
 	key = str(key)
 	item = key_cache.get(key)
 	if item is not None:
-		desc = item.get("description", "(no description provided)")
 		cmd = item.get("command")
 		if cmd is not None: interpreter.queue.put_nowait(cmd)
 	else: print("[Interception] no entry found for keycode", key)
@@ -43,13 +42,8 @@ class SoundEffectPlayer:
 	def __init__(self):
 		self.player = MediaPlayer()
 		self.player.audio_output_set("mmdevice")
-		self.toggle_duration = 0
+		self.toggle_duration = 3000
 		self.md = None
-
-	def set_configuration(self, cfg):
-		if isinstance(cfg, dict):
-			self.toggle_duration = cfg.get("effect.toggle_duration", 3000)
-		else: print("[EffectPlayer] got invalid configuration", cfg)
 
 	def play_effect(self, arg, loop=False):
 		if self.player.is_playing():
@@ -59,7 +53,7 @@ class SoundEffectPlayer:
 				self.md = None
 				return
 
-		sound_path = interpreter.configuration.get("directory", {}).get("sounds")
+		sound_path = client["directory"].get("sounds")
 		if sound_path is not None and not sound_path.endswith("/"): sound_path += "/"
 		if sound_path is None or not os.path.isdir(sound_path): print("[EffectPlayer] invalid sound folder:", sound_path); return
 		effects = [file for file in os.listdir(sound_path) if arg == os.path.splitext(file)[0]]
@@ -108,9 +102,6 @@ def initialize():
 	try: start_listener(None, 0)
 	except: pass
 	if len(interpreter.checks) == 0: interpreter.queue.put_nowait("effect startup")
-
-def set_configuration(cfg):
-	effect_player.set_configuration(cfg)
 
 def on_destroy():
 	global effect_player
