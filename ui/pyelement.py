@@ -220,3 +220,27 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 		return self.cget("maximum")
 	@maximum.setter
 	def maximum(self, value): self.configure(maximum=value)
+
+class PyItemlist(PyElement, tkinter.Listbox):
+	""" A list of options where the user can select one or more lines """
+	def __init__(self, window):
+		PyElement.__init__(self)
+		try: tkinter.Listbox.__init__(self, window.root)
+		except AttributeError: tkinter.Listbox.__init__(self, window)
+		self.configure(selectmode="single")
+		self.list_var = None
+		self._items = None
+
+	@property
+	def itemlist(self):
+		""" Returns the items displayed in the list """
+		return self._items if self.list_var is not None else self.get(0, "end")
+	@itemlist.setter
+	def itemlist(self, value):
+		""" Set the items displayed in this list (after the first call using 'insert' or 'delete' no longer has effect) """
+		if self.list_var is None:
+			self.list_var = tkinter.StringVar()
+			self.configure(listvariable=self.list_var)
+
+		self._items = value
+		self.list_var.set(self._items)
