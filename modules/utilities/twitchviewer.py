@@ -1,66 +1,48 @@
-import requests, tkinter
+import requests
 
-from modules.utilities.twitchchat import TwitchChat
+from ui import pywindow, pyelement
+import modules.utilities.twitchchat as twitchchat
 
-class TwitchViewer(tkinter.Toplevel):
+class TwitchViewer(pywindow.PyWindow):
 	channel_meta_url = "https://api.twitch.tv/kraken/channels/{channel}?client_id={client_id}"
 
-	def __init__(self, root, configuration, channel):
-		self.is_alive = True
-		self.limited_mode = False
-		if "login" in configuration:
-			print("getting metadata for channel", channel)
-			self.channel_meta = requests.get(self.channel_meta_url.format(channel=channel, client_id=configuration["login"]["client-id"])).json()
-			if "error" in self.channel_meta: self.error = self.channel_meta["error"]
-			else: self.error = None
+	def __init__(self, parent, channel, limited_mode=False):
+		pywindow.PyWindow.__init__(self, parent, id="Twitch")
+		self.title = "TwitchViewer"
+		self.channel = channel
+		self.always_on_top = True
+		self.icon = "assets/icon_twitchviewer.ico"
+		login = self["account_data"]
+		if login is not None:
+			print("[TwitchViewer.INFO] Getting metadata for channel", channel)
+			self._channel_meta = requests.get(self.channel_meta_url.format(channel=channel, client_id=login["client-id"])).json()
+			self.error = self._channel_meta["error"] if "error" in self._channel_meta else None
 		else: self.error = "No login information specified"
-
-		super().__init__(root)
-		self.root = root
-		self.title("TwitchViewer")
-		try: self.iconbitmap("assets/icon_twitchviewer.ico")
-		except Exception as e: print("error setting window icon: ", e)
-		self.bind("<Destroy>", self.on_destroy)
 
 		if self.error is None:
 			print("no errors, starting chat...")
 			self.bind("<Destroy>", self.disconnect)
-			self.attributes("-topmost", "true")
-			self.geometry("390x600")
-			self.chat = TwitchChat(self)
-			self.set_configuration(configuration)
+			self.add_widget("chat_viewer", twitchchat.TwitchChat(self, limited_mode), fill="both", expand=True)
+			self.add_widget("chat_input", twitchchat.TwitchChatTalker(self, self.widgets["chat_viewer"].send_message), fill="x")
 			self.set_title()
 			self.start()
 		else:
-			self.label = tkinter.Label(self)
-			self.label.configure(text="Error getting metadata for '{}': ".format(channel) + str(self.error))
-			self.label.pack()
+			self.label = pyelement.PyTextlabel(self)
+			self.label.display_text = "Error getting metadata for '{}': {}".format(channel, self.error)
 
 	def set_title(self):
-		title = self.channel_meta["display_name"]
-		if self.channel_meta["status"] is not None:
-			title += " - " + self.channel_meta["status"]
-			if self.channel_meta["game"] is not None: title += " [" + self.channel_meta["game"] + "]"
+		title = self._channel_meta["display_name"]
+		if self._channel_meta["status"] is not None:
+			title += " - " + self._channel_meta["status"]
+			if self._channel_meta["game"] is not None: title += " [" + self._channel_meta["game"] + "]"
 		else: title = "TwitchViewer - " + title
-		self.title(title)
-
-	def set_limited(self, limited_mode):
-		self.limited_mode = limited_mode
-		self.chat.set_limited_mode(limited_mode)
-
-	def set_configuration(self, configuration):
-		if isinstance(configuration, dict):
-			self.configuration = configuration
-			self.chat.set_configuration(configuration.get("chat", {}))
+		self.title = title
 
 	def start(self):
-		self.chat.connect(self.channel_meta, login=self.configuration.get("login"))
-		self.after(500, self.chat.run)
+		chat = self.widgets["chat_viewer"]
+		chat.connect(self._channel_meta, login=self["account_data"])
+		self.after(.5, chat.run)
 
 	def disconnect(self, event):
-		self.chat.disconnect()
-		self.chat.destroy()
-		self.on_destroy()
-
-	def on_destroy(self):
-		self.is_alive = False
+		self.widgets["chat_viewer"].disconnect()
+		self.write_configuration(event)
