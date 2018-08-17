@@ -57,10 +57,6 @@ def widget_get(name=None):
 	return client.children.get(name)
 
 # ===== MAIN COMMANDS =====
-# - cfg commmand
-def command_cfg(arg, argc):
-	pass
-
 def command_cfg_get(arg, argc):
 	if 1 <= argc <= 2:
 		wd = widget_get(arg.pop(0) if argc == 2 else None)
@@ -82,7 +78,7 @@ def command_cfg_set(arg, argc, save=True):
 	if 2 <= argc <= 3:
 		wd = widget_get(arg.pop(0) if argc == 3 else None)
 		if wd is None: return None
-		elif not isinstance(wd.configuration.get(arg[0], ""), str): return messagetypes.Reply("Cannot set a nested configuration option")
+		elif isinstance(wd[arg[0]], list) or isinstance(wd[arg[0]], dict): return messagetypes.Reply("Cannot set a nested configuration option")
 
 		wd[arg[0]] = arg[1]
 		return messagetypes.Reply("'{}' has been updated to '{}'".format(arg[0], wd[arg[0]]))
