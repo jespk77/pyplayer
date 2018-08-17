@@ -51,23 +51,10 @@ class Interpreter(Thread):
 			except Exception as e:
 				print("error getting memory tracker:", e)
 		self.client.update_title("PyPlayerTk", self.checks)
-
-	def set_configuration(self, cfg):
-		raise RuntimeError("update yo program!!!")
-		#if isinstance(cfg, dict):
-		#	self.configuration = cfg
-		#	self.client.set_configuration(cfg.get("window"))
-		#	for md in self.modules:
-		#		try: md.set_configuration(cfg)
-		#		except AttributeError: pass
-		#		except Exception as e: self.client.add_message(args=messagetypes.Error(e, "Error updating configuration for '" + md.__name__ + "'").get_contents())
-		#else: print("[Interpreter] got invalid configuration: ", cfg)
-
 	def print_additional_debug(self):
 		if "MemoryLog" in self.checks: self.mem_tracker.print_diff()
 
 	def run(self):
-		if self.configuration is not None: self.set_configuration(self.configuration)
 		while True:
 			cmd = self.queue.get()
 			if cmd is False or len(cmd) == 0:
