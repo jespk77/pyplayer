@@ -1,4 +1,4 @@
-import json, tkinter, os
+import json, tkinter, ast
 
 from ui import pyelement
 
@@ -20,8 +20,6 @@ class BaseWindow:
 
 	@property
 	def root(self): return None
-	@property
-	def configuration(self): return self._configuration_cache
 	@property
 	def window_id(self):
 		""" The (unique) identifier for this window, this cannot change once the window is created """
@@ -86,7 +84,7 @@ class BaseWindow:
 			cfg = self._configuration_cache.get(id)
 			if cfg is not None: wd.configuration = cfg
 
-	def write_configuration(self, event=None):
+	def write_configuration(self):
 		""" Write window configuration to file (if dirty) """
 		if self._configuration_error: print("[BaseWindow.INFO] Skipping configuration writing since there was an error loading it")
 		elif self.dirty:
@@ -94,8 +92,6 @@ class BaseWindow:
 				self._configuration_cache[id] = wd.configuration
 
 			try:
-				if not os.path.exists("cfg"): os.mkdir("cfg")
-				print("writing configuration:", self._configuration_cache)
 				self._configuration_cache["geometry"] = self.geometry
 				file = open(self.cfg_filename, "w+")
 				json.dump(self._configuration_cache, file, indent=5, sort_keys=True)
@@ -143,7 +139,7 @@ class BaseWindow:
 
 		if self._children is None: self._children = {}
 		success = self.remove_window(id)
-		if not success: return print("[BaseWindow.ERROR] cannot close previously bound window with id '{}'".format(id))
+		if not success: print("[BaseWindow.ERROR] Cannot close previously bound window with id '{}'".format(id))
 
 		self._children[id] = window
 		return self.children[id]
@@ -188,7 +184,9 @@ class BaseWindow:
 	def __getitem__(self, item):
 		""" Get configuration option for this window/widget in this window or empty string if no such value was stored
 		 	For a nested search in configuration seperate keys with '::' """
-		return self._cfg_lookup(item)
+		value = self._cfg_lookup(item)
+		try: return ast.literal_eval(value)
+		except: return value
 
 	def __setitem__(self, key, value):
 		""" Set configuration option for this window/widget in this window, the change will be updated in the configuration file """
@@ -203,7 +201,8 @@ class BaseWindow:
 		self.__setitem__(key, None)
 
 class PyWindow(BaseWindow):
-	""" Separate window that can be created on top of another window """
+	""" Separate window that can be created on top of another window
+		(it has its own configuration file separate from root configuration) """
 	def __init__(self, root, id):
 		self.tk = tkinter.Toplevel(root.root)
 		BaseWindow.__init__(self, id)
@@ -221,7 +220,17 @@ class PyWindow(BaseWindow):
 		try: self.autosave_delay = int(self._configuration_cache.get("autosave_delay", "5"))
 		except ValueError: self.autosave_delay = 5
 		self.root.bind("<Configure>", self.mark_dirty)
-		self.root.bind("<Destroy>", self.write_configuration)
+		self.root.bind("<Destroy>", self.try_autosave)
+
+	def bind(self, sequence, callback=None, add=None):
+		sequence = sequence.split("&&")
+		for s in sequence: self.root.bind(s, callback, add)
+		return self
+
+	def unbind(self, sequence, funcid=None):
+		sequence = sequence.split("&&")
+		for s in sequence: self.root.unbind(s, funcid)
+		return self
 
 	@property
 	def autosave_delay(self):
@@ -274,7 +283,7 @@ class PyWindow(BaseWindow):
 	@always_on_top.setter
 	def always_on_top(self, value):
 		""" Set this window to be always above others """
-		self.root.wm_attributes("--topmost", "1" if value else "0")
+		self.root.wm_attributes("-topmost", "1" if value else "0")
 
 	def focus_followsmouse(self):
 		""" The widget under mouse will get focus, cannot be disabled! """
@@ -287,14 +296,15 @@ class PyWindow(BaseWindow):
 	def after(self, s, *args):
 		self.root.after(int(s * 1000) if s < 1000 else s, *args)
 
-	def try_autosave(self):
+	def try_autosave(self, event=None):
 		""" Autosave configuration to file (if dirty) """
 		self.write_configuration()
-		try: self.autosave_delay = int(self._configuration_cache.get("autosave_delay", ""))
-		except ValueError: pass
+		if event is None:
+			try: self.autosave_delay = int(self._configuration_cache.get("autosave_delay", ""))
+			except ValueError: pass
 
-		if self.autosave_delay > 0: self._autosave = self.root.after(self._autosave_delay, self.try_autosave)
-		else: self._autosave = None
+			if self.autosave_delay > 0: self._autosave = self.root.after(self._autosave_delay, self.try_autosave)
+			else: self._autosave = None
 
 class RootPyWindow(PyWindow):
 	""" Root window for this application (should be the first created window and should only be created once, for additional windows use 'PyWindow' instead) """

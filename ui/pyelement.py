@@ -1,4 +1,4 @@
-from tkinter import ttk
+from tkinter import ttk, font
 import tkinter
 
 class PyElement:
@@ -8,11 +8,13 @@ class PyElement:
 	def __init__(self, id="??"):
 		self._configuration = {}
 		self._dirty = False
+		self._boundids = {}
 		self.id = id
 
 	@property
 	def configuration(self):
-		""" Get current configuration options (as dictionary: {key}:{value}) that have been set for this element """
+		""" Get current configuration options (as dictionary) that have been set for this element
+		 	(only used for writing to file, to get a specific option use 'element[option]' instead """
 		self._dirty = False
 		return self._configuration
 	@configuration.setter
@@ -20,7 +22,8 @@ class PyElement:
 		""" Takes a dictionary and updates all configuration options for this element, should only be used when loading configuration from file """
 		if isinstance(value, dict):
 			self._configuration = value
-			self._load_configuration(value)
+			self._load_configuration()
+		else: raise TypeError("Can only update configuration using dictionary, not whatever you're giving me")
 
 	@property
 	def dirty(self):
@@ -31,8 +34,8 @@ class PyElement:
 		""" Mark this element as dirty (configuration options will be written to file next save)"""
 		self._dirty = True
 
-	def _load_configuration(self, cfg):
-		self.configure(**cfg)
+	def _load_configuration(self):
+		self.configure(**self._configuration)
 
 	def __setitem__(self, key, value):
 		""" Update configuration item for this element """
@@ -44,21 +47,29 @@ class PyElement:
 
 	def after(self, s, *args):
 		""" Schedule function to be executed (with given parameters) after at least given seconds has passed """
-		try: super().after(s * 1000, *args)
+		try: super().after(int(s * 1000), *args)
 		except AttributeError: print("[PyElement.ERROR] Cannot find super class 'after' method in:", super())
 		return self
 
 	def bind(self, sequence=None, func=None, add=None):
-		""" Bind passed function to specified event, returns binding identifier (used for unbinding) """
+		""" Bind passed function to specified event, returns binding identifier (used for unbinding)
+			Multiple events can be specified by separating events with '&&' """
+		sequence = sequence.split("&&")
+		for s in sequence: self._try_bind(s, func, add)
+		return self
+	def _try_bind(self, sequence=None, func=None, add=None):
 		try: super().bind(sequence, func, add)
 		except AttributeError: print("[PyElement.ERROR] Cannot find super class 'bind' method in:", super())
-		return self
 
 	def unbind(self, sequence, funcid=None):
-		""" Remove passed function bound from identifier """
+		""" Remove passed function bound from identifier
+		 	Multiple events can be specified by separating events with '&&' """
+		sequence = sequence.split("&&")
+		for s in sequence: self._try_unbind(s, funcid)
+		return self
+	def _try_unbind(self, sequence, funcid):
 		try: super().unbind(sequence, funcid)
 		except AttributeError: print("[PyElement.ERROR] Cannot find super class 'unbind' method in:", super())
-		return self
 
 	def configure(self, cnf=None, **kw):
 		""" Update configuration options (are NOT saved to file, set options directly if it should be)
@@ -131,11 +142,15 @@ class PyTextfield(PyElement, tkinter.Text):
 	front = "0.0"
 	back = "end"
 
-	def __init__(self, window):
+	def __init__(self, window, accept_input=True):
 		PyElement.__init__(self)
 		try: tkinter.Text.__init__(self, window.root)
 		except AttributeError: tkinter.Text.__init__(self, window)
-		self.accept_input = True
+		self.accept_input = accept_input
+
+		self._font = font.Font(family="segoeui", size="11")
+		self.configure(font=self._font)
+		self._boldfont = None
 
 	@property
 	def accept_input(self): return self._accept_input
@@ -149,9 +164,14 @@ class PyTextfield(PyElement, tkinter.Text):
 	@current_pos.setter
 	def current_pos(self, value): self.mark_set("current", value)
 
-	def has_focus(self):
-		""" Return true if the widget is focused """
-		return tkinter.Text.focus_get
+	@property
+	def font(self): return self._font
+	@property
+	def bold_font(self):
+		if self._boldfont is None: self._boldfont = self._font.copy().configure(weight="bold")
+		return self._boldfont
+
+	has_focus = tkinter.Text.focus_get
 	current_focus = tkinter.Text.focus_displayof
 	previous_focus = tkinter.Text.focus_lastfor
 	def focus(self, force=False):
@@ -168,10 +188,19 @@ class PyTextfield(PyElement, tkinter.Text):
 		tkinter.Text.insert(self, index, chars, *args)
 		if not self.accept_input: self.configure(state="disabled")
 
-	def _load_configuration(self, cfg):
-		for key, value in cfg.items():
+	def delete(self, index1, index2=None):
+		self.configure(state="normal")
+		tkinter.Text.delete(self, index1, index2)
+		if not self.accept_input: self.configure(state="disabled")
+
+	def _load_configuration(self):
+		for key, value in self._configuration.items():
 			item = key.split(".", maxsplit=1)
-			if len(item) == 2: tkinter.Text.tag_configure(self, item[0], {item[1]: value})
+			if len(item) == 2: self.tag_configure(item[0], {item[1]: value})
+			elif item[0] == "font":
+				self._font = font.Font(**value)
+				if self._boldfont is not None: self._boldfont.configure(**value)
+				self.configure(font=self._font)
 			else: self.configure({key: value})
 
 	def __setitem__(self, key, value):
@@ -182,13 +211,21 @@ class PyTextfield(PyElement, tkinter.Text):
 			self.mark_dirty()
 		else: PyElement.__setitem__(self, key, value)
 
+	def __getitem__(self, key):
+		if key in self._configuration: return self._configuration[key]
+		try: return self.cget(key)
+		except tkinter.TclError as e: print("[PyTextfield.ERROR] Cannot find key '{}' for element '{}': ".format(key, self.id), e)
+		return None
+
 class PyProgressbar(PyElement, ttk.Progressbar):
 	""" Widget that displays a bar indicating progress made by the application """
 	def __init__(self, window, horizontal=True):
 		self._progress_var = tkinter.IntVar()
 		self._style = ttk.Style()
-		ttk.Progressbar.__init__(self, window.root, mode="determinate", variable=self._progress_var)
 		PyElement.__init__(self)
+		try: ttk.Progressbar.__init__(self, window.root)
+		except AttributeError: ttk.Progressbar.__init__(self, window)
+		self.configure(mode="determinate", variable=self._progress_var)
 		self.horizontal = horizontal
 
 	@property
@@ -208,10 +245,10 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 	@determinate.setter
 	def determinate(self, value): self.configure(mode="determinate" if value else "indeterminate")
 
-	def _load_configuration(self, cfg):
-		self._style.theme_use(cfg.get("theme", "default"))
+	def _load_configuration(self):
+		self._style.theme_use(self._configuration.get("theme", "default"))
 		style = "Horizontal.TProgressbar" if self.horizontal else "Vertical.TProgressbar"
-		self._style.configure(style, **cfg)
+		self._style.configure(style, **self._configuration)
 		self.configure(style=style)
 
 	@property
