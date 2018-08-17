@@ -23,7 +23,7 @@ class PyPlayer(pywindow.RootPyWindow):
 		self.progressbar_style = ttk.Style()
 		self.progressbar_style.theme_use("default")
 		self.progressbar_style.configure(style="Horizontal.TProgressbar")
-		self.add_widget("progressbar", pyelement.PyProgressbar(self), fill="x")
+		self.add_widget("progressbar", pyelement.PyProgressbar(self), fill="x").maximum = 1
 		self.add_widget("console", TextConsole(self, command_callback=self.parse_command), fill="both", expand=True).focus()
 
 		self.last_cmd = None
