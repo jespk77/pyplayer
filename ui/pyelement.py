@@ -168,7 +168,9 @@ class PyTextfield(PyElement, tkinter.Text):
 	def font(self): return self._font
 	@property
 	def bold_font(self):
-		if self._boldfont is None: self._boldfont = self._font.copy().configure(weight="bold")
+		if self._boldfont is None:
+			self._boldfont = self._font.copy()
+			self._boldfont.configure(weight="bold")
 		return self._boldfont
 
 	has_focus = tkinter.Text.focus_get
@@ -199,7 +201,9 @@ class PyTextfield(PyElement, tkinter.Text):
 			if len(item) == 2: self.tag_configure(item[0], {item[1]: value})
 			elif item[0] == "font":
 				self._font = font.Font(**value)
-				if self._boldfont is not None: self._boldfont.configure(**value)
+				if self._boldfont is not None:
+					self._boldfont.configure(**value)
+					self._boldfont.configure(weight="bold")
 				self.configure(font=self._font)
 			else: self.configure({key: value})
 

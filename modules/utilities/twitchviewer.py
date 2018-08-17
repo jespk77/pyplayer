@@ -45,4 +45,4 @@ class TwitchViewer(pywindow.PyWindow):
 
 	def disconnect(self, event):
 		self.widgets["chat_viewer"].disconnect()
-		self.write_configuration(event)
+		self.write_configuration()

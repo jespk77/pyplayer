@@ -91,6 +91,7 @@ class BaseWindow:
 			for id, wd in self.widgets.items():
 				self._configuration_cache[id] = wd.configuration
 
+			print("[PyWindow.INFO] Window is dirty, writing configuration to '{}'".format(self.cfg_filename))
 			try:
 				self._configuration_cache["geometry"] = self.geometry
 				file = open(self.cfg_filename, "w+")

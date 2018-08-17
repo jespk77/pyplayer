@@ -13,7 +13,7 @@ def close_browser(arg=None, argc=0):
 		return messagetypes.Reply("Songbrowser closed")
 
 def parse_path(arg, argc):
-	dir = client.configuration.get("directory", {})
+	dir = client["directory"]
 	if argc > 0:
 		if arg[0] in dir: return (arg[0], dir[arg[0]])
 		else: return ("No directory with name: '{}'".format(arg[0]),)
@@ -116,8 +116,8 @@ def command_browser_remove(arg, argc):
 		return messagetypes.Reply("Browser closed")
 
 def command_browser(arg, argc):
-	sorting = client["songbrowser"].get("default-sort")
-	if isinstance(sorting, str):
+	sorting = client["songbrowser_sorting"]
+	if isinstance(sorting, str) and len(sorting) > 0:
 		if sorting in commands["browser"]: return commands["browser"][sorting](arg, argc)
 		else: return messagetypes.Reply("Invalid default sorting set in configuration '{}'".format(sorting))
 	return messagetypes.Reply("No default sorting set {songbrowser::default-sort} and none or invalid one specified")
