@@ -23,7 +23,7 @@ autoplay = Autoplay.OFF
 # ===== HELPER OPERATIONS =====
 def parse_song(arg):
 	if len(arg) > 0:
-		dir = client.configuration.get("directory", {})
+		dir = client["directory"]
 		if arg[0] in dir:
 			path = dir[arg[0]]
 			arg = arg[1:]

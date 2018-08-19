@@ -16,6 +16,7 @@ class BaseWindow:
 		self.last_position = -1
 		self.last_size = -1
 		self._configuration_cache = {}
+		self._configuration_error = False
 		self.load_configuration()
 
 	@property
@@ -35,6 +36,7 @@ class BaseWindow:
 	@property
 	def children(self):
 		""" All windows that are active and have this window as parent """
+		if self._children is None: self._children = {}
 		return self._children
 
 	@property
