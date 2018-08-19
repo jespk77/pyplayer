@@ -1,4 +1,4 @@
-import datetime
+import datetime, os, json
 from utilities import messagetypes
 from ui import pyelement
 
@@ -8,7 +8,7 @@ interpreter = None
 client = None
 
 # MODULE SPECIFIC VARIABLES
-cfg_file = "cfg"
+cfg_folder = ".cfg/"
 timer = None
 time_str = ""
 second_time = datetime.timedelta(seconds=1)
@@ -52,36 +52,50 @@ def timer_check():
 		else: client.widgets["timer"].display_text = "\u23f0 " + str(timer)
 	else: timer = None
 
-def widget_get(name=None):
-	if name is None: return client
-	return client.children.get(name)
-
 # ===== MAIN COMMANDS =====
-def command_cfg_get(arg, argc):
-	if 1 <= argc <= 2:
-		wd = widget_get(arg.pop(0) if argc == 2 else None)
-		if wd is None: return None
+def command_cfg(arg, argc):
+	if argc > 0:
+		path = cfg_folder + arg[0]
+		write_file = False
+		if arg[0] in client.children:
+			wd = client.children[arg.pop(0)]
+			argc -= 1
+		else:
+			if os.path.isfile(path):
+				arg = arg[1:]
+				argc -= 1
+				write_file = True
+				file = open(path, "r")
+				try: wd = json.load(file)
+				except json.JSONDecodeError as e:
+					file.close()
+					return messagetypes.Reply("Error parsing configuration file: {}".format(e))
+			else: wd = client
 
-		value = wd[arg[0]]
-		if len(str(value)) == 0: return messagetypes.Reply("Unknown option '{}'".format(arg[0]))
-		return messagetypes.Reply("'{}' is set to '{}'".format(arg[0], value))
+		if argc >= 2:
+			arg[1] = " ".join(arg[1:])
+			try:
+				cl = wd[arg[0]]
+				if isinstance(cl, dict) or isinstance(cl, list): return messagetypes.Reply("Cannot set a nested option")
+			except KeyError: pass
 
-def command_cfg_remove(arg, argc):
-	if 1 <= argc <= 2:
-		wd = widget_get(arg.pop(0) if argc == 2 else None)
-		if wd is None: return None
+			if arg[1] == "none":
+				del wd[arg[0]]
+				reply = "Configuration option '{}' deleted".format(arg[0])
+			else:
+				wd[arg[0]] = arg[1]
+				reply = "Configuration option '{}' updated to '{}'".format(arg[0], wd[arg[0]])
 
-		del wd[arg[0]]
-		return messagetypes.Reply("'{}' has been deleted")
-
-def command_cfg_set(arg, argc, save=True):
-	if 2 <= argc <= 3:
-		wd = widget_get(arg.pop(0) if argc == 3 else None)
-		if wd is None: return None
-		elif isinstance(wd[arg[0]], list) or isinstance(wd[arg[0]], dict): return messagetypes.Reply("Cannot set a nested configuration option")
-
-		wd[arg[0]] = arg[1]
-		return messagetypes.Reply("'{}' has been updated to '{}'".format(arg[0], wd[arg[0]]))
+			if write_file:
+				file = open(path, "w")
+				json.dump(wd, file, indent=5)
+				file.close()
+			else: wd.write_configuration()
+			return messagetypes.Reply(reply)
+		elif argc == 1:
+			try: return messagetypes.Reply("Configuration option '{}' is set to '{}'".format(arg[0], wd[arg[0]]))
+			except KeyError: return messagetypes.Reply("Configuration option '{}' is not set".format(arg[0]))
+		else: return messagetypes.Reply("cfg {module} option1{::option2...} ['get', 'set' value]")
 
 def command_timer(arg, argc):
 	if argc == 1:
@@ -97,10 +111,6 @@ def command_timer(arg, argc):
 		else: return messagetypes.Reply("Cannot decode time syntax, try again...")
 
 commands = {
-	"cfg": {
-		"": command_cfg_get,
-		"set": command_cfg_set,
-		"remove": command_cfg_remove,
-		"list": 0
-	}, "timer": command_timer
+	"cfg": command_cfg,
+	"timer": command_timer
 }
