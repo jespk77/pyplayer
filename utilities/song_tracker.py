@@ -8,7 +8,7 @@ is_dirty = False
 listeners = []
 
 def is_loaded():
-	return tracker != None
+	return tracker is not None
 
 def load_tracker():
 	global tracker, tracker_file, is_dirty
@@ -17,9 +17,9 @@ def load_tracker():
 	tracker = load_file(tracker_file)
 	is_dirty = False
 
-def load_file(tracker_file):
-	if not tracker_file.startswith("statistics/"): tracker_file = "statistics/" + tracker_file
-
+def load_file(file):
+	global tracker_file
+	if not file.startswith("statistics/"): tracker_file = "statistics/" + file
 	c = Counter()
 	try:
 		d = open(tracker_file, "r")
@@ -56,7 +56,7 @@ def get_songlist(alltime=False):
 		if item != "player": songlist.update(load_file(item))
 	return songlist
 
-def get_freq(song, monthly=True):
-	ls = get_songlist(monthly)
+def get_freq(song, alltime=False):
+	ls = get_songlist(alltime)
 	if song in ls: return ls[song]
 	else: return 0
