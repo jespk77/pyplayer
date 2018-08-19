@@ -1,5 +1,5 @@
 from tkinter import ttk, font
-import tkinter
+import tkinter, os
 
 class PyElement:
 	""" Framework for elements that can be added to 'PyWindow' and 'RootPyWindow' instances, should not be created on its own """
@@ -112,6 +112,11 @@ class PyButton(PyElement, tkinter.Button):
 		except AttributeError: tkinter.Button.__init__(window)
 		self._string_var = None
 		self._callback = None
+
+	@property
+	def accept_input(self): return self.cget("state") == "normal"
+	@accept_input.setter
+	def accept_input(self, vl): self.configure(state="normal" if vl else "disabled")
 
 	@property
 	def text(self):
@@ -285,3 +290,8 @@ class PyItemlist(PyElement, tkinter.Listbox):
 
 		self._items = value
 		self.list_var.set(self._items)
+
+class PyImage(tkinter.PhotoImage):
+	def __init__(self, file):
+		tkinter.PhotoImage.__init__(self, file=file)
+		if not os.path.isfile(file): print("[PyImage.ERROR] Cannot find image path '{}'".format(file))
