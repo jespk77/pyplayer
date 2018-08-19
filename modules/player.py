@@ -14,6 +14,7 @@ client = None
 media_player = MediaPlayer()
 song_queue = Queue()
 song_history = history.History()
+invalid_cfg = messagetypes.Reply("Invalid directory configuration, check your options")
 class Autoplay(enum.Enum):
 	OFF = 0
 	QUEUE = 1
@@ -33,15 +34,14 @@ def parse_song(arg):
 		song = media_player.find_song(path=path, keyword=arg)
 		return (path, song)
 	else:
-		meta = media_player.get_current_media()
-		try:
+		meta = media_player.current_media
+		if meta is not None:
 			path = meta.path
 			song = meta.song
 			return (path, song)
-		except: return (None, None)
+		else: return (None, None)
 
-def get_displayname(song):
-	return os.path.splitext(song)[0]
+def get_displayname(song): return os.path.splitext(song)[0]
 
 # ===== MAIN COMMANDS =====
 # - configure autoplay
@@ -81,22 +81,25 @@ def command_filter_info(arg, argc):
 
 def command_filter_clear(arg, argc):
 	if argc == 0:
-		dir = client.configuration.get("directory", {})
-		media_player.set_filter(dir.get(dir.get("default"), ""), "")
-		return messagetypes.Reply("Filter cleared")
+		dir = client["directory"]
+		if isinstance(dir, dict):
+			media_player.update_filter(path=dir.get(dir.get("default"), ""), keyword="")
+			return messagetypes.Reply("Filter cleared")
+		else: return invalid_cfg
 
 def command_filter(arg, argc):
 	if argc > 0:
-		dirs = client.configuration.get("directory")
+		dirs = client["directory"]
 		if isinstance(dirs, dict):
-			if arg[0] in dirs: path = dirs[arg[0]]; arg = arg[1:]
-			else: path = dirs.get(dirs.get("default"))
+			if arg[0] in dirs: path = dirs[arg[0]]; displaypath = arg.pop(0)
+			else: path = dirs.get(dirs.get("default")); displaypath = dirs.get("default")
 
 			if path is not None:
 				arg = " ".join(arg)
-				media_player.set_filter(path, arg)
-				return messagetypes.Reply("Filter set to '" + arg + "' from '" + path + "'")
-		return messagetypes.Reply("That won't work, try again")
+				media_player.update_filter(path=path, keyword=arg)
+				if len(arg) > 0: return messagetypes.Reply("Filter set to '" + arg + "' from '" + displaypath + "'")
+				else: return messagetypes.Reply("Filter set to directory '{}'".format(displaypath))
+		else: return invalid_cfg
 
 # - provide song or song tracker information
 def command_info_info(arg, argc):
@@ -110,7 +113,7 @@ def command_info_added(arg, argc):
 			time = os.path.getctime(path + song)
 			time = datetime.fromtimestamp(time)
 			return messagetypes.Reply("'" + get_displayname(song) + "' was added on " + str(time.strftime("%b %d, %Y")))
-		else: return messagetypes.Reply("That song doesn't even exist")
+		else: return messagetypes.Reply("That song doesn't exist")
 
 def command_info_played(arg, argc):
 	monthly = True
@@ -133,7 +136,7 @@ def command_info_reload(arg, argc):
 		return messagetypes.Reply("Song tracker reloaded")
 
 def command_music(arg, argc):
-	if argc > 0: return messagetypes.Reply("We no longer listen to that command, you probably meant 'player' instead?")
+	return messagetypes.Reply("It no longer works like that, you probably meant to put 'player' in front of that?")
 
 # - player specific commands
 def command_pause(arg, argc):
@@ -191,8 +194,10 @@ def command_queue(arg, argc):
 
 def command_random(arg, argc):
 	dirs = client["directory"]
+	if not isinstance(dirs, dict): return invalid_cfg
+
 	if argc > 0 and arg[0] in dirs: path = dirs[arg[0]]; arg = arg[1:]
-	else: path = dirs.get(dirs.get("default"))
+	else: path = ""
 
 	if path is not None: return messagetypes.Reply(media_player.random_song(path=path, keyword=" ".join(arg)))
 	else: return messagetypes.Reply("I've never heard of that path")
@@ -234,20 +239,21 @@ commands = {
 }
 
 def initialize():
+	media_player.update_blacklist(client["artist_blacklist"])
 	media_player.attach_event("media_changed", on_media_change)
 	media_player.attach_event("pos_changed", on_pos_change)
 	media_player.attach_event("player_updated", on_player_update)
 	media_player.attach_event("end_reached", on_end_reached)
 	if not song_tracker.is_loaded(): song_tracker.load_tracker()
 	dr = client["directory"]
-	media_player.set_filter(path=dr.get(dr.get("default")))
+	media_player.update_filter(path=dr.get(dr.get("default")))
 
 def on_destroy():
 	media_player.on_destroy()
 
 def on_media_change(event, player):
 	song_history.reset_index()
-	client.after(.5, client.update_title, media_player.get_current_media().display_name)
+	client.after(.5, client.update_title, media_player.current_media.display_name)
 
 def on_pos_change(event, player):
 	client.after(.5, client.update_progressbar, event.u.new_position)
