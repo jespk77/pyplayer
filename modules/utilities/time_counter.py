@@ -8,7 +8,6 @@ class TimeCount(pywindow.PyWindow):
 		self.timer_callback = None
 		self.flashes = 0
 		self.countdown = -1
-		self.noise = tkinter.PhotoImage(file="assets/noise.png")
 
 		background_color = self["background_color"]
 		foreground_color = self["foreground_color"]
