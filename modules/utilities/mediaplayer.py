@@ -125,7 +125,8 @@ class MediaPlayer():
 		id = -1
 		if len(keyword) > 1:
 			try:
-				id = int(keyword.pop(-1))
+				id = int(keyword[-1])
+				keyword.pop(-1)
 				print("[MediaPlayer.INFO] Found index in keyword", id)
 			except ValueError: pass
 
