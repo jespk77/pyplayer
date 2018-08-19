@@ -106,26 +106,24 @@ def command_info_info(arg, argc):
 	return messagetypes.Info("'info' ['added' [song, |'current'|], 'played' [song [|'month'|, 'all']], 'reload']")
 
 def command_info_added(arg, argc):
-	if argc > 0:
-		(path, song) = parse_song(arg)
-		if path is not None and song is not None:
-			if not path.endswith("/"): path += "/"
-			time = os.path.getctime(path + song)
-			time = datetime.fromtimestamp(time)
-			return messagetypes.Reply("'" + get_displayname(song) + "' was added on " + str(time.strftime("%b %d, %Y")))
-		else: return messagetypes.Reply("That song doesn't exist")
+	(path, song) = parse_song(arg)
+	if path is not None and song is not None:
+		if not path.endswith("/"): path += "/"
+		time = datetime.fromtimestamp(os.path.getctime(path + song))
+		return messagetypes.Reply("'" + get_displayname(song) + "' was added on " + str(time.strftime("%b %d, %Y")))
+	else: return messagetypes.Reply("That song doesn't exist and there is no song currently playing")
 
 def command_info_played(arg, argc):
-	monthly = True
-	if arg[-1] == "all":
-		monthly = False
+	alltime = False
+	if argc > 0 and arg[-1] == "all":
+		alltime = True
 		arg = arg[:-1]
 
 	(path, song) = parse_song(arg)
 	if path is not None and song is not None:
-		freq = song_tracker.get_freq(song=get_displayname(song), monthly=monthly)
+		freq = song_tracker.get_freq(song=get_displayname(song), alltime=alltime)
 		if freq > 0:
-			if monthly: return messagetypes.Reply("'" + get_displayname(song) + "' played " + str(freq) + " times this month")
+			if not alltime: return messagetypes.Reply("'" + get_displayname(song) + "' played " + str(freq) + " times this month")
 			else: return messagetypes.Reply("'" + get_displayname(song) + "' played " + str(freq) + " times overall")
 		else: return messagetypes.Reply("'" + get_displayname(song) + " has not been played")
 	else: return messagetypes.Reply("That song doesn't even exist")
