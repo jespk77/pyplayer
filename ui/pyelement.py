@@ -212,13 +212,20 @@ class PyTextfield(PyElement, tkinter.Text):
 				self.configure(font=self._font)
 			else: self.configure({key: value})
 
-	def __setitem__(self, key, value):
+	def __setitem__(self, key, value, dirty=True):
 		item = key.split(".", maxsplit=1)
 		if len(item) == 2:
 			self.tag_configure(item[0], {item[1]: value})
 			self._configuration[key] = value
-			self.mark_dirty()
+		elif item[0] == "font":
+			item = key.split("::", maxsplit=1)
+			if len(item) == 2:
+				if self._font is None: self._font = font.Font()
+				self._font.configure(**{item[1]: value})
+				self.configure(font=self._font)
+			else: print("PyTextfield.ERROR] Missing subkey in key argument '{}'".format(key))
 		else: PyElement.__setitem__(self, key, value)
+		if dirty: self.mark_dirty()
 
 	def __getitem__(self, key):
 		if key in self._configuration: return self._configuration[key]

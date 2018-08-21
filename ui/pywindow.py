@@ -1,6 +1,6 @@
-import json, tkinter, ast
+import tkinter, ast
 
-from ui import pyelement
+from ui import pyelement, pyconfiguration
 
 class BaseWindow:
 	""" Framework class for PyWindow and RootPyWindow, should not be created on its own """
@@ -15,9 +15,7 @@ class BaseWindow:
 
 		self.last_position = -1
 		self.last_size = -1
-		self._configuration_cache = {}
-		self._configuration_error = False
-		self.load_configuration()
+		self._configuration = pyconfiguration.Configuration(filepath=self.cfg_filename)
 
 	@property
 	def root(self): return None
@@ -69,36 +67,22 @@ class BaseWindow:
 		else: self._dirty = True
 
 	def load_configuration(self):
-		""" (Re)load window configuration from file """
-		try:
-			file = open(self.cfg_filename, "r")
-			try:
-				self._configuration_cache = json.load(file)
-				self._configuration_error = False
-			except json.JSONDecodeError as e:
-				self._configuration_error = True
-				print("[BaseWindow.ERROR] Error parsing configuration json '{}':".format(self.cfg_filename), e)
-			file.close()
-			self._dirty = False
-		except FileNotFoundError: print("[BaseWindow.ERROR] Cannot find configuration file:", self.cfg_filename)
-
 		for id, wd in self.widgets.items():
-			cfg = self._configuration_cache.get(id)
-			if cfg is not None: wd.configuration = cfg
+			cfg = self._configuration[id]
+			try: wd.configuration = cfg.to_dict()
+			except AttributeError as e: print(e)
 
 	def write_configuration(self):
 		""" Write window configuration to file (if dirty) """
-		if self._configuration_error: print("[BaseWindow.INFO] Skipping configuration writing since there was an error loading it")
+		if self._configuration.error: print("[BaseWindow.INFO] Skipping configuration writing since there was an error loading it")
 		elif self.dirty:
 			for id, wd in self.widgets.items():
-				self._configuration_cache[id] = wd.configuration
+				self._configuration[id] = pyconfiguration.Configuration(wd.configuration)
 
 			print("[PyWindow.INFO] Window is dirty, writing configuration to '{}'".format(self.cfg_filename))
 			try:
-				self._configuration_cache["geometry"] = self.geometry
-				file = open(self.cfg_filename, "w+")
-				json.dump(self._configuration_cache, file, indent=5, sort_keys=True)
-				file.close()
+				self._configuration["geometry"] = self.geometry
+				self._configuration.write_configuration()
 				self._dirty = False
 			except Exception as e: print("[BaseWindow.ERROR] error writing configuration file for '{}':".format(self.window_id), e)
 
@@ -114,8 +98,9 @@ class BaseWindow:
 		self.remove_widget(id)
 		self.widgets[id] = widget
 		widget.id = id
-		if self._configuration_cache is not None and id in self._configuration_cache:
-			self.widgets[id].configuration = self._configuration_cache[id]
+		try: self.widgets[id].configuration = self._configuration[id].get_dict()
+		except AttributeError: pass
+
 		self.widgets[id].pack(pack_args)
 		return self.widgets[id]
 
@@ -157,45 +142,23 @@ class BaseWindow:
 			except: return False
 		return True
 
-	def _cfg_lookup(self, key, value=""):
-		if self._configuration_error: return ""
-
-		k = key.split("::")
-		if k[0] in self.widgets:
-			d = self.widgets[k[0]]
-			k = k[1:]
-		else: d = self._configuration_cache
-
-		while len(k) > 1:
-			item = k.pop(0)
-			if item in d: d = d[item]
-			else: break
-
-		key = k[0]
-		if value is None:
-			if key in d and not isinstance(d[key], str): return False
-			del d[key]
-			self.mark_dirty()
-			return None
-		elif value != "":
-			if key in d and not isinstance(d[key], str): return False
-			d[key] = value
-			self.mark_dirty()
-		try: return d.cget(key)
-		except AttributeError: return d.get(key, "")
-
 	def __getitem__(self, item):
-		""" Get configuration option for this window/widget in this window or empty string if no such value was stored
+		""" Get configuration option for this window/widget in this window or None if no such value was stored
 		 	For a nested search in configuration seperate keys with '::' """
-		value = self._cfg_lookup(item)
-		try: return ast.literal_eval(value)
-		except: return value
+		vl = self._configuration[item]
+		try: return vl.to_cfg()
+		except AttributeError: return vl.value
 
 	def __setitem__(self, key, value):
 		""" Set configuration option for this window/widget in this window, the change will be updated in the configuration file """
-		if not self._configuration_error:
+		if not self._configuration.error:
 			if key in BaseWindow.invalid_cfg_keys: raise ValueError("Tried to set option '{}' which should not be changed manually".format(key))
-			self._cfg_lookup(key, value)
+			self._configuration[key] = value
+			key = key.split("::")
+			if len(key) > 1 and key[0] in self.widgets:
+				try: self.widgets[key[0]].configure({key[1], value})
+				except: pass
+			self.mark_dirty()
 		else: print("[BaseWindow.WARNING] Configuration was not loaded properly therefore any configuration updates are ignored")
 
 	def __delitem__(self, key):
@@ -219,9 +182,8 @@ class PyWindow(BaseWindow):
 	def load_configuration(self):
 		""" (Re)load configuration from file """
 		BaseWindow.load_configuration(self)
-		self.geometry = self._configuration_cache.get("geometry")
-		try: self.autosave_delay = int(self._configuration_cache.get("autosave_delay", "5"))
-		except ValueError: self.autosave_delay = 5
+		self.geometry = self._configuration.get("geometry", "")
+		self.autosave_delay = int(self._configuration["autosave_delay"])
 		self.root.bind("<Configure>", self.mark_dirty)
 		self.root.bind("<Destroy>", self.try_autosave)
 
@@ -303,8 +265,7 @@ class PyWindow(BaseWindow):
 		""" Autosave configuration to file (if dirty) """
 		self.write_configuration()
 		if event is None:
-			try: self.autosave_delay = int(self._configuration_cache.get("autosave_delay", ""))
-			except ValueError: pass
+			self.autosave_delay = int(self._configuration["autosave_delay"])
 
 			if self.autosave_delay > 0: self._autosave = self.root.after(self._autosave_delay, self.try_autosave)
 			else: self._autosave = None
