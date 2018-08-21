@@ -31,7 +31,6 @@ class PyPlayer(pywindow.RootPyWindow):
 			"title_update": []  # parameters [ title: str ]
 		}
 
-		self.load_configuration()
 		self.focus_followsmouse()
 		self.update_label()
 

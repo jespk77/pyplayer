@@ -1,4 +1,4 @@
-import tkinter, ast
+import tkinter
 
 from ui import pyelement, pyconfiguration
 
@@ -16,6 +16,7 @@ class BaseWindow:
 		self.last_position = -1
 		self.last_size = -1
 		self._configuration = pyconfiguration.Configuration(filepath=self.cfg_filename)
+		self.load_configuration()
 
 	@property
 	def root(self): return None
@@ -98,7 +99,7 @@ class BaseWindow:
 		self.remove_widget(id)
 		self.widgets[id] = widget
 		widget.id = id
-		try: self.widgets[id].configuration = self._configuration[id].get_dict()
+		try: self.widgets[id].configuration = self._configuration[id].to_dict()
 		except AttributeError: pass
 
 		self.widgets[id].pack(pack_args)
