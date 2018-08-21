@@ -1,4 +1,4 @@
 @echo off
-py PyPlayerTk.pyw memory console
+py pyinit.pyw memory console
 pause
 %0

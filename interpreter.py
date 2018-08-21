@@ -110,14 +110,10 @@ class Interpreter(Thread):
 				except Exception as e: return messagetypes.Error(e, "Error reloading '" + module + "'")
 
 				md_list.append(md)
-				md.interpreter = self; md.client = self.client;
+				md.interpreter = self; md.client = self.client
 				try: md.initialize()
 				except AttributeError: pass
 				except Exception as e: return messagetypes.Error(e, "Error initializing module '" + str(md) + "'")
-
-				try: md.set_configuration(self.configuration)
-				except AttributeError: pass
-				except Exception as e: return messagetypes.Error(e, "Error updating configuration")
 				dirty = True
 			else: md_list.append(md)
 

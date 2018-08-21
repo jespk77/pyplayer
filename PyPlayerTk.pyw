@@ -1,13 +1,10 @@
 from tkinter import ttk
 from traceback import format_exception
-import sys, datetime
+import datetime
 
 from ui import pywindow, pyelement
 from console import TextConsole
-from interpreter import Interpreter
 
-client = None
-interp = None
 class PyPlayerEvent:
 	def __init__(self, **kwargs):
 		for key, value in kwargs.items():
@@ -19,6 +16,7 @@ class PyPlayer(pywindow.RootPyWindow):
 		self.add_widget("header", pyelement.PyTextlabel(self), fill="x")
 		self.title_song = ""
 		self.icon = "assets/icon.ico"
+		self.interp = None
 
 		self.progressbar_style = ttk.Style()
 		self.progressbar_style.theme_use("default")
@@ -33,6 +31,7 @@ class PyPlayer(pywindow.RootPyWindow):
 			"title_update": []  # parameters [ title: str ]
 		}
 
+		self.load_configuration()
 		self.focus_followsmouse()
 		self.update_label()
 
@@ -58,7 +57,7 @@ class PyPlayer(pywindow.RootPyWindow):
 
 	def update_title(self, title, checks=None):
 		prefix = ""
-		for c in (checks if checks is not None else interp.checks): prefix += "[" + str(c) + "] "
+		for c in (checks if checks is not None else self.interp.checks): prefix += "[" + str(c) + "] "
 		self.title_song = title
 		self.title = prefix + title
 		self.post_event("title_update", PyPlayerEvent(title=title))
@@ -70,7 +69,7 @@ class PyPlayer(pywindow.RootPyWindow):
 		self.post_event("progressbar_update", PyPlayerEvent(progress=progress))
 
 	def parse_command(self, cmd):
-		try: interp.queue.put_nowait(cmd)
+		try: self.interp.queue.put_nowait(cmd)
 		except Exception as e: self.widgets["console"].set_reply(msg="Cannot send command: " + str(e))
 
 	def add_reply(self, s=0.1, args=None):
@@ -94,16 +93,3 @@ class PyLog:
 
 	def flush(self):
 		pass
-
-if __name__ == "__main__":
-	if "console" not in sys.argv:
-		sys.stdout = PyLog()
-		print("PyPlayer: file logging enabled")
-
-	print("initializing client...")
-	client = PyPlayer()
-	interp = Interpreter(client)
-	client.start()
-	print("client closed, destroying client...")
-	if interp is not None and interp.is_alive(): interp.queue.put(False)
-	interp.join()

@@ -1,2 +1,2 @@
 #!/bin/bash
-python3 PyPlayerTk.pyw
+python3 pyinit.pyw
