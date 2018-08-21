@@ -108,6 +108,8 @@ def command_info_info(arg, argc):
 def command_info_added(arg, argc):
 	(path, song) = parse_song(arg)
 	if path is not None and song is not None:
+		if isinstance(song, list): return messagetypes.Reply("More than one song found, be more specific")
+		
 		if not path.endswith("/"): path += "/"
 		time = datetime.fromtimestamp(os.path.getctime(path + song))
 		return messagetypes.Reply("'" + get_displayname(song) + "' was added on " + str(time.strftime("%b %d, %Y")))
@@ -121,6 +123,7 @@ def command_info_played(arg, argc):
 
 	(path, song) = parse_song(arg)
 	if path is not None and song is not None:
+		if isinstance(song, list): return messagetypes.Reply("More than one song found, be more specific")
 		freq = song_tracker.get_freq(song=get_displayname(song), alltime=alltime)
 		if freq > 0:
 			if not alltime: return messagetypes.Reply("'" + get_displayname(song) + "' played " + str(freq) + " times this month")
