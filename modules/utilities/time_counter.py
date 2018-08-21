@@ -1,5 +1,4 @@
 from ui import pywindow, pyelement
-import tkinter
 
 class TimeCount(pywindow.PyWindow):
 	def __init__(self, root):
