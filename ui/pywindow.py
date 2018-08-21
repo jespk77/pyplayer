@@ -146,7 +146,7 @@ class BaseWindow:
 		""" Get configuration option for this window/widget in this window or None if no such value was stored
 		 	For a nested search in configuration seperate keys with '::' """
 		vl = self._configuration[item]
-		try: return vl.to_cfg()
+		try: return vl.to_dict()
 		except AttributeError: return vl.value
 
 	def __setitem__(self, key, value):
