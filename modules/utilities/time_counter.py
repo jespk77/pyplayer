@@ -16,7 +16,7 @@ class TimeCount(pywindow.PyWindow):
 		self.widgets["label"].display_text = "initializing..."
 		self.widgets["label"].configure(background=background_color, foreground=foreground_color)
 		self.add_widget("update_button", pyelement.PyButton(self), fill="x")
-		self.widgets["update_button"].configure(image=self.noise, command=self.on_noise_click, background=background_color)
+		self.widgets["update_button"].configure(command=self.on_noise_click, background=background_color)
 		self.add_widget("reset_button", pyelement.PyButton(self), fill="x")
 		self.widgets["reset_button"].text = "Reset"
 		self.widgets["reset_button"].configure(command=self.on_timer_reset, background=background_color, foreground=foreground_color)
