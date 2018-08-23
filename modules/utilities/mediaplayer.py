@@ -88,7 +88,7 @@ class MediaPlayer():
 	def update_blacklist(self, blacklist):
 		""" Update the player blacklist, all songs from artist in this list will not be picked as random song
 		 	This list is ignored when a filter is set or when choosing a specific song """
-		if blacklist is not None and not isinstance(blacklist, list): raise TypeError("[MediaPlayer] Blacklist must be a list!")
+		if blacklist is not None and not isinstance(blacklist, list): raise TypeError("[MediaPlayer.ERROR] Blacklist must be a list!")
 		self._blacklist = blacklist
 
 	# === PLAYER UTILITIES ===
@@ -97,7 +97,7 @@ class MediaPlayer():
 			Items that match the full keyword get returned first, if no matches found returns items containing the keyword
 				path: the path to search in
 				keyword: [optional], returns all items matching this keyword or all items if no argument passed """
-		print("looking for songs in", path, "with keyword", keyword)
+		print("[MediaPlayer.INFO] looking for songs in", path, "with keyword", keyword)
 		res1 = []
 		res2 = []
 		keyword = keyword.lower()
@@ -130,7 +130,11 @@ class MediaPlayer():
 				print("[MediaPlayer.INFO] Found index in keyword", id)
 			except ValueError: pass
 
-		songlist = self.list_songs(path=path, keyword=" ".join(keyword))
+		if keyword[-1].endswith("."):
+			exact = True
+			keyword[-1] = keyword[-1][:-1]
+		else: exact = False
+		songlist = self.list_songs(path=path, keyword=" ".join(keyword), exact_search=exact)
 		if 0 <= id < len(songlist):
 			print("[MediaPlayer.INFO] Picking song from list using found index", id)
 			return songlist[id]

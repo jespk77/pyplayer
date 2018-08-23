@@ -50,15 +50,12 @@ def command_browser_played_month(arg, argc):
 		if len(path) == 2:
 			if path[0] != client["directory"].get("default"): return command_browser_name(arg, argc)
 
-			client.console.pack_forget()
-			try: client.songbrowser.on_destroy()
-			except: pass
-			client.console.pack(fill="both", expand=True)
-			client.songbrowser = SongBrowser(client.root)
-			client.songbrowser.create_list_from_frequency(path, song_tracker.get_songlist())
-			client.console.pack_forget()
-			client.songbrowser.pack(fill="both", expand=True)
-			client.console.pack(fill="x")
+			browser = SongBrowser(client.root)
+			browser.create_list_from_frequency(path, song_tracker.get_songlist(alltime=False))
+			# TODO: fix dirty console unpack/pack
+			client.widgets["console"].pack_forget()
+			client.add_widget("songbrowser", browser, fill="both", expand=True)
+			client.widgets["console"].pack(fill="x")
 			bind_events()
 			return messagetypes.Reply("Browser enabled on plays per month in '{}'".format(path[0]))
 		elif len(path) == 1: return messagetypes.Reply(path[0])
