@@ -6,7 +6,8 @@ def update_program():
 	try:
 		gt = git.Repo()
 		print("checking for updates...")
-		print(gt.git.checkout(git_branch))
+		print("fetching...", gt.git.execute("git fetch --all"), sep="\n")
+		print("updating...", gt.git.execute("git reset --hard origin/" + git_branch))
 		gt.close()
 	except git.exc.InvalidGitRepositoryError:
 		print("downloading pyplayer...")
