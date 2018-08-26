@@ -1,5 +1,6 @@
 from utilities import messagetypes
 from modules.utilities import time_counter, drink_window
+import pyjokes
 
 # DEFAULT MODULE VARIABLES
 priority = 7
@@ -56,7 +57,14 @@ def refill_drink(arg, argc):
 			return messagetypes.Reply("Drink refilled")
 		else: return start_drink_reminder(arg, argc)
 
+def tell_joke(arg, argc):
+	if argc == 1:
+		try: return messagetypes.Reply(pyjokes.get_joke(category=arg[0]))
+		except: pass
+	return messagetypes.Reply(pyjokes.get_joke())
+
 commands = {
+	"joke": tell_joke,
 	"noise": start_catching_noises,
 	"water": {
 		"": start_drink_reminder,
