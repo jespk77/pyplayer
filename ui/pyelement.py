@@ -1,12 +1,14 @@
 from tkinter import ttk, font
 import tkinter, os
 
+from ui import pyconfiguration
+
 class PyElement:
 	""" Framework for elements that can be added to 'PyWindow' and 'RootPyWindow' instances, should not be created on its own """
 	block_action = "break"
 
 	def __init__(self, id="??"):
-		self._configuration = {}
+		self._configuration = pyconfiguration.Configuration()
 		self._dirty = False
 		self._boundids = {}
 		self.id = id
@@ -16,14 +18,14 @@ class PyElement:
 		""" Get current configuration options (as dictionary) that have been set for this element
 		 	(only used for writing to file, to get a specific option use 'element[option]' instead """
 		self._dirty = False
-		return self._configuration
+		return self._configuration.to_dict()
 	@configuration.setter
 	def configuration(self, value):
 		""" Takes a dictionary and updates all configuration options for this element, should only be used when loading configuration from file """
 		if isinstance(value, dict):
-			self._configuration = value
+			self._configuration.update_dict(value)
 			self._load_configuration()
-		else: raise TypeError("Can only update configuration using dictionary, not whatever you're giving me")
+		else: raise TypeError("Can only update configuration with a dictionary")
 
 	@property
 	def dirty(self):
@@ -35,7 +37,7 @@ class PyElement:
 		self._dirty = True
 
 	def _load_configuration(self):
-		self.configure(**self._configuration)
+		self.configure(**self.configuration)
 
 	def __setitem__(self, key, value):
 		""" Update configuration item for this element """
@@ -201,7 +203,7 @@ class PyTextfield(PyElement, tkinter.Text):
 		if not self.accept_input: self.configure(state="disabled")
 
 	def _load_configuration(self):
-		for key, value in self._configuration.items():
+		for key, value in self.configuration.items():
 			item = key.split(".", maxsplit=1)
 			if len(item) == 2: self.tag_configure(item[0], {item[1]: value})
 			elif item[0] == "font":
@@ -264,7 +266,7 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 	def _load_configuration(self):
 		self._style.theme_use(self._configuration.get("theme", "default"))
 		style = "Horizontal.TProgressbar" if self.horizontal else "Vertical.TProgressbar"
-		self._style.configure(style, **self._configuration)
+		self._style.configure(style, **self.configuration)
 		self.configure(style=style)
 
 	@property
