@@ -28,5 +28,5 @@ interp = Interpreter(client)
 client.interp = interp
 client.start()
 print("client closed, destroying client...")
-if interp is not None and interp.is_alive(): interp.queue.put(False)
+if interp is not None and interp.is_alive(): interp.stop_command()
 interp.join()
