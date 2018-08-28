@@ -25,6 +25,8 @@ class ConfigurationEntry:
 	def value(self): return self._vl
 	@value.setter
 	def value(self, v):
+		if isinstance(v, Configuration): raise TypeError("Cannot set a configuration entry to a configuration!")
+
 		if v is None: self._vl = None
 		elif self._vl is None or self._tp == type(v): self._vl = v
 		else: raise TypeError("Cannot assign value with type " + type(v).__name__ + " to entry type " + self._tp.__name__)
@@ -45,30 +47,40 @@ class Configuration:
 	def __init__(self, initial_value=None, filepath=None):
 		self._cfg = {}
 		self._error = False
+		self._filepath = filepath
+		self._file = None
+
 		if initial_value is not None:
 			if not isinstance(initial_value, dict):
-				raise TypeError("[Configuration] 'initial_value' must be dict or None, not " + type(initial_value).__name__)
-			else: self._parse_dict(initial_value)
+				raise TypeError("'initial_value' must be dict or None, not " + type(initial_value).__name__)
+			else: self.update_dict(initial_value)
 
-		if filepath is not None:
-			self._file = open(filepath, "r+")
-			try: self._parse_dict(json.load(self._file))
-			except json.JSONDecodeError as e:
-				print("[Configuration] Error parsing configuration file:", e)
-				self._file.close()
-				self._file = None
-				self._error = True
-		else: self._file = None
+		if self._filepath is not None:
+			if not os.path.isdir(".cfg"): os.mkdir(".cfg")
+
+			try:
+				self._file = open(self._filepath, "r+")
+				try: self.update_dict(json.load(self._file))
+				except json.JSONDecodeError as e:
+					print("[Configuration.ERROR] Error parsing configuration file:", e)
+					self._file.close()
+					self._file = None
+					self._error = True
+			except FileNotFoundError: pass
 
 	@property
 	def cfg_file(self): return self._file is not None
 	@property
 	def error(self): return self._error
 
-	def _parse_dict(self, dt):
-		for key, value in dt.items():
-			if isinstance(value, dict): self._cfg[key] = Configuration(value)
-			else: self._cfg[key] = ConfigurationEntry(value)
+	def update_dict(self, dt):
+		if isinstance(dt, dict):
+			for key, value in dt.items():
+				if isinstance(value, dict): self._cfg[key] = Configuration(value)
+				else: self._cfg[key] = ConfigurationEntry(value)
+		elif isinstance(dt, Configuration):
+			self._cfg.update(dt._cfg)
+		else: raise TypeError("Cannot update from type '{}'".format(type(dt.__name__)))
 
 	def __str__(self): return self.__descstr__()
 	def __descstr__(self):
@@ -77,14 +89,14 @@ class Configuration:
 		return s + ")"
 
 	def __getitem__(self, key):
-		key = key.split("::", maxsplit=1)
+		key = str(key).split("::", maxsplit=1)
 		if len(key) == 2:
 			arg = self._cfg.get(key.pop(0))
 			if arg is not None:
 				try: return arg[key[0]]
 				except AttributeError: return arg
 			return ConfigurationEntry()
-		else: return self._cfg.get(key[0], ConfigurationEntry())
+		else: return self._cfg.get(key[0])
 
 	def get(self, key, default=None):
 		vl = self[key]
@@ -109,13 +121,20 @@ class Configuration:
 	def to_dict(self):
 		cfg = {}
 		for key, value in self._cfg.items():
-			try: cfg[key] = value.to_dict()
-			except AttributeError:
-				vl = value.value
-				if vl is not None: cfg[key] = value.value
+			vl = None
+			try: vl = value.to_dict()
+			except AttributeError: vl = value.value
+			except Exception as e: print("[PyConfiguration.ERROR] Cannot get value for key '{}':", e)
+
+			if not isinstance(vl, Configuration) and not isinstance(vl, ConfigurationEntry): cfg[key] = vl
+			else: print("[PyConfiguration.ERROR] Invalid value for key '{}':".format(key), vl)
 		return cfg
 
 	def write_configuration(self, sort_keys=True):
+		if self._filepath is not None and self._file is None:
+			try: self._file = open(self._filepath, "w+")
+			except Exception as e: print("[PyConfiguration.ERROR] Cannot create configuration file '{}':".format(self._filepath), e)
+
 		if self._file is not None:
 			self._file.seek(0)
 			self._file.truncate()
