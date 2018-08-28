@@ -10,9 +10,11 @@ class PyPlayerEvent:
 		for key, value in kwargs.items():
 			setattr(self, key, value)
 
+initial_cfg = { "autosave_delay": 5, "directory":{}, "header_format": "PyPlayer - %a %b %d, %Y %I:%M %p -" }
+
 class PyPlayer(pywindow.RootPyWindow):
 	def __init__(self):
-		pywindow.RootPyWindow.__init__(self, "client")
+		pywindow.RootPyWindow.__init__(self, "client", initial_cfg)
 		self.add_widget("header", pyelement.PyTextlabel(self), fill="x")
 		self.title_song = ""
 		self.icon = "assets/icon.ico"
@@ -46,7 +48,7 @@ class PyPlayer(pywindow.RootPyWindow):
 		if name in self.event_handlers:
 			for c in self.event_handlers[name]:
 				try: c(self, data)
-				except Exception as e: print("[PyPlayer] An error occured while processing event '", name, "' -> ", "\n".join(format_exception(None, e, e.__traceback__)), sep="")
+				except Exception as e: print("[PyPlayer.ERROR] An error occured while processing event '", name, "' -> ", "\n".join(format_exception(None, e, e.__traceback__)), sep="")
 
 	def update_label(self):
 		self.date = datetime.datetime.today()
@@ -68,7 +70,7 @@ class PyPlayer(pywindow.RootPyWindow):
 		self.post_event("progressbar_update", PyPlayerEvent(progress=progress))
 
 	def parse_command(self, cmd):
-		try: self.interp.queue.put_nowait(cmd)
+		try: self.interp.put_command(cmd)
 		except Exception as e: self.widgets["console"].set_reply(msg="Cannot send command: " + str(e))
 
 	def add_reply(self, s=0.1, args=None):
