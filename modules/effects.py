@@ -1,11 +1,13 @@
 from vlc import MediaPlayer
 import os, json
-from utilities import messagetypes, keyboard_intercept
+
+from utilities import messagetypes
 
 # DEFAULT MODULE VARIABLES
 priority = 4
 interpreter = None
 client = None
+platform = None
 
 # MODULE SPECIFIC VARIABLES
 trigger_file = "keytriggers"
@@ -36,7 +38,7 @@ def on_key_down(key):
 	if item is not None:
 		cmd = item.get("command")
 		if cmd is not None: interpreter.queue.put_nowait(cmd)
-	else: print("[Interception] no entry found for keycode", key)
+	else: print("[Interception.ERROR] no entry found for keycode", key)
 
 class SoundEffectPlayer:
 	def __init__(self):
@@ -65,7 +67,7 @@ class SoundEffectPlayer:
 			self.last_effect = os.path.splitext(effects[0])[0]
 			return messagetypes.Reply("Playing sound effect: " + self.last_effect)
 		else:
-			print("cannot determine sound effect from", arg, ", there are", len(effects), "posibilities")
+			print("[EffectPlayer.INFO] cannot determine sound effect from", arg, ", there are", len(effects), "posibilities")
 			return messagetypes.Reply("Cannot determine what sound that should be")
 
 	def stop_player(self):
@@ -89,34 +91,32 @@ def stop_effect(arg, argc):
 def start_listener(arg, argc):
 	global hook_running
 	if argc == 0:
-		if not hook_running: start_keyboard_hook()
+		if not hook_running:
+			try:
+				import keyboard_intercept
+				keyboard_intercept.initialize(on_key_down)
+				hook_running = True
+			except ImportError: return messagetypes.Reply("Interception cannot be found")
+			except Exception as e: return messagetypes.Error(e, "Error loading interception")
 		return messagetypes.Reply("Interception started")
 
 def stop_listener(arg, argc):
 	if argc == 0:
 		global hook_running
-		if hook_running: pause_keyboard_hook()
-		return messagetypes.Reply("Interception stopped")
+		if hook_running:
+			keyboard_intercept.join()
+			hook_running = False
+			return messagetypes.Reply("Interception stopped")
+		else: return messagetypes.Reply("Interception not running")
 
 def initialize():
-	try: start_listener(None, 0)
-	except: pass
+	start_listener(None, 0)
 	if len(interpreter.checks) == 0: interpreter.queue.put_nowait("effect startup")
 
 def on_destroy():
 	global effect_player
 	effect_player.on_destroy()
-	pause_keyboard_hook()
-
-def start_keyboard_hook():
-	global hook_running
-	keyboard_intercept.initialize(on_key_down)
-	hook_running = True
-
-def pause_keyboard_hook():
-	global hook_running
-	keyboard_intercept.join()
-	hook_running = False
+	stop_listener(None, 0)
 
 commands = {
 	"effect":{
