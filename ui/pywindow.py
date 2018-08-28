@@ -7,7 +7,7 @@ class BaseWindow:
 	default_title = "PyWindow"
 	invalid_cfg_keys = ["geometry"]
 
-	def __init__(self, id):
+	def __init__(self, id, initial_cfg):
 		self._windowid = id
 		self._elements = {}
 		self._children = None
@@ -15,7 +15,7 @@ class BaseWindow:
 
 		self.last_position = -1
 		self.last_size = -1
-		self._configuration = pyconfiguration.Configuration(filepath=self.cfg_filename)
+		self._configuration = pyconfiguration.Configuration(initial_value=initial_cfg, filepath=self.cfg_filename)
 		self.load_configuration()
 
 	@property
@@ -44,9 +44,7 @@ class BaseWindow:
 		if self._dirty: return True
 
 		for id, wd in self.widgets.items():
-			if wd.dirty:
-				print(self.window_id, "-> found dirty widget:", id)
-				return True
+			if wd.dirty: return True
 		return False
 
 	@property
@@ -80,7 +78,7 @@ class BaseWindow:
 			for id, wd in self.widgets.items():
 				self._configuration[id] = pyconfiguration.Configuration(wd.configuration)
 
-			print("[PyWindow.INFO] Window is dirty, writing configuration to '{}'".format(self.cfg_filename))
+			print("[BaseWindow.INFO] Window is dirty, writing configuration to '{}'".format(self.cfg_filename))
 			try:
 				self._configuration["geometry"] = self.geometry
 				self._configuration.write_configuration()
@@ -99,8 +97,8 @@ class BaseWindow:
 		self.remove_widget(id)
 		self.widgets[id] = widget
 		widget.id = id
-		try: self.widgets[id].configuration = self._configuration[id].to_dict()
-		except AttributeError: pass
+		try: self.widgets[id].configuration.update_dict(self._configuration[id])
+		except (AttributeError, TypeError): pass
 
 		self.widgets[id].pack(pack_args)
 		return self.widgets[id]
@@ -170,9 +168,9 @@ class BaseWindow:
 class PyWindow(BaseWindow):
 	""" Separate window that can be created on top of another window
 		(it has its own configuration file separate from root configuration) """
-	def __init__(self, root, id):
+	def __init__(self, root, id, initial_cfg=None):
 		self.tk = tkinter.Toplevel(root.root)
-		BaseWindow.__init__(self, id)
+		BaseWindow.__init__(self, id, initial_cfg)
 		self.title = id
 
 	@property
@@ -273,7 +271,7 @@ class PyWindow(BaseWindow):
 
 class RootPyWindow(PyWindow):
 	""" Root window for this application (should be the first created window and should only be created once, for additional windows use 'PyWindow' instead) """
-	def __init__(self, id="root"):
+	def __init__(self, id="root", initial_cfg=None):
 		self.tk = tkinter.Tk()
-		BaseWindow.__init__(self, id)
+		BaseWindow.__init__(self, id, initial_cfg)
 		self.title = BaseWindow.default_title
