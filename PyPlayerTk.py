@@ -1,6 +1,6 @@
 from tkinter import ttk
 from traceback import format_exception
-import datetime
+import datetime, inspect, os
 
 from ui import pywindow, pyelement
 from console import TextConsole
@@ -48,7 +48,7 @@ class PyPlayer(pywindow.RootPyWindow):
 		if name in self.event_handlers:
 			for c in self.event_handlers[name]:
 				try: c(self, data)
-				except Exception as e: print("[PyPlayer.ERROR] An error occured while processing event '", name, "' -> ", "\n".join(format_exception(None, e, e.__traceback__)), sep="")
+				except Exception as e: print("[PyPlayer.ERROR]", "An error occured while processing event '", name, "' -> ", "\n".join(format_exception(None, e, e.__traceback__)), sep="")
 
 	def update_label(self):
 		self.date = datetime.datetime.today()
@@ -81,16 +81,38 @@ class PyPlayer(pywindow.RootPyWindow):
 		self.after(s, self.widgets["console"].set_notification, *args)
 
 class PyLog:
-	filename = "log"
 	def __init__(self):
-		file = open(self.filename, "w")
-		file.write(str(datetime.datetime.today()) + " ")
-		file.close()
+		if not os.path.isdir("logs"): os.mkdir("logs")
 
-	def write(self, str):
-		file = open(self.filename, "a")
-		file.write(str)
-		file.close()
+		self._filename = "log_{}_0".format(datetime.datetime.today())
+		self._file = None
+		while self._file is None:
+			try: self._file = open(self._filename, "x")
+			except FileExistsError:
+				try:
+					suffix = self._filename[-1]
+					self._filename = self._filename[:-1]
+					self._filename += int(suffix) + 1
+				except ValueError: self._filename += "1"
+
+	def __del__(self):
+		if self._file is not None: self._file.close()
+
+	@staticmethod
+	def _get_class_from_stack(stack):
+		return stack[0].f_locals["self"].__class__.__name__
+
+	def _write_to_file(self, log, level):
+		if self._file is not None:
+			try:
+				stack = inspect.stack()[1]
+				try: self._file.write("[{}.{}.{}] {}\n".format(PyLog._get_class_from_stack(stack), stack.function, level, log))
+				except KeyError: self._file.write("[__main__.{}] {}\n".format(level, log))
+			except Exception as e: self._file.write("[?.{}] '{}': ".format(level, log) + "(? -> {})\n".format(e))
+
+	def write(self, objects, level="INFO", sep=" ", end="\n", file=None, flush=True):
+		self._write_to_file(objects, level)
 
 	def flush(self):
-		pass
+		if self._file is not None:
+			self._file.flush()
