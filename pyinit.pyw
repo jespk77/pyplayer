@@ -14,8 +14,9 @@ def update_program():
 		gt = git.Repo.clone_from(url=git_url, to_path="")
 		gt.close()
 
-if "developer" in sys.argv: print("running in developer mode: skipping update checks")
+if "no_update" in sys.argv: print("skipping update checks")
 else: update_program()
+
 from PyPlayerTk import PyPlayer, PyLog
 from interpreter import Interpreter
 if "console" not in sys.argv:
