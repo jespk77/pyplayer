@@ -1,6 +1,6 @@
 from utilities import messagetypes
 from modules.utilities import time_counter, drink_window
-import pyjokes
+import pyjokes, datetime
 
 # DEFAULT MODULE VARIABLES
 priority = 7
@@ -8,25 +8,23 @@ interpreter = None
 client = None
 
 # MODULE SPECIFIC VARIABLES
-noise_timer = None
 drink_timer = None
 drink_reminder = None
 drink_count = 0
+last_joke = None
 
 def on_noise_timer():
 	interpreter.put_command("effect deer")
 
 def on_drink_timer(level):
-	interpreter.queue.put_nowait("effect splash")
+	interpreter.put_command("effect splash")
 
 def start_catching_noises(arg, argc):
 	if argc == 0:
-		global noise_timer
-		if noise_timer is not None:
-			try: noise_timer.destroy()
-			except: pass
-		noise_timer = time_counter.TimeCount(client)
-		noise_timer.set_callback(on_noise_timer)
+		counter = time_counter.TimeCount(client, "Catching noises", "assets/noise")
+		counter.set_callback(on_noise_timer)
+		counter.always_on_top = True
+		client.add_window("noise_counter", counter)
 		return messagetypes.Reply("The noises will be caught")
 
 def start_drink_reminder(arg, argc):
@@ -58,10 +56,15 @@ def refill_drink(arg, argc):
 		else: return start_drink_reminder(arg, argc)
 
 def tell_joke(arg, argc):
-	if argc == 1:
-		try: return messagetypes.Reply(pyjokes.get_joke(category=arg[0]))
-		except: pass
-	return messagetypes.Reply(pyjokes.get_joke())
+	if argc == 0:
+		global last_joke
+		current = datetime.datetime.today()
+		if last_joke is not None:
+			delta = current - last_joke
+			s = 3600 - delta.total_seconds()
+			if s > 0: return messagetypes.Reply("Limited to one joke an hour, next one in {}m{}s".format(int(s / 60), int(s % 60)))
+		last_joke = current
+		return messagetypes.Reply(pyjokes.get_joke())
 
 commands = {
 	"joke": tell_joke,
