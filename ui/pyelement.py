@@ -282,6 +282,24 @@ class PyItemlist(PyElement, tkinter.Listbox):
 		self.configure(selectmode="single")
 		self.list_var = None
 		self._items = None
+		self._font = None
+
+	def _load_configuration(self):
+		PyElement._load_configuration(self)
+		if "font" in self.configuration:
+			if self._font is None: self._font = font.Font()
+			self._font.configure(**self.configuration["font"])
+			self.configure(font=self._font)
+
+	def __setitem__(self, key, value):
+		k = key.split("::", maxsplit=1)
+		if len(k) > 1 and k[0] == "font":
+			if self._font is None: self._font = font.Font()
+			if k[1] == "family": self._font.configure(family=value)
+			elif k[1] == "size": self._font.configure(size=value)
+			self.configure(font=self._font)
+			self.event_generate("<Configure>")
+		else: PyElement.__setitem__(self, key, value)
 
 	@property
 	def itemlist(self):

@@ -41,14 +41,14 @@ def on_tick(client, event):
 
 def timer_check():
 	global timer
-	time_widget = client.widgets.get("timer")
+	time_widget = client.widgets["timer"]
 	if timer is not None and time_widget is not None:
 		timer -= second_time
 		if timer.total_seconds() == 0:
 			timer = None
 			client.remove_widget("timer")
 			client.unsubscribe_event("tick_second", on_tick)
-			interpreter.queue.put_nowait("effect ftl_distress_beacon")
+			interpreter.put_command("effect ftl_distress_beacon")
 		else: client.widgets["timer"].display_text = "\u23f0 " + str(timer)
 	else: timer = None
 
