@@ -49,6 +49,7 @@ class Configuration:
 		self._error = False
 		self._filepath = filepath
 		self._file = None
+		self._cfgvalue = None
 
 		if initial_value is not None:
 			if not isinstance(initial_value, dict):
@@ -74,13 +75,11 @@ class Configuration:
 	def error(self): return self._error
 
 	def update_dict(self, dt):
+		self._cfgvalue = None
 		if isinstance(dt, dict):
 			for key, value in dt.items():
 				if isinstance(value, dict): self._cfg[key] = Configuration(value)
 				else: self._cfg[key] = ConfigurationEntry(value)
-		elif isinstance(dt, Configuration):
-			self._cfg.update(dt._cfg)
-		else: raise TypeError("Cannot update from type '{}'".format(type(dt.__name__)))
 
 	def __str__(self): return self.__descstr__()
 	def __descstr__(self):
@@ -96,7 +95,7 @@ class Configuration:
 				try: return arg[key[0]]
 				except AttributeError: return arg
 			return ConfigurationEntry()
-		else: return self._cfg.get(key[0])
+		else: return self._cfg.get(key[0], ConfigurationEntry())
 
 	def get(self, key, default=None):
 		vl = self[key]
@@ -106,29 +105,33 @@ class Configuration:
 	def __setitem__(self, key, value):
 		value = parse_arg(value)
 		key = key.split("::", maxsplit=1)
+		self._cfgvalue = None
 		if len(key) == 2:
-			try: self._cfg.get(key[0])[key[1]] = value; return
-			except TypeError as e:
-				raise TypeError("Key '{}' does not correspond to a configuration, therefore subkeys for this key cannot be set. Update this key on its own instead|".format(key[0]) + str(e))
+			try:
+				self._cfg.get(key[0], ConfigurationEntry())[key[1]] = value
+				return
+			except TypeError: raise TypeError("Key '{}' does not correspond to a configuration, therefore subkeys for this key cannot be set. Update this key on its own instead".format(key[0]))
 
 		arg = self._cfg.get(key[0])
 		if arg is not None:
-			try: arg.value = value
-			except TypeError:
-				raise TypeError("Key '{}' corresponds to a configuration, therefore it cannot be directly to another value. Append '::(subkey)' to the index to set subkeys".format(key[0]))
+			try: self._cfg[key[0]].value = value
+			except TypeError: raise TypeError("Key '{}' corresponds to a configuration, therefore it cannot be directly to another value. Append '::(subkey)' to the index to set subkeys".format(key[0]))
+		elif isinstance(value, dict): self._cfg[key[0]] = Configuration(initial_value=value)
 		else: self._cfg[key[0]] = ConfigurationEntry(value)
 
-	def to_dict(self):
-		cfg = {}
+	def to_dict(self, force_remake=False):
+		if self._cfgvalue is not None and not force_remake: return self._cfgvalue
+
+		self._cfgvalue = {}
 		for key, value in self._cfg.items():
 			vl = None
 			try: vl = value.to_dict()
 			except AttributeError: vl = value.value
 			except Exception as e: print("[PyConfiguration.ERROR] Cannot get value for key '{}':", e)
 
-			if not isinstance(vl, Configuration) and not isinstance(vl, ConfigurationEntry): cfg[key] = vl
+			if not isinstance(vl, Configuration) and not isinstance(vl, ConfigurationEntry): self._cfgvalue[key] = vl
 			else: print("[PyConfiguration.ERROR] Invalid value for key '{}':".format(key), vl)
-		return cfg
+		return self._cfgvalue
 
 	def write_configuration(self, sort_keys=True):
 		if self._filepath is not None and self._file is None:
@@ -138,7 +141,7 @@ class Configuration:
 		if self._file is not None:
 			self._file.seek(0)
 			self._file.truncate()
-			json.dump(self.to_dict(), self._file, indent=5, sort_keys=sort_keys)
+			json.dump(self.to_dict(force_remake=True), self._file, indent=5, sort_keys=sort_keys)
 			self._file.flush()
 			os.fsync(self._file.fileno())
 

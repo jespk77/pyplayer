@@ -8,24 +8,23 @@ class PyElement:
 	block_action = "break"
 
 	def __init__(self, id="??"):
-		self._configuration = pyconfiguration.Configuration()
+		self._configuration = {}
 		self._dirty = False
 		self._boundids = {}
 		self.id = id
 
 	@property
 	def configuration(self):
-		""" Get current configuration options (as dictionary) that have been set for this element
-		 	(only used for writing to file, to get a specific option use 'element[option]' instead """
-		self._dirty = False
-		return self._configuration.to_dict()
+		""" Get current configuration options (as dictionary) that have been set for this element """
+		return self._configuration
 	@configuration.setter
 	def configuration(self, value):
 		""" Takes a dictionary and updates all configuration options for this element, should only be used when loading configuration from file """
 		if isinstance(value, dict):
-			self._configuration.update_dict(value)
+			self._configuration = value
 			self._load_configuration()
-		else: raise TypeError("Can only update configuration with a dictionary")
+			self.mark_dirty()
+		else: raise TypeError("Can only update configuration with a dictionary, not '{}'".format(type(value).__name__))
 
 	@property
 	def dirty(self):
@@ -36,8 +35,7 @@ class PyElement:
 		""" Mark this element as dirty (configuration options will be written to file next save)"""
 		self._dirty = True
 
-	def _load_configuration(self):
-		self.configure(**self.configuration)
+	def _load_configuration(self): self.configure(**self._configuration)
 
 	def __setitem__(self, key, value):
 		""" Update configuration item for this element """
@@ -46,6 +44,12 @@ class PyElement:
 		try: super().__setitem__(key, value)
 		except AttributeError: print("[PyElement.ERROR] Cannot find super class 'setitem' method in:", super())
 		return self
+
+	def __getitem__(self, key):
+		if key in self._configuration: return self._configuration[key]
+		try: return self.cget(key)
+		except (AttributeError, tkinter.TclError) as e: print("[PyElement.ERROR] Cannot find key '{}' for element '{}': ".format(key, self.id), e)
+		return pyconfiguration.ConfigurationEntry()
 
 	def after(self, s, *args):
 		""" Schedule function to be executed (with given parameters) after at least given seconds has passed """
@@ -189,8 +193,7 @@ class PyTextfield(PyElement, tkinter.Text):
 		if force: return self.focus_force()
 		else: return self.focus_set()
 
-	def can_user_interact(self):
-		return self["state"] == "normal"
+	def can_user_interact(self): return self.cget("state") == "normal"
 
 	def insert(self, index, chars, *args):
 		self.configure(state="normal")
@@ -219,21 +222,15 @@ class PyTextfield(PyElement, tkinter.Text):
 		if len(item) == 2:
 			self.tag_configure(item[0], {item[1]: value})
 			self._configuration[key] = value
-		elif item[0] == "font":
+		elif item[0].startswith("font"):
 			item = key.split("::", maxsplit=1)
 			if len(item) == 2:
 				if self._font is None: self._font = font.Font()
 				self._font.configure(**{item[1]: value})
 				self.configure(font=self._font)
-			else: print("PyTextfield.ERROR] Missing subkey in key argument '{}'".format(key))
+			else: print("[PyTextfield.ERROR] Missing subkey in key argument '{}'".format(key))
 		else: PyElement.__setitem__(self, key, value)
 		if dirty: self.mark_dirty()
-
-	def __getitem__(self, key):
-		if key in self._configuration: return self._configuration[key]
-		try: return self.cget(key)
-		except tkinter.TclError as e: print("[PyTextfield.ERROR] Cannot find key '{}' for element '{}': ".format(key, self.id), e)
-		return None
 
 class PyProgressbar(PyElement, ttk.Progressbar):
 	""" Widget that displays a bar indicating progress made by the application """

@@ -1,4 +1,4 @@
-import tkinter
+import tkinter, sys
 
 from ui import pyelement, pyconfiguration
 
@@ -37,6 +37,7 @@ class BaseWindow:
 		""" All windows that are active and have this window as parent """
 		if self._children is None: self._children = {}
 		return self._children
+	def load_configuration(self): pass
 
 	@property
 	def dirty(self):
@@ -65,18 +66,13 @@ class BaseWindow:
 				self.last_size = event.height * event.width
 		else: self._dirty = True
 
-	def load_configuration(self):
-		for id, wd in self.widgets.items():
-			cfg = self._configuration[id]
-			try: wd.configuration = cfg.to_dict()
-			except AttributeError as e: print(e)
-
 	def write_configuration(self):
 		""" Write window configuration to file (if dirty) """
 		if self._configuration.error: print("[BaseWindow.INFO] Skipping configuration writing since there was an error loading it")
 		elif self.dirty:
 			for id, wd in self.widgets.items():
-				self._configuration[id] = pyconfiguration.Configuration(wd.configuration)
+				self._configuration[id] = wd.configuration
+				wd._dirty = False
 
 			print("[BaseWindow.INFO] Window is dirty, writing configuration to '{}'".format(self.cfg_filename))
 			try:
@@ -85,7 +81,7 @@ class BaseWindow:
 				self._dirty = False
 			except Exception as e: print("[BaseWindow.ERROR] error writing configuration file for '{}':".format(self.window_id), e)
 
-	def add_widget(self, id, widget, **pack_args):
+	def add_widget(self, id, widget, initial_cfg=None, **pack_args):
 		""" Add new 'pyelement' widget to this window using passed (unique) identifier, add all needed pack parameters for this widget to the end
 		 	(any widget already assigned to this identifier will be destroyed)
 		 	Returns the bound widget if successful, False otherwise"""
@@ -97,8 +93,13 @@ class BaseWindow:
 		self.remove_widget(id)
 		self.widgets[id] = widget
 		widget.id = id
-		try: self.widgets[id].configuration.update_dict(self._configuration[id])
-		except (AttributeError, TypeError): pass
+		try:
+			cfg = self._configuration.get(id)
+			if cfg is not None: initial_cfg.update(cfg.to_dict()); cfg = initial_cfg
+			elif initial_cfg is not None: cfg = initial_cfg
+
+			if cfg is not None: self.widgets[id].configuration = cfg
+		except (AttributeError, TypeError) as e: print("[BaseWindow.ERROR] Cannot assign configuration to created widget '{}':".format(id), e)
 
 		self.widgets[id].pack(pack_args)
 		return self.widgets[id]
@@ -138,8 +139,16 @@ class BaseWindow:
 			try:
 				self._children[id].destroy()
 				del self._children[id]
-			except: return False
+			except AttributeError: return False
+			except Exception as e: print("[BaseWindow.ERROR] Couldn't destroy window '{}' properly: ".format(id), e); return False
 		return True
+
+	def get_or_create(self, item, default=None):
+		""" Get configuration option if it is currently set,
+				- when this option is not set and a 'default' is given, this will be used as value for this option """
+		i = self._configuration.get(item)
+		if i is None and default is not None: self._configuration[item] = default
+		return self._configuration.get(item)
 
 	def __getitem__(self, item):
 		""" Get configuration option for this window/widget in this window or None if no such value was stored
@@ -153,10 +162,10 @@ class BaseWindow:
 		if not self._configuration.error:
 			if key in BaseWindow.invalid_cfg_keys: raise ValueError("Tried to set option '{}' which should not be changed manually".format(key))
 			self._configuration[key] = value
-			key = key.split("::")
+			key = key.split("::", maxsplit=1)
 			if len(key) > 1 and key[0] in self.widgets:
-				try: self.widgets[key[0]].configure({key[1], value})
-				except: pass
+				try: self.widgets[key[0]][key[1]] = value
+				except Exception as e: print("[BaseWindow.ERROR] Error configuring option '{}': ".format(key), e)
 			self.mark_dirty()
 		else: print("[BaseWindow.WARNING] Configuration was not loaded properly therefore any configuration updates are ignored")
 
@@ -180,7 +189,6 @@ class PyWindow(BaseWindow):
 
 	def load_configuration(self):
 		""" (Re)load configuration from file """
-		BaseWindow.load_configuration(self)
 		self.geometry = self._configuration.get("geometry", "")
 		self.autosave_delay = int(self._configuration["autosave_delay"])
 		self.root.bind("<Configure>", self.mark_dirty)
@@ -237,13 +245,13 @@ class PyWindow(BaseWindow):
 	@icon.setter
 	def icon(self, value):
 		""" Set window icon """
-		try: self.root.iconbitmap(value)
-		except Exception as e: print("[PyWindow.ERROR] setting bitmap '{}': {}".format(value, e))
+		try: self.root.iconbitmap(value + ".ico" if "win" in sys.platform else value + ".png")
+		except Exception as e: print("[PyWindow.ERROR] setting icon bitmap '{}': {}".format(value, e))
 
 	@property
 	def always_on_top(self):
 		""" If true this window will always display be displayed above others """
-		return self.root.wm_attributes("--topmost")
+		return bool(self.root.wm_attributes("-topmost"))
 	@always_on_top.setter
 	def always_on_top(self, value):
 		""" Set this window to be always above others """
