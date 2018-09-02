@@ -93,6 +93,8 @@ class BaseWindow:
 		self.remove_widget(id)
 		self.widgets[id] = widget
 		widget.id = id
+		if initial_cfg is None: initial_cfg = {}
+
 		try:
 			cfg = self._configuration.get(id)
 			if cfg is not None: initial_cfg.update(cfg.to_dict()); cfg = initial_cfg

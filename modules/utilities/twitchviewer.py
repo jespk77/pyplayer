@@ -11,7 +11,7 @@ class TwitchViewer(pywindow.PyWindow):
 		self.title = "TwitchViewer"
 		self.channel = channel
 		self.always_on_top = True
-		self.icon = "assets/icon_twitchviewer.ico"
+		self.icon = "assets/icon_twitchviewer"
 		login = self["account_data"]
 		if login is not None:
 			print("[TwitchViewer.INFO] Getting metadata for channel", channel)
