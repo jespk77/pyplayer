@@ -83,8 +83,10 @@ def command_cfg(arg, argc):
 				del wd[arg[0]]
 				reply = "Configuration option '{}' deleted".format(arg[0])
 			else:
-				wd[arg[0]] = arg[1]
-				reply = "Configuration option '{}' updated to '{}'".format(arg[0], wd[arg[0]])
+				try:
+					wd[arg[0]] = arg[1]
+					reply = "Configuration option '{}' updated to '{}'".format(arg[0], wd[arg[0]])
+				except TypeError as e: reply = str(e)
 
 			if write_file:
 				file = open(path, "w")
@@ -93,8 +95,9 @@ def command_cfg(arg, argc):
 			else: wd.write_configuration()
 			return messagetypes.Reply(reply)
 		elif argc == 1:
-			try: return messagetypes.Reply("Configuration option '{}' is set to '{}'".format(arg[0], wd[arg[0]]))
-			except KeyError: return messagetypes.Reply("Configuration option '{}' is not set".format(arg[0]))
+			vl = wd[arg[0]]
+			if vl is not None: return messagetypes.Reply("Configuration option '{}' is set to '{}'".format(arg[0], vl))
+			else: return messagetypes.Reply("Configuration option '{}' is not set".format(arg[0]))
 		else: return messagetypes.Reply("cfg {module} option1{::option2...} ['get', 'set' value]")
 
 def command_timer(arg, argc):

@@ -81,7 +81,6 @@ class MediaPlayer():
 		""" Set a filter for random song picking using path and keyword
 		 	(will override the blacklist that was set on this player) """
 		self._filter = [path, keyword]
-		print(self._filter)
 
 	@property
 	def blacklist(self): return self._blacklist

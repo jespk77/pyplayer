@@ -34,10 +34,10 @@ def title_update(widget, data):
 	client.widgets["songbrowser"].select_song(data.title)
 
 def on_browser_doubleclick(event):
-	interpreter.queue.put_nowait("player {path} {song}.".format(path=client.widgets["songbrowser"].path[0], song=client.widgets["songbrowser"].get_song_from_event(event)))
+	interpreter.put_command("player {path} {song}.".format(path=client.widgets["songbrowser"].path[0], song=client.widgets["songbrowser"].get_song_from_event(event)))
 
 def on_browser_rightclick(event):
-	interpreter.queue.put_nowait("queue {path} {song}.".format(path=client.widgets["songbrowser"].path[0], song=client.widgets["songbrowser"].get_song_from_event(event)))
+	interpreter.put_command("queue {path} {song}.".format(path=client.widgets["songbrowser"].path[0], song=client.widgets["songbrowser"].get_song_from_event(event)))
 
 def block_event(event):
 	return "break"

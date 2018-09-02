@@ -9,8 +9,7 @@ class SongBrowser(pyelement.PyItemlist):
 	"""
 	def __init__(self, client):
 		pyelement.PyItemlist.__init__(self, client)
-		self.font = Font(family="terminal", size=10)
-		self.configure(activestyle="none", font=self.font, highlightthickness=0)
+		self.configure(activestyle="none", highlightthickness=0)
 		self._path = None
 		self.path_valid = False
 		self.bind("<Enter>", self.set_focus, True).bind("<Leave>", self.set_focus)

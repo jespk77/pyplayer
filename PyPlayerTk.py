@@ -11,20 +11,24 @@ class PyPlayerEvent:
 			setattr(self, key, value)
 
 initial_cfg = { "autosave_delay": 5, "directory":{}, "header_format": "PyPlayer - %a %b %d, %Y %I:%M %p -" }
+progressbar_cfg = {"background": "cyan", "foreground": "white"}
+header_cfg = { "background": "black", "foreground": "white" }
+console_cfg = { "background": "black", "error.foreground": "red", "font":{"family":"terminal","size":10}, "foreground": "white", "info.foreground": "yellow",
+				"insertbackground": "white", "reply.foreground": "gray", "selectbackground": "gray30" }
 
 class PyPlayer(pywindow.RootPyWindow):
 	def __init__(self):
 		pywindow.RootPyWindow.__init__(self, "client", initial_cfg)
-		self.add_widget("header", pyelement.PyTextlabel(self), fill="x")
+		self.add_widget("header", pyelement.PyTextlabel(self), initial_cfg=header_cfg, fill="x")
 		self.title_song = ""
-		self.icon = "assets/icon.ico"
+		self.icon = "assets/icon"
 		self.interp = None
 
 		self.progressbar_style = ttk.Style()
 		self.progressbar_style.theme_use("default")
 		self.progressbar_style.configure(style="Horizontal.TProgressbar")
-		self.add_widget("progressbar", pyelement.PyProgressbar(self), fill="x").maximum = 1
-		self.add_widget("console", TextConsole(self, command_callback=self.parse_command), fill="both", expand=True).focus()
+		self.add_widget("progressbar", pyelement.PyProgressbar(self), initial_cfg=progressbar_cfg, fill="x").maximum = 1
+		self.add_widget("console", TextConsole(self, command_callback=self.parse_command), initial_cfg=console_cfg, fill="both", expand=True).focus()
 
 		self.last_cmd = None
 		self.event_handlers = {
@@ -58,7 +62,7 @@ class PyPlayer(pywindow.RootPyWindow):
 
 	def update_title(self, title, checks=None):
 		prefix = ""
-		for c in (checks if checks is not None else self.interp.checks): prefix += "[" + str(c) + "] "
+		for c in (checks if checks is not None else self.interp.arguments): prefix += "[" + str(c) + "] "
 		self.title_song = title
 		self.title = prefix + title
 		self.post_event("title_update", PyPlayerEvent(title=title))
@@ -86,14 +90,14 @@ class PyLog:
 
 		self._filename = "log_{}_0".format(datetime.datetime.today())
 		self._file = None
-		while self._file is None:
-			try: self._file = open(self._filename, "x")
-			except FileExistsError:
-				try:
-					suffix = self._filename[-1]
-					self._filename = self._filename[:-1]
-					self._filename += int(suffix) + 1
-				except ValueError: self._filename += "1"
+		#while self._file is None:
+		#	try: self._file = open(self._filename, "x")
+		#	except FileExistsError:
+		#		try:
+		#			suffix = self._filename[-1]
+		#			self._filename = self._filename[:-1]
+		#			self._filename += int(suffix) + 1
+		#		except ValueError: self._filename += "1"
 
 	def __del__(self):
 		if self._file is not None: self._file.close()
@@ -110,9 +114,15 @@ class PyLog:
 				except KeyError: self._file.write("[__main__.{}] {}\n".format(level, log))
 			except Exception as e: self._file.write("[?.{}] '{}': ".format(level, log) + "(? -> {})\n".format(e))
 
-	def write(self, objects, level="INFO", sep=" ", end="\n", file=None, flush=True):
+	def write_out(self, objects, level="INFO", sep=" ", end="\n", file=None, flush=True):
 		self._write_to_file(objects, level)
 
+	def write(self, str):
+		file = open(self._filename, "a")
+		file.write(str)
+		file.close()
+
+
 	def flush(self):
-		if self._file is not None:
+		if self._file is not None and not self._file.closed:
 			self._file.flush()

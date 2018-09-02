@@ -109,7 +109,7 @@ def command_info_added(arg, argc):
 	(path, song) = parse_song(arg)
 	if path is not None and song is not None:
 		if isinstance(song, list): return messagetypes.Reply("More than one song found, be more specific")
-		
+
 		if not path.endswith("/"): path += "/"
 		time = datetime.fromtimestamp(os.path.getctime(path + song))
 		return messagetypes.Reply("'" + get_displayname(song) + "' was added on " + str(time.strftime("%b %d, %Y")))
@@ -240,13 +240,15 @@ commands = {
 }
 
 def initialize():
-	media_player.update_blacklist(client["artist_blacklist"])
+	media_player.update_blacklist(client.get_or_create("artist_blacklist", []))
 	media_player.attach_event("media_changed", on_media_change)
 	media_player.attach_event("pos_changed", on_pos_change)
 	media_player.attach_event("player_updated", on_player_update)
 	media_player.attach_event("end_reached", on_end_reached)
+	media_player.attach_event("stopped", on_stopped)
 	if not song_tracker.is_loaded(): song_tracker.load_tracker()
-	dr = client["directory"]
+
+	dr = client.get_or_create("directory", {})
 	media_player.update_filter(path=dr.get(dr.get("default")))
 
 def on_destroy():
@@ -258,6 +260,9 @@ def on_media_change(event, player):
 
 def on_pos_change(event, player):
 	client.after(.5, client.update_progressbar, event.u.new_position)
+
+def on_stopped(event, player):
+	client.after(.5, client.update_progressbar, 0)
 
 def on_player_update(event, player):
 	md = event.data

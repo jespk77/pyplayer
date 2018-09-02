@@ -1,11 +1,10 @@
-from ui import pywindow, pyelement
+from ui import pyelement
 
 class TextConsole(pyelement.PyTextfield):
 	current_start = "end-1l linestart+2c"
 	current_end = "end lineend-1c"
 
 	def __init__(self, root, command_callback=print):
-		#self.font = Font(family="terminal", size=10)
 		pyelement.PyTextfield.__init__(self, root)
 		self.cmd_history = []
 		self.cmd_history_index = -1

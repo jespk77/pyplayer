@@ -14,7 +14,7 @@ drink_reminder = None
 drink_count = 0
 
 def on_noise_timer():
-	interpreter.queue.put_nowait("effect deer")
+	interpreter.put_command("effect deer")
 
 def on_drink_timer(level):
 	interpreter.queue.put_nowait("effect splash")

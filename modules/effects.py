@@ -2,6 +2,10 @@ from vlc import MediaPlayer
 import os, json
 
 from utilities import messagetypes
+try: import keyboard_intercept
+except ImportError as e:
+	print("[Interception.ERROR] Interception could not be loaded: ", e)
+	keyboard_intercept = None
 
 # DEFAULT MODULE VARIABLES
 priority = 4
@@ -27,7 +31,7 @@ def verify_key_cache():
 				file.close()
 			except Exception as e:
 				key_cache.clear()
-				print("error updating keyfile:", e)
+				print("[Interception.ERROR] updating keyfile:", e)
 	else: key_cache.clear()
 
 def on_key_down(key):
@@ -38,7 +42,7 @@ def on_key_down(key):
 	if item is not None:
 		cmd = item.get("command")
 		if cmd is not None: interpreter.queue.put_nowait(cmd)
-	else: print("[Interception.ERROR] no entry found for keycode", key)
+	else: print("[Interception.WARNING] no entry found for keycode", key)
 
 class SoundEffectPlayer:
 	def __init__(self):
@@ -91,19 +95,17 @@ def stop_effect(arg, argc):
 def start_listener(arg, argc):
 	global hook_running
 	if argc == 0:
-		if not hook_running:
+		if not hook_running and keyboard_intercept is not None:
 			try:
-				import keyboard_intercept
 				keyboard_intercept.initialize(on_key_down)
 				hook_running = True
-			except ImportError: return messagetypes.Reply("Interception cannot be found")
 			except Exception as e: return messagetypes.Error(e, "Error loading interception")
 		return messagetypes.Reply("Interception started")
 
 def stop_listener(arg, argc):
 	if argc == 0:
 		global hook_running
-		if hook_running:
+		if hook_running and keyboard_intercept is not None:
 			keyboard_intercept.join()
 			hook_running = False
 			return messagetypes.Reply("Interception stopped")
@@ -111,7 +113,7 @@ def stop_listener(arg, argc):
 
 def initialize():
 	start_listener(None, 0)
-	if len(interpreter.checks) == 0: interpreter.queue.put_nowait("effect startup")
+	if len(interpreter.arguments) == 0: interpreter.put_command("effect startup")
 
 def on_destroy():
 	global effect_player
