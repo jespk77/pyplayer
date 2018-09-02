@@ -24,20 +24,16 @@ class Interpreter(Thread):
 	def __init__(self, client):
 		super().__init__(name="PyInterpreterThread")
 		self._client = client
-		self._modules = []
-		self._load_modules()
 		self._queue = Queue()
 		self._configuration = None
 		self._checks = []
 		self._platform = sys.platform
 		self._set_sys_arg()
-		for md in self._modules:
-			md.interpreter = self
-			md.client = self._client
-			md.platform = self._platform
-			try: md.initialize()
-			except AttributeError: pass
-			except Exception as e: self._client.add_message(args=messagetypes.Error(e, "Error initializing '" + md.__name__ + "'").get_contents())
+
+		self._modules = []
+		for module in [f for f in os.listdir("modules") if f.endswith(".py")]:
+			r = self._load_module(module)
+			if isinstance(r, messagetypes.Error): client.add_message(r.get_contents())
 		self.start()
 
 	def _set_sys_arg(self):
@@ -53,6 +49,9 @@ class Interpreter(Thread):
 			except Exception as e: print("[Interpreter.ERROR] Cannot load memory tracker:", e)
 		self._client.update_title("PyPlayerTk", self._checks)
 
+	@property
+	def arguments(self): return self._checks
+
 	def print_additional_debug(self):
 		if "MemoryLog" in self._checks: self.mem_tracker.print_diff()
 
@@ -66,7 +65,7 @@ class Interpreter(Thread):
 			cmd = cmd.split(" ")
 			op = None
 			self.print_additional_debug()
-			if cmd[0] == "reload": op = self._reload_module(" ".join(cmd[1:]))
+			if cmd[0] == "reload": op = self._load_module(" ".join(cmd[1:]))
 
 			if op is None:
 				try: res = self._parse_cmd(cmd)
@@ -76,11 +75,10 @@ class Interpreter(Thread):
 					op = messagetypes.Error(TypeError("Expected a 'messagetype' object here, not a '{}'".format(type(res).__name__)), "Invalid response from command")
 				else: op = res
 
-			if op is None: op = messagetypes.Reply("No answer :(").get_contents()
-			elif op is False: op = messagetypes.Reply("Invalid command").get_contents()
-			else: op = op.get_contents()
+			if op is False: op = messagetypes.Reply("Invalid command")
+			elif not isinstance(op, messagetypes.Empty): op = messagetypes.Reply("No answer :(")
 			self.print_additional_debug()
-			self._client.add_reply(args=op)
+			self._client.add_reply(args=op.get_contents())
 
 	def put_command(self, cmd):
 		self._queue.put_nowait(str(cmd))
@@ -91,7 +89,9 @@ class Interpreter(Thread):
 	def _parse_cmd(self, cmd):
 		for md in self._modules:
 			try: cl = md.commands
-			except AttributeError: continue
+			except AttributeError:
+				print("[Interpreter.WARNING] Module '{}' does not have a 'commands' dictionary, this is most likely not intended...")
+				continue
 
 			if "" in cl: raise TypeError("Module '" + md.__name__ + "' contains a default command, this is not allowed in the top level")
 			while isinstance(cl, dict):
@@ -104,58 +104,51 @@ class Interpreter(Thread):
 			if isinstance(cl, dict): cl = cl.get("")
 			if cl is not None: return cl(cmd, len(cmd))
 
-	def _load_modules(self):
-		modules = []
-		for file in os.listdir("modules"):
-			if file.endswith(".py"):
-				fl = open("modules/" + file, "r")
-				header = fl.readline(0)
-				if header.startswith("#") and self._platform != header[1:]: continue
-				fl.close()
+	def _load_module(self, md):
+		if not md.startswith("modules."): md = "modules." + md
+		if md.endswith(".py"): md = md[:-3]
+
+		print("[Interpreter.INFO] Searching for module '{}' for (re)load".format(md))
+		for m in self._modules:
+			if m.__name__ == md:
+				print("[Interpreter.INFO] Found existing module, reloading...")
+				prev_priority = m.priority
+				try: m.on_destroy()
+				except AttributeError as a:
+					if not "on_destroy" in str(a): print("[Interpreter.ERROR] Couldn't close module '{}' properly: ".format(m.__name__), a)
+				except Exception as e: print("[Interpreter.ERROR] Couldn't close module '{}' properly: ".format(m.__name__), e)
 
 				try:
-					md = importlib.import_module("modules." + file[:-3])
-					modules.append(md)
-				except Exception as e: print("[Interpreter.ERROR] Error importing module '{}':".format(file), e)
+					importlib.reload(m)
+					if prev_priority != m.priority: print("[Interpreter.WARNING] Priority has changed on reload, this change will not take effect unless the program is restarted")
+					m.interpreter = self
+					m.client = self._client
+					m.platform = self._platform
+				except Exception as e: return messagetypes.Error(e, "Failed to load module '{}'".format(m.__name__))
 
-		self._modules = sorted(modules, key=lambda md: md.priority)
+				try: m.initialize()
+				except AttributeError as a:
+					if not "initialize" in str(a): raise a
+				except Exception as e: return messagetypes.Error(e, "Failed to initialize module '{}'".format(m.__name__))
+				return messagetypes.Reply("Successfully reloaded module '{}'".format(m.__name__))
 
-	def _reload_module(self, module):
-		md_list = []
-		dirty = False
-		for md in self._modules:
-			if "modules." + module == md.__name__:
-				try: md.on_destroy()
-				except AttributeError: pass
-				except Exception as e: print("[Interpreter.ERROR] Cleaning up module '{}':".format(md), e)
-
-				try: importlib.reload(md)
-				except Exception as e: return messagetypes.Error(e, "Error reloading '" + module + "'")
-
-				md_list.append(md)
-				md.interpreter = self
-				md.client = self._client
-				try: md.initialize()
-				except AttributeError: pass
-				except Exception as e: return messagetypes.Error(e, "Error initializing module '" + str(md) + "'")
-				dirty = True
-			else: md_list.append(md)
-
-		if not dirty:
-			try: lib = importlib.import_module("modules." + module)
-			except Exception as e: return messagetypes.Error(e, "Error importing module '" + module + "'")
-
-			lib.interpreter = self
-			lib.client = self._client
-			try: lib.initialize()
-			except AttributeError: pass
-			except Exception as e: return messagetypes.Error(e, "Error initializing module '{}'".format(module))
-			md_list.append(lib)
-
-		self._modules = sorted([ module for module in md_list ], key=lambda module: module.priority)
-		return messagetypes.Reply("Module '" + module + "' reloaded (all related settings were reset)")
+		print("[Interpreter.INFO] No module found, trying to import as new module")
+		try:
+			m = importlib.import_module(md)
+			m.interpreter = self
+			m.client = self._client
+			m.platform = self._platform
+			try: m.initialize()
+			except AttributeError as a:
+				if "initialize" not in str(a): raise a
+			except Exception as e: return messagetypes.Error(e, "Failed to initialize module '{}'".format(md))
+			self._modules.append(m)
+			self._modules = sorted(self._modules, key= lambda me: me.priority)
+			return messagetypes.Reply("Module successfully loaded")
+		except Exception as e: return messagetypes.Error(e, "Failed to import module '{}'".format(md))
 
 	def on_destroy(self):
 		for module in self._modules:
 			try: module.on_destroy()
-			except: pass
+			except AttributeError: pass
+			except Exception as e: print("[Interpreter.ERROR] Couldn't close module '{}' properly:".format(module.__name__), e)
