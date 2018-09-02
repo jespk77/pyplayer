@@ -88,7 +88,7 @@ class PyLog:
 	def __init__(self):
 		if not os.path.isdir("logs"): os.mkdir("logs")
 
-		self._filename = "log_{}_0".format(datetime.datetime.today().strftime("%y-%m-%d"))
+		self._filename = "logs/log_{}_0".format(datetime.datetime.today().strftime("%y-%m-%d"))
 		self._file = None
 		#while self._file is None:
 		#	try: self._file = open(self._filename, "x")
