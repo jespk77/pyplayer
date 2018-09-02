@@ -1,11 +1,9 @@
 from vlc import MediaPlayer
 import os, json
-
 from utilities import messagetypes
-try: import keyboard_intercept
-except ImportError as e:
-	print("[Interception.ERROR] Interception could not be loaded: ", e)
-	keyboard_intercept = None
+
+try: import utilities.keyboard_intercept as keyboard_intercept
+except ImportError: keyboard_intercept = None
 
 # DEFAULT MODULE VARIABLES
 priority = 4
@@ -41,7 +39,7 @@ def on_key_down(key):
 	item = key_cache.get(key)
 	if item is not None:
 		cmd = item.get("command")
-		if cmd is not None: interpreter.queue.put_nowait(cmd)
+		if cmd is not None: interpreter.put_command(cmd)
 	else: print("[Interception.WARNING] no entry found for keycode", key)
 
 class SoundEffectPlayer:
@@ -95,30 +93,34 @@ def stop_effect(arg, argc):
 def start_listener(arg, argc):
 	global hook_running
 	if argc == 0:
-		if not hook_running and keyboard_intercept is not None:
-			try:
-				keyboard_intercept.initialize(on_key_down)
-				hook_running = True
-			except Exception as e: return messagetypes.Error(e, "Error loading interception")
+		if not hook_running: start_keyboard_hook()
 		return messagetypes.Reply("Interception started")
 
 def stop_listener(arg, argc):
 	if argc == 0:
 		global hook_running
-		if hook_running and keyboard_intercept is not None:
-			keyboard_intercept.join()
-			hook_running = False
-			return messagetypes.Reply("Interception stopped")
-		else: return messagetypes.Reply("Interception not running")
+		if hook_running: pause_keyboard_hook()
+		return messagetypes.Reply("Interception stopped")
 
 def initialize():
-	start_listener(None, 0)
+	try: start_listener(None, 0)
+	except: pass
 	if len(interpreter.arguments) == 0: interpreter.put_command("effect startup")
 
 def on_destroy():
 	global effect_player
 	effect_player.on_destroy()
-	stop_listener(None, 0)
+	pause_keyboard_hook()
+
+def start_keyboard_hook():
+	global hook_running
+	if keyboard_intercept is not None: keyboard_intercept.initialize(on_key_down)
+	hook_running = True
+
+def pause_keyboard_hook():
+	global hook_running
+	if keyboard_intercept is not None: keyboard_intercept.join()
+	hook_running = False
 
 commands = {
 	"effect":{
