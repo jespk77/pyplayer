@@ -19,6 +19,7 @@ def load_tracker():
 
 def load_file(file):
 	global tracker_file
+	if not os.path.isdir("statistics"): os.mkdir("statistics")
 	if not file.startswith("statistics/"): tracker_file = "statistics/" + file
 	c = Counter()
 	try:

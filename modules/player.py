@@ -24,12 +24,12 @@ autoplay = Autoplay.OFF
 # ===== HELPER OPERATIONS =====
 def parse_song(arg):
 	if len(arg) > 0:
-		dir = client["directory"]
+		dir = client.get_or_create("directory", {"default": ""})
 		if arg[0] in dir:
 			path = dir[arg[0]]
 			arg = arg[1:]
 		else:
-			path = dir.get(dir["default"])
+			path = dir.get(dir.get("default"))
 			if path is None: return (None, None)
 		song = media_player.find_song(path=path, keyword=arg)
 		return (path, song)
@@ -277,4 +277,4 @@ def on_player_update(event, player):
 	song_history.add((md.path, md.song))
 
 def on_end_reached(event, player):
-	interpreter.queue.put_nowait("autoplay next")
+	interpreter.put_command("autoplay next")

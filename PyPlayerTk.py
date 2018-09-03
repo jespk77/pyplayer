@@ -10,7 +10,7 @@ class PyPlayerEvent:
 		for key, value in kwargs.items():
 			setattr(self, key, value)
 
-initial_cfg = { "autosave_delay": 5, "directory":{}, "header_format": "PyPlayer - %a %b %d, %Y %I:%M %p -" }
+initial_cfg = { "autosave_delay": 5, "directory":{"default": ""}, "header_format": "PyPlayer - %a %b %d, %Y %I:%M %p -" }
 progressbar_cfg = {"background": "cyan", "foreground": "white"}
 header_cfg = { "background": "black", "foreground": "white" }
 console_cfg = { "background": "black", "error.foreground": "red", "font":{"family":"terminal","size":10}, "foreground": "white", "info.foreground": "yellow",
