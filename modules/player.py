@@ -24,12 +24,12 @@ autoplay = Autoplay.OFF
 # ===== HELPER OPERATIONS =====
 def parse_song(arg):
 	if len(arg) > 0:
-		dir = client.get_or_create("directory", {"default": ""})
+		dir = client["directory"]
 		if arg[0] in dir:
 			path = dir[arg[0]]
 			arg = arg[1:]
 		else:
-			path = dir.get(dir.get("default"))
+			path = dir.get("music")
 			if path is None: return (None, None)
 		song = media_player.find_song(path=path, keyword=arg)
 		return (path, song)
