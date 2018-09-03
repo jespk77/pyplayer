@@ -12,8 +12,10 @@ def update_program():
 			print("updating...", gt.git.execute("git reset --hard origin/" + git_branch))
 		else:
 			print("Linux detected")
-			print("fetching...", os.system("git fetch --all"))
-			print("updating...", os.system("git reset --hard origin/" + git_branch))
+			print("fetching...")
+			os.system("git fetch --all")
+			print("updating...")
+			os.system("git reset --hard origin/" + git_branch)
 		gt.close()
 	except git.exc.InvalidGitRepositoryError:
 		print("downloading pyplayer...")
