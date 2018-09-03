@@ -1,4 +1,4 @@
-import sys, git
+import sys, git, os
 
 def update_program():
 	git_url = "https://github.com/jkr-77/pyplayer.git"
@@ -6,8 +6,14 @@ def update_program():
 	try:
 		gt = git.Repo()
 		print("checking for updates...")
-		print("fetching...", gt.git.execute("git fetch --all"), sep="\n")
-		print("updating...", gt.git.execute("git reset --hard origin/" + git_branch))
+		if "win" in sys.platform:
+			print("Windows detected")
+			print("fetching...", gt.git.execute("git fetch --all"), sep="\n")
+			print("updating...", gt.git.execute("git reset --hard origin/" + git_branch))
+		else:
+			print("Linux detected")
+			print("fetching...", os.system("git fetch --all"))
+			print("updating...", os.system("git reset --hard origin/" + git_branch))
 		gt.close()
 	except git.exc.InvalidGitRepositoryError:
 		print("downloading pyplayer...")
