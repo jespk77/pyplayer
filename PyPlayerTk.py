@@ -88,16 +88,15 @@ class PyLog:
 	def __init__(self):
 		if not os.path.isdir("logs"): os.mkdir("logs")
 
-		self._filename = "logs/log_{}_0".format(datetime.datetime.today().strftime("%y-%m-%d"))
+		self._filename = "logs/log_{}".format(datetime.datetime.today().strftime("%y-%m-%d"))
 		self._file = None
-		#while self._file is None:
-		#	try: self._file = open(self._filename, "x")
-		#	except FileExistsError:
-		#		try:
-		#			suffix = self._filename[-1]
-		#			self._filename = self._filename[:-1]
-		#			self._filename += int(suffix) + 1
-		#		except ValueError: self._filename += "1"
+		attempts = 0
+		while self._file is None:
+			fname = self._filename + "_" + str(attempts) if attempts > 0 else self._filename
+			try:
+				self._file = open(fname, "x")
+				self._filename = fname
+			except FileExistsError: attempts += 1
 
 	def __del__(self):
 		if self._file is not None: self._file.close()
@@ -118,11 +117,14 @@ class PyLog:
 		self._write_to_file(objects, level)
 
 	def write(self, str):
-		file = open(self._filename, "a")
-		file.write(str)
-		file.close()
-
+		if self._file is not None:
+			self._file.write(str)
+			self.flush()
 
 	def flush(self):
 		if self._file is not None and not self._file.closed:
 			self._file.flush()
+
+	def on_destroy(self):
+		if self._file is not None:
+			self._file.close()
