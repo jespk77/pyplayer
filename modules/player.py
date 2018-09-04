@@ -20,6 +20,7 @@ class Autoplay(enum.Enum):
 	QUEUE = 1
 	ON = 2
 autoplay = Autoplay.OFF
+autoplay_ignore = False
 
 # ===== HELPER OPERATIONS =====
 def parse_song(arg):
@@ -48,6 +49,12 @@ def get_displayname(song): return os.path.splitext(song)[0]
 def command_autoplay_info(arg, argc):
 	return messagetypes.Info("'autoplay' ['on', 'off', 'queue']")
 
+def command_autoplay_ignore(arg, argc):
+	if argc == 0:
+		global autoplay_ignore
+		autoplay_ignore = True
+		return messagetypes.Reply("Autoplay will be ignored once")
+
 def command_autoplay_off(arg, argc):
 	if argc == 0:
 		global autoplay
@@ -68,6 +75,11 @@ def command_autoplay_queue(arg, argc):
 
 def command_autoplay_next(arg, argc):
 	if argc == 0:
+		global autoplay_ignore
+		if autoplay_ignore:
+			autoplay_ignore = False
+			return messagetypes.Empty()
+
 		global autoplay
 		if autoplay.value > 0 and not song_queue.empty():
 			song = song_queue.get_nowait()
@@ -211,6 +223,7 @@ def command_stop(arg, argc):
 commands = {
 	"autoplay": {
 		"next": command_autoplay_next,
+		"ignore": command_autoplay_ignore,
 		"info": command_autoplay_info,
 		"off": command_autoplay_off,
 		"on": command_autoplay_on,
