@@ -78,8 +78,9 @@ class Configuration:
 		self._cfgvalue = None
 		if isinstance(dt, dict):
 			for key, value in dt.items():
-				if isinstance(value, dict): self._cfg[key] = Configuration(value)
-				else: self._cfg[key] = ConfigurationEntry(value)
+				if value is not None:
+					if isinstance(value, dict): self._cfg[key] = Configuration(value)
+					else: self._cfg[key] = ConfigurationEntry(value)
 
 	def __str__(self): return self.__descstr__()
 	def __descstr__(self):
@@ -141,6 +142,7 @@ class Configuration:
 		if self._file is not None:
 			self._file.seek(0)
 			self._file.truncate()
+			#TODO: create custom JSONencoder
 			json.dump(self.to_dict(force_remake=True), self._file, indent=5, sort_keys=sort_keys)
 			self._file.flush()
 			os.fsync(self._file.fileno())
