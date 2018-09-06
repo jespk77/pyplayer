@@ -39,4 +39,6 @@ client.start()
 print("client closed, destroying client...")
 if interp is not None and interp.is_alive(): interp.stop_command()
 interp.join()
-sys.stdout.on_destroy()
+
+try: sys.stdout.on_destroy()
+except AttributeError: pass
