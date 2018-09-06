@@ -263,7 +263,8 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 	def _load_configuration(self):
 		self._style.theme_use(self._configuration.get("theme", "default"))
 		style = "Horizontal.TProgressbar" if self.horizontal else "Vertical.TProgressbar"
-		self._style.configure(style, **self.configuration)
+		try: self._style.configure(style, **self.configuration)
+		except: pass
 		self.configure(style=style)
 
 	@property
