@@ -44,6 +44,7 @@ class MediaPlayer():
 		self._updated = False
 		self._filter = None
 		self._blacklist = None
+		self._last_random = None
 
 		self._events = {
 			"end_reached": (VLCPlayer.EventType.MediaPlayerEndReached, self.on_song_end, []),
@@ -198,10 +199,16 @@ class MediaPlayer():
 				if not match: song = s
 
 			if song is not None:
+				self._last_random = (path, song)
 				self.play_song(path, song)
 				return "Playing: {}".format(get_displayname(song))
 			else: return "No song found that doesn't match something in blacklist, try reducing the number of blacklisted items"
 		return "No songs with that filter"
+
+	def play_last_random(self):
+		if self._last_random is not None:
+			return self.play_song(self._last_random[0], self._last_random[1])
+		else: return None
 
 	def get_lyrics(self): raise NotImplementedError("Getting lyrics currently not supported, stay tuned(tm) for the future!")
 			#s = self._media_data.display_name
