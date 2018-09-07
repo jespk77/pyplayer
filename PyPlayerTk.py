@@ -1,6 +1,6 @@
 from tkinter import ttk
 from traceback import format_exception
-import datetime, inspect, os
+import datetime
 
 from ui import pywindow, pyelement
 from console import TextConsole
@@ -52,7 +52,7 @@ class PyPlayer(pywindow.RootPyWindow):
 		if name in self.event_handlers:
 			for c in self.event_handlers[name]:
 				try: c(self, data)
-				except Exception as e: print("[PyPlayer.ERROR]", "An error occured while processing event '", name, "' -> ", "\n".join(format_exception(None, e, e.__traceback__)), sep="")
+				except Exception as e: print("ERROR", "An error occured while processing event '", name, "' -> ", "\n".join(format_exception(None, e, e.__traceback__)), sep="")
 
 	def update_label(self):
 		self.date = datetime.datetime.today()
@@ -83,48 +83,3 @@ class PyPlayer(pywindow.RootPyWindow):
 
 	def add_message(self, args, s=0.1):
 		self.after(s, self.widgets["console"].set_notification, *args)
-
-class PyLog:
-	def __init__(self):
-		if not os.path.isdir("logs"): os.mkdir("logs")
-
-		self._filename = "logs/log_{}".format(datetime.datetime.today().strftime("%y-%m-%d"))
-		self._file = None
-		attempts = 0
-		while self._file is None:
-			fname = self._filename + "_" + str(attempts) if attempts > 0 else self._filename
-			try:
-				self._file = open(fname, "x")
-				self._filename = fname
-			except FileExistsError: attempts += 1
-
-	def __del__(self):
-		if self._file is not None: self._file.close()
-
-	@staticmethod
-	def _get_class_from_stack(stack):
-		return stack[0].f_locals["self"].__class__.__name__
-
-	def _write_to_file(self, log, level):
-		if self._file is not None:
-			try:
-				stack = inspect.stack()[1]
-				try: self._file.write("[{}.{}.{}] {}\n".format(PyLog._get_class_from_stack(stack), stack.function, level, log))
-				except KeyError: self._file.write("[__main__.{}] {}\n".format(level, log))
-			except Exception as e: self._file.write("[?.{}] '{}': ".format(level, log) + "(? -> {})\n".format(e))
-
-	def write_out(self, objects, level="INFO", sep=" ", end="\n", file=None, flush=True):
-		self._write_to_file(objects, level)
-
-	def write(self, str):
-		if self._file is not None:
-			self._file.write(str)
-			self.flush()
-
-	def flush(self):
-		if self._file is not None and not self._file.closed:
-			self._file.flush()
-
-	def on_destroy(self):
-		if self._file is not None:
-			self._file.close()

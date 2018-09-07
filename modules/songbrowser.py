@@ -24,7 +24,7 @@ def parse_path(arg, argc):
 
 def bind_events():
 	try: client.widgets["songbrowser"].bind("<Button-1>", block_event).bind("<Double-Button-1>", on_browser_doubleclick).bind("<Button-3>", on_browser_rightclick)
-	except KeyError: print("[module.songbrowser.ERROR] Cannot bind events because the browser could not be found")
+	except KeyError: print("ERROR", "Cannot bind events because the browser could not be found")
 	client.subscribe_event("title_update", title_update)
 
 def unbind_events():

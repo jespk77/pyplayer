@@ -40,13 +40,13 @@ class Interpreter(Thread):
 		if "console" in sys.argv: self._checks.append("ConsoleLog")
 
 		if "memory" in sys.argv:
-			print("[Interpreter.INFO] Memory logging enabled")
+			print("INFO", "Memory logging enabled")
 			try:
 				from pympler import tracker
 				self.mem_tracker = tracker.SummaryTracker()
 				self.mem_tracker.print_diff()
 				self._checks.append("MemoryLog")
-			except Exception as e: print("[Interpreter.ERROR] Cannot load memory tracker:", e)
+			except Exception as e: print("ERROR", "Cannot load memory tracker:", e)
 		self._client.update_title("PyPlayerTk", self._checks)
 
 	@property
@@ -90,7 +90,7 @@ class Interpreter(Thread):
 		for md in self._modules:
 			try: cl = md.commands
 			except AttributeError:
-				print("[Interpreter.WARNING] Module '{}' does not have a 'commands' dictionary, this is most likely not intended...")
+				print("WARNING", "Module '{}' does not have a 'commands' dictionary, this is most likely not intended...")
 				continue
 
 			if "" in cl: raise TypeError("Module '" + md.__name__ + "' contains a default command, this is not allowed in the top level")
@@ -108,19 +108,19 @@ class Interpreter(Thread):
 		if not md.startswith("modules."): md = "modules." + md
 		if md.endswith(".py"): md = md[:-3]
 
-		print("[Interpreter.INFO] Searching for module '{}' for (re)load".format(md))
+		print("INFO", "Searching for module '{}' for (re)load".format(md))
 		for m in self._modules:
 			if m.__name__ == md:
-				print("[Interpreter.INFO] Found existing module, reloading...")
+				print("INFO", "Found existing module, reloading...")
 				prev_priority = m.priority
 				try: m.on_destroy()
 				except AttributeError as a:
-					if not "on_destroy" in str(a): print("[Interpreter.ERROR] Couldn't close module '{}' properly: ".format(m.__name__), a)
-				except Exception as e: print("[Interpreter.ERROR] Couldn't close module '{}' properly: ".format(m.__name__), e)
+					if not "on_destroy" in str(a): print("ERROR", "Couldn't close module '{}' properly: ".format(m.__name__), a)
+				except Exception as e: print("ERROR", "Couldn't close module '{}' properly: ".format(m.__name__), e)
 
 				try:
 					importlib.reload(m)
-					if prev_priority != m.priority: print("[Interpreter.WARNING] Priority has changed on reload, this change will not take effect unless the program is restarted")
+					if prev_priority != m.priority: print("WARNING", "Priority has changed on reload, this change will not take effect unless the program is restarted")
 					m.interpreter = self
 					m.client = self._client
 					m.platform = self._platform
@@ -132,7 +132,7 @@ class Interpreter(Thread):
 				except Exception as e: return messagetypes.Error(e, "Failed to initialize module '{}'".format(m.__name__))
 				return messagetypes.Reply("Successfully reloaded module '{}'".format(m.__name__))
 
-		print("[Interpreter.INFO] No module found, trying to import as new module")
+		print("INFO", "No module found, trying to import as new module")
 		try:
 			m = importlib.import_module(md)
 			m.interpreter = self
@@ -151,4 +151,4 @@ class Interpreter(Thread):
 		for module in self._modules:
 			try: module.on_destroy()
 			except AttributeError: pass
-			except Exception as e: print("[Interpreter.ERROR] Couldn't close module '{}' properly:".format(module.__name__), e)
+			except Exception as e: print("ERROR", "Couldn't close module '{}' properly:".format(module.__name__), e)

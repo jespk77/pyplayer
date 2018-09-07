@@ -14,13 +14,13 @@ class TwitchViewer(pywindow.PyWindow):
 		self.icon = "assets/icon_twitchviewer"
 		login = self["account_data"]
 		if login is not None:
-			print("[TwitchViewer.INFO] Getting metadata for channel", channel)
+			print("INFO", "Getting metadata for channel", channel)
 			self._channel_meta = requests.get(self.channel_meta_url.format(channel=channel, client_id=login["client-id"])).json()
 			self.error = self._channel_meta["error"] if "error" in self._channel_meta else None
 		else: self.error = "No login information specified"
 
 		if self.error is None:
-			print("no errors, starting chat...")
+			print("INFO", "no errors, starting chat...")
 			self.bind("<Destroy>", self.disconnect)
 			self.add_widget("chat_viewer", twitchchat.TwitchChat(self, limited_mode), fill="both", expand=True)
 			self.add_widget("chat_input", twitchchat.TwitchChatTalker(self, self.widgets["chat_viewer"].send_message), fill="x")

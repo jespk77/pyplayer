@@ -63,7 +63,7 @@ class Configuration:
 				self._file = open(self._filepath, "r+")
 				try: self.update_dict(json.load(self._file))
 				except json.JSONDecodeError as e:
-					print("[Configuration.ERROR] Error parsing configuration file:", e)
+					print("ERROR", "Error parsing configuration file:", e)
 					self._file.close()
 					self._file = None
 					self._error = True
@@ -127,16 +127,16 @@ class Configuration:
 			vl = None
 			try: vl = value.to_dict()
 			except AttributeError: vl = value.value
-			except Exception as e: print("[PyConfiguration.ERROR] Cannot get value for key '{}':", e)
+			except Exception as e: print("ERROR", "Cannot get value for key '{}':", e)
 
 			if not isinstance(vl, Configuration) and not isinstance(vl, ConfigurationEntry): self._cfgvalue[key] = vl
-			else: print("[PyConfiguration.ERROR] Invalid value for key '{}':".format(key), vl)
+			else: print("ERROR", "Invalid value for key '{}':".format(key), vl)
 		return self._cfgvalue
 
 	def write_configuration(self, sort_keys=True):
 		if self._filepath is not None and self._file is None:
 			try: self._file = open(self._filepath, "w+")
-			except Exception as e: print("[PyConfiguration.ERROR] Cannot create configuration file '{}':".format(self._filepath), e)
+			except Exception as e: print("ERROR", "Cannot create configuration file '{}':".format(self._filepath), e)
 
 		if self._file is not None:
 			self._file.seek(0)

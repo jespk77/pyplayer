@@ -42,19 +42,19 @@ class PyElement:
 		self._configuration[key] = value
 		self.mark_dirty()
 		try: super().__setitem__(key, value)
-		except AttributeError: print("[PyElement.ERROR] Cannot find super class 'setitem' method in:", super())
+		except AttributeError: print("ERROR", "Cannot find super class 'setitem' method in:", super())
 		return self
 
 	def __getitem__(self, key):
 		if key in self._configuration: return self._configuration[key]
 		try: return self.cget(key)
-		except (AttributeError, tkinter.TclError) as e: print("[PyElement.ERROR] Cannot find key '{}' for element '{}': ".format(key, self.id), e)
+		except (AttributeError, tkinter.TclError) as e: print("ERROR", "Cannot find key '{}' for element '{}': ".format(key, self.id), e)
 		return pyconfiguration.ConfigurationEntry()
 
 	def after(self, s, *args):
 		""" Schedule function to be executed (with given parameters) after at least given seconds has passed """
 		try: super().after(int(s * 1000), *args)
-		except AttributeError: print("[PyElement.ERROR] Cannot find super class 'after' method in:", super())
+		except AttributeError: print("ERROR", "Cannot find super class 'after' method in:", super())
 		return self
 
 	def bind(self, sequence=None, func=None, add=None):
@@ -65,7 +65,7 @@ class PyElement:
 		return self
 	def _try_bind(self, sequence=None, func=None, add=None):
 		try: super().bind(sequence, func, add)
-		except AttributeError: print("[PyElement.ERROR] Cannot find super class 'bind' method in:", super())
+		except AttributeError: print("ERROR", "Cannot find super class 'bind' method in:", super().__name__)
 
 	def unbind(self, sequence, funcid=None):
 		""" Remove passed function bound from identifier
@@ -75,14 +75,14 @@ class PyElement:
 		return self
 	def _try_unbind(self, sequence, funcid):
 		try: super().unbind(sequence, funcid)
-		except AttributeError: print("[PyElement.ERROR] Cannot find super class 'unbind' method in:", super())
+		except AttributeError: print("ERROR", "Cannot find super class 'unbind' method in:", super().__name__)
 
 	def configure(self, cnf=None, **kw):
 		""" Update configuration options (are NOT saved to file, set options directly if it should be)
 		 	(also note that using direct updating + calling in conbination can cause unwanted effects, only do this if you know what you're doing) """
 		try: super()._configure("configure", cnf, kw)
-		except AttributeError: print("[PyElement.ERROR] Cannot find super class 'configure' method in:", super())
-		except tkinter.TclError as e: print("[PyElement.ERROR] Cannot set configuration for item '{}':".format(self.id), e)
+		except AttributeError: print("ERROR", "Cannot find super class 'configure' method in:", super())
+		except tkinter.TclError as e: print("ERROR", "Cannot set configuration for item '{}':".format(self.id), e)
 		return self
 
 class PyFrame(PyElement, tkinter.Frame):
@@ -228,7 +228,7 @@ class PyTextfield(PyElement, tkinter.Text):
 				if self._font is None: self._font = font.Font()
 				self._font.configure(**{item[1]: value})
 				self.configure(font=self._font)
-			else: print("[PyTextfield.ERROR] Missing subkey in key argument '{}'".format(key))
+			else: print("ERROR", "Missing subkey in key argument '{}'".format(key))
 		else: PyElement.__setitem__(self, key, value)
 		if dirty: self.mark_dirty()
 
@@ -318,4 +318,4 @@ class PyItemlist(PyElement, tkinter.Listbox):
 class PyImage(tkinter.PhotoImage):
 	def __init__(self, file):
 		tkinter.PhotoImage.__init__(self, file=file)
-		if not os.path.isfile(file): print("[PyImage.ERROR] Cannot find image path '{}'".format(file))
+		if not os.path.isfile(file): print("ERROR" ,"Cannot find image path '{}'".format(file))
