@@ -1,7 +1,7 @@
 import sys, os
 
 def update_program():
-	git_url = "https://github.com/jkr-77/pyplayer.git"
+	git_url = "https://github.com/jespk77/pyplayer.git"
 	git_branch = "experimental"
 	print("checking for updates...")
 	if "win" in sys.platform:

@@ -1,1 +1,1 @@
-"#pyplayer" 
+Custom music player with interface using python-vlc and tkinter, as well as a number of other functions
