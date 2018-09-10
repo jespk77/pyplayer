@@ -254,9 +254,11 @@ class PyWindow(BaseWindow):
 	@icon.setter
 	def icon(self, value):
 		""" Set window icon """
-		path = os.path.dirname(os.path.realpath(__file__))
-		try: self.root.tk.call("wm", "iconphoto", self.root._w, pyelement.PyImage(file=os.path.join(path, os.pardir, value + (".ico" if "win" in sys.platform else ".png"))))
-		except Exception as e: print("ERROR", "Setting icon bitmap {}".format(e))
+		if "linux" in sys.platform:
+			path = os.path.dirname(os.path.realpath(__file__))
+			try: self.root.tk.call("wm", "iconphoto", self.root._w, pyelement.PyImage(file=os.path.join(path, os.pardir, value + ".png")))
+			except Exception as e: print("ERROR", "Setting icon bitmap {}".format(e))
+		elif "win" in sys.platform: self.root.iconbitmap(value + ".ico")
 
 	@property
 	def always_on_top(self):
