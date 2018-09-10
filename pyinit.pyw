@@ -12,16 +12,20 @@ def update_program():
 			print("fetching...", gt.git.execute("git fetch --all"), sep="\n")
 			print("updating...", gt.git.execute("git reset --hard origin/" + git_branch))
 		except git.exc.InvalidGitRepositoryError:
-			print("downloading pyplayer...")
+			print("PyPlayer not found, downloading from branch {}...".format(git_branch))
 			gt = git.Repo.clone_from(url=git_url, to_path="")
 		gt.close()
-	elif "unix" in sys.platform:
+	elif "linux" in sys.platform:
 		print("Linux detected")
-		print("fetching...")
-		os.system("git fetch --all")
-		print("updating...")
-		os.system("git reset --hard origin/" + git_branch)
-	else: raise OSError("platform not supported! sorry! (unless you're using macOS: in that case you don't deserve this program)")
+		try:
+			print("fetching...")
+			if not os.system("git fetch --all"): raise FileNotFoundError
+			print("updating...")
+			os.system("git reset --hard origin/" + git_branch)
+		except FileNotFoundError:
+			print("PyPlayer not found, downloading from branch {}...".format(git_branch))
+			os.system("git clone {} -b {}".format(git_url, git_branch))
+	else: raise OSError("platform not supported! sorry! (unless you're using macOS: in that case sorry not sorry)")
 
 if "no_update" in sys.argv: print("skipping update checks")
 else: update_program()
@@ -39,4 +43,6 @@ client.start()
 print("client closed, destroying client...")
 if interp is not None and interp.is_alive(): interp.stop_command()
 interp.join()
-sys.stdout.on_destroy()
+
+try: sys.stdout.on_destroy()
+except AttributeError: pass

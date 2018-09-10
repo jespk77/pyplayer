@@ -173,6 +173,12 @@ def command_play(arg, argc):
 			return messagetypes.Reply(reply)
 		else: return messagetypes.Reply("Cannot find that song")
 
+def command_last_random(arg, argc):
+	if argc == 0:
+		r = media_player.play_last_random()
+		if r is not None: return messagetypes.Reply("Playing: " + r.display_name)
+		else: return messagetypes.Reply("There haven't been any randomly picked songs")
+
 def command_prev_song(arg, argc):
 	if argc == 0:
 		item = song_history.get()
@@ -240,6 +246,7 @@ commands = {
 	}, "music": command_music,
 	"player": {
 		"": command_play,
+		"last_random": command_last_random,
 		"next_song": command_next_song,
 		"pause": command_pause,
 		"prev_song": command_prev_song,

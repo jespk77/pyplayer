@@ -1,4 +1,4 @@
-import tkinter, sys
+import tkinter, os, sys
 
 from ui import pyelement, pyconfiguration
 
@@ -189,6 +189,13 @@ class PyWindow(BaseWindow):
 		""" Get window manager for this window """
 		return self.tk
 
+	@property
+	def transient(self):
+		""" Sets this window to be transient, connected to its parent and is minimized when the parent is minimized
+		 	(Cannot be set on root window) """
+		if not isinstance(self.tk, tkinter.Toplevel): raise TypeError("Can only set transient on regular window")
+		return self.root.transient()
+
 	def load_configuration(self):
 		""" (Re)load configuration from file """
 		self.geometry = self._configuration.get("geometry", "")
@@ -247,8 +254,9 @@ class PyWindow(BaseWindow):
 	@icon.setter
 	def icon(self, value):
 		""" Set window icon """
-		try: self.root.iconbitmap(value + ".ico" if "win" in sys.platform else value + ".png")
-		except Exception as e: print("ERROR", "setting icon bitmap '{}': {}".format(value, e))
+		path = os.path.dirname(os.path.realpath(__file__))
+		try: self.root.tk.call("wm", "iconphoto", self.root._w, pyelement.PyImage(file=os.path.join(path, os.pardir, value + (".ico" if "win" in sys.platform else ".png"))))
+		except Exception as e: print("ERROR", "Setting icon bitmap {}".format(e))
 
 	@property
 	def always_on_top(self):
