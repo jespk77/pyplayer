@@ -1,7 +1,7 @@
 import sys, os
 
 def update_program():
-	git_url = "https://github.com/jkr-77/pyplayer.git"
+	git_url = "https://github.com/jespk77/pyplayer.git"
 	git_branch = "experimental"
 	print("checking for updates...")
 	if "win" in sys.platform:
@@ -12,16 +12,20 @@ def update_program():
 			print("fetching...", gt.git.execute("git fetch --all"), sep="\n")
 			print("updating...", gt.git.execute("git reset --hard origin/" + git_branch))
 		except git.exc.InvalidGitRepositoryError:
-			print("downloading pyplayer...")
+			print("PyPlayer not found, downloading from branch {}...".format(git_branch))
 			gt = git.Repo.clone_from(url=git_url, to_path="")
 		gt.close()
 	elif "linux" in sys.platform:
 		print("Linux detected")
-		print("fetching...")
-		os.system("git fetch --all")
-		print("updating...")
-		os.system("git reset --hard origin/" + git_branch)
-	else: raise OSError("platform not supported! sorry! (unless you're using macOS: in that case you don't deserve this program)")
+		try:
+			print("fetching...")
+			if not os.system("git fetch --all"): raise FileNotFoundError
+			print("updating...")
+			os.system("git reset --hard origin/" + git_branch)
+		except FileNotFoundError:
+			print("PyPlayer not found, downloading from branch {}...".format(git_branch))
+			os.system("git clone {} -b {}".format(git_url, git_branch))
+	else: raise OSError("platform not supported! sorry! (unless you're using macOS: in that case sorry not sorry)")
 
 if "no_update" in sys.argv: print("skipping update checks")
 else: update_program()
