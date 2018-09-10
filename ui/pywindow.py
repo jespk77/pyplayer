@@ -1,4 +1,4 @@
-import tkinter, sys
+import tkinter, os, sys
 
 from ui import pyelement, pyconfiguration
 
@@ -254,8 +254,9 @@ class PyWindow(BaseWindow):
 	@icon.setter
 	def icon(self, value):
 		""" Set window icon """
-		try: self.root.iconbitmap(value + ".ico" if "win" in sys.platform else value + ".png")
-		except Exception as e: print("ERROR", "setting icon bitmap '{}': {}".format(value, e))
+		path = os.path.dirname(os.path.realpath(__file__))
+		try: self.root.tk.call("wm", "iconphoto", self.root._w, pyelement.PyImage(file=os.path.join(path, os.pardir, value + (".ico" if "win" in sys.platform else ".png"))))
+		except Exception as e: print("ERROR", "Setting icon bitmap {}".format(e))
 
 	@property
 	def always_on_top(self):
