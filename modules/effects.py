@@ -29,7 +29,7 @@ def verify_key_cache():
 				file.close()
 			except Exception as e:
 				key_cache.clear()
-				print("[Interception.ERROR] updating keyfile:", e)
+				print("ERROR", "updating keyfile:", e)
 	else: key_cache.clear()
 
 def on_key_down(key):
@@ -40,7 +40,7 @@ def on_key_down(key):
 	if item is not None:
 		cmd = item.get("command")
 		if cmd is not None: interpreter.put_command(cmd)
-	else: print("[Interception.WARNING] no entry found for keycode", key)
+	else: print("WARNING", "no entry found for keycode", key)
 
 class SoundEffectPlayer:
 	def __init__(self):
@@ -59,7 +59,7 @@ class SoundEffectPlayer:
 
 		sound_path = client["directory"].get("sounds")
 		if sound_path is not None and not sound_path.endswith("/"): sound_path += "/"
-		if sound_path is None or not os.path.isdir(sound_path): print("[EffectPlayer] invalid sound folder:", sound_path); return
+		if sound_path is None or not os.path.isdir(sound_path): print("ERROR", "Invalid sound folder:", sound_path); return
 		effects = [file for file in os.listdir(sound_path) if arg == os.path.splitext(file)[0]]
 		if len(effects) == 1:
 			if loop: self.player.set_mrl(sound_path + effects[0], "input-repeat=-1")
@@ -69,7 +69,7 @@ class SoundEffectPlayer:
 			self.last_effect = os.path.splitext(effects[0])[0]
 			return messagetypes.Reply("Playing sound effect: " + self.last_effect)
 		else:
-			print("[EffectPlayer.INFO] cannot determine sound effect from", arg, ", there are", len(effects), "posibilities")
+			print("INFO", "cannot determine sound effect from", arg, ", there are", len(effects), "posibilities")
 			return messagetypes.Reply("Cannot determine what sound that should be")
 
 	def stop_player(self):

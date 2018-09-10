@@ -30,7 +30,7 @@ class MediaPlayer():
 	end_pos = 0.85
 
 	def __init__(self):
-		print("[MediaPlayer.INFO] initializing new MediaPlayer instance...")
+		print("INFO", "Initializing new MediaPlayer instance...")
 		self._vlc = VLCPlayer.Instance()
 		self._player1 = self._vlc.media_player_new()
 		self._player1.audio_output_set("mmdevice")
@@ -88,7 +88,7 @@ class MediaPlayer():
 	def update_blacklist(self, blacklist):
 		""" Update the player blacklist, all songs from artist in this list will not be picked as random song
 		 	This list is ignored when a filter is set or when choosing a specific song """
-		if blacklist is not None and not isinstance(blacklist, list): raise TypeError("[MediaPlayer.ERROR] Blacklist must be a list!")
+		if blacklist is not None and not isinstance(blacklist, list): raise TypeError("Blacklist must be a list!")
 		self._blacklist = blacklist
 
 	# === PLAYER UTILITIES ===
@@ -97,7 +97,7 @@ class MediaPlayer():
 			Items that match the full keyword get returned first, if no matches found returns items containing the keyword
 				path: the path to search in
 				keyword: [optional], returns all items matching this keyword or all items if no argument passed """
-		print("[MediaPlayer.INFO] looking for songs in", path, "with keyword", keyword)
+		print("INFO", "looking for songs in", path, "with keyword", keyword)
 		res1 = []
 		res2 = []
 		keyword = keyword.lower()
@@ -121,13 +121,13 @@ class MediaPlayer():
 		elif isinstance(keyword, str): keyword = keyword.split(" ")
 		elif not isinstance(keyword, list): raise TypeError("'keyword' argument must be either None, string or list")
 
-		print("[MediaPlayer.INFO] Find songs in", path, "with keyword", keyword)
+		print("INFO", "Find songs in", path, "with keyword", keyword)
 		id = -1
 		if len(keyword) > 1:
 			try:
 				id = int(keyword[-1])
 				keyword.pop(-1)
-				print("[MediaPlayer.INFO] Found index in keyword", id)
+				print("INFO", "Found index in keyword", id)
 			except ValueError: pass
 
 		if keyword[-1].endswith("."):
@@ -136,7 +136,7 @@ class MediaPlayer():
 		else: exact = False
 		songlist = self.list_songs(path=path, keyword=" ".join(keyword), exact_search=exact)
 		if 0 <= id < len(songlist):
-			print("[MediaPlayer.INFO] Picking song from list using found index", id)
+			print("INFO", "Picking song from list using found index", id)
 			return songlist[id]
 		elif len(songlist) == 1: return songlist[0]
 		else: return songlist
@@ -146,7 +146,7 @@ class MediaPlayer():
 			If successful, returns the updated media data set by the player """
 		if not path.endswith("/"): path += "/"
 		file = path + song
-		print("[MediaPlayer.INFO] Preparing to play", file)
+		print("INFO", "Preparing to play", file)
 		if not os.path.isfile(file): return None
 
 		self._media = self._vlc.media_new(file)
@@ -181,7 +181,7 @@ class MediaPlayer():
 		""" Choose a random song from a directory, uses values set in player filter when no arguments are given """
 		if path == "": path = self.filter_path
 		if keyword == "": keyword = self.filter_keyword
-		print("[MediaPlayer.INFO] Play random song from ", path, ", keyword=", keyword, sep="")
+		print("INFO", "Play random song from ", path, ", keyword=", keyword, sep="")
 		songlist = self.list_songs(path, keyword)
 		if len(songlist) > 0:
 			song = None
@@ -194,7 +194,7 @@ class MediaPlayer():
 					for item in self._blacklist:
 						if item.lower() == s.split(" - ", maxsplit=1)[0].lower():
 							match = True
-							print("[MediaPlayer.INFO] Found blacklist item '{}', tried {} times now".format(item, tries))
+							print("INFO", "Found blacklist item '{}', tried {} times now".format(item, tries))
 							break
 				if not match: song = s
 
@@ -211,11 +211,6 @@ class MediaPlayer():
 		else: return None
 
 	def get_lyrics(self): raise NotImplementedError("Getting lyrics currently not supported, stay tuned(tm) for the future!")
-			#s = self._media_data.display_name
-			#if len(s) > 1:
-			#	artist = re.sub("[^0-9a-zA-Z]+", "", s[0]).lower()
-			#	if artist.startswith("the"): artist = artist.lstrip("the")
-			#	return "http://www.azlyrics.com/lyrics/" + artist + "/" + re.sub("[^0-9a-zA-Z]+", "", s[1]).lower() + ".html"
 
 # ===== EVENT HANDLING =====
 	def attach_event(self, event, callback):
@@ -231,18 +226,18 @@ class MediaPlayer():
 
 	def update_event_handler(self, event, callback, add):
 		if event in self._events:
-			if not callable(callback): raise TypeError("[MediaPlayer] 'callable' argument must be callable")
+			if not callable(callback): raise TypeError("'callable' argument must be callable")
 			handle = self._events[event]
 			if add == (not callback in handle[2]):
 				if add: handle[2].append(callback)
 				else: handle[2].remove(callback)
-		else: print("[MediaPlayer.WARNING] Tried to register unknown event handler id '" + event + "', ignoring this call...")
+		else: print("WARNING", "Tried to register unknown event handler id '" + event + "', ignoring this call...")
 
 	def call_attached_handlers(self, name, event, player):
 		if name in self._events:
 			for cb in self._events[name][2]:
 				try: cb(event, player)
-				except Exception as e: print("[MediaPlayer.ERROR] Calling event handler '{}':".format(name), e)
+				except Exception as e: print("ERROR", "Calling event handler '{}':".format(name), e)
 
 	def on_song_end(self, event, name, player, player_one):
 		if not self._updated:
@@ -281,7 +276,7 @@ class MediaPlayer():
 # ====== DESTROY PLAYER INSTANCE =====
 	def on_destroy(self):
 		self.stop_player()
-		print("[MediaPlayer.INFO] Looks like we're done here, release all player stuffs")
+		print("INFO", "Looks like we're done here, release all player stuffs")
 		self._player1.release()
 		self._player2.release()
 		self._vlc.release()

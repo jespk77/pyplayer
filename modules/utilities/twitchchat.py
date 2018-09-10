@@ -25,7 +25,7 @@ class IRCClient(threading.Thread):
 		super().start()
 
 	def connect(self):
-		print("[IRCClient] connecting to", self.server, ":", self.port)
+		print("INFO", "connecting to", self.server, ":", self.port)
 		self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.socket.connect((self.server, self.port))
 		self.send("PASS {!s}".format(self.auth))
@@ -36,13 +36,13 @@ class IRCClient(threading.Thread):
 		self.send("JOIN #{}".format(self.channel_name))
 
 	def disconnect(self):
-		print("[IRCClient] disconnecting from", self.server)
+		print("INFO", "disconnecting from", self.server)
 		if self.socket is not None:
 			try:
 				self.socket.shutdown(socket.SHUT_RDWR)
 				self.socket.close()
-			except Exception as e: print("[IRCClient] exception closing socket:", e)
-			print("[IRCClient] disconnected")
+			except Exception as e: print("ERROR", "exception closing socket:", e)
+			print("INFO", "disconnected")
 		self.socket = None
 
 	def send(self, message):
@@ -54,7 +54,7 @@ class IRCClient(threading.Thread):
 			try:
 				rec = self.socket.recv(1024).decode("UTF-8").split("\r\n")
 				if rec == 0:
-					print("[IRCClient] Whoops, the connections seems to have broken, reconnecting...")
+					print("INFO", "Whoops, the connections seems to have broken, reconnecting...")
 					self.connect()
 					time.sleep(2)
 					continue
@@ -101,7 +101,7 @@ class TwitchChat(pyelement.PyTextfield):
 	@command_callback.setter
 	def command_callback(self, callback):
 		if callable(callback): self._callback = callback
-		else: print("[TwitchChat.ERROR] tried to set queue callback to non-callable type", callback)
+		else: print("ERROR", "Tried to set queue callback to non-callable type", callback)
 
 	def update_time(self):
 		self._timestamp = datetime.datetime.today()
@@ -155,7 +155,7 @@ class TwitchChat(pyelement.PyTextfield):
 				u.close()
 
 			except Exception as e:
-				print("[TwitchChat.ERROR] Cannot load bttv emote '{}':".format(name), e)
+				print("ERROR", "Cannot load bttv emote '{}':".format(name), e)
 				del self._bttv_emotecache[name]
 				return
 		return self._bttv_emotecache[name]
@@ -327,7 +327,7 @@ class TwitchChat(pyelement.PyTextfield):
 					continue
 			elif word in self._bttv_emotecache:
 				try: self.image_create("end", image=self._get_bttv_emote(word))
-				except Exception as e: print("[TwitchChat] error creating image for bttv emote '{}':".format(word), e)
+				except Exception as e: print("ERROR", "Error creating image for bttv emote '{}':".format(word), e)
 				continue
 
 			self.insert("end", word + " ", tags)
@@ -398,7 +398,7 @@ class TwitchChatTalker(pyelement.PyTextfield):
 			self.clear_text(event)
 		else:
 			self.message_callback = None
-			print("[TwitchChatTalker.ERROR] Chat message sender has invalid callback, messages will not be sent")
+			print("ERROR", "Chat message sender has invalid callback, messages will not be sent")
 		return self.block_action
 
 	def clear_text(self, event):

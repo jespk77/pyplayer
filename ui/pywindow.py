@@ -68,18 +68,18 @@ class BaseWindow:
 
 	def write_configuration(self):
 		""" Write window configuration to file (if dirty) """
-		if self._configuration.error: print("[BaseWindow.INFO] Skipping configuration writing since there was an error loading it")
+		if self._configuration.error: print("INFO", "Skipping configuration writing since there was an error loading it")
 		elif self.dirty:
 			for id, wd in self.widgets.items():
 				self._configuration[id] = wd.configuration
 				wd._dirty = False
 
-			print("[BaseWindow.INFO] Window is dirty, writing configuration to '{}'".format(self.cfg_filename))
+			print("INFO", "Window is dirty, writing configuration to '{}'".format(self.cfg_filename))
 			try:
 				self._configuration["geometry"] = self.geometry
 				self._configuration.write_configuration()
 				self._dirty = False
-			except Exception as e: print("[BaseWindow.ERROR] error writing configuration file for '{}':".format(self.window_id), e)
+			except Exception as e: print("ERROR", "Error writing configuration file for '{}':".format(self.window_id), e)
 
 	def add_widget(self, id, widget, initial_cfg=None, **pack_args):
 		""" Add new 'pyelement' widget to this window using passed (unique) identifier, add all needed pack parameters for this widget to the end
@@ -87,7 +87,7 @@ class BaseWindow:
 		 	Returns the bound widget if successful, False otherwise"""
 		id = id.lower()
 		if not isinstance(widget, pyelement.PyElement):
-			print("[BaseWindow.ERROR] tried to create widget with id '{}' but it is not a valid widget: ".format(id), widget)
+			print("ERROR", "Tried to create widget with id '{}' but it is not a valid widget: ".format(id), widget)
 			return False
 
 		self.remove_widget(id)
@@ -101,7 +101,7 @@ class BaseWindow:
 			elif initial_cfg is not None: cfg = initial_cfg
 
 			if cfg is not None: self.widgets[id].configuration = cfg
-		except (AttributeError, TypeError) as e: print("[BaseWindow.ERROR] Cannot assign configuration to created widget '{}':".format(id), e)
+		except (AttributeError, TypeError) as e: print("ERROR", "Cannot assign configuration to created widget '{}':".format(id), e)
 
 		self.widgets[id].pack(pack_args)
 		return self.widgets[id]
@@ -124,12 +124,12 @@ class BaseWindow:
 		 	Returns the bound window if successful, False otherwise """
 		id = id.lower()
 		if not isinstance(window, BaseWindow):
-			print("[BaseWindow.ERROR] tried to create window with id '{}' but it is not a valid widget: {}".format(id, window))
+			print("ERROR", "Tried to create window with id '{}' but it is not a valid widget: {}".format(id, window))
 			return False
 
 		if self._children is None: self._children = {}
 		success = self.remove_window(id)
-		if not success: print("[BaseWindow.ERROR] Cannot close previously bound window with id '{}'".format(id))
+		if not success: print("ERROR", "Cannot close previously bound window with id '{}'".format(id))
 
 		self._children[id] = window
 		return self.children[id]
@@ -142,7 +142,7 @@ class BaseWindow:
 				self._children[id].destroy()
 				del self._children[id]
 			except AttributeError: return False
-			except Exception as e: print("[BaseWindow.ERROR] Couldn't destroy window '{}' properly: ".format(id), e); return False
+			except Exception as e: print("ERROR", "Couldn't destroy window '{}' properly: ".format(id), e); return False
 		return True
 
 	def get_or_create(self, item, default=None):
@@ -167,9 +167,9 @@ class BaseWindow:
 			key = key.split("::", maxsplit=1)
 			if len(key) > 1 and key[0] in self.widgets:
 				try: self.widgets[key[0]][key[1]] = value
-				except Exception as e: print("[BaseWindow.ERROR] Error configuring option '{}': ".format(key), e)
+				except Exception as e: print("ERROR", "Error configuring option '{}': ".format(key), e)
 			self.mark_dirty()
-		else: print("[BaseWindow.WARNING] Configuration was not loaded properly therefore any configuration updates are ignored")
+		else: print("WARNING", "Configuration was not loaded properly therefore any configuration updates are ignored")
 
 	def __delitem__(self, key):
 		""" Delete the configuration option for this window/widget in this window from the configuration file
@@ -248,7 +248,7 @@ class PyWindow(BaseWindow):
 	def icon(self, value):
 		""" Set window icon """
 		try: self.root.iconbitmap(value + ".ico" if "win" in sys.platform else value + ".png")
-		except Exception as e: print("[PyWindow.ERROR] setting icon bitmap '{}': {}".format(value, e))
+		except Exception as e: print("ERROR", "setting icon bitmap '{}': {}".format(value, e))
 
 	@property
 	def always_on_top(self):
