@@ -189,6 +189,13 @@ class PyWindow(BaseWindow):
 		""" Get window manager for this window """
 		return self.tk
 
+	@property
+	def transient(self):
+		""" Sets this window to be transient, connected to its parent and is minimized when the parent is minimized
+		 	(Cannot be set on root window) """
+		if not isinstance(self.tk, tkinter.Toplevel): raise TypeError("Can only set transient on regular window")
+		return self.root.transient()
+
 	def load_configuration(self):
 		""" (Re)load configuration from file """
 		self.geometry = self._configuration.get("geometry", "")
