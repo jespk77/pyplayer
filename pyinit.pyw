@@ -15,7 +15,7 @@ def update_program():
 			print("downloading pyplayer...")
 			gt = git.Repo.clone_from(url=git_url, to_path="")
 		gt.close()
-	elif "unix" in sys.platform:
+	elif "linux" in sys.platform:
 		print("Linux detected")
 		print("fetching...")
 		os.system("git fetch --all")
