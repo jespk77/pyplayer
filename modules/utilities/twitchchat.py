@@ -8,6 +8,7 @@ from ui import pyelement
 
 import re, threading, time, datetime
 import io, socket, requests, random
+import os, json
 
 class IRCClient(threading.Thread):
 	def __init__(self, message_queue, extra_info=False):
@@ -74,6 +75,9 @@ class TwitchChat(pyelement.PyTextfield):
 	bttv_emote_list = "https://api.betterttv.net/2/emotes"
 	bttv_emote_url = "https://cdn.betterttv.net/emote/{id}/1x"
 
+	emotemap_cache_file = "twitch/emotemap_cache"
+	emotemap_url = "https://api.twitch.tv/kraken/chat/emoticon_images?emotesets={sets}&client_id={client_id}"
+
 	def __init__(self, master, limited_mode=False):
 		self._window = master
 		pyelement.PyTextfield.__init__(self, master, accept_input=False)
@@ -88,6 +92,7 @@ class TwitchChat(pyelement.PyTextfield):
 		self._bttv_emotecache = {}
 		self._bitcache = {}
 		self._badgecache = {}
+		self._emotenamecache = {}
 		self._versioned_badges = []
 		self._timestamp = None
 
@@ -125,9 +130,10 @@ class TwitchChat(pyelement.PyTextfield):
 				self._load_local_emote()
 				self._load_bttv()
 				self._load_bits(login)
+				self._load_emotemap(login)
 				self.add_text(text=" - Joined channel: {} -".format(self._channel_meta["display_name"]), tags=("notice",))
 			else: raise ConnectionError("Invalid login provided '{}'".format(login))
-		else: raise ConnectionError("Already coonected")
+		else: raise ConnectionError("Already connected")
 
 	def disconnect(self):
 		if self._irc_client is not None:
@@ -239,6 +245,28 @@ class TwitchChat(pyelement.PyTextfield):
 			self._emotecache[emote_id] = PhotoImage(Image.open(io.BytesIO(url.read())))
 			url.close()
 		except: self._emotecache[emote_id] = None
+
+	def _load_emotemap(self, login):
+		if os.path.isfile(self.emotemap_cache_file) and time.time() - os.path.getmtime(self.emotemap_cache_file) < 86400:
+			try:
+				jfile = open(self.emotemap_cache_file, "r")
+				self._emotenamecache = json.load(jfile)
+				jfile.close()
+				return
+			except Exception as e: print("ERROR", "Parsing previously written emote name cache:", e)
+
+		try:
+			#TODO: get the emote set for currently active subscriptions
+			emote_map = requests.get(self.emotemap_url.format(sets="0", client_id=login["client-id"])).json()["emoticon_sets"]
+			for set, emotes in emote_map.items():
+				for emote in emotes:
+					#TODO: remove unwanted characters (or remap special character emotes) from code parsing
+					self._emotenamecache[emote["code"]] = str(emote["id"])
+			jfile = open(self.emotemap_cache_file, "w")
+			json.dump(self._emotenamecache, jfile)
+			jfile.close()
+		except Exception as e: print("ERROR", "Getting emote cache:", e)
+
 	# ===== END OF BUILT-IN HELPER METHODS =====
 
 	def send_message(self, msg):
@@ -314,8 +342,15 @@ class TwitchChat(pyelement.PyTextfield):
 
 			if word in emote_map:
 				try: self.image_create(index="end", image=self._emotecache[emote_map[word]])
-				except Exception: pass
+				except Exception as e: print("ERROR", "Creating emote for word '{}' from id:".format(word), e)
 				continue
+
+			elif word in self._emotenamecache:
+				if not self._emotenamecache[word] in self._emotecache: self._load_emote(self._emotenamecache[word])
+				try: self.image_create(index="end", image=self._emotecache[self._emotenamecache[word]])
+				except Exception as e: print("ERROR", "Creating emote for word '{}' from name: ", e)
+				continue
+
 			elif bits:
 				bit = self.bit_format.findall(word)
 				if len(bit) > 0:
@@ -325,6 +360,7 @@ class TwitchChat(pyelement.PyTextfield):
 						self.insert("end", str(bit[0][1]), "cheer"+str(im[0]))
 					except Exception: pass
 					continue
+
 			elif word in self._bttv_emotecache:
 				try: self.image_create("end", image=self._get_bttv_emote(word))
 				except Exception as e: print("ERROR", "Error creating image for bttv emote '{}':".format(word), e)
