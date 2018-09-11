@@ -278,6 +278,7 @@ class TwitchChat(pyelement.PyTextfield):
 	def send_message(self, msg):
 		if self._irc_client is not None:
 			self._irc_client.send("PRIVMSG #" + self._channel_meta["name"] + " :" + msg)
+			if msg.startswith("/me"): msg = "\x01ACTION" + msg[3:]
 			if self._user_meta is None:
 				self.insert("end", "\n You: ", ("notice",))
 				self.insert("end", msg.rstrip("\n"))
