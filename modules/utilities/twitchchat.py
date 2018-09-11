@@ -76,7 +76,7 @@ class TwitchChat(pyelement.PyTextfield):
 	bttv_emote_url = "https://cdn.betterttv.net/emote/{id}/1x"
 
 	emotemap_cache_file = "twitch/emotemap_cache"
-	emotemap_url = "https://api.twitch.tv/kraken/chat/emoticon_images?emotesets={sets}&client_id={client_id}"
+	emotemap_url = "https://api.twitch.tv/kraken/users/{user}/emotes"
 
 	def __init__(self, master, limited_mode=False):
 		self._window = master
@@ -256,16 +256,22 @@ class TwitchChat(pyelement.PyTextfield):
 			except Exception as e: print("ERROR", "Parsing previously written emote name cache:", e)
 
 		try:
-			#TODO: get the emote set for currently active subscriptions
-			emote_map = requests.get(self.emotemap_url.format(sets="0", client_id=login["client-id"])).json()["emoticon_sets"]
-			for set, emotes in emote_map.items():
+			emote_map = requests.get(self.emotemap_url.format(user=login["username"]), headers={"Client-ID": login["client-id"], "Authorization": "OAuth " + login["access-token"]}).json()
+			if "error" in emote_map: raise ConnectionError(emote_map["message"])
+
+			for set, emotes in emote_map["emoticon_sets"].items():
 				for emote in emotes:
 					#TODO: remove unwanted characters (or remap special character emotes) from code parsing
 					self._emotenamecache[emote["code"]] = str(emote["id"])
 			jfile = open(self.emotemap_cache_file, "w")
 			json.dump(self._emotenamecache, jfile)
 			jfile.close()
-		except Exception as e: print("ERROR", "Getting emote cache:", e)
+		except Exception as e:
+			if "access-token" in str(e):
+				print("ERROR", "No access token found, get one from https://id.twitch.tv/oauth2/authorize?client_id=" +
+					login["client-id"] + "&redirect_uri=http://localhost&response_type=code&scope=user_subscriptions")
+				raise ConnectionError("No access token found, see log for details...")
+			else: print("ERROR", "Getting emote cache:", e)
 
 	# ===== END OF BUILT-IN HELPER METHODS =====
 
