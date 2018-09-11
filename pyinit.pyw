@@ -19,12 +19,14 @@ def update_program():
 		print("Linux detected")
 		try:
 			print("fetching...")
-			if not os.system("git fetch --all"): raise FileNotFoundError
-			print("updating...")
-			os.system("git reset --hard origin/" + git_branch)
-		except FileNotFoundError:
-			print("PyPlayer not found, downloading from branch {}...".format(git_branch))
-			os.system("git clone {} -b {}".format(git_url, git_branch))
+			if os.system("git fetch --all"):
+				print("PyPlayer not found, downloading from branch {}...".format(git_branch))
+				os.system("git clone {} -b {}".format(git_url, git_branch))
+			else:
+				print("updating...")
+				os.system("git reset --hard origin/" + git_branch)
+		except Exception as e: print("ERROR", "Updating player:", e)
+
 	else: raise OSError("platform not supported! sorry! (unless you're using macOS: in that case sorry not sorry)")
 
 if "no_update" in sys.argv: print("skipping update checks")
