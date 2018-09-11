@@ -10,6 +10,15 @@ import re, threading, time, datetime
 import io, socket, requests, random
 import os, json
 
+re_emote_translation = {
+	"\\:-?\\)": ":)", "\\:-?\\(": ":(",
+	"\\:-?D": ":D", "\\&gt\\;\\(": ">(",
+	"\\:-?[z|Z|\\|]": ":z", "[oO](_|\\.)[oO]": "O_o",
+	"B-?\\)": "B)", "\\:-?(o|O)": ":o",
+	"\\&lt\\;3": "<3", "\\:-?[\\\\/]": ":/",
+	"\\;-?\\)": ";)", "\\:-?(p|P)": ":P",
+	"\\;-?(p|P)": ";p", "R-?\\)": "R)"
+}
 class IRCClient(threading.Thread):
 	def __init__(self, message_queue, extra_info=False):
 		super().__init__()
@@ -184,7 +193,7 @@ class TwitchChat(pyelement.PyTextfield):
 		if not name in self._bitcache: return None
 
 		try: amount = int(amount)
-		except Exception: return None
+		except ValueError: return None
 
 		emote = None
 		for (min_amount, img) in self._bitcache[name].items():
@@ -261,8 +270,9 @@ class TwitchChat(pyelement.PyTextfield):
 
 			for set, emotes in emote_map["emoticon_sets"].items():
 				for emote in emotes:
-					#TODO: remove unwanted characters (or remap special character emotes) from code parsing
-					self._emotenamecache[emote["code"]] = str(emote["id"])
+					if emote["code"] in re_emote_translation: self._emotenamecache[re_emote_translation[emote["code"]]] = str(emote["id"])
+					else: self._emotenamecache[emote["code"]] = str(emote["id"])
+
 			jfile = open(self.emotemap_cache_file, "w")
 			json.dump(self._emotenamecache, jfile)
 			jfile.close()
