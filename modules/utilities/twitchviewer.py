@@ -5,6 +5,7 @@ import modules.utilities.twitchchat as twitchchat
 
 class TwitchViewer(pywindow.PyWindow):
 	channel_meta_url = "https://api.twitch.tv/kraken/channels/{channel}?client_id={client_id}"
+	chat = twitchchat.TwitchChat
 
 	def __init__(self, parent, channel, limited_mode=False):
 		pywindow.PyWindow.__init__(self, parent, id="Twitch")
@@ -22,7 +23,7 @@ class TwitchViewer(pywindow.PyWindow):
 		if self.error is None:
 			print("INFO", "no errors, starting chat...")
 			self.bind("<Destroy>", self.disconnect)
-			self.add_widget("chat_viewer", twitchchat.TwitchChat(self, limited_mode), fill="both", expand=True)
+			self.add_widget("chat_viewer", self.chat(self, limited_mode), fill="both", expand=True)
 			self.add_widget("chat_input", twitchchat.TwitchChatTalker(self, self.widgets["chat_viewer"].send_message), fill="x")
 			self.set_title()
 			self.start()
