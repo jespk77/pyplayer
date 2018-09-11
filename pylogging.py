@@ -15,7 +15,7 @@ class PyLogLevel(enum.Enum):
 		if isinstance(level, PyLogLevel): return level
 
 		try: return PyLogLevel[level]
-		except KeyError: return PyLogLevel.NDEFINE
+		except: return PyLogLevel.NDEFINE
 
 	def is_match(self, level):
 		""" Returns True if the passed level is equal or greater importance and should be displayed in the log """
