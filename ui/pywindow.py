@@ -200,7 +200,8 @@ class PyWindow(BaseWindow):
 		 	(Cannot be set on root window, also cannot be disabled once set) """
 		if value:
 			if not isinstance(self.tk, tkinter.Toplevel): raise TypeError("Can only set transient on regular window")
-			self.root.transient()
+			try: self.root.transient(self.root.master)
+			except Exception as e: print("ERROR", "Cannot set window to transient:", e)
 
 	@property
 	def hidden(self): return self.root.state() == "withdrawn"
