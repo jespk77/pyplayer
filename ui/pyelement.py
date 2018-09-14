@@ -7,12 +7,12 @@ class PyElement:
 	""" Framework for elements that can be added to 'PyWindow' and 'RootPyWindow' instances, should not be created on its own """
 	block_action = "break"
 
-	def __init__(self, id="??", write_configuration=True):
+	def __init__(self, id="??"):
 		self._configuration = {}
 		self._dirty = False
 		self._boundids = {}
 		self.id = id
-		self._write = write_configuration
+		self._master_cfg = True
 
 	@property
 	def configuration(self):
@@ -28,13 +28,25 @@ class PyElement:
 		else: raise TypeError("Can only update configuration with a dictionary, not '{}'".format(type(value).__name__))
 
 	@property
+	def has_master_configuration(self):
+		""" Returns true if the configuration for this element should be written to file """
+		return self._master_cfg
+	@has_master_configuration.setter
+	def has_master_configuration(self, value):
+		""" Set whether or not the configuration should be added to configuration file (when false, element will never be marked as dirty)
+		 	This is useful when creating many widgets that have the same configuration options """
+		self._master_cfg = value
+		self._dirty = False
+
+	@property
 	def dirty(self):
 		""" Returns true if the configuration for this element has been updated since last save to file """
 		return self._dirty
 
 	def mark_dirty(self, event=None):
-		""" Mark this element as dirty (configuration options will be written to file next save)"""
-		self._dirty = True
+		""" Mark this element as dirty (configuration options will be written to file next save)
+			Has no effect if the configuration is not set to be added to configuration file"""
+		if self._master_cfg: self._dirty = True
 
 	def _load_configuration(self): self.configure(**self._configuration)
 
