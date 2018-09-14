@@ -219,6 +219,8 @@ class PyWindow(BaseWindow):
 		self.autosave_delay = int(self._configuration["autosave_delay"])
 		self.root.bind("<Configure>", self.mark_dirty)
 		self.root.bind("<Destroy>", self.try_autosave)
+		root_cfg = self._configuration.get("root")
+		if root_cfg is not None: self.root.configure(**root_cfg.to_dict())
 
 	def bind(self, sequence, callback=None, add=None):
 		sequence = sequence.split("&&")
@@ -271,6 +273,8 @@ class PyWindow(BaseWindow):
 	@icon.setter
 	def icon(self, value):
 		""" Set window icon """
+		if value is None: value = "assets/blank"
+
 		if "linux" in sys.platform:
 			path = os.path.dirname(os.path.realpath(__file__))
 			try: self.root.tk.call("wm", "iconphoto", self.root._w, pyelement.PyImage(file=os.path.join(path, os.pardir, value + ".png")))
