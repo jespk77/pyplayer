@@ -1,11 +1,7 @@
-from urllib.request import urlopen
 from collections import OrderedDict
 from multiprocessing import Queue
 
-from PIL import Image
-from PIL.ImageTk import PhotoImage
 from ui import pyelement
-
 from utilities import history
 
 import re, threading, time, datetime
@@ -86,6 +82,7 @@ class TwitchChat(pyelement.PyTextfield):
 	bttv_emote_list = "https://api.betterttv.net/2/emotes"
 	bttv_emote_url = "https://cdn.betterttv.net/emote/{id}/1x"
 
+	emote_cache_folder = "twitch/emotecache"
 	emotemap_cache_file = "twitch/emotemap_cache"
 	emotemap_url = "https://api.twitch.tv/kraken/users/{user}/emotes"
 
@@ -111,6 +108,7 @@ class TwitchChat(pyelement.PyTextfield):
 		self.configure(cursor="left_ptr", wrap="word", spacing1=3, padx=5)
 		self.bind("<End>", self.adjust_scroll).bind("<Enter>&&<Leave>", self.set_scroll)
 		self.update_time()
+		if not os.path.isdir(self.emote_cache_folder): os.mkdir(self.emote_cache_folder)
 
 	@property
 	def command_callback(self): return self._callback
@@ -144,7 +142,6 @@ class TwitchChat(pyelement.PyTextfield):
 				self._load_emotemap(login)
 				self.add_text(text=" - Joined channel: {} -".format(self._channel_meta["display_name"]), tags=("notice",))
 			else: raise ConnectionError("Invalid login provided '{}'".format(login))
-		else: raise ConnectionError("Already connected")
 
 	def disconnect(self):
 		if self._irc_client is not None:
@@ -166,11 +163,7 @@ class TwitchChat(pyelement.PyTextfield):
 		if img is None: return None
 
 		if isinstance(img, str):
-			try:
-				u = urlopen(self.bttv_emote_url.format(id=img))
-				self._bttv_emotecache[name] = PhotoImage(Image.open(io.BytesIO(u.read())))
-				u.close()
-
+			try: self._bttv_emotecache[name] = pyelement.PyImage(url=self.bttv_emote_url.format(id=img))
 			except Exception as e:
 				print("ERROR", "Cannot load bttv emote '{}':".format(name), e)
 				del self._bttv_emotecache[name]
@@ -204,12 +197,9 @@ class TwitchChat(pyelement.PyTextfield):
 
 		if emote is None: return None
 		if isinstance(emote[1], str):
-			try:
-				url = urlopen(emote[1])
-				self._bitcache[name][emote[0]] = PhotoImage(Image.open(io.BytesIO(url.read())))
-				url.close()
-
-			except Exception:
+			try: self._bitcache[name][emote[0]] = pyelement.PyImage(url=emote[1])
+			except Exception as e:
+				print("ERROR", "Loading bit emote", name, "->", e)
 				del self._bitcache[name]
 				return None
 		return (emote[0], self._bitcache[name][emote[0]])
@@ -237,25 +227,39 @@ class TwitchChat(pyelement.PyTextfield):
 					self._badgecache["bits/" + version] = url["image_url_1x"]
 
 		for badge_id, badge_url in self._badgecache.items():
-			try:
-				url = urlopen(badge_url)
-				self._badgecache[badge_id] = PhotoImage(Image.open(io.BytesIO(url.read())))
-				url.close()
-			except Exception: del self._badgecache[badge_id]
+			try: self._badgecache[badge_id] = pyelement.PyImage(url=badge_url)
+			except Exception as e:
+				print("ERROR", "Loading badge", badge_id, "->", e)
+				del self._badgecache[badge_id]
 
 	# === Twitch emote support ===
 	def _load_local_emote(self):
-		self._emotecache["25"] = PhotoImage(Image.open("twitch/kappa.png"))
-		self._emotecache["36"] = PhotoImage(Image.open("twitch/pjsalt.png"))
-		self._emotecache["66"] = PhotoImage(Image.open("twitch/onehand.png"))
+		try: self._emotecache["25"] = pyelement.PyImage(file="twitch/kappa.png")
+		except: pass
+		try: self._emotecache["36"] = pyelement.PyImage(file="twitch/pjsalt.png")
+		except: pass
+		try: self._emotecache["66"] = pyelement.PyImage(file="twitch/onehand.png")
+		except: pass
 
 	def _load_emote(self, emote_id):
-		u = self.twitch_emote_url.format(emote_id=emote_id)
-		try:
-			url = urlopen(u)
-			self._emotecache[emote_id] = PhotoImage(Image.open(io.BytesIO(url.read())))
-			url.close()
-		except Exception as e: self._emotecache[emote_id] = None
+		file = self.emote_cache_folder + "/" + emote_id + ".bin"
+		if os.path.isfile(file):
+			try:
+				img = pyelement.PyImage(file=file)
+				self._emotecache[emote_id] = img
+				return img
+			except Exception as e: print("ERROR", "Getting emote", emote_id, "from cache:", e)
+
+		url = self.twitch_emote_url.format(emote_id=emote_id)
+		try: img = pyelement.PyImage(url=url)
+		except Exception as e:
+			print("ERROR", "Getting emote", emote_id, "from url:", e)
+			return None
+		self._emotecache[emote_id] = img
+
+		try: img.write(file)
+		except Exception as e: print("ERROR", "Writing emote", emote_id, "to cache:", e)
+		return img
 
 	def get_emoteimage_from_cache(self, emote_id):
 		if not emote_id in self._emotecache: self._load_emote(emote_id)
@@ -295,7 +299,6 @@ class TwitchChat(pyelement.PyTextfield):
 			else: print("ERROR", "Getting emote cache:", e)
 
 	# ===== END OF BUILT-IN HELPER METHODS =====
-
 	def send_message(self, msg):
 		if self._irc_client is not None:
 			self._irc_client.send("PRIVMSG #" + self._channel_meta["name"] + " :" + msg)
