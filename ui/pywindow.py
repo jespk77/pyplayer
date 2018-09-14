@@ -190,11 +190,24 @@ class PyWindow(BaseWindow):
 		return self.tk
 
 	@property
-	def transient(self):
+	def transient(self): return None
+	@transient.setter
+	def transient(self, value):
 		""" Sets this window to be transient, connected to its parent and is minimized when the parent is minimized
-		 	(Cannot be set on root window) """
-		if not isinstance(self.tk, tkinter.Toplevel): raise TypeError("Can only set transient on regular window")
-		return self.root.transient()
+		 	(Cannot be set on root window, also cannot be disabled once set) """
+		if value:
+			if not isinstance(self.tk, tkinter.Toplevel): raise TypeError("Can only set transient on regular window")
+			self.root.transient()
+
+	@property
+	def hidden(self): return self.root.state() == "withdrawn"
+	@hidden.setter
+	def hidden(self, value):
+		if value: self.root.withdraw()
+		else: self.root.deiconify()
+
+	def toggle_hidden(self):
+		self.hidden = not self.hidden
 
 	def load_configuration(self):
 		""" (Re)load configuration from file """
