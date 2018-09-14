@@ -1,5 +1,5 @@
 from tkinter import ttk, font
-import tkinter, os
+import tkinter
 
 from ui import pyconfiguration
 
@@ -336,7 +336,32 @@ class PyItemlist(PyElement, tkinter.Listbox):
 		self._items = value
 		self.list_var.set(self._items)
 
-class PyImage(tkinter.PhotoImage):
-	def __init__(self, file):
-		tkinter.PhotoImage.__init__(self, file=file)
-		if not os.path.isfile(file): print("ERROR" ,"Cannot find image path '{}'".format(file))
+
+from PIL import Image, ImageTk
+class PyImage(ImageTk.PhotoImage):
+	def __init__(self, file=None, url=None, bin_file=None):
+		if url:
+			from urllib.request import urlopen
+			import io
+			u = urlopen(url)
+			self._bytes = io.BytesIO(u.read())
+			u.close()
+			self._img = Image.open(self._bytes)
+			ImageTk.PhotoImage.__init__(self, self._img)
+
+		elif bin_file:
+			import io
+			with open(bin_file, "rb") as file:
+				self._bytes = io.BytesIO()
+			self._img = Image.open(self._bytes)
+			ImageTk.PhotoImage.__init__(self, self._img)
+
+		elif file:
+			ImageTk.PhotoImage.__init__(self, file=file)
+			self._bytes = None
+		else: raise ValueError("Must specify either file, bin_file or url argument")
+
+	def write(self, filename, format=None, from_coords=None):
+		if self._bytes is not None:
+			with open(filename, "wb") as file:
+				file.write(self._bytes.getvalue())
