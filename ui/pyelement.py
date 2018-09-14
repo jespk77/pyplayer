@@ -7,11 +7,12 @@ class PyElement:
 	""" Framework for elements that can be added to 'PyWindow' and 'RootPyWindow' instances, should not be created on its own """
 	block_action = "break"
 
-	def __init__(self, id="??"):
+	def __init__(self, id="??", write_configuration=True):
 		self._configuration = {}
 		self._dirty = False
 		self._boundids = {}
 		self.id = id
+		self._write = write_configuration
 
 	@property
 	def configuration(self):

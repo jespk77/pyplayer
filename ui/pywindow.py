@@ -71,7 +71,7 @@ class BaseWindow:
 		if self._configuration.error: print("INFO", "Skipping configuration writing since there was an error loading it")
 		elif self.dirty:
 			for id, wd in self.widgets.items():
-				self._configuration[id] = wd.configuration
+				if wd._write: self._configuration[id] = wd.configuration
 				wd._dirty = False
 
 			print("INFO", "Window is dirty, writing configuration to '{}'".format(self.cfg_filename))
