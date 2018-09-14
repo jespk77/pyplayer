@@ -15,6 +15,7 @@ media_player = MediaPlayer()
 song_queue = Queue()
 song_history = history.History()
 invalid_cfg = messagetypes.Reply("Invalid directory configuration, check your options")
+
 class Autoplay(enum.Enum):
 	OFF = 0
 	QUEUE = 1
@@ -181,7 +182,7 @@ def command_last_random(arg, argc):
 
 def command_prev_song(arg, argc):
 	if argc == 0:
-		item = song_history.get()
+		item = song_history.get_previous(song_history.head)
 		if item is not None: media_player.play_song(item[0], item[1])
 		return messagetypes.Empty()
 
@@ -247,8 +248,10 @@ commands = {
 	"player": {
 		"": command_play,
 		"last_random": command_last_random,
+		"next": command_next_song,
 		"next_song": command_next_song,
 		"pause": command_pause,
+		"previous": command_prev_song,
 		"prev_song": command_prev_song,
 		"random": command_random,
 		"stop": command_stop
@@ -275,7 +278,6 @@ def on_destroy():
 	media_player.on_destroy()
 
 def on_media_change(event, player):
-	song_history.reset_index()
 	client.after(.5, client.update_title, media_player.current_media.display_name)
 
 def on_pos_change(event, player):
