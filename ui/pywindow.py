@@ -189,6 +189,8 @@ class PyWindow(BaseWindow):
 	def root(self):
 		""" Get window manager for this window """
 		return self.tk
+	@property
+	def block_action(self): return "break"
 
 	@property
 	def transient(self): return None
