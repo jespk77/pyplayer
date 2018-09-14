@@ -1,4 +1,5 @@
 from ui import pyelement
+from utilities import history
 
 class TextConsole(pyelement.PyTextfield):
 	current_start = "end-1l linestart+2c"
@@ -6,10 +7,7 @@ class TextConsole(pyelement.PyTextfield):
 
 	def __init__(self, root, command_callback=print):
 		pyelement.PyTextfield.__init__(self, root)
-		self.cmd_history = []
-		self.cmd_history_index = -1
-		self.last_action = None
-		self.last_line = None
+		self._cmdhistory = history.History()
 		self.cmd_cache = ""
 		self.cmd_callback = command_callback
 
@@ -36,36 +34,22 @@ class TextConsole(pyelement.PyTextfield):
 		self.last_action = "send"
 		cmd = self.get(self.current_start, self.current_end)
 		if len(cmd) > 0:
-			try: self.cmd_history.remove(cmd)
-			except Exception: pass
-
-			self.cmd_history.append(cmd)
-			self.cmd_history_index = len(self.cmd_history) - 1
+			self._cmdhistory.add(cmd)
 			self.insert("end", "\n")
 			self.configure(state="disabled")
 			if self.cmd_callback is not None: self.cmd_callback(cmd)
 		return self.block_action
 
 	def on_set_command_from_history(self, event):
-		last_index = len(self.cmd_history) - 1
-		if last_index >= 0:
-			self.mark_set("insert", "end")
-			if event.keysym == "Up":
-				if self.last_line is None: self.last_line = self.get(self.current_start, self.current_end)
-				if self.last_action == "down" and self.cmd_history_index > 0: self.cmd_history_index -= 1
-				self.set_current_line(self.cmd_history[self.cmd_history_index])
-				if self.cmd_history_index > 0: self.cmd_history_index -= 1; self.last_action = "up-move"
-				else: self.last_action = "up"
-			elif event.keysym == "Down":
-				if self.last_action == "up-move" and self.cmd_history_index < last_index: self.cmd_history_index += 1
-				if self.cmd_history_index < last_index:
-					self.cmd_history_index += 1
-					self.set_current_line(self.cmd_history[self.cmd_history_index])
-				elif self.last_line is not None:
-					self.cmd_history_index += 1
-					self.set_current_line(self.last_line)
-					self.last_line = None
-				self.last_action = "down"
+		if event.keysym == "Up":
+			cmd = self._cmdhistory.get_previous(self._cmdhistory.head)
+		elif event.keysym == "Down":
+			cmd = self._cmdhistory.get_next()
+		else: cmd = None
+
+		self.clear_current_line(event)
+		if not cmd is None: self.insert("end", cmd)
+		self.mark_set("insert", "end")
 		return self.block_action
 
 	def set_reply(self, msg=None, tags=()):
