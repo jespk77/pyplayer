@@ -169,8 +169,9 @@ def command_play(arg, argc):
 			count = 0
 			for s in song:
 				if count > 15: reply += "\n and more..."; break
-				else: count += 1
-				reply += "\n - " + get_displayname(s)
+				else:
+					reply += "\n {}. {}".format(count, get_displayname(s))
+					count += 1
 			return messagetypes.Reply(reply)
 		else: return messagetypes.Reply("Cannot find that song")
 
@@ -207,6 +208,11 @@ def command_queue_next(arg, argc):
 def command_queue(arg, argc):
 	if argc > 0:
 		(path, song) = parse_song(arg)
+		if isinstance(song, list):
+			r = "Found multiple choices:"
+			for item in song: r += "\n - {}".format(get_displayname(item))
+			return messagetypes.Reply(r)
+
 		if path is not None and song is not None:
 			song_queue.put_nowait((path, song))
 			return messagetypes.Reply("'" + get_displayname(song) + "' added to queue")
