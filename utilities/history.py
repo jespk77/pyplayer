@@ -47,7 +47,7 @@ class History():
 
 		self._history.append(element)
 		self._ensure_limit()
-		self._reset_index()
+		self.reset_index()
 
 	def peek_previous(self):
 		""" Get the element that is one below the current index
