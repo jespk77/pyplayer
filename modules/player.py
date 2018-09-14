@@ -54,7 +54,7 @@ def command_autoplay_ignore(arg, argc):
 	if argc == 0:
 		global autoplay_ignore
 		autoplay_ignore = True
-		return messagetypes.Reply("Autoplay will be ignored once")
+		return messagetypes.Reply("Autoplay will be skipped for one song")
 
 def command_autoplay_off(arg, argc):
 	if argc == 0:
@@ -230,10 +230,10 @@ def command_stop(arg, argc):
 commands = {
 	"autoplay": {
 		"next": command_autoplay_next,
-		"ignore": command_autoplay_ignore,
 		"info": command_autoplay_info,
 		"off": command_autoplay_off,
 		"on": command_autoplay_on,
+		"skip": command_autoplay_ignore,
 		"queue": command_autoplay_queue
 	}, "filter": {
 		"info": command_filter_info,
