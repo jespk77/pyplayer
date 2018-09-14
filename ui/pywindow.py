@@ -71,7 +71,7 @@ class BaseWindow:
 		if self._configuration.error: print("INFO", "Skipping configuration writing since there was an error loading it")
 		elif self.dirty:
 			for id, wd in self.widgets.items():
-				if wd._write: self._configuration[id] = wd.configuration
+				if wd.has_master_configuration: self._configuration[id] = wd.configuration
 				wd._dirty = False
 
 			print("INFO", "Window is dirty, writing configuration to '{}'".format(self.cfg_filename))
@@ -81,7 +81,8 @@ class BaseWindow:
 				self._dirty = False
 			except Exception as e: print("ERROR", "Error writing configuration file for '{}':".format(self.window_id), e)
 
-	def add_widget(self, id, widget, initial_cfg=None, **pack_args):
+	#TODO: customize pack ordering
+	def add_widget(self, id, widget, initial_cfg=None, disable_packing=False, **pack_args):
 		""" Add new 'pyelement' widget to this window using passed (unique) identifier, add all needed pack parameters for this widget to the end
 		 	(any widget already assigned to this identifier will be destroyed)
 		 	Returns the bound widget if successful, False otherwise"""
@@ -103,7 +104,7 @@ class BaseWindow:
 			if cfg is not None: self.widgets[id].configuration = cfg
 		except (AttributeError, TypeError) as e: print("ERROR", "Cannot assign configuration to created widget '{}':".format(id), e)
 
-		self.widgets[id].pack(pack_args)
+		if not disable_packing: self.widgets[id].pack(pack_args)
 		return self.widgets[id]
 
 	def remove_widget(self, id):
