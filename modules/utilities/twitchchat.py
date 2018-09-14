@@ -5,6 +5,7 @@ from multiprocessing import Queue
 from PIL import Image
 from PIL.ImageTk import PhotoImage
 from ui import pyelement
+from utilities import history
 
 import re, threading, time, datetime
 import io, socket, requests, random
@@ -438,16 +439,33 @@ class TwitchChat(pyelement.PyTextfield):
 
 class TwitchChatTalker(pyelement.PyTextfield):
 	def __init__(self, root, send_message_callback):
+		if not callable(send_message_callback): raise TypeError("Callback not callable!")
 		pyelement.PyTextfield.__init__(self, root)
 		self.bind("<Escape>", self.clear_text)
 		self.bind("<Return>", self.on_send_message)
+		self.bind("<Up>", self.set_history)
+		self.bind("<Down>", self.set_history)
 		self.configure(height=5, wrap="word", spacing1=3, padx=5)
 		self.message_callback = send_message_callback
+		self._chathistory = history.History()
+
+	def is_empty(self): return len(self.text) == 0
+
+	def set_history(self, event):
+		if event.keysym == "Up": last_cmd = self._chathistory.get_previous(self._chathistory.head)
+		elif event.keysym == "Down": last_cmd = self._chathistory.get_next()
+		else: return
+
+		if last_cmd is not None: self.text = last_cmd
+		else: self.clear_text(event)
+		return self.block_action
 
 	def on_send_message(self, event):
 		if callable(self.message_callback):
-			message = self.get("0.0", "end")
-			if len(message) > 1: self.message_callback(message)
+			message = self.text
+			if len(message) > 0:
+				self.message_callback(message)
+				self._chathistory.add(message)
 			self.clear_text(event)
 		else:
 			self.message_callback = None
