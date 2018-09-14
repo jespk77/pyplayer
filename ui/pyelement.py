@@ -184,6 +184,13 @@ class PyTextfield(PyElement, tkinter.Text):
 			self._boldfont.configure(weight="bold")
 		return self._boldfont
 
+	@property
+	def text(self): return self.get(self.front, self.back).rstrip("\n")
+	@text.setter
+	def text(self, value):
+		self.delete(self.front, self.back)
+		self.insert(self.back, value)
+
 	has_focus = tkinter.Text.focus_get
 	current_focus = tkinter.Text.focus_displayof
 	previous_focus = tkinter.Text.focus_lastfor
