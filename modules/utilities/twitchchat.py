@@ -5,6 +5,7 @@ from multiprocessing import Queue
 from PIL import Image
 from PIL.ImageTk import PhotoImage
 from ui import pyelement
+
 from utilities import history
 
 import re, threading, time, datetime
@@ -52,7 +53,7 @@ class IRCClient(threading.Thread):
 			try:
 				self.socket.shutdown(socket.SHUT_RDWR)
 				self.socket.close()
-			except Exception as e: print("ERROR", "exception closing socket:", e)
+			except Exception as e: print("ERROR", "closing socket:", e)
 			print("INFO", "disconnected")
 		self.socket = None
 
@@ -254,8 +255,17 @@ class TwitchChat(pyelement.PyTextfield):
 			url = urlopen(u)
 			self._emotecache[emote_id] = PhotoImage(Image.open(io.BytesIO(url.read())))
 			url.close()
-		except: self._emotecache[emote_id] = None
+		except Exception as e: self._emotecache[emote_id] = None
 
+	def get_emoteimage_from_cache(self, emote_id):
+		if not emote_id in self._emotecache: self._load_emote(emote_id)
+		if self._emotecache[emote_id] is None:
+			del self._emotecache[emote_id]
+			return None
+		return self._emotecache[emote_id]
+
+	@property
+	def emotemap_cache(self): return self._emotenamecache
 	def _load_emotemap(self, login):
 		if os.path.isfile(self.emotemap_cache_file) and time.time() - os.path.getmtime(self.emotemap_cache_file) < 86400:
 			try:
@@ -343,10 +353,7 @@ class TwitchChat(pyelement.PyTextfield):
 		emote_map = {}
 		if emotes is not None:
 			for emote_id, emote_index in emotes.items():
-				if not emote_id in self._emotecache: self._load_emote(emote_id)
-				if self._emotecache[emote_id] is None:
-					del self._emotecache[emote_id]
-					continue
+				self.get_emoteimage_from_cache(emote_id)
 
 				emote_index = emote_index.split(",")[0].split("-")
 				emote_begin = int(emote_index[0])
@@ -459,6 +466,11 @@ class TwitchChatTalker(pyelement.PyTextfield):
 		if last_cmd is not None: self.text = last_cmd
 		else: self.clear_text(event)
 		return self.block_action
+
+	def add_emote(self, emote):
+		if self.get("insert-1c") != " ": emote = " " + emote
+		if not emote.endswith(" "): emote += " "
+		self.insert("insert", emote)
 
 	def on_send_message(self, event):
 		if callable(self.message_callback):

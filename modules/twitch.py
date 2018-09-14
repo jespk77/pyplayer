@@ -11,8 +11,7 @@ client = None
 # MODULE COMMANDS
 def command_twitch(arg, argc, limit=False):
 	if argc == 1:
-		viewer = client.add_window("twitchviewer", TwitchViewer(client, arg[0], limit))
-		viewer.widgets["chat_viewer"].command_callback = interpreter.put_command
+		viewer = client.add_window("twitchviewer", TwitchViewer(client, arg[0], interpreter.put_command, limit))
 		return messagetypes.Reply("Twitch viewer for '{}' started".format(viewer.channel))
 
 def command_twitch_limited(arg, argc):
