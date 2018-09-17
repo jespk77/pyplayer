@@ -70,7 +70,9 @@ class PyLog:
 		l = PyLogLevel.from_arg(level)
 		if l != PyLogLevel.NDEFINE: objects = objects[1:]
 
-		if self._level.is_match(level): return self._prev_print(PyLog._get_traceback_string(level), *objects, sep=sep, end=end, file=file, flush=flush)
+		if self._level.is_match(level):
+			return self._prev_print(datetime.datetime.today().strftime("[%I:%M:%S]"), PyLog._get_traceback_string(level), *objects,
+									sep=sep, end=end, file=file, flush=flush)
 		return False
 
 	def write(self, str):
