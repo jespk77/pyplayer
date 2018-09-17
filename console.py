@@ -70,7 +70,7 @@ class TextConsole(pyelement.PyTextfield):
 
 	def on_backspace_key(self, event):
 		if str(self.index("insert")).endswith(".2"):
-			try: self.selection_get()
+			try: self.index("sel.first"), self.index("sel.last")
 			except: return self.block_action
 
 	def on_home_key(self, event):
