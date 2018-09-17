@@ -357,7 +357,10 @@ class PyImage(ImageTk.PhotoImage):
 			ImageTk.PhotoImage.__init__(self, self._img)
 
 		elif file:
-			ImageTk.PhotoImage.__init__(self, file=file)
+			try: ImageTk.PhotoImage.__init__(self, file=file)
+			except FileNotFoundError as e:
+				print("ERROR", "Loading image:", e)
+				ImageTk.PhotoImage.__init__(self, file="assets/blank.png")
 			self._bytes = None
 		else: raise ValueError("Must specify either file, bin_file or url argument")
 
