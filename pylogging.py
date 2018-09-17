@@ -62,7 +62,7 @@ class PyLog:
 		try:
 			stack = inspect.stack()[2]
 			try: return "[{}.{}.{}]".format(PyLog._get_class_from_stack(stack), stack.function, str(level))
-			except KeyError: return "[__main__.{}]".format(level)
+			except KeyError: return "[{}.{}]".format("/".join(stack.filename.split("/")[-3:]), stack.function)
 		except Exception as e: return "[<{}>.{}]".format(e, level)
 
 	def print_log(self, *objects, sep=" ", end="\n", file=None, flush=True):
