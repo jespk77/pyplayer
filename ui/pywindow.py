@@ -10,6 +10,7 @@ class BaseWindow:
 	def __init__(self, id, initial_cfg=None, cfg_file=None):
 		self._windowid = id
 		if cfg_file is None: cfg_file = ".cfg/" + self._windowid.lower()
+		elif not cfg_file.startswith(".cfg/"): cfg_file = ".cfg/" + cfg_file
 
 		self._elements = {}
 		self._children = None
@@ -192,9 +193,9 @@ class BaseWindow:
 class PyWindow(BaseWindow):
 	""" Separate window that can be created on top of another window
 		(it has its own configuration file separate from root configuration) """
-	def __init__(self, root, id, cfg_file=None, initial_cfg=None):
+	def __init__(self, root, id, initial_cfg=None, cfg_file=None):
 		self.tk = tkinter.Toplevel(root.root)
-		BaseWindow.__init__(self, id, cfg_file, initial_cfg)
+		BaseWindow.__init__(self, id, initial_cfg, cfg_file)
 		self.title = id
 
 	@property
