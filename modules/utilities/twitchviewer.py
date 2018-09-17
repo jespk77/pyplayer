@@ -19,7 +19,7 @@ class TwitchViewer(pywindow.PyWindow):
 
 	def __init__(self, parent, channel, command_callback, limited_mode=False):
 		if not callable(command_callback): raise TypeError("Command callback must be callable")
-		pywindow.PyWindow.__init__(self, parent, id="Twitch", initial_cfg=initial_cfg)
+		pywindow.PyWindow.__init__(self, parent, id="Twitch_"+channel, initial_cfg=initial_cfg, cfg_file="twitch")
 		self.title = "TwitchViewer"
 		self.channel = channel
 		self.always_on_top = True

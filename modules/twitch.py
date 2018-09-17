@@ -9,7 +9,11 @@ client = None
 # MODULE COMMANDS
 def command_twitch(arg, argc, limit=False):
 	if argc == 1:
-		viewer = client.add_window("twitchviewer", twitchviewer.TwitchViewer(client, arg[0], interpreter.put_command, limit))
+		window_id = "twitch_" + arg[0]
+		rmv = client.remove_window(window_id)
+		if not rmv: return messagetypes.Reply("Cannot open another window for this channel because the current open window cannot be closed")
+
+		viewer = client.add_window(window_id, twitchviewer.TwitchViewer(client, arg[0], interpreter.put_command, limit))
 		return messagetypes.Reply("Twitch viewer for '{}' started".format(viewer.channel))
 
 def command_twitch_limited(arg, argc):
@@ -21,12 +25,13 @@ def command_twitch_resetcache(arg, argc):
 		return messagetypes.Reply("Twitch cache will be regenerated")
 
 def command_twitch_say(arg, argc):
-	if argc > 0:
-		viewer = client.children.get("twitchviewer")
+	if argc > 1:
+		viewer = client.children.get("twitch_" + arg[0])
 		if viewer is not None:
-			viewer.widgets["chat_viewer"].send_message(" ".join(arg))
+			viewer.widgets["chat_viewer"].send_message(" ".join(arg[1:]))
 			return messagetypes.Reply("Message sent")
-		return messagetypes.Reply("No twitch viewer open")
+		return messagetypes.Reply("No twitch viewer for channel '{}' open".format(arg[0]))
+	elif argc == 1: return messagetypes.Reply("Name of channel to send to is required now")
 
 commands = {
 	"twitch": {
