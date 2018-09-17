@@ -116,7 +116,7 @@ class BaseWindow:
 				self.widgets[id].destroy()
 				del self.widgets[id]
 				return True
-			else: raise NameError("[BaseWindow.ERROR] Cannot remove self from widgets!")
+			else: raise NameError("Cannot remove self from widgets!")
 		return False
 
 	def add_window(self, id, window):
@@ -130,7 +130,9 @@ class BaseWindow:
 
 		if self._children is None: self._children = {}
 		success = self.remove_window(id)
-		if not success: print("ERROR", "Cannot close previously bound window with id '{}'".format(id))
+		if not success:
+			print("ERROR", "Cannot close previously bound window with id '{}':".format(id))
+			return False
 
 		self._children[id] = window
 		return self.children[id]
@@ -142,7 +144,6 @@ class BaseWindow:
 			try:
 				self._children[id].destroy()
 				del self._children[id]
-			except AttributeError: return False
 			except Exception as e: print("ERROR", "Couldn't destroy window '{}' properly: ".format(id), e); return False
 		return True
 
@@ -297,6 +298,10 @@ class PyWindow(BaseWindow):
 	def start(self):
 		""" Initialize and start GUI """
 		self.root.mainloop()
+
+	def destroy(self):
+		""" Close window """
+		self.root.destroy()
 
 	def after(self, s, *args):
 		self.root.after(int(s * 1000) if s < 1000 else s, *args)
