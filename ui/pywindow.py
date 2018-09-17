@@ -7,7 +7,7 @@ class BaseWindow:
 	default_title = "PyWindow"
 	invalid_cfg_keys = ["geometry"]
 
-	def __init__(self, id, cfg_file=None, initial_cfg=None):
+	def __init__(self, id, initial_cfg=None, cfg_file=None):
 		self._windowid = id
 		if cfg_file is None: cfg_file = ".cfg/" + self._windowid.lower()
 
@@ -29,7 +29,7 @@ class BaseWindow:
 	@property
 	def cfg_filename(self):
 		""" The filepath of the configuration file (created using window identifier)"""
-		return ".cfg/" + self.window_id.lower()
+		return self._configuration._filepath
 	@property
 	def widgets(self):
 		""" All elements that are present inside this window """
