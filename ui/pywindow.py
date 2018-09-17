@@ -7,15 +7,17 @@ class BaseWindow:
 	default_title = "PyWindow"
 	invalid_cfg_keys = ["geometry"]
 
-	def __init__(self, id, initial_cfg):
+	def __init__(self, id, cfg_file=None, initial_cfg=None):
 		self._windowid = id
+		if cfg_file is None: cfg_file = ".cfg/" + self._windowid.lower()
+
 		self._elements = {}
 		self._children = None
 		self._dirty = False
 
 		self.last_position = -1
 		self.last_size = -1
-		self._configuration = pyconfiguration.Configuration(initial_value=initial_cfg, filepath=self.cfg_filename)
+		self._configuration = pyconfiguration.Configuration(initial_value=initial_cfg, filepath=cfg_file)
 		self.load_configuration()
 
 	@property
@@ -56,6 +58,15 @@ class BaseWindow:
 	def icon(self): return None
 	@property
 	def always_on_top(self): return False
+
+	@property
+	def resizable_height(self): return self.root.resizable()[0]
+	@resizable_height.setter
+	def resizable_height(self, value): self.root.resizable((value, self.resizable_width))
+	@property
+	def resizable_width(self): return self.root.resizable()[1]
+	@resizable_width.setter
+	def resizable_width(self, value): self.root.resizable((self.resizable_height, value))
 
 	def mark_dirty(self, event=None):
 		""" Mark this window as dirty, event parameter only used for tkinter event handling """
@@ -181,9 +192,9 @@ class BaseWindow:
 class PyWindow(BaseWindow):
 	""" Separate window that can be created on top of another window
 		(it has its own configuration file separate from root configuration) """
-	def __init__(self, root, id, initial_cfg=None):
+	def __init__(self, root, id, cfg_file=None, initial_cfg=None):
 		self.tk = tkinter.Toplevel(root.root)
-		BaseWindow.__init__(self, id, initial_cfg)
+		BaseWindow.__init__(self, id, cfg_file, initial_cfg)
 		self.title = id
 
 	@property
