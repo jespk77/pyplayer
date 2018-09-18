@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, shutil
 
 def update_program():
 	git_url = "https://github.com/jespk77/pyplayer.git"
@@ -22,6 +22,12 @@ def update_program():
 			if os.system("git fetch --all"):
 				print("PyPlayer not found, downloading from branch {}...".format(git_branch))
 				os.system("git clone {} -b {}".format(git_url, git_branch))
+
+				print("moving files to current directory...")
+				if os.path.isdir("pyplayer"):
+					for file in os.listdir("pyplayer"): shutil.move("pyplayer/" + file, file)
+					os.rmdir("pyplayer")
+				else: print("Cannot find pyplayer"); sys.exit(-1)
 			else:
 				print("updating...")
 				os.system("git reset --hard origin/" + git_branch)
