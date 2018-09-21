@@ -309,7 +309,10 @@ class PyWindow(BaseWindow):
 
 	def start(self):
 		""" Initialize and start GUI """
-		self.root.mainloop()
+		try: self.root.mainloop()
+		except KeyboardInterrupt:
+			print("INFO", "Received keyboard interrupt, closing program...")
+			self.destroy()
 
 	def destroy(self):
 		""" Close window """
