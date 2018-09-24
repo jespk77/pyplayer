@@ -62,15 +62,13 @@ class IRCClient(threading.Thread):
 			try:
 				rec = self.socket.recv(1024)
 				if not rec:
-					print("INFO", "Whoops, the connections seems to have broken, reconnecting...")
-					self.connect()
-					time.sleep(2)
-					continue
-				else: rec = rec.decode("UTF-8").split("\r\n")
+					print("INFO", "Connection was terminated, shutting down socket")
+					break
 
+				rec = rec.decode("UTF-8").split("\r\n")
 				for data in rec: self.message_queue.put_nowait(data.split(" ", maxsplit=4))
 			except UnicodeDecodeError: pass
-			except socket.error as e: print("ERROR", "receiving IRC socket:", e)
+			except Exception as e: print("ERROR", "receiving from IRC socket:", e)
 
 class TwitchChat(pyelement.PyTextfield):
 	chat_server = "irc.chat.twitch.tv"
@@ -142,7 +140,8 @@ class TwitchChat(pyelement.PyTextfield):
 				self._load_bits(login)
 				self._load_emotemap(login)
 				self.add_text(text=" - Joined channel: {} -".format(self._channel_meta["display_name"]), tags=("notice",))
-			else: raise ConnectionError("Invalid login provided '{}'".format(login))
+			else: raise TypeError("Login should be a 'dict', not '{}'".format(type(login).__name__))
+		else: print("INFO", "Tried to connect again when the IRC client was already started")
 
 	def disconnect(self):
 		if self._irc_client is not None:
@@ -426,6 +425,9 @@ class TwitchChat(pyelement.PyTextfield):
 		self.configure(state="disabled")
 		if len(data) > 0: self.on_privmsg(meta, data)
 
+	def on_notice(self, meta, data):
+		self.insert("end", "\n" + data, ("notice",))
+
 	def on_clearchat(self, user):
 		tag = user.lower() + ".last"
 		try: self.tag_add("deleted", tag, tag + " lineend")
@@ -443,6 +445,7 @@ class TwitchChat(pyelement.PyTextfield):
 		try:
 			if data[0] == "PING": self._irc_client.send("PONG " + "".join(data[1:]))
 			elif data[2] == "PRIVMSG": self.on_privmsg(meta=self.get_meta(data[0]), data=data[4][1:])
+			elif data[2] == "NOTICE": self.on_notice(meta=self.get_meta(data[0]), data=data[4][1:])
 			elif data[2] == "USERNOTICE": self.on_usernotice(meta=self.get_meta(data[0]), data="".join(data[4:])[1:])
 			elif data[2] == "CLEARCHAT": self.on_clearchat(data[4][1:])
 			elif data[2] == "USERSTATE": self.on_userstate(self.get_meta(data[0]))
