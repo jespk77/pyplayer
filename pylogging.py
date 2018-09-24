@@ -4,9 +4,9 @@ class PyLogLevel(enum.Enum):
 	""" Defines the importance of the log message
 			when the logger is set to a level, all messages that are below that level are omitted """
 	INFO = 0
-	WARNING = 1
 	NDEFINE = 1
-	ERROR = 2
+	WARNING = 2
+	ERROR = 3
 	MESSAGE = 99
 
 	@staticmethod
