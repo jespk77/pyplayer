@@ -60,16 +60,17 @@ class IRCClient(threading.Thread):
 		self.connect()
 		while self.socket is not None:
 			try:
-				rec = self.socket.recv(1024).decode("UTF-8").split("\r\n")
-				if rec == 0:
+				rec = self.socket.recv(1024)
+				if not rec:
 					print("INFO", "Whoops, the connections seems to have broken, reconnecting...")
 					self.connect()
 					time.sleep(2)
 					continue
+				else: rec = rec.decode("UTF-8").split("\r\n")
 
 				for data in rec: self.message_queue.put_nowait(data.split(" ", maxsplit=4))
 			except UnicodeDecodeError: pass
-			except socket.error: pass
+			except socket.error as e: print("ERROR", "receiving IRC socket:", e)
 
 class TwitchChat(pyelement.PyTextfield):
 	chat_server = "irc.chat.twitch.tv"
@@ -262,11 +263,11 @@ class TwitchChat(pyelement.PyTextfield):
 		return img
 
 	def get_emoteimage_from_cache(self, emote_id):
-		if not emote_id in self._emotecache: self._load_emote(emote_id)
-		if self._emotecache[emote_id] is None:
-			del self._emotecache[emote_id]
-			return None
-		return self._emotecache[emote_id]
+		em = self._emotecache.get(emote_id, self._load_emote(emote_id))
+		if em is None:
+			try: del self._emotecache[emote_id]
+			except KeyError: pass
+		else: return self._emotecache[emote_id]
 
 	@property
 	def emotemap_cache(self): return self._emotenamecache
