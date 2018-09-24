@@ -15,7 +15,7 @@ class PyLogLevel(enum.Enum):
 		if isinstance(level, PyLogLevel): return level
 
 		try: return PyLogLevel[level]
-		except: return PyLogLevel.NDEFINE
+		except KeyError: return PyLogLevel.NDEFINE
 
 	def is_match(self, level):
 		""" Returns True if the passed level is equal or greater importance and should be displayed in the log """
@@ -61,8 +61,8 @@ class PyLog:
 	def _get_traceback_string(level):
 		try:
 			stack = inspect.stack()[2]
-			try: return "[{}.{}.{}]".format(PyLog._get_class_from_stack(stack), stack.function, str(level))
-			except KeyError: return "[{}.{}]".format("/".join(stack.filename.split("/")[-3:]), stack.function)
+			try: return "[{}.{}.{}]".format(PyLog._get_class_from_stack(stack), stack.function, PyLogLevel.from_arg(str(level)))
+			except KeyError: return "[{}.{}.{}]".format("/".join(stack.filename.split("/")[-3:]), stack.function, PyLogLevel.from_arg(level))
 		except Exception as e: return "[<{}>.{}]".format(e, level)
 
 	def print_log(self, *objects, sep=" ", end="\n", file=None, flush=True):
