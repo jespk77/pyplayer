@@ -1,4 +1,4 @@
-import requests
+import requests, os
 
 from ui import pywindow, pyelement
 from modules.utilities import twitchchat, twitchemotelist
@@ -34,7 +34,9 @@ class TwitchViewer(pywindow.PyWindow):
 
 		if error is None:
 			print("INFO", "no errors, starting chat...")
+			if not os.path.isdir("twitch"): os.mkdir("twitch")
 			self.bind("<Destroy>", self.disconnect)
+
 			chat = TwitchViewer.chat(self, limited_mode)
 			chat.command_callback = command_callback
 			self.add_widget("chat_viewer", chat, disable_packing=True, fill="both", expand=True)
