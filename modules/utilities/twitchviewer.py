@@ -3,8 +3,9 @@ import requests
 from ui import pywindow, pyelement
 from modules.utilities import twitchchat, twitchemotelist
 
-initial_cfg = { "autosave_delay": 5, "chat_input": {"background": "gray3", "foreground": "white", "font":{"family": "segoeui", "size": 10, "slant": "italics"}},
-				"chat_limit": 300, "message_blacklist": [], "emote_toggle": {"background": "gray3", "foreground": "white"},
+initial_cfg = { "account_data": {"username": "user", "access-token": "y20nzhiwuss8fmw1j2t8wh6ya3wv1x", "client-id": "6adynlxibzw3ug8udhyzy6w3yt70pw", "oauth": "noauth"},
+				"autosave_delay": 5, "chat_input": {"background": "gray3", "foreground": "white", "font":{"family": "segoeui", "size": 10, "slant": "italic"}},
+				"chat_limit": 300, "message_blacklist": [], "emote_toggle": {"background": "gray3", "foreground": "white"}, "enable_timestamp": "true", "enable_triggers": "false",
 				"chat_viewer": {"background": "gray3", "foreground": "white", "font":{"family": "segoeui", "size": 10}, "notice.foreground": "gray50", "deleted.foreground": "gray75"}}
 
 #TODO: make sure we're not currently loading cache
