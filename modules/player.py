@@ -31,7 +31,7 @@ def parse_song(arg):
 			path = dir[arg[0]]
 			arg = arg[1:]
 		else:
-			path = dir.get("music")
+			path = dir.get("default")
 			if path is None: return (None, None)
 		song = media_player.find_song(path=path, keyword=arg)
 		return (path, song)
@@ -149,9 +149,6 @@ def command_info_reload(arg, argc):
 		song_tracker.load_tracker()
 		return messagetypes.Reply("Song tracker reloaded")
 
-def command_music(arg, argc):
-	return messagetypes.Reply("It no longer works like that, you probably meant to put 'player' in front of that?")
-
 # - player specific commands
 def command_pause(arg, argc):
 	if argc == 0:
@@ -250,8 +247,7 @@ commands = {
 		"added": command_info_added,
 		"played": command_info_played,
 		"reload": command_info_reload
-	}, "music": command_music,
-	"player": {
+	}, "player": {
 		"": command_play,
 		"last_random": command_last_random,
 		"next": command_next_song,
