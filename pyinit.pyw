@@ -1,39 +1,27 @@
-import sys, os, shutil
+import sys
 
 def update_program():
 	git_url = "https://github.com/jespk77/pyplayer.git"
 	git_branch = "experimental"
+	git_path = ".gitplayer"
 	print("checking for updates...")
-	if "win" in sys.platform:
-		print("Windows detected")
-		import git
-		try:
-			gt = git.Repo()
-			print("fetching...", gt.git.execute("git fetch --all"), sep="\n")
-			print("updating...", gt.git.execute("git reset --hard origin/" + git_branch))
-		except git.exc.InvalidGitRepositoryError:
-			print("PyPlayer not found, downloading from branch {}...".format(git_branch))
-			gt = git.Repo.clone_from(url=git_url, to_path="")
-		gt.close()
-	elif "linux" in sys.platform:
-		print("Linux detected")
-		try:
-			print("fetching...")
-			if os.system("git fetch --all"):
-				print("PyPlayer not found, downloading from branch {}...".format(git_branch))
-				os.system("git clone {} -b {}".format(git_url, git_branch))
+	import os, subprocess, shutil
+	res = subprocess.run(["git", "fetch", "-all"])
+	if res.returncode == 128:
+		print("Pyplayer was not found, installing new version...")
+		if os.path.isdir(git_path): shutil.rmtree(git_path)
+		res = subprocess.run(["git", "clone", git_url, git_path, "-b", git_branch])
+	else: res = subprocess.run(["git", "reset", "--hard", "origin/", git_branch])
 
-				print("moving files to current directory...")
-				if os.path.isdir("pyplayer"):
-					for file in os.listdir("pyplayer"): shutil.move("pyplayer/" + file, file)
-					os.rmdir("pyplayer")
-				else: print("Cannot find pyplayer"); sys.exit(-1)
-			else:
-				print("updating...")
-				os.system("git reset --hard origin/" + git_branch)
-		except Exception as e: print("ERROR", "Updating player:", e)
+	if res.returncode != 0:
+		print("Cannot download pyplayer...")
+		sys.exit(-1)
 
-	else: raise OSError("platform not supported! sorry! (unless you're using macOS: in that case sorry not sorry)")
+	import os
+	if os.path.isdir(git_path):
+		print("Moving downloaded player to main folder")
+		for file in os.listdir(git_path): shutil.move(git_path + "/" + file, file)
+		os.rmdir(git_path)
 
 if "no_update" in sys.argv: print("skipping update checks")
 else: update_program()
