@@ -1,5 +1,3 @@
-import sys
-
 def update_program():
 	git_url = "https://github.com/jespk77/pyplayer.git"
 	git_branch = "experimental"
@@ -17,12 +15,12 @@ def update_program():
 		print("Cannot download pyplayer...")
 		sys.exit(-1)
 
-	import os
 	if os.path.isdir(git_path):
 		print("Moving downloaded player to main folder")
 		for file in os.listdir(git_path): shutil.move(git_path + "/" + file, file)
 		os.rmdir(git_path)
 
+import sys
 if "no_update" in sys.argv: print("skipping update checks")
 else: update_program()
 
