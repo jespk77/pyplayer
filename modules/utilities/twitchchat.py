@@ -262,11 +262,13 @@ class TwitchChat(pyelement.PyTextfield):
 		return img
 
 	def get_emoteimage_from_cache(self, emote_id):
-		em = self._emotecache.get(emote_id, self._load_emote(emote_id))
-		if em is None:
-			try: del self._emotecache[emote_id]
-			except KeyError: pass
-		else: return self._emotecache[emote_id]
+		if emote_id in self._emotecache: return self._emotecache[emote_id]
+
+		emote = self._load_emote(emote_id)
+		if emote is not None:
+			self._emotecache[emote_id] = emote
+			return emote
+		else: return None
 
 	@property
 	def emotemap_cache(self): return self._emotenamecache
