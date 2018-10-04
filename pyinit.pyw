@@ -4,12 +4,12 @@ def update_program():
 	git_path = ".gitplayer"
 	print("checking for updates...")
 	import os, subprocess, shutil
-	res = subprocess.run(["git", "fetch", "-all"])
+	res = subprocess.run(["git", "fetch", "--all"])
 	if res.returncode == 128:
 		print("Pyplayer was not found, installing new version...")
 		if os.path.isdir(git_path): shutil.rmtree(git_path)
-		res = subprocess.run(["git", "clone", git_url, git_path, "-b", git_branch])
-	else: res = subprocess.run(["git", "reset", "--hard", "origin/", git_branch])
+		res = subprocess.run(["git", "clone", git_url, git_path, "-b "+git_branch])
+	else: res = subprocess.run(["git", "reset", "--hard", "origin/"+git_branch])
 
 	if res.returncode != 0:
 		print("Cannot download pyplayer...")
