@@ -31,7 +31,7 @@ def parse_song(arg):
 			path = dir[arg[0]]
 			arg = arg[1:]
 		else:
-			path = dir.get("default")
+			path = dir.get(dir["default"])
 			if path is None: return (None, None)
 		song = media_player.find_song(path=path, keyword=arg)
 		return (path, song)
