@@ -15,7 +15,7 @@ class TwitchEmoteWindow(pywindow.PyWindow):
 
 		self.bind("<Button-3>", self.hide_window)
 		self.root.protocol("WM_DELETE_WINDOW", self.on_destroy)
-		self.root.resizable(width=False, height=False)
+		self.root.resizable(width=False, height=True)
 
 		self._emote_count = 0
 		self._click_callback = click_callback
