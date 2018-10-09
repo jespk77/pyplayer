@@ -125,6 +125,7 @@ class BaseWindow:
 		id = id.lower()
 		if id in self.widgets:
 			if id != self.window_id:
+				if id.startwith("_"): print("WARNING", "Removing widget '{}' that was marked as private, can potentially cause issues!")
 				self.widgets[id].destroy()
 				del self.widgets[id]
 				return True
