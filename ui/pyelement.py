@@ -105,6 +105,12 @@ class PyFrame(PyElement, tkinter.Frame):
 		try: tkinter.Frame.__init__(self, root.root)
 		except AttributeError: tkinter.Frame.__init__(self, root)
 
+class PyCanvas(PyElement, tkinter.Canvas):
+	def __init__(self, root):
+		PyElement.__init__(self)
+		try: tkinter.Canvas.__init__(self, root.root)
+		except AttributeError: tkinter.Canvas.__init__(self, root)
+
 class PyTextlabel(PyElement, tkinter.Label):
 	""" Element for displaying a line of text """
 	def __init__(self, window):
@@ -293,6 +299,17 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 		return self.cget("maximum")
 	@maximum.setter
 	def maximum(self, value): self.configure(maximum=value)
+
+class PyScrollbar(PyElement, tkinter.Scrollbar):
+	def __init__(self, root):
+		PyElement.__init__(self)
+		try: tkinter.Scrollbar.__init__(self, root.root)
+		except AttributeError: tkinter.Scrollbar.__init__(self, root)
+
+	@property
+	def scrollcommand(self): return
+	@scrollcommand.setter
+	def scrollcommand(self, value): self.configure(command=value)
 
 class PyItemlist(PyElement, tkinter.Listbox):
 	""" A list of options where the user can select one or more lines """
