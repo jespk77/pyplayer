@@ -69,6 +69,8 @@ class IRCClient(threading.Thread):
 				for data in rec: self.message_queue.put_nowait(data.split(" ", maxsplit=4))
 			except UnicodeDecodeError: pass
 			except Exception as e: print("ERROR", "receiving from IRC socket:", e)
+		self.message_queue.put_nowait(False)
+		self.socket.close()
 
 class TwitchChat(pyelement.PyTextfield):
 	chat_server = "irc.chat.twitch.tv"
@@ -440,8 +442,13 @@ class TwitchChat(pyelement.PyTextfield):
 
 	def run(self):
 		if self._irc_client is not None:
-			if not self._message_queue.empty(): self.process_data(self._message_queue.get_nowait())
-			self.after(.1, self.run)
+			if not self._message_queue.empty():
+				msg = self._message_queue.get_nowait()
+				if not msg:
+					self.on_notice(None, "Disconnected from chat")
+					self._irc_client = None
+				else: self.process_data(msg)
+		self.after(.1, self.run)
 
 	def process_data(self, data):
 		try:
