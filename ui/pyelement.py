@@ -134,7 +134,7 @@ class PyButton(PyElement, tkinter.Button):
 	def __init__(self, window):
 		PyElement.__init__(self)
 		try: tkinter.Button.__init__(self, window.root)
-		except AttributeError: tkinter.Button.__init__(window)
+		except AttributeError: tkinter.Button.__init__(self, window)
 		self._string_var = None
 		self._callback = None
 
