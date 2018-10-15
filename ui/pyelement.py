@@ -39,9 +39,9 @@ class PyElement:
 		self._dirty = False
 
 	@property
-	def dirty(self):
-		""" Returns true if the configuration for this element has been updated since last save to file """
-		return self._dirty
+	def root(self): return self.master
+	@property
+	def dirty(self): return self._dirty
 
 	def mark_dirty(self, event=None):
 		""" Mark this element as dirty (configuration options will be written to file next save)
