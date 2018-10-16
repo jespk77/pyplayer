@@ -1,6 +1,6 @@
 from threading import Thread
 from multiprocessing import Queue
-import os, importlib, sys
+import os, importlib, sys, subprocess
 
 from utilities import messagetypes
 
@@ -14,7 +14,8 @@ class Interpreter(Thread):
 		Each module can define:
 			'initialize()': [optional] gets called whenever the module is imported/reloaded
 			'on_destoy()': [optional] gets called before the client is shut down or a module gets reloaded, use to clean up any previously created data/references
-			'priority: int': this defines the order in which a command gets processed by modules, the module with the highest priority (lowest value) get called first, when a module returns a 'messagetype' further processing is stopped
+			'priority': int: this defines the order in which a command gets processed by modules, the module with the highest priority (lowest value) get called first, when a module returns a 'messagetype' further processing is stopped
+			'dependencies': dict: this defines the dependencies that need to be installed using pip, this should be a dictionary where key is the name that needs to be loaded (this name will be set as a module attribure with the import assigned)
 			'commands: dict': defines the commands this module can process, if not defined this module will not receive any commands
 				Notes:
 					- each command callback receives two argument, the remaining command and the number of words of this command
@@ -28,6 +29,7 @@ class Interpreter(Thread):
 		self._configuration = None
 		self._checks = []
 		self._platform = sys.platform
+		self._pycmd = ["py", "-m", "pip", "install"] if "win" in self._platform else ["python3", "-m", "pip", "install", "--user"]
 		self._set_sys_arg()
 
 		self._modules = []
@@ -138,14 +140,39 @@ class Interpreter(Thread):
 			m.interpreter = self
 			m.client = self._client
 			m.platform = self._platform
+
+			try: self._load_dependencies(m)
+			except Exception as e: print("WARNING", "Failed to get dependencies for module '{}', it might not work correctly:".format(m.__name__), e)
 			try: m.initialize()
 			except AttributeError as a:
 				if "initialize" not in str(a): raise a
 			except Exception as e: return messagetypes.Error(e, "Failed to initialize module '{}'".format(md))
+
 			self._modules.append(m)
 			self._modules = sorted(self._modules, key= lambda me: me.priority)
 			return messagetypes.Reply("Module successfully loaded")
 		except Exception as e: return messagetypes.Error(e, "Failed to import module '{}'".format(md))
+
+	def _load_dependencies(self, module):
+		try: d = module.dependencies
+		except AttributeError as e:
+			if not str(e).endswith("'dependencies'"): raise e
+			else: return True
+
+		if isinstance(d, dict):
+			print("INFO", "Loading found keyword dependencies in module")
+			deps = [(k,v) for k,v in d.items()]
+		else: raise TypeError("Invalid type for dependencies for module '{}': must be dict, not '{}'".format(module.__name__, type(d).__name__))
+
+		for i in range(0, len(deps)):
+			key, vl = deps[i]
+			res = subprocess.call(self._pycmd + [vl])
+			if res == 0:
+				print("INFO", "Import module and set module attribute to key:", key)
+				setattr(module, key, importlib.import_module(key))
+			else: print("WARNING", "Failed to install dependency '{}' for module '{}', it might not work correctly".format(vl, module.__name__))
+
+		print("INFO", "Finished installing dependencies")
 
 	def on_destroy(self):
 		for module in self._modules:
