@@ -82,9 +82,10 @@ class SongBrowser(pyelement.PyItemlist):
 
 	def add_count(self, song, add=1):
 		if self.path_valid:
-			self.songcounter[song] += add
-			self.itemlist = [i[0] for i in self.songcounter.most_common()]
-			self.select_song(song)
+			if self.is_dynamic:
+				self.songcounter[song] += add
+				self.itemlist = [i[0] for i in self.songcounter.most_common()]
+				self.select_song(song)
 			return True
 		else: return False
 
