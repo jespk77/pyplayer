@@ -466,21 +466,28 @@ class TwitchChatTalker(pyelement.PyTextfield):
 		pyelement.PyTextfield.__init__(self, root)
 		self.bind("<Escape>", self.clear_text)
 		self.bind("<Return>", self.on_send_message)
-		self.bind("<Up>", self.set_history)
-		self.bind("<Down>", self.set_history)
+		self.bind("<Up>", self.set_history_back)
+		self.bind("<Down>", self.set_history_ahead)
 		self.configure(height=5, wrap="word", spacing1=3, padx=5)
 		self.message_callback = send_message_callback
 		self._chathistory = history.History()
+		self._next_message = None
 
 	def is_empty(self): return len(self.text) == 0
 
-	def set_history(self, event):
-		if event.keysym == "Up": last_cmd = self._chathistory.get_previous(self._chathistory.head)
-		elif event.keysym == "Down": last_cmd = self._chathistory.get_next()
-		else: return
+	def set_history_back(self, event):
+		last_cmd = self._chathistory.get_previous(self._chathistory.head)
+		if last_cmd is not None:
+			if self._next_message is None: self._next_message = self.text
+			self.text = last_cmd
+		return self.block_action
 
+	def set_history_ahead(self, event):
+		last_cmd = self._chathistory.get_next()
 		if last_cmd is not None: self.text = last_cmd
-		else: self.clear_text(event)
+		elif self._next_message is not None:
+			self.text = self._next_message
+			self._next_message = None
 		return self.block_action
 
 	def add_emote(self, emote):
