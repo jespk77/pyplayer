@@ -1,9 +1,14 @@
 from ui import pyelement
 from utilities import history
 
+input_mark = "mark_input"
 class TextConsole(pyelement.PyTextfield):
 	current_start = "end-1l linestart+2c"
 	current_end = "end lineend-1c"
+
+	_prefixes = {
+		"command": "> "
+	}
 
 	def __init__(self, root, command_callback=print):
 		pyelement.PyTextfield.__init__(self, root)
@@ -14,7 +19,7 @@ class TextConsole(pyelement.PyTextfield):
 		self.bind("<Key>", self.on_key_press).bind("<Button-1>", self.block_action).bind("<B1-Motion>", self.block_action)
 		self.bind("<BackSpace>", self.on_backspace_key).bind("<Return>", self.on_command_confirm).bind("<Escape>", self.clear_current_line).bind("<Home>", self.on_home_key)
 		self.bind("<Left>", self.on_left_key).bind("<Up>", self.on_set_command_from_history).bind("<Down>", self.on_set_command_from_history)
-		self.insert("end", "> ")
+		self.set_prefix()
 
 	def clear_current_line(self, event=None):
 		if event is not None: self.last_line = None
@@ -52,10 +57,17 @@ class TextConsole(pyelement.PyTextfield):
 		self.mark_set("insert", "end")
 		return self.block_action
 
+	def set_prefix(self, prefix="command"):
+		prefix = self._prefixes.get(prefix, prefix)
+		self.insert("end", prefix)
+		self.mark_set(input_mark, "insert")
+		self.mark_gravity(input_mark, "left")
+
 	def set_reply(self, msg=None, tags=()):
 		if not self.can_user_interact():
 			if msg is not None: self.insert("end", msg + "\n", tags)
-			self.insert("end", "> " + self.cmd_cache)
+			self.set_prefix()
+			self.insert("end", self.cmd_cache)
 			self.see("end")
 			self.mark_set("insert", "end")
 			self.tag_remove("sel", "0.0", "end")
@@ -65,11 +77,13 @@ class TextConsole(pyelement.PyTextfield):
 		self.insert("end-1l linestart", msg + "\n", tags)
 
 	def on_left_key(self, event):
-		if str(self.index("insert")).endswith(".2"):
+		if self.index("insert") == self.index(input_mark):
+			try: self.tag_remove("sel", self.front, self.back)
+			except Exception as e: print(e)
 			return self.block_action
 
 	def on_backspace_key(self, event):
-		if str(self.index("insert")).endswith(".2"):
+		if self.index("insert") == self.index(input_mark):
 			try: self.index("sel.first"), self.index("sel.last")
 			except: return self.block_action
 
