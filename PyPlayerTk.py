@@ -10,7 +10,7 @@ class PyPlayerEvent:
 		for key, value in kwargs.items():
 			setattr(self, key, value)
 
-initial_cfg = { "autosave_delay": 5, "directory":{"default": ""}, "header_format": "PyPlayer - %a %b %d, %Y %I:%M %p -" }
+initial_cfg = { "autosave_delay": 5, "directory":{"default": ""}, "header_format": "PyPlayer - %a %b %d, %Y %I:%M %p -", "loglevel": "warning" }
 progressbar_cfg = {"background": "cyan", "foreground": "white"}
 header_cfg = { "background": "black", "foreground": "white" }
 console_cfg = { "background": "black", "error.foreground": "red", "font":{"family":"terminal","size":10}, "foreground": "white", "info.foreground": "yellow",
@@ -39,6 +39,7 @@ class PyPlayer(pywindow.RootPyWindow):
 
 		self.focus_followsmouse()
 		self.update_label()
+		self._update_loglevel()
 
 	def subscribe_event(self, name, callback):
 		if name in self.event_handlers and callable(callback):
@@ -53,6 +54,10 @@ class PyPlayer(pywindow.RootPyWindow):
 			for c in self.event_handlers[name]:
 				try: c(self, data)
 				except Exception as e: print("ERROR", "An error occured while processing event '", name, "' -> ", "\n".join(format_exception(None, e, e.__traceback__)), sep="")
+
+	def _update_loglevel(self):
+		import pylogging
+		pylogging.get_logger().log_level = self["loglevel"]
 
 	def update_label(self):
 		self.date = datetime.datetime.today()

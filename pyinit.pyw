@@ -27,7 +27,7 @@ else: update_program()
 from PyPlayerTk import PyPlayer
 from interpreter import Interpreter
 import pylogging
-pylogging.PyLog(log_level="INFO", log_to_file="console" not in sys.argv)
+pylogging.get_logger()
 
 print("initializing client...")
 client = PyPlayer()
