@@ -13,6 +13,8 @@ class PyLogLevel(enum.Enum):
 	def from_arg(level):
 		""" Get appropriate enum level safely, providing the 'NDEFINE' value when level cannot be found """
 		if isinstance(level, PyLogLevel): return level
+		try: level = level.upper()
+		except: pass
 
 		try: return PyLogLevel[level]
 		except: return PyLogLevel.NDEFINE
@@ -24,8 +26,8 @@ class PyLogLevel(enum.Enum):
 	def __str__(self): return self.name
 
 class PyLog:
-	def __init__(self, log_level="WARNING", log_to_file=True):
-		self._level = PyLogLevel.from_arg(log_level)
+	def __init__(self, log_to_file=True):
+		self._level = PyLogLevel.INFO
 		if not os.path.isdir("logs"): os.mkdir("logs")
 
 		today = datetime.datetime.today()
@@ -52,6 +54,11 @@ class PyLog:
 	def __del__(self):
 		self.on_destroy()
 		builtins.print = self._prev_print
+
+	@property
+	def log_level(self): return self._level
+	@log_level.setter
+	def log_level(self, value): self._level = PyLogLevel.from_arg(value)
 
 	@staticmethod
 	def _get_class_from_stack(stack):
@@ -90,9 +97,8 @@ class PyLog:
 		if self._file is not None:
 			self._file.close()
 
-def intialize_logging(level="WARNING"):
-	sys.stdout = PyLog(level)
-
-def destroy_logging():
-	try: sys.stdout.on_destroy()
-	except AttributeError: pass
+logger = None
+def get_logger():
+	global logger
+	if logger is None: logger = PyLog(log_to_file="console" not in sys.argv)
+	return logger
