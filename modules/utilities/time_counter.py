@@ -1,6 +1,6 @@
 from ui import pywindow, pyelement
 
-initial_cfg = {"foreground": "white", "background": "gray25", "highlight_color": "cyan"}
+initial_cfg = {"foreground": "white", "background": "gray25", "highlight_color": "cyan", "highlight_delay": 0}
 class TimeCount(pywindow.PyWindow):
 	def __init__(self, root, title, icon):
 		super().__init__(root, "counter", initial_cfg=initial_cfg)
@@ -34,11 +34,14 @@ class TimeCount(pywindow.PyWindow):
 
 	def update_self(self):
 		if self.countdown == 0:
-			self.countdown = self["highlight_delay"]
-			self.flashes = 3
-			self.flash_highlight()
+			delay = self["highlight_delay"]
+			if delay > 0:
+				self.countdown = delay
+				self.flashes = 3
+				self.flash_highlight()
+				if callable(self.timer_callback): self.timer_callback()
+			else: self.countdown = -1
 			self.widgets["update_button"].accept_input = True
-			if callable(self.timer_callback): self.timer_callback()
 		elif self.countdown > 0: self.countdown -= 1
 
 		self.widgets["label"].display_text="{timer} | {countdown}".format(timer=self.timer, countdown=self.countdown if self.countdown >= 0 else "--")
