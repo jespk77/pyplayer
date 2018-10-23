@@ -1,6 +1,6 @@
 from utilities import messagetypes
 from modules.utilities import time_counter, drink_window
-import pyjokes, datetime
+import datetime
 
 # DEFAULT MODULE VARIABLES
 priority = 7
@@ -62,8 +62,9 @@ def tell_joke(arg, argc):
 		if last_joke is not None:
 			delta = current - last_joke
 			s = 3600 - delta.total_seconds()
-			if s > 0: return messagetypes.Reply("Limited to one joke an hour, next one in {}m{}s".format(int(s / 60), int(s % 60)))
+			if s > 0: return messagetypes.Reply("We're still recovering from that last joke, wait {}m{}s for the next one".format(int(s / 60), int(s % 60)))
 		last_joke = current
+		import pyjokes
 		return messagetypes.Reply(pyjokes.get_joke())
 
 commands = {
