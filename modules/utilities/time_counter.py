@@ -7,7 +7,7 @@ class TimeCount(pywindow.PyWindow):
 		self.timer = 0
 		self.timer_callback = None
 		self.flashes = 0
-		self.countdown = -1
+		self.countdown = 0 if count_time else -1
 		self._count_time = count_time
 
 		background_color = self["background"]
@@ -41,7 +41,6 @@ class TimeCount(pywindow.PyWindow):
 				self.flash_highlight()
 				if callable(self.timer_callback): self.timer_callback(self["command"])
 			else: self.countdown = -1
-			self.widgets["update_button"].accept_input = True
 		elif self.countdown > 0: self.countdown -= 1
 
 		self.widgets["label"].display_text="{timer} | {countdown}".format(timer=self.timer, countdown=self.countdown if self.countdown >= 0 else "--")
@@ -60,11 +59,11 @@ class TimeCount(pywindow.PyWindow):
 		self.disable_highlight()
 
 	def enable_highlight(self):
-		self.widgets["update_button"].configure(background=self["highlight_color"]).accept_input = True
+		self.widgets["update_button"].configure(background=self["highlight_color"])
 
 	def disable_highlight(self):
 		self.flashes = 0
-		self.widgets["update_button"].configure(background=self["background_color"]).accept_input = False
+		self.widgets["update_button"].configure(background=self["background_color"])
 
 	def flash_highlight(self):
 		if self.flashes > 0:
