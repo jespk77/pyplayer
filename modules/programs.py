@@ -13,8 +13,8 @@ drink_reminder = None
 drink_count = 0
 last_joke = None
 
-def on_noise_timer():
-	interpreter.put_command("effect deer")
+def on_noise_timer(cmd):
+	interpreter.put_command(cmd)
 
 def on_drink_timer(level):
 	interpreter.put_command("effect splash")

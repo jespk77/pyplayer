@@ -1,6 +1,6 @@
 from ui import pywindow, pyelement
 
-initial_cfg = {"foreground": "white", "background": "gray25", "highlight_color": "cyan", "highlight_delay": 0}
+initial_cfg = {"foreground": "white", "background": "gray25", "highlight_color": "cyan", "highlight_delay": 0, "command": "effect deer"}
 class TimeCount(pywindow.PyWindow):
 	def __init__(self, root, title, icon="", count_time=None):
 		super().__init__(root, "counter", initial_cfg=initial_cfg)
@@ -39,7 +39,7 @@ class TimeCount(pywindow.PyWindow):
 				self.countdown = delay
 				self.flashes = 3
 				self.flash_highlight()
-				if callable(self.timer_callback): self.timer_callback()
+				if callable(self.timer_callback): self.timer_callback(self["command"])
 			else: self.countdown = -1
 			self.widgets["update_button"].accept_input = True
 		elif self.countdown > 0: self.countdown -= 1
