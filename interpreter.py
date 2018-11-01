@@ -64,7 +64,8 @@ class Interpreter(Thread):
 			if cmd is False:
 				self.on_destroy()
 				break
-			cmd, cb = cmd
+			try: cmd, cb = cmd
+			except ValueError: cb = None
 			print("INFO", "Processing command '{}' with callback:".format(cmd), cb)
 
 			cmd = cmd.split(" ")
