@@ -58,12 +58,14 @@ class Interpreter(Thread):
 		if "MemoryLog" in self._checks: self.mem_tracker.print_diff()
 
 	def run(self):
+		print("INFO", "Interpreter thread started")
 		while True:
 			cmd = self._queue.get()
 			if cmd is False:
 				self.on_destroy()
 				break
 			cmd, cb = cmd
+			print("INFO", "Processing command '{}' with callback:".format(cmd), cb)
 
 			cmd = cmd.split(" ")
 			op = None
@@ -79,6 +81,7 @@ class Interpreter(Thread):
 					op = messagetypes.Error(TypeError("Expected a 'messagetype' object here, not a '{}'".format(type(res).__name__)), "Invalid response from command")
 				else: op = res
 
+			print("INFO", "Got command result:", op)
 			if op is False: op = messagetypes.Reply("Invalid command")
 			elif not isinstance(op, messagetypes.Empty): op = messagetypes.Reply("No answer :(")
 			self.print_additional_debug()
