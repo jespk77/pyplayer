@@ -5,14 +5,15 @@ input_mark = "mark_input"
 class TextConsole(pyelement.PyTextfield):
 	current_end = "end lineend-1c"
 
-	_prefixes = ["> "]
+	_prefixes = ["> ", " - "]
 
 	def __init__(self, root, command_callback=print):
 		pyelement.PyTextfield.__init__(self, root)
 		self._cmdhistory = history.History()
-		self.cmd_cache = ""
-		self.cmd_callback = command_callback
+		self._cmd_cache = ""
+		self._cmd_callback = command_callback
 		self._cmd_state = 0
+		self._parsers = [self.on_command, self.on_command_answer]
 
 		self.bind("<Key>", self.on_key_press).bind("<Button-1>", self.block_action).bind("<B1-Motion>", self.block_action)
 		self.bind("<Left>", self.on_left_key).bind("<Up>", lambda event: self.on_set_command_from_history(event, previous=True))
@@ -38,11 +39,17 @@ class TextConsole(pyelement.PyTextfield):
 		self.last_action = "send"
 		cmd = self.get(input_mark, self.current_end)
 		if len(cmd) > 0:
-			self._cmdhistory.add(cmd)
+			self._parsers[self._cmd_state](cmd)
 			self.insert(self.back, "\n")
 			self.configure(state="disabled")
-			if self.cmd_callback is not None: self.cmd_callback(cmd)
 		return self.block_action
+
+	def on_command(self, cmd):
+		self._cmdhistory.add(cmd)
+		if self._cmd_callback is not None: self._cmd_callback(cmd)
+
+	def on_command_answer(self, text):
+		if self._cmd_callback is not None: self._cmd_callback(text)
 
 	def on_set_command_from_history(self, event, previous=False):
 		self.clear_input_line(event)
@@ -56,15 +63,21 @@ class TextConsole(pyelement.PyTextfield):
 		self.mark_set(input_mark, "insert")
 		self.mark_gravity(input_mark, "left")
 
-	def set_reply(self, msg=None, tags=()):
+	def set_reply(self, msg=None, tags=(), interactive_text=None):
 		if not self.can_user_interact():
 			if msg is not None: self.insert("end", msg + "\n", tags)
-			self.set_prefix()
-			self.insert(self.back, self.cmd_cache)
+			if not interactive_text or len(interactive_text) == 0:
+				self.set_prefix()
+				self.insert(self.back, self._cmd_cache)
+				self._cmd_cache = ""
+			else:
+				self._cmd_state = 1
+				self.set_prefix()
+				self.insert(self.back, interactive_text)
+
 			self.see(self.back)
 			self.mark_set("insert", self.back)
 			self.tag_remove("sel", self.front, self.back)
-			self.cmd_cache = ""
 
 	def set_notification(self, msg, tags=()):
 		self.insert("end-1l linestart", msg + "\n", tags)
@@ -87,4 +100,4 @@ class TextConsole(pyelement.PyTextfield):
 	def on_key_press(self, event):
 		self.focus_set()
 		if not self.accept_input and event.char != "":
-			self.cmd_cache += event.char
+			self._cmd_cache += event.char

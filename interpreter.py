@@ -30,6 +30,7 @@ class Interpreter(Thread):
 		self._checks = []
 		self._platform = sys.platform
 		self._pycmd = ["py", "-m", "pip", "install"] if "win" in self._platform else ["python3", "-m", "pip", "install", "--user"]
+		self._answer_callback = None
 		self._set_sys_arg()
 
 		self._modules = []
@@ -80,6 +81,7 @@ class Interpreter(Thread):
 			if op is False: op = messagetypes.Reply("Invalid command")
 			elif not isinstance(op, messagetypes.Empty): op = messagetypes.Reply("No answer :(")
 			self.print_additional_debug()
+			if callable(op): self._answer_callback = op
 			self._client.add_reply(args=op.get_contents())
 
 	def put_command(self, cmd):
