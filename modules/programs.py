@@ -78,19 +78,10 @@ def tell_joke(arg, argc):
 		import pyjokes
 		return messagetypes.Reply(pyjokes.get_joke())
 
-def axe_answer(arg, argc):
-	if argc == 1 and arg[0] == "nothing": return messagetypes.Reply("Ok then")
-	else: return messagetypes.Question("Anything else?", axe_answer, "no")
-
-def axe_question(arg, argc):
-	if argc == 0:
-		return messagetypes.Question("What is it?", axe_answer)
-
 commands = {
 	"counter": start_timer,
 	"joke": tell_joke,
 	"noise": start_catching_noises,
-	"question": axe_question,
 	"water": {
 		"": start_drink_reminder,
 		"count": get_drink_count,
