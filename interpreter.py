@@ -85,7 +85,7 @@ class Interpreter(Thread):
 			self._client.add_reply(args=op.get_contents())
 
 	def put_command(self, cmd):
-		self._queue.put_nowait(str(cmd))
+		self._queue.put_nowait(cmd)
 
 	def stop_command(self):
 		self._queue.put_nowait(False)
