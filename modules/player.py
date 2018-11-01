@@ -48,7 +48,7 @@ def get_displayname(song): return os.path.splitext(song)[0]
 # ===== MAIN COMMANDS =====
 # - configure autoplay
 def command_autoplay_info(arg, argc):
-	return messagetypes.Info("'autoplay' ['on', 'off', 'queue']")
+	return messagetypes.Info("'autoplay' ['on', 'off', 'queue', 'skip']")
 
 def command_autoplay_ignore(arg, argc):
 	if argc == 0:
@@ -58,20 +58,23 @@ def command_autoplay_ignore(arg, argc):
 
 def command_autoplay_off(arg, argc):
 	if argc == 0:
-		global autoplay
+		global autoplay, autoplay_ignore
 		autoplay = Autoplay.OFF
+		autoplay_ignore = False
 		return messagetypes.Reply("Autoplay is off")
 
 def command_autoplay_on(arg, argc):
 	if argc == 0:
-		global autoplay
+		global autoplay, autoplay_ignore
 		autoplay = Autoplay.ON
+		autoplay_ignore = False
 		return messagetypes.Reply("Autoplay is turned on")
 
 def command_autoplay_queue(arg, argc):
 	if argc == 0:
-		global autoplay
+		global autoplay, autoplay_ignore
 		autoplay = Autoplay.QUEUE
+		autoplay_ignore = False
 		return messagetypes.Reply("Autoplay is enabled for queued songs")
 
 def command_autoplay_next(arg, argc):

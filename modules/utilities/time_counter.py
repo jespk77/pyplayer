@@ -1,13 +1,14 @@
 from ui import pywindow, pyelement
 
-initial_cfg = {"foreground": "white", "background": "gray25", "highlight_color": "cyan", "highlight_delay": 0}
+initial_cfg = {"foreground": "white", "background": "gray25", "highlight_color": "cyan", "highlight_delay": 0, "command": "effect deer"}
 class TimeCount(pywindow.PyWindow):
-	def __init__(self, root, title, icon):
+	def __init__(self, root, title, icon="", count_time=None):
 		super().__init__(root, "counter", initial_cfg=initial_cfg)
 		self.timer = 0
 		self.timer_callback = None
 		self.flashes = 0
-		self.countdown = -1
+		self.countdown = 0 if count_time else -1
+		self._count_time = count_time
 
 		background_color = self["background"]
 		foreground_color = self["foreground"]
@@ -22,8 +23,7 @@ class TimeCount(pywindow.PyWindow):
 
 		self.title = title
 		self.icon = icon
-		self.noise = pyelement.PyImage(icon + ".png")
-		self.widgets["update_button"].configure(image=self.noise)
+		self.widgets["update_button"].configure(image=self.icon)
 		self.update_self()
 
 	def set_delay_time(self, seconds):
@@ -34,14 +34,13 @@ class TimeCount(pywindow.PyWindow):
 
 	def update_self(self):
 		if self.countdown == 0:
-			delay = self["highlight_delay"]
+			delay = self._count_time if self._count_time is not None else self["highlight_delay"]
 			if delay > 0:
 				self.countdown = delay
 				self.flashes = 3
 				self.flash_highlight()
-				if callable(self.timer_callback): self.timer_callback()
+				if callable(self.timer_callback): self.timer_callback(self["command"])
 			else: self.countdown = -1
-			self.widgets["update_button"].accept_input = True
 		elif self.countdown > 0: self.countdown -= 1
 
 		self.widgets["label"].display_text="{timer} | {countdown}".format(timer=self.timer, countdown=self.countdown if self.countdown >= 0 else "--")
@@ -56,15 +55,15 @@ class TimeCount(pywindow.PyWindow):
 
 	def on_timer_reset(self):
 		self.timer = 0
-		self.countdown = self["highlight_delay"]
+		self.countdown = self._count_time if self._count_time is not None else self["highlight_delay"]
 		self.disable_highlight()
 
 	def enable_highlight(self):
-		self.widgets["update_button"].configure(background=self["highlight_color"]).accept_input = True
+		self.widgets["update_button"].configure(background=self["highlight_color"])
 
 	def disable_highlight(self):
 		self.flashes = 0
-		self.widgets["update_button"].configure(background=self["background_color"]).accept_input = False
+		self.widgets["update_button"].configure(background=self["background_color"])
 
 	def flash_highlight(self):
 		if self.flashes > 0:

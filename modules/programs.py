@@ -13,11 +13,22 @@ drink_reminder = None
 drink_count = 0
 last_joke = None
 
-def on_noise_timer():
-	interpreter.put_command("effect deer")
+def on_noise_timer(cmd):
+	interpreter.put_command(cmd)
 
 def on_drink_timer(level):
 	interpreter.put_command("effect splash")
+
+def start_timer(arg, argc):
+	delay = -1
+	if argc > 0:
+		try: delay = int(arg[0])
+		except ValueError: print("INFO", "Cannot parse argument into a number")
+
+	counter = time_counter.TimeCount(client, "Timer", count_time=delay if delay >= 0 else None)
+	counter.set_callback(on_noise_timer)
+	counter.always_on_top = True
+	return messagetypes.Reply("Counter started")
 
 def start_catching_noises(arg, argc):
 	if argc == 0:
@@ -68,6 +79,7 @@ def tell_joke(arg, argc):
 		return messagetypes.Reply(pyjokes.get_joke())
 
 commands = {
+	"counter": start_timer,
 	"joke": tell_joke,
 	"noise": start_catching_noises,
 	"water": {
