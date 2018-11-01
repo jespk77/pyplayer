@@ -14,6 +14,7 @@ class TextConsole(pyelement.PyTextfield):
 		self._cmd_callback = command_callback
 		self._cmd_state = 0
 		self._parsers = [self.on_command, self.on_command_answer]
+		self._question = None
 
 		self.bind("<Key>", self.on_key_press).bind("<Button-1>", self.block_action).bind("<B1-Motion>", self.block_action)
 		self.bind("<Left>", self.on_left_key).bind("<Up>", lambda event: self.on_set_command_from_history(event, previous=True))
@@ -42,6 +43,7 @@ class TextConsole(pyelement.PyTextfield):
 			self._parsers[self._cmd_state](cmd)
 			self.insert(self.back, "\n")
 			self.configure(state="disabled")
+			self._cmd_state = 0
 		return self.block_action
 
 	def on_command(self, cmd):
@@ -49,7 +51,10 @@ class TextConsole(pyelement.PyTextfield):
 		if self._cmd_callback is not None: self._cmd_callback(cmd)
 
 	def on_command_answer(self, text):
-		if self._cmd_callback is not None: self._cmd_callback(text)
+		if self._question is not None and self._cmd_callback is not None:
+			self._cmd_callback(text, self._question)
+			self._question = None
+		else: self.on_command(text)
 
 	def on_set_command_from_history(self, event, previous=False):
 		self.clear_input_line(event)
@@ -63,17 +68,19 @@ class TextConsole(pyelement.PyTextfield):
 		self.mark_set(input_mark, "insert")
 		self.mark_gravity(input_mark, "left")
 
-	def set_reply(self, msg=None, tags=(), interactive_text=None):
+	def set_reply(self, msg=None, tags=(), cmd=None):
 		if not self.can_user_interact():
 			if msg is not None: self.insert("end", msg + "\n", tags)
-			if not interactive_text or len(interactive_text) == 0:
+
+			if cmd is None:
 				self.set_prefix()
 				self.insert(self.back, self._cmd_cache)
 				self._cmd_cache = ""
 			else:
 				self._cmd_state = 1
 				self.set_prefix()
-				self.insert(self.back, interactive_text)
+				self.insert(self.back, cmd.text)
+				self._question = cmd
 
 			self.see(self.back)
 			self.mark_set("insert", self.back)

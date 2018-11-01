@@ -30,7 +30,6 @@ class Interpreter(Thread):
 		self._checks = []
 		self._platform = sys.platform
 		self._pycmd = ["py", "-m", "pip", "install"] if "win" in self._platform else ["python3", "-m", "pip", "install", "--user"]
-		self._answer_callback = None
 		self._set_sys_arg()
 
 		self._modules = []
@@ -61,14 +60,16 @@ class Interpreter(Thread):
 	def run(self):
 		while True:
 			cmd = self._queue.get()
-			if cmd is False or len(cmd) == 0:
+			if cmd is False:
 				self.on_destroy()
 				break
+			cmd, cb = cmd
 
 			cmd = cmd.split(" ")
 			op = None
 			self.print_additional_debug()
-			if cmd[0] == "reload": op = self._load_module(" ".join(cmd[1:]))
+			if cb is not None: op = cb(cmd)
+			elif cmd[0] == "reload": op = self._load_module(" ".join(cmd[1:]))
 
 			if op is None:
 				try: res = self._parse_cmd(cmd)
@@ -81,8 +82,7 @@ class Interpreter(Thread):
 			if op is False: op = messagetypes.Reply("Invalid command")
 			elif not isinstance(op, messagetypes.Empty): op = messagetypes.Reply("No answer :(")
 			self.print_additional_debug()
-			if callable(op): self._answer_callback = op
-			self._client.add_reply(args=op.get_contents())
+			self._client.add_reply(op.get_contents())
 
 	def put_command(self, cmd):
 		self._queue.put_nowait(cmd)

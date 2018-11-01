@@ -34,16 +34,16 @@ class Reply(Empty):
 class Question(Empty):
 	""" Request more information from the user to process their command without having to re-enter it
 	 	(WORK IN PROGRESS: class structure might change) """
-	def __init__(self, message, callback, suggestion=""):
+	def __init__(self, message, callback, text="", **kwargs):
 		self.message = message
 		self.callback = callback
-		assert callable(callback), "Callback must be callable!"
-		self.suggestion = suggestion
+		self.text = text
+		self.kwargs = kwargs
 
-	def __call__(self, *args, **kwargs): self.callback(*args, **kwargs)
+	def __call__(self, cmd): return self.callback(cmd, len(cmd), **self.kwargs)
 	def __str__(self): return st.join(["Question", self.message, self.callback.__name__])
 	def get_prefix(self): return " ? "
-	def get_contents(self): return self.get_prefix() + self.message, ("reply",), self.suggestion
+	def get_contents(self): return self.get_prefix() + self.message, ("reply",), self
 
 class Error(Empty):
 	""" Show the user that an error occured while processing their command,

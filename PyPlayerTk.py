@@ -78,13 +78,12 @@ class PyPlayer(pywindow.RootPyWindow):
 		self.widgets["progressbar"].progress = progress
 		self.post_event("progressbar_update", PyPlayerEvent(progress=progress))
 
-	def parse_command(self, cmd):
-		try: self.interp.put_command(cmd)
+	def parse_command(self, cmd, dt=None):
+		try: self.interp.put_command((cmd, dt))
 		except Exception as e: self.widgets["console"].set_reply(msg="Cannot send command: " + str(e))
 
-	def add_reply(self, s=0.1, args=None):
-		if args is None: self.after(s, self.widgets["console"].set_reply)
-		else: self.after(s, self.widgets["console"].set_reply, *args)
+	def add_reply(self, args):
+		self.after(.1, self.widgets["console"].set_reply, *args)
 
 	def add_message(self, args, s=0.1):
 		self.after(s, self.widgets["console"].set_notification, *args)
