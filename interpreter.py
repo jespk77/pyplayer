@@ -61,32 +61,36 @@ class Interpreter(Thread):
 		print("INFO", "Interpreter thread started")
 		while True:
 			cmd = self._queue.get()
-			if cmd is False:
-				self.on_destroy()
-				break
-			try: cmd, cb = cmd
-			except ValueError: cb = None
-			print("INFO", "Processing command '{}' with callback:".format(cmd), cb)
+			try:
+				if cmd is False:
+					self.on_destroy()
+					break
+				try: cmd, cb = cmd
+				except ValueError: cb = None
+				print("INFO", "Processing command '{}' with callback:".format(cmd), cb)
 
-			cmd = cmd.split(" ")
-			op = None
-			self.print_additional_debug()
-			if cb is not None: op = cb(cmd)
-			elif cmd[0] == "reload": op = self._load_module(" ".join(cmd[1:]))
+				cmd = cmd.split(" ")
+				op = None
+				self.print_additional_debug()
+				if cb is not None: op = cb(cmd)
+				elif cmd[0] == "reload": op = self._load_module(" ".join(cmd[1:]))
 
-			if op is None:
-				try: res = self._parse_cmd(cmd)
-				except Exception as e: res = messagetypes.Error(e, "Error parsing command")
+				if op is None:
+					try: res = self._parse_cmd(cmd)
+					except Exception as e: res = messagetypes.Error(e, "Error parsing command")
 
-				if res is not None and not isinstance(res, messagetypes.Empty):
-					op = messagetypes.Error(TypeError("Expected a 'messagetype' object here, not a '{}'".format(type(res).__name__)), "Invalid response from command")
-				else: op = res
+					if res is not None and not isinstance(res, messagetypes.Empty):
+						op = messagetypes.Error(TypeError("Expected a 'messagetype' object here, not a '{}'".format(type(res).__name__)), "Invalid response from command")
+					else: op = res
 
-			print("INFO", "Got command result:", op)
-			if op is False: op = messagetypes.Reply("Invalid command")
-			elif not isinstance(op, messagetypes.Empty): op = messagetypes.Reply("No answer :(")
-			self.print_additional_debug()
-			self._client.add_reply(op.get_contents())
+				print("INFO", "Got command result:", op)
+				if op is False: op = messagetypes.Reply("Invalid command")
+				elif not isinstance(op, messagetypes.Empty): op = messagetypes.Reply("No answer :(")
+				self.print_additional_debug()
+				self._client.add_reply(op.get_contents())
+			except Exception as e:
+				print("ERROR", "Error processing command '{}':".format(cmd), e)
+				self._client.add_reply(messagetypes.Error(e, "Error processing command").get_contents())
 
 	def put_command(self, cmd, data=None):
 		self._queue.put_nowait((cmd, data))
