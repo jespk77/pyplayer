@@ -6,7 +6,7 @@ class Empty():
 	""" Base class for console user interaction """
 	def __str__(self): return "Empty"
 	def get_prefix(self): return "< "
-	def get_contents(self): return None
+	def get_contents(self): return ()
 
 class Pass(Empty):
 	""" Can be used when features are not working yet, while already showing the command exists """
