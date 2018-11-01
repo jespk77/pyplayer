@@ -17,7 +17,7 @@ class Pass(Empty):
 		return "Pass"
 
 	def get_contents(self):
-		return ("Sorry, the elves are still working here, coming soon (TM) to a PyPlayer (TM) near you!", ("reply",))
+		return "Sorry, the elves are still working here, coming soon (TM) to a PyPlayer (TM) near you!", ("reply",)
 
 class Info(Empty):
 	def __init__(self, message):
@@ -28,7 +28,7 @@ class Info(Empty):
 		return "Info" + st + self.message
 
 	def get_contents(self):
-		return (self.get_prefix() + self.date.strftime("[%I:%M %p] ") + self.message, ("info",))
+		return self.get_prefix() + self.date.strftime("[%I:%M %p] ") + self.message, ("info",)
 
 class Reply(Empty):
 	def __init__(self, message):
@@ -39,7 +39,7 @@ class Reply(Empty):
 		return "Reply" + st + self.message
 
 	def get_contents(self):
-		return (self.get_prefix() + self.date.strftime("[%I:%M %p] ") + self.message, ("reply",))
+		return self.get_prefix() + self.date.strftime("[%I:%M %p] ") + self.message, ("reply",)
 
 class Error(Empty):
 	def __init__(self, error, message=""):
@@ -56,8 +56,8 @@ class Error(Empty):
 		try: print("\n".join(format_exception(None, self.error, self.error.__traceback__)))
 		except: print(self.error, self.message)
 
-		if len(self.message) > 0: return ((self.get_prefix() + self.message + ", see log for details"), ("error",))
-		else: return (self.get_prefix() + str(self.error) + ", see log for details", ("error",))
+		if len(self.message) > 0: return (self.get_prefix() + self.message + ", see log for details"), ("error",)
+		else: return self.get_prefix() + str(self.error) + ", see log for details", ("error",)
 
 class URL(Empty):
 	def __init__(self, url):
