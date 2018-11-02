@@ -35,7 +35,10 @@ def _check_link(tag):
 def search(query):
 	import requests
 	query = query.replace(" ", "+")
-	r = requests.get("https://www.youtube.com/results?search_query={}".format(query))
+	try: r = requests.get("https://www.youtube.com/results?search_query={}".format(query))
+	except Exception as e:
+		print("ERROR", "Executing Youtube request:", e)
+		return None
 
 	res = []
 	if r.status_code == 200:
@@ -49,43 +52,58 @@ def search(query):
 			except StopIteration: break
 			except KeyError: pass
 			except Exception as e: print("ERROR", "Parsing youtube html tag:", e)
-	else: print("WARNING", "Invalid respone from server '{}':".format(r.status_code), r.reason)
+	else: print("WARNING", "Invalid response from server '{}':".format(r.status_code), r.reason)
 	return res
 
-def convert(url):
+def convert(url, filename=None):
+	if not filename: filename = download_options["outtmpl"]
+
 	ensure_yt()
 	global yt
 	try:
+		yt.params["outtmpl"] = filename + ".%(ext)s"
 		return yt.download([url])
 	except Exception as e:
 		print("INFO", "Passed argument was not a valid url:", e)
 		return -1
+
+def process_song(cmd, data=None, url=None):
+	import os
+	cmd = " ".join(cmd)
+	res = convert(url, os.path.join(client["directory"].get("youtube", ""),cmd))
+	if res == 0: return messagetypes.Reply("Song downloaded as '{}'".format(cmd))
+	else: return messagetypes.Reply("Error downloading file: code {}".format(res))
+
+def handle_url(value, data=None):
+	if value is not None and data is not None:
+		return messagetypes.Question("What should the file be named?", process_song, text=value, url=data[0])
+	else: return messagetypes.Reply("Nothing found")
 # --- END OF HELPER FUNCTIONS
 
-def command_youtube_get(arg, argc):
+def command_youtube_find(arg, argc):
 	if argc > 0:
-		if argc == 1:
-			print("INFO", "Only one argument found, this could be a url")
-			if not convert(arg[0]): return messagetypes.Reply("File downloaded")
+		if argc > 1 and arg[-1] == "all":
+			scan_official = False
+			arg.pop(-1)
+		else: scan_official = True
 
 		arg = " ".join(arg)
-		print("INFO", "Searching youtube for", arg)
 		ls = search(arg)
-		res, off = [], []
-		for title, link, desc in ls:
-			link = link[9:]
-			vd = ("  - " + title + ": " + link, link)
-			if desc.startswith("Provided to YouTube by"): off.append(vd)
-			else: res.append(vd)
+		if ls is None: return messagetypes.Reply("There was an error looking for file, see log for details...")
 
-		if len(off) > 0:
-			if len(off) == 1 and not convert(off[0][1]): return messagetypes.Reply("Official song found and downloaded")
-			else: return messagetypes.Reply("Found official videos:\n" + "\n".join([i[0] for i in off]))
-		if len(res) > 0: return messagetypes.Reply("Found several videos:\n" + "\n".join([i[0] for i in res]))
-		else: return messagetypes.Reply("No videos found")
+		res = []
+		for title, link, desc in ls: res.append((title, link[9:], desc))
+		if scan_official:
+			officals = [(title, link, desc) for title, link, desc in res if desc.startswith("Provided to YouTube by")]
+			if len(officals) > 0: return messagetypes.Select("Found official videos:", handle_url, choices=res)
+		return messagetypes.Select("Found multiple videos:", handle_url, choices=res)
+
+def command_youtube_get(arg, argc):
+	if argc > 0: return messagetypes.Reply("This command has been replaced by the command 'youtube find'")
 
 commands = {
 	"youtube": {
+		"find": command_youtube_find,
 		"get": command_youtube_get
 	}
 }
