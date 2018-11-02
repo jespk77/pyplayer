@@ -4,13 +4,13 @@ import datetime
 st = "###"
 class Empty():
 	""" Base class for console user interaction """
-	def __str__(self): return "Empty"
+	def __name__(self): return type(self).__name__
+	def __str__(self): return self.__name__()
 	def get_prefix(self): return "< "
 	def get_contents(self): return ()
 
 class Pass(Empty):
 	""" Can be used when features are not working yet, while already showing the command exists """
-	def __str__(self): return "Pass"
 	def get_contents(self): return "Sorry, the elves are still working here, coming soon (TM) to a PyPlayer (TM) near you!", ("reply",)
 
 class Info(Empty):
@@ -19,7 +19,7 @@ class Info(Empty):
 		self.date = datetime.datetime.today()
 		self.message = message
 
-	def __str__(self): return "Info" + st + self.message
+	def __str__(self): return self.__name__() + st + self.message
 	def get_contents(self): return self.get_prefix() + self.date.strftime("[%I:%M %p] ") + self.message, ("info",)
 
 class Reply(Empty):
@@ -28,12 +28,11 @@ class Reply(Empty):
 		self.date = datetime.datetime.today()
 		self.message = message
 
-	def __str__(self): return "Reply" + st + self.message
+	def __str__(self): return self.__name__() + st + self.message
 	def get_contents(self): return self.get_prefix() + self.date.strftime("[%I:%M %p] ") + self.message, ("reply",)
 
 class Question(Empty):
-	""" Request more information from the user to process their command without having to re-enter it
-	 	(WORK IN PROGRESS: class structure might change) """
+	""" Request more information from the user to process their command without having to re-enter it """
 	def __init__(self, message, callback, text="", **kwargs):
 		self.message = message
 		self.callback = callback
@@ -41,7 +40,7 @@ class Question(Empty):
 		self.kwargs = kwargs
 
 	def __call__(self, cmd): return self.callback(cmd, len(cmd), **self.kwargs)
-	def __str__(self): return st.join(["Question", self.message, self.callback.__name__])
+	def __str__(self): return st.join([self.__name__(), self.message, self.callback.__name__])
 	def get_prefix(self): return " ? "
 	def get_contents(self): return self.get_prefix() + self.message, ("reply",), self
 
@@ -53,7 +52,7 @@ class Error(Empty):
 		self.error = error
 
 	def get_prefix(self): return "! "
-	def __str__(self): return "Error" + st + str(self.error) + st + self.message
+	def __str__(self): return self.__name__() + st + str(self.error) + st + self.message
 
 	def get_contents(self):
 		try: print("\n".join(format_exception(None, self.error, self.error.__traceback__)))
@@ -67,7 +66,7 @@ class URL(Empty):
 	def __init__(self, url):
 		self.url = url
 
-	def __str__(self): return "URL" + st + self.url
+	def __str__(self): return self.__name__() + st + self.url
 
 	def get_contents(self):
 		import webbrowser
