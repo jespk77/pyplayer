@@ -61,7 +61,7 @@ class Select(Question):
 			if 0 <= n < len(self.choices): self.choices = self.choices[n:n+1]
 			else: raise ValueError
 		except ValueError:
-			self.choices = [o for o in self.choices if cmd in o]
+			self.choices = [o for o in self.choices if cmd.lower() in o[0].lower()]
 
 		res = self._callback()
 		if res is not None: return res
@@ -69,16 +69,18 @@ class Select(Question):
 
 	def _callback(self):
 		if len(self.choices) < 2:
-			if len(self.choices) == 1: self.kwargs["value"] = self.choices[0]
+			if len(self.choices) == 1:
+				self.kwargs["value"] = self.choices[0][0]
+				self.kwargs["data"] = self.choices[0][1:]
 			return self.callback(**self.kwargs)
 
 	def _display_options(self):
-		return "\n".join(["  {}. {}".format(i, self.choices[i]) for i in range(len(self.choices))])
+		return "\n".join(["  {}. {}".format(i, self.choices[i][0]) for i in range(len(self.choices))])
 
 	def get_contents(self):
 		res = self._callback()
 		if res is not None: return res.get_contents()
-		else: return self.get_prefix() + self.message + "\n" + self._display_options(), ("reply",), self
+		else: return self.get_prefix() + self.message + "\n" + self._display_options() + "\n < Select item:", ("reply",), self
 
 class Error(Empty):
 	""" Show the user that an error occured while processing their command,
