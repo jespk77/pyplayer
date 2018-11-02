@@ -32,7 +32,9 @@ class Reply(Empty):
 	def get_contents(self): return self.get_prefix() + self.date.strftime("[%I:%M %p] ") + self.message, ("reply",)
 
 class Question(Empty):
-	""" Request more information from the user to process their command without having to re-enter it """
+	""" Request more information from the user to process their command without having to re-enter it
+	 	The 'callback' is called with the answer from the user (same arguments as a regular command + extra keywords provided)
+	 	Use the 'text' argument to give the user an initial suggestion for faster selection """
 	def __init__(self, message, callback, text="", **kwargs):
 		self.message = message
 		self.callback = callback
@@ -43,6 +45,40 @@ class Question(Empty):
 	def __str__(self): return st.join([self.__name__(), self.message, self.callback.__name__])
 	def get_prefix(self): return " ? "
 	def get_contents(self): return self.get_prefix() + self.message, ("reply",), self
+
+class Select(Question):
+	""" Provide a list of options to let the user choose from, they can either use index or keyword to filter items
+		Each request reduces the list, when there is only one left (or zero if no matches) the callback is called with remaining value
+		When the list is empty the callback is called with a 'None' value """
+	def __init__(self, message, callback, choices, **kwargs):
+		Question.__init__(self, message, callback, value=None, **kwargs)
+		self.choices = choices
+
+	def __call__(self, cmd):
+		cmd = " ".join(cmd)
+		try:
+			n = int(cmd)
+			if 0 <= n < len(self.choices): self.choices = self.choices[n:n+1]
+			else: raise ValueError
+		except ValueError:
+			self.choices = [o for o in self.choices if cmd in o]
+
+		res = self._callback()
+		if res is not None: return res
+		else: return self
+
+	def _callback(self):
+		if len(self.choices) < 2:
+			if len(self.choices) == 1: self.kwargs["value"] = self.choices[0]
+			return self.callback(**self.kwargs)
+
+	def _display_options(self):
+		return "\n".join(["  {}. {}".format(i, self.choices[i]) for i in range(len(self.choices))])
+
+	def get_contents(self):
+		res = self._callback()
+		if res is not None: return res.get_contents()
+		else: return self.get_prefix() + self.message + "\n" + self._display_options(), ("reply",), self
 
 class Error(Empty):
 	""" Show the user that an error occured while processing their command,
