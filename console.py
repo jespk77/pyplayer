@@ -57,9 +57,10 @@ class TextConsole(pyelement.PyTextfield):
 		else: self.on_command(text)
 
 	def on_set_command_from_history(self, event, previous=False):
-		self.clear_input_line(event)
-		self.insert(self.back, self._cmdhistory.get_previous(self._cmdhistory.head) if previous else self._cmdhistory.get_next(""))
-		self.mark_set("insert", "end")
+		if self._cmd_state == 0:
+			self.clear_input_line(event)
+			self.insert(self.back, self._cmdhistory.get_previous(self._cmdhistory.head) if previous else self._cmdhistory.get_next(""))
+			self.mark_set("insert", "end")
 		return self.block_action
 
 	def set_prefix(self):
