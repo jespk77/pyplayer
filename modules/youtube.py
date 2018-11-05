@@ -67,20 +67,23 @@ def convert(url, filename=None):
 		print("INFO", "Passed argument was not a valid url:", e)
 		return -1
 
-def process_song(cmd, data=None, url=None):
+def process_song(cmd, data=None, url=None, path=None):
 	import os
 	cmd = " ".join(cmd)
-	res = convert(url, os.path.join(client["directory"].get("youtube", ""),cmd))
-	if res == 0: return messagetypes.Reply("Song downloaded as '{}'".format(cmd))
+	if path is None: path = client["directory"].get("youtube")
+	res = convert(url, os.path.join(path, cmd))
+	if res == 0:
+		if path is not None: interpreter.put_command("player {} {}".format(path, cmd))
+		return messagetypes.Reply("Song downloaded as '{}'".format(cmd))
 	else: return messagetypes.Reply("Error downloading file: code {}".format(res))
 
-def handle_url(value, data=None):
+def handle_url(value, data=None, path=None):
 	if value is not None and data is not None:
-		return messagetypes.Question("What should the file be named?", process_song, text=value, url=data[0])
+		return messagetypes.Question("What should the file be named?", process_song, text=value, url=data[0], path=path)
 	else: return messagetypes.Reply("Nothing found")
 # --- END OF HELPER FUNCTIONS
 
-def command_youtube_find(arg, argc):
+def command_youtube_find(arg, argc, path=None):
 	if argc > 0:
 		if argc > 1 and arg[-1] == "all":
 			scan_official = False
@@ -95,15 +98,11 @@ def command_youtube_find(arg, argc):
 		for title, link, desc in ls: res.append((title, link[9:], desc))
 		if scan_official:
 			officals = [(title, link, desc) for title, link, desc in res if desc.startswith("Provided to YouTube by")]
-			if len(officals) > 0: return messagetypes.Select("Found official videos:", handle_url, choices=res)
-		return messagetypes.Select("Found multiple videos:", handle_url, choices=res)
-
-def command_youtube_get(arg, argc):
-	if argc > 0: return messagetypes.Reply("This command has been replaced by the command 'youtube find'")
+			if len(officals) > 0: return messagetypes.Select("Found official videos:", handle_url, choices=res, path=path)
+		return messagetypes.Select("Found multiple videos:", handle_url, choices=res, path=path)
 
 commands = {
 	"youtube": {
-		"find": command_youtube_find,
-		"get": command_youtube_get
+		"find": command_youtube_find
 	}
 }

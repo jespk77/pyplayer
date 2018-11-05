@@ -15,6 +15,7 @@ media_player = MediaPlayer()
 song_queue = Queue()
 song_history = history.History()
 invalid_cfg = messagetypes.Reply("Invalid directory configuration, check your options")
+MAX_LIST = 15
 
 class Autoplay(enum.Enum):
 	OFF = 0
@@ -44,6 +45,13 @@ def parse_song(arg):
 		else: return (None, None)
 
 def get_displayname(song): return os.path.splitext(song)[0]
+
+def search_youtube(arg, argc, keywords, path):
+	if argc > 0 and len(keywords) > 0:
+		try: from modules import youtube
+		except ImportError: return messagetypes.Reply("Youtube module is not installed")
+		if " ".join(arg).lower() == "y": return youtube.command_youtube_find(keywords, len(keywords), path=path)
+	return messagetypes.Reply("No song found")
 
 # ===== MAIN COMMANDS =====
 # - configure autoplay
@@ -168,12 +176,12 @@ def command_play(arg, argc):
 			reply = "Multiple songs ({:d} total) found: ".format(len(song))
 			count = 0
 			for s in song:
-				if count > 15: reply += "\n and more..."; break
+				if count > MAX_LIST: reply += "\n and more..."; break
 				else:
 					reply += "\n {}. {}".format(count, get_displayname(s))
 					count += 1
 			return messagetypes.Reply(reply)
-		else: return messagetypes.Reply("Cannot find that song")
+		else: return messagetypes.Question("Can't find that song, search for it on youtube?", search_youtube, keywords=arg, path=path)
 
 def command_last_random(arg, argc):
 	if argc == 0:
