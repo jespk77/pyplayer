@@ -41,15 +41,15 @@ def on_tick(client, event):
 
 def timer_check():
 	global timer
-	time_widget = client.widgets["timer"]
+	time_widget = client.widgets["header_left"]
 	if timer is not None and time_widget is not None:
 		timer -= second_time
 		if timer.total_seconds() == 0:
 			timer = None
-			client.remove_widget("timer")
+			client.widgets["header_left"].display_text = ""
 			client.unsubscribe_event("tick_second", on_tick)
 			interpreter.put_command("effect ftl_distress_beacon")
-		else: client.widgets["timer"].display_text = "\u23f0 " + str(timer)
+		else: client.widgets["header_left"].display_text = str(timer)#"\u23f0 " + str(timer)
 	else: timer = None
 
 # ===== MAIN COMMANDS =====
@@ -107,7 +107,7 @@ def command_timer(arg, argc):
 			if isinstance(time, datetime.timedelta):
 				global timer
 				timer = time
-				client.add_widget("timer", pyelement.PyTextlabel(client.widgets["header"]), side="left").display_text = "\u23f0 {}".format(timer)
+				client.widgets["header_left"].display_text = str(timer)#"\u23f0 {}".format(timer)
 				client.subscribe_event("tick_second", on_tick)
 				return messagetypes.Reply("Timer set")
 			else: return messagetypes.Reply(str(time))
