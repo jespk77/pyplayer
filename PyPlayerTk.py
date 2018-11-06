@@ -19,16 +19,18 @@ console_cfg = { "background": "black", "error.foreground": "red", "font":{"famil
 class PyPlayer(pywindow.RootPyWindow):
 	def __init__(self):
 		pywindow.RootPyWindow.__init__(self, "client", initial_cfg)
-		self.add_widget("header", pyelement.PyTextlabel(self), initial_cfg=header_cfg, fill="x")
+		self.set_widget("header_left", pyelement.PyTextlabel(self.frame), initial_cfg=header_cfg)
+		self.set_widget("header", pyelement.PyTextlabel(self.frame), initial_cfg=header_cfg, column=1)
+		self.set_widget("header_right", pyelement.PyTextlabel(self.frame), initial_cfg=header_cfg, column=2)
+		self.column_expand(1, True)
 		self.title_song = ""
 		self.icon = "assets/icon"
 		self.interp = None
 
-		self.progressbar_style = ttk.Style()
-		self.progressbar_style.theme_use("default")
-		self.progressbar_style.configure(style="Horizontal.TProgressbar")
-		self.add_widget("progressbar", pyelement.PyProgressbar(self), initial_cfg=progressbar_cfg, fill="x").maximum = 1
-		self.add_widget("console", TextConsole(self, command_callback=self.parse_command), initial_cfg=console_cfg, fill="both", expand=True).focus()
+		self.set_widget("progressbar", pyelement.PyProgressbar(self.frame), initial_cfg=progressbar_cfg, row=1, columnspan=9).maximum = 1
+		self.set_widget("console", TextConsole(self, command_callback=self.parse_command), initial_cfg=console_cfg, row=3, columnspan=9).focus()
+		self.row_expand(1, True)
+		self.row_expand(3, True)
 
 		self.last_cmd = None
 		self.event_handlers = {
@@ -39,7 +41,7 @@ class PyPlayer(pywindow.RootPyWindow):
 
 		self.focus_followsmouse()
 		self.update_label()
-		self._update_loglevel()
+		self.update_loglevel()
 
 	def subscribe_event(self, name, callback):
 		if name in self.event_handlers and callable(callback):
@@ -55,7 +57,7 @@ class PyPlayer(pywindow.RootPyWindow):
 				try: c(self, data)
 				except Exception as e: print("ERROR", "An error occured while processing event '", name, "' -> ", "\n".join(format_exception(None, e, e.__traceback__)), sep="")
 
-	def _update_loglevel(self):
+	def update_loglevel(self):
 		import pylogging
 		pylogging.get_logger().log_level = self["loglevel"]
 

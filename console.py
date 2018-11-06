@@ -7,8 +7,8 @@ class TextConsole(pyelement.PyTextfield):
 
 	_prefixes = ["> ", " - "]
 
-	def __init__(self, root, command_callback=print):
-		pyelement.PyTextfield.__init__(self, root)
+	def __init__(self, master, command_callback=print):
+		pyelement.PyTextfield.__init__(self, master.frame)
 		self._cmdhistory = history.History()
 		self._cmd_cache = ""
 		self._cmd_callback = command_callback

@@ -3,15 +3,20 @@ import tkinter
 
 from ui import pyconfiguration
 
+def check_master(master):
+	tp = type(master)
+	if tp != tkinter.Tk: raise TypeError("'master' parameter must be a 'PyElement' instance, not '{}'".format(tp.__name__))
+
 class PyElement:
-	""" Framework for elements that can be added to 'PyWindow' and 'RootPyWindow' instances, should not be created on its own """
+	""" Framework for elements that can be parented from other pyelements, should not be created on its own """
 	block_action = "break"
 
-	def __init__(self, id="??"):
+	def __init__(self, id="<???>"):
 		self._configuration = {}
 		self._dirty = False
 		self._boundids = {}
 		self.id = id
+		self.window = None
 		self._master_cfg = True
 
 	@property
@@ -38,8 +43,6 @@ class PyElement:
 		self._master_cfg = value
 		self._dirty = False
 
-	@property
-	def root(self): return self.master
 	@property
 	def dirty(self): return self._dirty
 
@@ -98,25 +101,30 @@ class PyElement:
 		except tkinter.TclError as e: print("ERROR", "Cannot set configuration for item '{}':".format(self.id), e)
 		return self
 
+""" Initializer of each 'PyElement' instance must contain a reference to its parent, which must also be a 'PyElement' instance
+	For widgets that don't have a parent, use the frame of the window (using the 'frame' attribute on window)
+	The window the frame is currently in can be accessed with the 'window' attribute (is None if not placed on a window)
+"""
 class PyFrame(PyElement, tkinter.Frame):
-	""" Use as container for a collection of elements """
-	def __init__(self, root):
+	""" Use as container for a collection of elements, parameter 'master' must be another pyelement """
+	def __init__(self, master):
+		check_master(master)
 		PyElement.__init__(self)
-		try: tkinter.Frame.__init__(self, root.root)
-		except AttributeError: tkinter.Frame.__init__(self, root)
+		tkinter.Frame.__init__(self, master)
 
 class PyCanvas(PyElement, tkinter.Canvas):
-	def __init__(self, root):
+	""" Similar to Frame, but this has more advanced features such as scrolling """
+	def __init__(self, master):
+		check_master(master)
 		PyElement.__init__(self)
-		try: tkinter.Canvas.__init__(self, root.root)
-		except AttributeError: tkinter.Canvas.__init__(self, root)
+		tkinter.Canvas.__init__(self, master)
 
 class PyTextlabel(PyElement, tkinter.Label):
 	""" Element for displaying a line of text """
-	def __init__(self, window):
+	def __init__(self, master):
+		check_master(master)
 		PyElement.__init__(self)
-		try: tkinter.Label.__init__(self, window.root)
-		except AttributeError: tkinter.Label.__init__(self, window)
+		tkinter.Label.__init__(self, master)
 		self._string_var = None
 
 	@property
@@ -131,10 +139,10 @@ class PyTextlabel(PyElement, tkinter.Label):
 
 class PyButton(PyElement, tkinter.Button):
 	""" Element to create a clickable button  """
-	def __init__(self, window):
+	def __init__(self, master):
+		check_master(master)
 		PyElement.__init__(self)
-		try: tkinter.Button.__init__(self, window.root)
-		except AttributeError: tkinter.Button.__init__(self, window)
+		tkinter.Button.__init__(self, master)
 		self._string_var = None
 		self._callback = None
 
@@ -172,14 +180,14 @@ class PyTextfield(PyElement, tkinter.Text):
 	front = "0.0"
 	back = "end"
 
-	def __init__(self, window, accept_input=True):
+	def __init__(self, master):
+		check_master(master)
 		PyElement.__init__(self)
-		try: tkinter.Text.__init__(self, window.root)
-		except AttributeError: tkinter.Text.__init__(self, window)
-		self.accept_input = accept_input
+		tkinter.Text.__init__(self, master)
 
 		self._font = font.Font(family="segoeui", size="11")
 		self.configure(font=self._font)
+		self._accept_input = True
 		self._boldfont = None
 
 	@property
@@ -260,14 +268,15 @@ class PyTextfield(PyElement, tkinter.Text):
 
 class PyProgressbar(PyElement, ttk.Progressbar):
 	""" Widget that displays a bar indicating progress made by the application """
-	def __init__(self, window, horizontal=True):
+	def __init__(self, master):
+		check_master(master)
 		self._progress_var = tkinter.IntVar()
 		self._style = ttk.Style()
+		self._horizontal = True
 		PyElement.__init__(self)
-		try: ttk.Progressbar.__init__(self, window.root)
+		try: ttk.Progressbar.__init__(self, master)
 		except AttributeError: ttk.Progressbar.__init__(self, window)
 		self.configure(mode="determinate", variable=self._progress_var)
-		self.horizontal = horizontal
 
 	@property
 	def progress(self, actual=True):
@@ -279,6 +288,11 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 	def progress(self, value): self._progress_var.set(value)
 
 	@property
+	def horizontal(self): return self._horizontal
+	@horizontal.setter
+	def horizontal(self, vl): self._horizontal = vl is True
+
+	@property
 	def determinate(self):
 		""" If determinate is true, the bar is set to the current value
 		 	If determinate is false, the bar is moving back and forth """
@@ -288,7 +302,7 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 
 	def _load_configuration(self):
 		self._style.theme_use(self._configuration.get("theme", "default"))
-		style = "Horizontal.TProgressbar" if self.horizontal else "Vertical.TProgressbar"
+		style = "Horizontal.TProgressbar" if self._horizontal else "Vertical.TProgressbar"
 		try: self._style.configure(style, **self.configuration)
 		except: pass
 		self.configure(style=style)
@@ -301,10 +315,10 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 	def maximum(self, value): self.configure(maximum=value)
 
 class PyScrollbar(PyElement, tkinter.Scrollbar):
-	def __init__(self, root):
+	def __init__(self, master):
+		check_master(master)
 		PyElement.__init__(self)
-		try: tkinter.Scrollbar.__init__(self, root.root)
-		except AttributeError: tkinter.Scrollbar.__init__(self, root)
+		tkinter.Scrollbar.__init__(self, master)
 
 	@property
 	def scrollcommand(self): return
@@ -313,11 +327,10 @@ class PyScrollbar(PyElement, tkinter.Scrollbar):
 
 class PyItemlist(PyElement, tkinter.Listbox):
 	""" A list of options where the user can select one or more lines """
-	def __init__(self, window):
+	def __init__(self, master):
+		check_master(master)
 		PyElement.__init__(self)
-		try: tkinter.Listbox.__init__(self, window.root)
-		except AttributeError: tkinter.Listbox.__init__(self, window)
-		self.configure(selectmode="single")
+		tkinter.Listbox.__init__(self, master, selectmode="single")
 		self.list_var = None
 		self._items = None
 		self._font = None

@@ -1,5 +1,4 @@
 import tkinter, os, sys
-
 from ui import pyelement, pyconfiguration
 
 class BaseWindow:
@@ -15,14 +14,13 @@ class BaseWindow:
 		self._elements = {}
 		self._children = None
 		self._dirty = False
+		self._autosave = 0
 
 		self.last_position = -1
 		self.last_size = -1
 		self._configuration = pyconfiguration.Configuration(initial_value=initial_cfg, filepath=cfg_file)
 		self.load_configuration()
 
-	@property
-	def root(self): return None
 	@property
 	def window_id(self):
 		""" The (unique) identifier for this window, this cannot change once the window is created """
@@ -72,7 +70,7 @@ class BaseWindow:
 	def mark_dirty(self, event=None):
 		""" Mark this window as dirty, event parameter only used for tkinter event handling """
 		if event is not None:
-			if event.widget is self.root:
+			if event.widget is self.window:
 				if self.last_position != -1 and self.last_size != -1: self._dirty = self._dirty or self.last_position != (event.x * event.y) or self.last_size != (event.height * event.width)
 				self.last_position = event.x * event.y
 				self.last_size = event.height * event.width
@@ -93,46 +91,40 @@ class BaseWindow:
 				self._dirty = False
 			except Exception as e: print("ERROR", "Error writing configuration file for '{}':".format(self.window_id), e)
 
-	#TODO: customize pack ordering
-	def add_widget(self, id, widget, initial_cfg=None, disable_packing=False, **pack_args):
-		""" Add new 'pyelement' widget to this window using passed (unique) identifier, add all needed pack parameters for this widget to the end
-		 	(any widget already assigned to this identifier will be destroyed)
-		 	Returns the bound widget if successful, False otherwise"""
+	def set_widget(self, id, widget=None, initial_cfg=None, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		""" Add given widget to this window, location for the widget on this window can be customized with the various parameters
+			If there is no widget specified, this will return the widget bound to that name (or None if the name isn't bound)
+			Once a widget is added, it can no longer be removed from this window until it closes """
 		id = id.lower()
-		if not isinstance(widget, pyelement.PyElement):
-			print("ERROR", "Tried to create widget with id '{}' but it is not a valid widget: ".format(id), widget)
-			return False
+		if not widget: return self.widgets.get(id)
+		elif not isinstance(widget, pyelement.PyElement): raise TypeError("Can only create widgets from 'PyElement' instances, not from '{}'".format(type(widget).__name__))
+		else: self.widgets[id] = widget
 
-		self.remove_widget(id)
-		self.widgets[id] = widget
+		print("INFO", "Adding widget with id '{}'".format(id))
 		widget.id = id
+		widget.window = self
 		if initial_cfg is None: initial_cfg = {}
 
-		try:
-			cfg = self._configuration.get(id)
-			if cfg is not None: initial_cfg.update(cfg.to_dict()); cfg = initial_cfg
-			elif initial_cfg is not None: cfg = initial_cfg
-
-			if cfg is not None: self.widgets[id].configuration = cfg
-		except (AttributeError, TypeError) as e: print("ERROR", "Cannot assign configuration to created widget '{}':".format(id), e)
-
-		if not disable_packing: self.widgets[id].pack(pack_args)
+		cfg = self._configuration.get(id)
+		if cfg is not None: initial_cfg.update(cfg.to_dict())
+		self.widgets[id].configuration = initial_cfg
+		self.widgets[id].grid(row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 		return self.widgets[id]
 
-	def remove_widget(self, id):
-		""" Destroy and removes widget that was assigned to the passed identifier (has no effect if identifier was not bound)
-		 	Returns true if the identifier was bound and the widget has been removed """
-		id = id.lower()
-		if id in self.widgets:
-			if id != self.window_id:
-				if id.startswith("_"): print("WARNING", "Removing widget '{}' that was marked as private, can potentially cause issues!")
-				self.widgets[id].destroy()
-				del self.widgets[id]
-				return True
-			else: raise NameError("Cannot remove self from widgets!")
-		return False
+	def add_widget(self, id, widget, initial_cfg=None, disable_packing=False, **pack_args):
+		"""  [DEPRECATED, use 'set_widget' instead]
+			Add new 'pyelement' widget to this window using passed (unique) identifier, add all needed pack parameters for this widget to the end
+		 	(any widget already assigned to this identifier will be destroyed)
+		 	Returns the bound widget if successful, False otherwise"""
+		raise DeprecationWarning("This operation is deprecated, use 'set_widget' instead")
 
-	def add_window(self, id, window):
+	def remove_widget(self, id):
+		""" [DEPRECATED, widgets cannot be removed while the window is open]
+			Destroy and removes widget that was assigned to the passed identifier (has no effect if identifier was not bound)
+		 	Returns true if the identifier was bound and the widget has been removed """
+		raise DeprecationWarning("This operation is deprecated, widgets can no longer be removed from window")
+
+	def open_window(self, id, window):
 		""" Adds new child window to this window using passed (unique) identifier
 		 	(any window already assigned to this identifier will be destroyed)
 		 	Returns the bound window if successful, False otherwise """
@@ -150,7 +142,7 @@ class BaseWindow:
 		self._children[id] = window
 		return self.children[id]
 
-	def remove_window(self, id):
+	def close_window(self, id):
 		""" Destroy and remove window assigned to passed identifier (has no effect if identifier was not bound) """
 		id = id.lower()
 		if self._children is not None and id in self._children:
@@ -194,17 +186,19 @@ class BaseWindow:
 class PyWindow(BaseWindow):
 	""" Separate window that can be created on top of another window
 		(it has its own configuration file separate from root configuration) """
-	def __init__(self, root, id, initial_cfg=None, cfg_file=None):
-		self.tk = tkinter.Toplevel(root.root)
+	def __init__(self, master, id, initial_cfg=None, cfg_file=None):
+		self.window = tkinter.Toplevel(master)
 		BaseWindow.__init__(self, id, initial_cfg, cfg_file)
 		self.title = id
 
 	@property
-	def root(self):
-		""" Get window manager for this window """
-		return self.tk
+	def block_action(self):
+		""" Return this in event handlers to stop an event from getting processed further """
+		return "break"
 	@property
-	def block_action(self): return "break"
+	def frame(self):
+		""" The base frame of this window, this is where all root elements should be added to """
+		return self.window
 
 	@property
 	def transient(self): return None
@@ -213,26 +207,24 @@ class PyWindow(BaseWindow):
 		""" Sets this window to be transient, connected to its parent and is minimized when the parent is minimized
 		 	(Cannot be set on root window, also cannot be disabled once set) """
 		if value:
-			if not isinstance(self.tk, tkinter.Toplevel): raise TypeError("Can only set transient on regular window")
-			try: self.root.transient(self.root.master)
+			if not isinstance(self.window, tkinter.Toplevel): raise TypeError("Can only set transient on regular window")
+			try: self.window.transient(self.window)
 			except Exception as e: print("ERROR", "Cannot set window to transient:", e)
 
 	@property
-	def hidden(self): return self.root.state() == "withdrawn"
+	def hidden(self): return self.window.state() == "withdrawn"
 	@hidden.setter
 	def hidden(self, value):
-		if value: self.root.withdraw()
-		else: self.root.deiconify()
-
-	def toggle_hidden(self):
-		self.hidden = not self.hidden
+		if value: self.window.withdraw()
+		else: self.window.deiconify()
+	def toggle_hidden(self): self.hidden = not self.hidden
 
 	def load_configuration(self):
 		""" (Re)load configuration from file """
 		self.geometry = self._configuration.get("geometry", "")
 		self.autosave_delay = int(self._configuration["autosave_delay"])
-		self.root.bind("<Configure>", self.mark_dirty)
-		self.root.bind("<Destroy>", self.try_autosave)
+		self.window.bind("<Configure>", self.mark_dirty)
+		self.window.bind("<Destroy>", self.try_autosave)
 		root_cfg = self._configuration.get("root")
 		if root_cfg is not None: self.root.configure(**root_cfg.to_dict())
 
@@ -256,34 +248,44 @@ class PyWindow(BaseWindow):
 		""" Set time interval (in minutes) between autosaves (if dirty), set to 0 to disable """
 		if self.autosave_delay != value:
 			self._autosave_delay = max(0, value * 60000)
-			try: self.root.after_cancel(self._autosave)
-			except (TypeError, AttributeError): pass
+			try: self.window.after_cancel(self._autosave)
+			except ValueError: pass
+			except Exception as e: print("WARNING", "Error canceling autosave task:", e)
 
-			if value > 0: self._autosave = self.root.after(self._autosave_delay, self.try_autosave)
+			if value > 0: self._autosave = self.window.after(self._autosave_delay, self.try_autosave)
 			else: self._autosave = None
 
 	@property
 	def geometry(self):
 		""" Get window geometry string, returned as '{width}x{height}+{x_pos}+{y_pos}' where {width} and {height} are positive and {x_pos} and {y_pos} may be negative """
-		return self.root.geometry()
+		return self.window.geometry()
 	@geometry.setter
 	def geometry(self, value):
-		""" Update geometry for this window (use specified geometry format) """
-		self.root.geometry(value)
+		""" Update geometry for this window (use geometry format defined for this property) """
+		self.window.geometry(value)
+
+	def column_expand(self, index, expand):
+		""" Set whether the column at the given index is allowed to change size when the window gets wider/smaller
+		 	By default this is not allowed """
+		return self.window.grid_columnconfigure(index, weight=expand)
+	def row_expand(self, index, expand):
+		""" Set whether the row at the given index is allowed to change size when the windows gets taller/shorter
+		 	By default this is not allowed """
+		return self.window.grid_rowconfigure(index, weight=expand)
 
 	@property
 	def title(self):
 		""" Get current window title """
-		return self.root.title()
+		return self.window.title()
 	@title.setter
 	def title(self, value):
 		""" Update current window title """
-		self.root.title(value)
+		self.window.title(value)
 
 	@property
 	def icon(self):
 		""" Get current window icon """
-		return self.root.iconbitmap()
+		return self.window.iconbitmap()
 	@icon.setter
 	def icon(self, value):
 		""" Set window icon """
@@ -291,36 +293,36 @@ class PyWindow(BaseWindow):
 
 		if "linux" in sys.platform:
 			path = os.path.dirname(os.path.realpath(__file__))
-			try: self.root.tk.call("wm", "iconphoto", self.root._w, pyelement.PyImage(file=os.path.join(path, os.pardir, value + ".png")))
+			try: self.window.tk.call("wm", "iconphoto", self.window._w, pyelement.PyImage(file=os.path.join(path, os.pardir, value + ".png")))
 			except Exception as e: print("ERROR", "Setting icon bitmap {}".format(e))
-		elif "win" in sys.platform: self.root.iconbitmap(value + ".ico")
+		elif "win" in sys.platform: self.window.iconbitmap(value + ".ico")
 
 	@property
 	def always_on_top(self):
 		""" If true this window will always display be displayed above others """
-		return bool(self.root.wm_attributes("-topmost"))
+		return bool(self.window.wm_attributes("-topmost"))
 	@always_on_top.setter
 	def always_on_top(self, value):
 		""" Set this window to be always above others """
-		self.root.wm_attributes("-topmost", "1" if value else "0")
+		self.window.wm_attributes("-topmost", "1" if value else "0")
 
 	def focus_followsmouse(self):
 		""" The widget under mouse will get focus, cannot be disabled! """
-		self.root.tk_focusFollowsMouse()
+		self.window.tk_focusFollowsMouse()
 
 	def start(self):
 		""" Initialize and start GUI """
-		try: self.root.mainloop()
+		try: self.window.mainloop()
 		except KeyboardInterrupt:
 			print("INFO", "Received keyboard interrupt, closing program...")
 			self.destroy()
 
 	def destroy(self):
 		""" Close window """
-		self.root.destroy()
+		self.window.destroy()
 
 	def after(self, s, *args):
-		self.root.after(int(s * 1000) if s < 1000 else s, *args)
+		self.window.after(int(s * 1000) if s < 1000 else s, *args)
 
 	def try_autosave(self, event=None):
 		""" Autosave configuration to file (if dirty) """
@@ -334,6 +336,6 @@ class PyWindow(BaseWindow):
 class RootPyWindow(PyWindow):
 	""" Root window for this application (should be the first created window and should only be created once, for additional windows use 'PyWindow' instead) """
 	def __init__(self, id="root", initial_cfg=None):
-		self.tk = tkinter.Tk()
+		self.window = tkinter.Tk()
 		BaseWindow.__init__(self, id, initial_cfg)
 		self.title = BaseWindow.default_title
