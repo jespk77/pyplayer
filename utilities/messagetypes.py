@@ -56,6 +56,8 @@ class Select(Question):
 
 	def __call__(self, cmd):
 		cmd = " ".join(cmd)
+		if len(cmd) == 0: return Reply("Selection aborted")
+
 		try:
 			n = int(cmd)
 			if 0 <= n < len(self.choices): self.choices = self.choices[n:n+1]

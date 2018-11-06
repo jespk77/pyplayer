@@ -39,7 +39,7 @@ class TextConsole(pyelement.PyTextfield):
 	def on_command_confirm(self, event=None):
 		self.last_action = "send"
 		cmd = self.get(input_mark, self.current_end)
-		if len(cmd) > 0:
+		if len(cmd) > 0 or self._cmd_state == 1:
 			self._parsers[self._cmd_state](cmd)
 			self.insert(self.back, "\n")
 			self.configure(state="disabled")
