@@ -66,6 +66,7 @@ class TextConsole(pyelement.PyTextfield):
 
 	def set_prefix(self):
 		prefix = self._prefixes[self._cmd_state]
+		self.mark_set("insert", self.back)
 		self.insert(self.back, prefix)
 		self.mark_set(input_mark, "insert")
 		self.mark_gravity(input_mark, "left")
