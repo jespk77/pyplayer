@@ -150,9 +150,11 @@ class Interpreter(Thread):
 			m.interpreter = self
 			m.client = self._client
 			m.platform = self._platform
+			try: m.priority
+			except AttributeError as e: return messagetypes.Error(e, "Cannot import '{}', it's missing a priority value".format(m.__name__))
 
 			try: self._load_dependencies(m)
-			except Exception as e: print("WARNING", "Failed to get dependencies for module '{}', it might not work correctly:".format(m.__name__), e)
+			except Exception as e: print("WARNING", "Failed to get dependencies for '{}', it might not work correctly:".format(m.__name__), e)
 			try: m.initialize()
 			except AttributeError as a:
 				if "initialize" not in str(a): raise a
