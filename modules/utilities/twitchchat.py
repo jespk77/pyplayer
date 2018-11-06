@@ -310,9 +310,9 @@ class TwitchChat(pyelement.PyTextfield):
 			if self._user_meta is None:
 				self.insert("end", "\n You: ", ("notice",))
 				self.insert("end", msg.rstrip("\n"))
-			else: self.on_privmsg(self._user_meta, msg.rstrip("\n"))
+			else: self.on_privmsg(self._user_meta, msg.rstrip("\n"), emote=True)
 
-	def on_privmsg(self, meta, data):
+	def on_privmsg(self, meta, data, emote=False):
 		if meta is None: return
 		for line in self._window["message_blacklist"]:
 			if line in data: return
@@ -344,13 +344,13 @@ class TwitchChat(pyelement.PyTextfield):
 				self.image_create(index="end", image=self._badgecache[badge])
 				self.insert("end", " ")
 
-		self.add_text(user=user, text=data, emotes=emote_list, bits="bits" in meta)
+		self.add_text(user=user, text=data, emotes=emote_list, bits="bits" in meta, emote=emote)
 
-	def add_text(self, text, user="", emotes=None, bits=False, tags=()):
+	def add_text(self, text, user="", emotes=None, bits=False, emote=False, tags=()):
 		text = "".join([c for c in text if ord(c) <= 65536])
 		if text.startswith("\x01ACTION"):
 			text = text.lstrip("\x01ACTION ").rstrip("\x01")
-			tags = (user.lower())
+			tags += (user.lower(),)
 		elif text == "": return
 
 		if self._chat_size >= self._window["chat_limit"]: self.delete("2.0", "3.0")
@@ -377,7 +377,7 @@ class TwitchChat(pyelement.PyTextfield):
 				except Exception as e: print("ERROR", "Creating emote for word '{}' from id:".format(word), e)
 				continue
 
-			elif word in self._emotenamecache:
+			elif emote and word in self._emotenamecache:
 				if not self._emotenamecache[word] in self._emotecache: self._load_emote(self._emotenamecache[word])
 				try: self.image_create(index="end", image=self._emotecache[self._emotenamecache[word]])
 				except Exception as e: print("ERROR", "Creating emote for word '{}' from name: ", e)
@@ -390,7 +390,7 @@ class TwitchChat(pyelement.PyTextfield):
 						im = self._get_bit_emote(name=bit[0][0], amount=bit[0][1])
 						self.image_create("end", image=im[1])
 						self.insert("end", str(bit[0][1]), "cheer"+str(im[0]))
-					except Exception: pass
+					except: self.insert("end", "".join(bit))
 					continue
 
 			elif word in self._bttv_emotecache:
@@ -399,7 +399,6 @@ class TwitchChat(pyelement.PyTextfield):
 				continue
 
 			self.insert("end", word + " ", tags)
-
 		if self._enable_scroll: self.see("end")
 
 	def get_meta(self, data):
