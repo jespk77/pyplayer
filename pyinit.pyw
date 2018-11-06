@@ -1,6 +1,6 @@
 def update_program():
 	git_url = "https://github.com/jespk77/pyplayer.git"
-	git_branch = "experimental"
+	git_branch = "master"
 	git_path = ".gitplayer"
 	print("checking for updates...")
 	import os, subprocess, shutil
