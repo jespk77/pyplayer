@@ -208,6 +208,7 @@ class PyWindow(BaseWindow):
 	def transient(self): return None
 	@transient.setter
 	def transient(self, value):
+		#TODO: transient currently doesn't work properly
 		""" Sets this window to be transient, connected to its parent and is minimized when the parent is minimized
 		 	(Cannot be set on root window, also cannot be disabled once set) """
 		if value:
