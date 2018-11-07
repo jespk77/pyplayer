@@ -4,8 +4,7 @@ import tkinter
 from ui import pyconfiguration
 
 def check_master(master):
-	tp = type(master)
-	if tp != tkinter.Tk: raise TypeError("'master' parameter must be a 'PyElement' instance, not '{}'".format(tp.__name__))
+	if not isinstance(master, tkinter.Wm): raise TypeError("'master' parameter must be a 'Tk' instance, not '{}'".format(type(master).__name__))
 
 class PyElement:
 	""" Framework for elements that can be parented from other pyelements, should not be created on its own """

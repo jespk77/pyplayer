@@ -88,13 +88,13 @@ class TwitchChat(pyelement.PyTextfield):
 	emotemap_url = "https://api.twitch.tv/kraken/users/{user}/emotes"
 
 	def __init__(self, master, limited_mode=False):
-		self._window = master
-		pyelement.PyTextfield.__init__(self, master, accept_input=False)
+		pyelement.PyTextfield.__init__(self, master)
 		self._callback = None
 		self._irc_client = None
 		self._chat_size = 0
 		self._enable_scroll = True
 		self._limited_mode = limited_mode
+		self.accept_input = False
 
 		self._user_meta = None
 		self._emotecache = {}
@@ -314,7 +314,7 @@ class TwitchChat(pyelement.PyTextfield):
 
 	def on_privmsg(self, meta, data, emote=False):
 		if meta is None: return
-		for line in self._window["message_blacklist"]:
+		for line in self.window["message_blacklist"]:
 			if line in data: return
 
 		user = meta["display-name"]
@@ -332,7 +332,7 @@ class TwitchChat(pyelement.PyTextfield):
 
 		badges = meta["badges"].split(",")
 		self.insert("end", "\n")
-		if self._window["enable_timestamp"]: self.insert("end", self._timestamp.strftime("%I:%M "), ("notice",))
+		if self.window["enable_timestamp"]: self.insert("end", self._timestamp.strftime("%I:%M "), ("notice",))
 		for badge in badges:
 			is_versioned = False
 			for b in self._versioned_badges:
@@ -353,7 +353,7 @@ class TwitchChat(pyelement.PyTextfield):
 			tags += (user.lower(),)
 		elif text == "": return
 
-		if self._chat_size >= self._window["chat_limit"]: self.delete("2.0", "3.0")
+		if self._chat_size >= self.window["chat_limit"]: self.delete("2.0", "3.0")
 		else: self._chat_size += 1
 		if user != "": self.insert("end", user + " ", (user.lower(),))
 
@@ -369,8 +369,8 @@ class TwitchChat(pyelement.PyTextfield):
 
 		text = text.split(" ")
 		for word in text:
-			if not self._limited_mode and self._window["enable_triggers"] and word in self._window["chat_triggers"]:
-				if callable(self._callback): self._callback(self._window["chat_triggers"][word])
+			if not self._limited_mode and self.window["enable_triggers"] and word in self.window["chat_triggers"]:
+				if callable(self._callback): self._callback(self.window["chat_triggers"][word])
 
 			if word in emote_map:
 				try: self.image_create(index="end", image=self._emotecache[emote_map[word]])

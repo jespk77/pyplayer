@@ -15,7 +15,6 @@ def reset_twitch_cache():
 
 class TwitchViewer(pywindow.PyWindow):
 	channel_meta_url = "https://api.twitch.tv/kraken/channels/{channel}?client_id={client_id}"
-	chat = twitchchat.TwitchChat
 
 	def __init__(self, parent, channel, command_callback, limited_mode=False):
 		if not callable(command_callback): raise TypeError("Command callback must be callable")
@@ -37,28 +36,26 @@ class TwitchViewer(pywindow.PyWindow):
 			if not os.path.isdir("twitch"): os.mkdir("twitch")
 			self.bind("<Destroy>", self.disconnect)
 
-			chat = TwitchViewer.chat(self, limited_mode)
+			chat = twitchchat.TwitchChat(self.frame, limited_mode)
 			chat.command_callback = command_callback
-			self.add_widget("chat_viewer", chat, disable_packing=True, fill="both", expand=True)
+			self.set_widget("chat_viewer", chat)
 
-			chatter = twitchchat.TwitchChatTalker(self, self.widgets["chat_viewer"].send_message)
-			chatter.pack_propagate(0)
-			self.add_widget("chat_input", chatter, disable_packing=True, fill="x")
-			emotelist_window = twitchemotelist.TwitchEmoteWindow(self, self.on_emoteclick, chat.emotemap_cache, chat.get_emoteimage_from_cache)
+			chatter = twitchchat.TwitchChatTalker(self.frame, self.widgets["chat_viewer"].send_message)
+			self.set_widget("chat_input", chatter, row=1)
+			emotelist_window = twitchemotelist.TwitchEmoteWindow(self.frame, self.on_emoteclick, chat.emotemap_cache, chat.get_emoteimage_from_cache)
 
-			emotelist_toggle = pyelement.PyButton(self)
+			emotelist_toggle = pyelement.PyButton(self.frame)
 			emotelist_toggle.text = "Emote list loading..."
 			emotelist_toggle.accept_input = False
-			emotelist_toggle.configure(command=self.on_emotetoggle)
-			self.add_widget("emote_toggle", emotelist_toggle, fill="x", side="bottom")
+			emotelist_toggle.callback = self.on_emotetoggle
+			self.set_widget("emote_toggle", emotelist_toggle, row=2)
 
-			chatter.pack(fill="x", side="bottom")
-			chat.pack(fill="both", expand=True)
-
-			self.add_window("emotelist", emotelist_window)
+			self.row_expand(0, True)
+			self.column_expand(0, True)
+			self.open_window("emotelist", emotelist_window)
 			self.set_title()
 			self.start()
-		else: self.add_widget("error_message", pyelement.PyTextlabel(self)).display_text = "Error getting metadata for '{}': {}".format(channel, error)
+		else: self.add_widget("error_message", pyelement.PyTextlabel(self.frame)).display_text = "Error getting metadata for '{}': {}".format(channel, error)
 
 	def on_emotetoggle(self): self.children["emotelist"].toggle_hidden()
 	def on_emoteclick(self, emote_name): self.widgets["chat_input"].add_emote(emote_name)
@@ -88,4 +85,4 @@ class TwitchViewer(pywindow.PyWindow):
 	def on_destroy(self, event=None):
 		self.disconnect(event)
 		self.write_configuration()
-		self.root.destroy()
+		self.master.destroy()

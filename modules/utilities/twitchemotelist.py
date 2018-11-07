@@ -3,19 +3,19 @@ from ui import pywindow, pyelement
 initial_cfg = { "root": {"background": "black"}, "emote_button": { "background": "gray3", "foreground": "white" }, "emote_height": 30, "emote_width": 35, "column_size": 15 }
 
 class TwitchEmoteWindow(pywindow.PyWindow):
-	def __init__(self, root, click_callback, emote_cache, emote_callback):
+	def __init__(self, master, click_callback, emote_cache, emote_callback):
 		if not callable(click_callback): raise TypeError("Button callback must be callable!")
 		if not callable(emote_callback): raise TypeError("Emote callback must be callable!")
 
-		pywindow.PyWindow.__init__(self, root, "twitch_emotelist", initial_cfg)
+		pywindow.PyWindow.__init__(self, master, "twitch_emotelist", initial_cfg)
 		self.transient = True
 		self.hidden = True
 		self.title = "Twitch Emotes"
 		self.icon = None
 
 		self.bind("<Button-3>", self.hide_window)
-		self.root.protocol("WM_DELETE_WINDOW", self.on_destroy)
-		self.root.resizable(width=False, height=True)
+		self.window.protocol("WM_DELETE_WINDOW", self.on_destroy)
+		self.window.resizable(width=False, height=True)
 
 		self._emote_count = 0
 		self._click_callback = click_callback
@@ -33,13 +33,13 @@ class TwitchEmoteWindow(pywindow.PyWindow):
 
 	def add_emote_button(self, emote_name, emote_img):
 		if emote_name not in self.widgets:
-			emote_button = pyelement.PyButton(self)
+			emote_button = pyelement.PyButton(self.frame)
 			emote_button.has_master_configuration = False
 			emote_button.configuration = self["emote_button"]
 			emote_button.configure(width=self["emote_width"], height=self["emote_height"])
-			emote_button.configure(image=emote_img, command=lambda: self._click_callback(emote_name))
-			emote_button.grid(row=int(self._emote_count / self["column_size"]), column=(self._emote_count % self["column_size"]), sticky="news")
-			return self.add_widget(emote_name, emote_button, disable_packing=True)
+			emote_button.configure(image=emote_img)
+			emote_button.callback = lambda: self._click_callback(emote_name)
+			return self.set_widget(emote_name, emote_button, row=int(self._emote_count / self["column_size"]), column=(self._emote_count % self["column_size"]))
 
 	def hide_window(self, event):
 		self.hidden = True

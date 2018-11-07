@@ -134,7 +134,7 @@ class BaseWindow:
 			return False
 
 		if self._children is None: self._children = {}
-		success = self.remove_window(id)
+		success = self.close_window(id)
 		if not success:
 			print("ERROR", "Cannot close previously bound window with id '{}':".format(id))
 			return False
@@ -226,16 +226,16 @@ class PyWindow(BaseWindow):
 		self.window.bind("<Configure>", self.mark_dirty)
 		self.window.bind("<Destroy>", self.try_autosave)
 		root_cfg = self._configuration.get("root")
-		if root_cfg is not None: self.root.configure(**root_cfg.to_dict())
+		if root_cfg is not None: self.window.configure(**root_cfg.to_dict())
 
 	def bind(self, sequence, callback=None, add=None):
 		sequence = sequence.split("&&")
-		for s in sequence: self.root.bind(s, callback, add)
+		for s in sequence: self.window.bind(s, callback, add)
 		return self
 
 	def unbind(self, sequence, funcid=None):
 		sequence = sequence.split("&&")
-		for s in sequence: self.root.unbind(s, funcid)
+		for s in sequence: self.window.unbind(s, funcid)
 		return self
 
 	@property

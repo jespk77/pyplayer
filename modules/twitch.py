@@ -10,10 +10,10 @@ client = None
 def command_twitch(arg, argc, limit=False):
 	if argc == 1:
 		window_id = "twitch_" + arg[0]
-		rmv = client.remove_window(window_id)
+		rmv = client.close_window(window_id)
 		if not rmv: return messagetypes.Reply("Cannot open another window for this channel because the current open window cannot be closed")
 
-		viewer = client.add_window(window_id, twitchviewer.TwitchViewer(client, arg[0], interpreter.put_command, limit))
+		viewer = client.open_window(window_id, twitchviewer.TwitchViewer(client.window, arg[0], interpreter.put_command, limit))
 		return messagetypes.Reply("Twitch viewer for '{}' started".format(viewer.channel))
 
 def command_twitch_limited(arg, argc):
@@ -22,7 +22,7 @@ def command_twitch_limited(arg, argc):
 def command_twitch_resetcache(arg, argc):
 	if argc == 0:
 		twitchviewer.reset_twitch_cache()
-		return messagetypes.Reply("Twitch cache will be regenerated")
+		return messagetypes.Reply("Twitch cache cleared")
 
 def command_twitch_say(arg, argc):
 	if argc > 1:
