@@ -50,8 +50,8 @@ class TwitchViewer(pywindow.PyWindow):
 			emotelist_toggle.callback = self.on_emotetoggle
 			self.set_widget("emote_toggle", emotelist_toggle, row=2)
 
-			self.row_expand(0, True)
-			self.column_expand(0, True)
+			self.row_options(0, weight=1)
+			self.column_options(0, weight=1)
 			self.open_window("emotelist", emotelist_window)
 			self.set_title()
 			self.start()
