@@ -163,6 +163,15 @@ class PyButton(PyElement, tkinter.Button):
 		self._string_var.set(value)
 
 	@property
+	def image(self):
+		""" Return the image that is displayed on the button """
+		return self.cget("image")
+	@image.setter
+	def image(self, vl):
+		""" Set the image displayed on this button """
+		self.configure(image=vl)
+
+	@property
 	def callback(self):
 		""" Returns the callback that is currently assigned to when the button is pressed or None if nothing bound (or if it cannot be called) """
 		if not callable(self._callback): self._callback = None
