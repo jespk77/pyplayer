@@ -4,7 +4,7 @@ from ui import pyelement, pyconfiguration
 class BaseWindow:
 	""" Framework class for PyWindow and RootPyWindow, should not be created on its own """
 	default_title = "PyWindow"
-	invalid_cfg_keys = ["geometry"]
+	invalid_cfg_keys = ["geometry", "height"]
 
 	def __init__(self, id, initial_cfg=None, cfg_file=None):
 		self._windowid = id
@@ -91,16 +91,20 @@ class BaseWindow:
 				self._dirty = False
 			except Exception as e: print("ERROR", "Error writing configuration file for '{}':".format(self.window_id), e)
 
-	def set_widget(self, id, widget=None, initial_cfg=None, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+	def set_widget(self, id, widget, initial_cfg=None, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		""" Add given widget to this window, location for the widget on this window can be customized with the various parameters
-			If there is no widget specified, this will return the widget bound to that name (or None if the name isn't bound)
-			Once a widget is added, it can no longer be removed from this window until it closes """
+			If there is no widget specified, the widget bound to given id will be destroyed. Otherwise the new widget will be replace the old onw """
 		id = id.lower()
-		if not widget: return self.widgets.get(id)
-		elif not isinstance(widget, pyelement.PyElement): raise TypeError("Can only create widgets from 'PyElement' instances, not from '{}'".format(type(widget).__name__))
-		else: self.widgets[id] = widget
-
+		wd = self.widgets.get(id)
 		print("INFO", "Adding widget with id '{}'".format(id))
+		if wd is not None:
+			print("INFO", "Removing existing widget bound to id")
+			wd.destroy()
+			del self.widgets[id]
+		elif not isinstance(widget, pyelement.PyElement): raise TypeError("Can only create widgets from 'PyElement' instances, not from '{}'".format(type(widget).__name__))
+
+		if widget is None: return widget
+		self.widgets[id] = widget
 		widget.id = id
 		widget.window = self
 		if initial_cfg is None: initial_cfg = {}
@@ -264,14 +268,14 @@ class PyWindow(BaseWindow):
 		""" Update geometry for this window (use geometry format defined for this property) """
 		self.window.geometry(value)
 
-	def column_expand(self, index, expand):
+	def column_options(self, index, **kwargs):
 		""" Set whether the column at the given index is allowed to change size when the window gets wider/smaller
 		 	By default this is not allowed """
-		return self.window.grid_columnconfigure(index, weight=expand)
-	def row_expand(self, index, expand):
+		return self.window.grid_columnconfigure(index, **kwargs)
+	def row_options(self, index, **kwargs):
 		""" Set whether the row at the given index is allowed to change size when the windows gets taller/shorter
 		 	By default this is not allowed """
-		return self.window.grid_rowconfigure(index, weight=expand)
+		return self.window.grid_rowconfigure(index, **kwargs)
 
 	@property
 	def title(self):
