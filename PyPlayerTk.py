@@ -13,6 +13,7 @@ class PyPlayerEvent:
 initial_cfg = { "autosave_delay": 5, "directory":{"default": ""}, "header_format": "PyPlayer - %a %b %d, %Y %I:%M %p -", "loglevel": "warning" }
 progressbar_cfg = {"background": "cyan", "foreground": "white"}
 header_cfg = { "background": "black", "foreground": "white" }
+browser_cfg = { "background": "black", "foreground": "white", "selectforeground": "cyan" }
 console_cfg = { "background": "black", "error.foreground": "red", "font":{"family":"terminal","size":10}, "foreground": "white", "info.foreground": "yellow",
 				"insertbackground": "white", "reply.foreground": "gray", "selectbackground": "gray30" }
 
@@ -22,15 +23,14 @@ class PyPlayer(pywindow.RootPyWindow):
 		self.set_widget("header_left", pyelement.PyTextlabel(self.frame), initial_cfg=header_cfg)
 		self.set_widget("header", pyelement.PyTextlabel(self.frame), initial_cfg=header_cfg, column=1)
 		self.set_widget("header_right", pyelement.PyTextlabel(self.frame), initial_cfg=header_cfg, column=2)
-		self.column_expand(1, True)
+		self.column_options(1, minsize=30, weight=1)
 		self.title_song = ""
 		self.icon = "assets/icon"
 		self.interp = None
 
 		self.set_widget("progressbar", pyelement.PyProgressbar(self.frame), initial_cfg=progressbar_cfg, row=1, columnspan=9).maximum = 1
 		self.set_widget("console", TextConsole(self, command_callback=self.parse_command), initial_cfg=console_cfg, row=3, columnspan=9).focus()
-		self.row_expand(1, True)
-		self.row_expand(3, True)
+		self.row_options(3, minsize=100, weight=1)
 
 		self.last_cmd = None
 		self.event_handlers = {
@@ -79,6 +79,15 @@ class PyPlayer(pywindow.RootPyWindow):
 		elif progress < 0: progress = 0
 		self.widgets["progressbar"].progress = progress
 		self.post_event("progressbar_update", PyPlayerEvent(progress=progress))
+
+	def set_songbrowser(self, browser):
+		self.set_widget("songbrowser", browser, row=2, columnspan=9)
+		if browser is None:
+			self.row_options(2, weight=0)
+			self.row_options(3, weight=1)
+		else:
+			self.row_options(2, minsize=200, weight=4)
+			self.row_options(3, weight=0)
 
 	def parse_command(self, cmd, dt=None):
 		try: self.interp.put_command(cmd, dt)
