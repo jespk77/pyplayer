@@ -90,4 +90,5 @@ class SongBrowser(pyelement.PyItemlist):
 		else: return False
 
 	def on_destroy(self):
+		print("INFO", "Songbrowser destroyed")
 		self.destroy()

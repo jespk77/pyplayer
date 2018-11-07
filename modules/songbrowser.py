@@ -7,11 +7,6 @@ interpreter = None
 client = None
 
 # ===== HELPER OPERATIONS ===== #
-def close_browser(arg=None, argc=0):
-	if argc == 0:
-		client.remove_widget("songbrowser")
-		return messagetypes.Reply("Songbrowser closed")
-
 def parse_path(arg, argc):
 	dir = client["directory"]
 	if argc > 0:
@@ -23,7 +18,7 @@ def parse_path(arg, argc):
 		else: return ("No default directory set",)
 
 def bind_events():
-	try: client.widgets["songbrowser"].bind("<Button-1>", block_event).bind("<Double-Button-1>", on_browser_doubleclick).bind("<Button-3>", on_browser_rightclick)
+	try: client.widgets["songbrowser"].bind("<Button-1>", client.block_action).bind("<Double-Button-1>", on_browser_doubleclick).bind("<Button-3>", on_browser_rightclick)
 	except KeyError: print("ERROR", "Cannot bind events because the browser could not be found")
 	client.subscribe_event("title_update", title_update)
 
@@ -39,9 +34,6 @@ def on_browser_doubleclick(event):
 def on_browser_rightclick(event):
 	interpreter.put_command("queue {path} {song}.".format(path=client.widgets["songbrowser"].path[0], song=client.widgets["songbrowser"].get_song_from_event(event)))
 
-def block_event(event):
-	return "break"
-
 # ===== MAIN COMMANDS =====
 # - browser configure
 def command_browser_played_month(arg, argc):
@@ -50,12 +42,9 @@ def command_browser_played_month(arg, argc):
 		if len(path) == 2:
 			if path[0] != client["directory"].get("default"): return command_browser_name(arg, argc)
 
-			browser = SongBrowser(client.root)
+			browser = SongBrowser(client.frame)
 			browser.create_list_from_frequency(path, song_tracker.get_songlist(alltime=False))
-			# TODO: fix dirty console unpack/pack
-			client.widgets["console"].pack_forget()
-			client.add_widget("songbrowser", browser, fill="both", expand=True)
-			client.widgets["console"].pack(fill="x")
+			client.set_songbrowser(browser)
 			bind_events()
 			return messagetypes.Reply("Browser enabled on plays per month in '{}'".format(path[0]))
 		elif len(path) == 1: return messagetypes.Reply(path[0])
@@ -66,12 +55,9 @@ def command_browser_played_all(arg, argc):
 		if len(path) == 2:
 			if path[0] != client["directory"].get("default"): return command_browser_name(arg, argc)
 
-			browser = SongBrowser(client.root)
+			browser = SongBrowser(client.frame)
 			browser.create_list_from_frequency(path, song_tracker.get_songlist(alltime=True))
-			# TODO: fix dirty console unpack/pack
-			client.widgets["console"].pack_forget()
-			client.add_widget("songbrowser", browser, fill="both", expand=True)
-			client.widgets["console"].pack(fill="x")
+			client.set_songbrowser(browser)
 			bind_events()
 			return messagetypes.Reply("Browser enabled on all time plays in '{}'".format(path[0]))
 		elif len(path) == 1: return messagetypes.Reply(path[0])
@@ -80,12 +66,9 @@ def command_browser_recent(arg, argc):
 	if argc <= 2:
 		path = parse_path(arg, argc)
 		if len(path) == 2:
-			browser = SongBrowser(client)
+			browser = SongBrowser(client.frame)
 			browser.create_list_from_recent(path)
-			# TODO: fix dirty console unpack/pack
-			client.widgets["console"].pack_forget()
-			client.add_widget("songbrowser", browser, fill="both", expand=True)
-			client.widgets["console"].pack(fill="x")
+			client.set_songbrowser(browser)
 			bind_events()
 			return messagetypes.Reply("Browser enabled on recent songs in '{}'".format(path[0]))
 		elif len(path) == 1: return messagetypes.Reply(path[0])
@@ -94,22 +77,16 @@ def command_browser_name(arg, argc):
 	if argc <= 2:
 		path = parse_path(arg, argc)
 		if len(path) == 2:
-			browser = SongBrowser(client)
-			# TODO: fix dirty console unpack/pack
-			client.widgets["console"].pack_forget()
-			client.add_widget("songbrowser", browser, fill="both", expand=True)
-			client.widgets["console"].pack(fill="x")
+			browser = SongBrowser(client.frame)
 			browser.create_list_from_name(path)
+			client.set_songbrowser(browser)
 			bind_events()
 			return messagetypes.Reply("Browser enabled for songs in '{}'".format(path[0]))
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
 def command_browser_remove(arg, argc):
 	if argc == 0:
-		if client.remove_widget("songbrowser"):
-			# TODO: fix dirty console unpack/pack
-			client.widgets["console"].pack_forget()
-			client.widgets["console"].pack(fill="both", expand=True)
+		client.set_songbrowser(None)
 		return messagetypes.Reply("Browser closed")
 
 def command_browser(arg, argc):
