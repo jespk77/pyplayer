@@ -2,8 +2,8 @@ from ui import pywindow, pyelement
 
 initial_cfg = {"foreground": "white", "background": "gray25", "highlight_color": "cyan", "highlight_delay": 0, "command": "effect deer"}
 class TimeCount(pywindow.PyWindow):
-	def __init__(self, root, title, icon="", count_time=None):
-		super().__init__(root, "counter", initial_cfg=initial_cfg)
+	def __init__(self, master, title, icon="", count_time=None):
+		super().__init__(master.window, "counter", initial_cfg=initial_cfg)
 		self.timer = 0
 		self.timer_callback = None
 		self.flashes = 0
@@ -12,18 +12,21 @@ class TimeCount(pywindow.PyWindow):
 
 		background_color = self["background"]
 		foreground_color = self["foreground"]
-		self.add_widget("label", pyelement.PyTextlabel(self), fill="both", expand=True)
+		self.set_widget("label", pyelement.PyTextlabel(self.frame))
 		self.widgets["label"].display_text = "initializing..."
 		self.widgets["label"].configure(background=background_color, foreground=foreground_color)
-		self.add_widget("update_button", pyelement.PyButton(self), fill="x")
+		self.set_widget("update_button", pyelement.PyButton(self.frame), row=1)
 		self.widgets["update_button"].configure(command=self.on_noise_click, background=background_color)
-		self.add_widget("reset_button", pyelement.PyButton(self), fill="x")
+		try: self.widgets["update_button"].image = pyelement.PyImage(file=icon)
+		except ValueError: print("WARNING", "Invalid/none specified for icon '{}'".format(icon))
+		self.set_widget("reset_button", pyelement.PyButton(self.frame), row=2)
 		self.widgets["reset_button"].text = "Reset"
 		self.widgets["reset_button"].configure(command=self.on_timer_reset, background=background_color, foreground=foreground_color)
 
 		self.title = title
 		self.icon = icon
-		self.widgets["update_button"].configure(image=self.icon)
+		self.row_expand(1, True)
+		self.column_expand(0, True)
 		self.update_self()
 
 	def set_delay_time(self, seconds):

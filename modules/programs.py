@@ -35,7 +35,7 @@ def start_catching_noises(arg, argc):
 		counter = time_counter.TimeCount(client, "Catching noises", "assets/noise")
 		counter.set_callback(on_noise_timer)
 		counter.always_on_top = True
-		client.add_window("noise_counter", counter)
+		client.open_window("noise_counter", counter)
 		return messagetypes.Reply("The noises will be caught")
 
 def start_drink_reminder(arg, argc):
