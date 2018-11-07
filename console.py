@@ -22,6 +22,7 @@ class TextConsole(pyelement.PyTextfield):
 		self.bind("<BackSpace>", self.on_backspace_key).bind("<Return>", self.on_command_confirm)
 		self.bind("<Escape>", self.clear_input_line).bind("<Home>", self.on_home_key)
 		self.set_prefix()
+		self.configure(height=10)
 
 	def clear_input_line(self, event=None):
 		self.current_pos = self.back
