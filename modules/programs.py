@@ -81,10 +81,5 @@ def tell_joke(arg, argc):
 commands = {
 	"counter": start_timer,
 	"joke": tell_joke,
-	"noise": start_catching_noises,
-	"water": {
-		"": start_drink_reminder,
-		"count": get_drink_count,
-		"refill": refill_drink
-	}
+	"noise": start_catching_noises
 }
