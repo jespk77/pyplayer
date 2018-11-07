@@ -330,7 +330,7 @@ class PyWindow(BaseWindow):
 		if event is None:
 			self.autosave_delay = int(self._configuration["autosave_delay"])
 
-			if self.autosave_delay > 0: self._autosave = self.root.after(self._autosave_delay, self.try_autosave)
+			if self.autosave_delay > 0: self._autosave = self.window.after(self._autosave_delay, self.try_autosave)
 			else: self._autosave = None
 
 class RootPyWindow(PyWindow):
