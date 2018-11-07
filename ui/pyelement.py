@@ -378,6 +378,7 @@ class PyItemlist(PyElement, tkinter.Listbox):
 from PIL import Image, ImageTk
 class PyImage(ImageTk.PhotoImage):
 	def __init__(self, file=None, url=None, bin_file=None):
+		self._success = False
 		if url:
 			from urllib.request import urlopen
 			import io
@@ -386,13 +387,15 @@ class PyImage(ImageTk.PhotoImage):
 			u.close()
 			self._img = Image.open(self._bytes)
 			ImageTk.PhotoImage.__init__(self, self._img)
+			self._success = True
 
 		elif bin_file:
 			import io
+			self._bytes = io.BytesIO()
 			with open(bin_file, "rb") as file:
-				self._bytes = io.BytesIO()
-			self._img = Image.open(self._bytes)
+				self._img = Image.open(file, self._bytes)
 			ImageTk.PhotoImage.__init__(self, self._img)
+			self._success = True
 
 		elif file:
 			try: ImageTk.PhotoImage.__init__(self, file=file)
@@ -400,9 +403,14 @@ class PyImage(ImageTk.PhotoImage):
 				print("ERROR", "Loading image:", e)
 				ImageTk.PhotoImage.__init__(self, file="assets/blank.png")
 			self._bytes = None
+			self._success = True
 		else: raise ValueError("Must specify either file, bin_file or url argument")
 
 	def write(self, filename, format=None, from_coords=None):
 		if self._bytes is not None:
 			with open(filename, "wb") as file:
 				file.write(self._bytes.getvalue())
+
+	def __del__(self):
+		if self._success: ImageTk.PhotoImage.__del__(self)
+		else: print("INFO", "Skipped image cleanup since there was an error loading image")
