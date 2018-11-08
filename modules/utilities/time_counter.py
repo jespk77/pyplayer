@@ -25,8 +25,8 @@ class TimeCount(pywindow.PyWindow):
 
 		self.title = title
 		self.icon = icon
-		self.row_expand(1, True)
-		self.column_expand(0, True)
+		self.row_options(1, weight=1)
+		self.column_options(0, weight=1)
 		self.update_self()
 
 	def set_delay_time(self, seconds):
