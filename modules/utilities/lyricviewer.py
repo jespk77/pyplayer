@@ -23,7 +23,7 @@ class LyricViewer(pywindow.PyWindow):
 
 		try:
 			result = rq.json()
-			print("INFO", "Received json data: ", result)
+			print("INFO", "Received json data: ", result.keys())
 			err = result.get("error")
 			if err is not None: return self.update_lyrics(err)
 			else: return self.update_lyrics(result["lyrics"])
