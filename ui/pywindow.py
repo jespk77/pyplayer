@@ -208,12 +208,11 @@ class PyWindow(BaseWindow):
 	def transient(self): return None
 	@transient.setter
 	def transient(self, value):
-		#TODO: transient currently doesn't work properly
 		""" Sets this window to be transient, connected to its parent and is minimized when the parent is minimized
 		 	(Cannot be set on root window, also cannot be disabled once set) """
 		if value:
 			if not isinstance(self.window, tkinter.Toplevel): raise TypeError("Can only set transient on regular window")
-			try: self.window.transient(self.window)
+			try: self.window.transient(self.window.master)
 			except Exception as e: print("ERROR", "Cannot set window to transient:", e)
 
 	@property
