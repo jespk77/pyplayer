@@ -160,6 +160,14 @@ def command_info_reload(arg, argc):
 		song_tracker.load_tracker()
 		return messagetypes.Reply("Song tracker reloaded")
 
+def command_lyrics(arg, argc):
+	path, song = parse_song(arg)
+	song = get_displayname(song)
+	if path is not None and song is not None:
+		if client.show_lyrics(song): return messagetypes.Reply("Lyrics for '{}' opened in window".format(song))
+		else: return messagetypes.Reply("Invalid title")
+	else: return messagetypes.Reply("No song found")
+
 # - player specific commands
 def command_pause(arg, argc):
 	if argc == 0:
@@ -258,7 +266,8 @@ commands = {
 		"added": command_info_added,
 		"played": command_info_played,
 		"reload": command_info_reload
-	}, "player": {
+	}, "lyrics": command_lyrics,
+	"player": {
 		"": command_play,
 		"last_random": command_last_random,
 		"next": command_next_song,

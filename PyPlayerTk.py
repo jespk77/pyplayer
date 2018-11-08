@@ -89,6 +89,19 @@ class PyPlayer(pywindow.RootPyWindow):
 			self.row_options(2, minsize=200, weight=4)
 			self.row_options(3, weight=0)
 
+	def show_lyrics(self, title):
+		wd = self.children.get("lyric_viewer")
+		if wd is None:
+			from modules.utilities.lyricviewer import LyricViewer
+			wd = LyricViewer(self.window)
+			self.open_window("lyric_viewer", wd)
+
+		title = title.split(" - ", maxsplit=1)
+		if len(title) == 2:
+			wd.load_lyrics(title[0], title[1])
+			return True
+		else: return False
+
 	def parse_command(self, cmd, dt=None):
 		try: self.interp.put_command(cmd, dt)
 		except Exception as e: self.widgets["console"].set_reply(msg="Cannot send command: " + str(e))
