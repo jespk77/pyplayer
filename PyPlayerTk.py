@@ -42,6 +42,7 @@ class PyPlayer(pywindow.RootPyWindow):
 		self.focus_followsmouse()
 		self.update_label()
 		self.update_loglevel()
+		self.add_cfg_keyhandler("loglevel", self.update_loglevel)
 
 	def subscribe_event(self, name, callback):
 		if name in self.event_handlers and callable(callback):
@@ -57,9 +58,12 @@ class PyPlayer(pywindow.RootPyWindow):
 				try: c(self, data)
 				except Exception as e: print("ERROR", "An error occured while processing event '", name, "' -> ", "\n".join(format_exception(None, e, e.__traceback__)), sep="")
 
-	def update_loglevel(self):
+	def update_loglevel(self, value=None):
+		if not value: value = self["loglevel"]
+		else: print("INFO", "Received log update:", value)
+
 		import pylogging
-		pylogging.get_logger().log_level = self["loglevel"]
+		pylogging.get_logger().log_level = value
 
 	def update_label(self):
 		self.date = datetime.datetime.today()
