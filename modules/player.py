@@ -176,6 +176,15 @@ def command_pause(arg, argc):
 		media_player.pause_player()
 		return messagetypes.Empty()
 
+def command_position(arg, argc):
+	if argc == 1:
+		try: ps = float(arg[0])
+		except ValueError: return messagetypes.Reply("Cannot figure out what that number is")
+		if 0 < ps < 1:
+			media_player.set_position(ps)
+			return messagetypes.Reply("Position updated")
+		else: return messagetypes.Reply("Set position must be between 0.0 and 1.0")
+
 def command_play(arg, argc):
 	if argc > 0:
 		(path, song) = parse_song(arg)
@@ -275,6 +284,7 @@ commands = {
 		"next": command_next_song,
 		"next_song": command_next_song,
 		"pause": command_pause,
+		"position": command_position,
 		"previous": command_prev_song,
 		"prev_song": command_prev_song,
 		"random": command_random,

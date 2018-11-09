@@ -144,11 +144,11 @@ class MediaPlayer():
 	def play_song(self, path, song):
 		""" Plays a song only when the full path and song name are known
 			If successful, returns the updated media data set by the player """
-		if not path.endswith("/"): path += "/"
-		file = path + song
+		file = os.path.join(path, song)
 		print("INFO", "Preparing to play", file)
 		if not os.path.isfile(file): return None
 
+		if self._media is not None: self._media.release()
 		self._media = self._vlc.media_new(file)
 		self._media_data = MediaPlayerData(path, song)
 		if self._paused: self.stop_player()
@@ -160,9 +160,19 @@ class MediaPlayer():
 		self._updated = True
 		return self._media_data
 
+	def set_position(self, pos):
+		""" Update the position the player is currently at, if the player has finished it will replay the last song at given position
+		 	Has no effect if the player hasn't played any songs yet """
+		if self._media is not None:
+			pl = self.active_player
+			if pl is None: pl = self._player1 if self._player_one else self._player2
+			pl.set_media(self._media)
+			pl.play()
+			pl.set_position(pos)
+
 	def pause_player(self):
 		""" Toggle player pause (has no effect if nothing is playing) """
-		self._paused = not self._paused and self._media is not None
+		self._paused = not self._paused and self._media_data is not None
 		self._player1.set_pause(self._paused)
 		self._player2.set_pause(self._paused)
 
@@ -171,9 +181,6 @@ class MediaPlayer():
 		self._paused = False
 		self._player1.stop()
 		self._player2.stop()
-		if self._media is not None:
-			self._media.release()
-			self._media = None
 		self._media_data = None
 
 # ===== OTHER FUNCTIONS =====
@@ -210,8 +217,6 @@ class MediaPlayer():
 			return self.play_song(self._last_random[0], self._last_random[1])
 		else: return None
 
-	def get_lyrics(self): raise NotImplementedError("Getting lyrics currently not supported, stay tuned(tm) for the future!")
-
 # ===== EVENT HANDLING =====
 	def attach_event(self, event, callback):
 		""" Attach a new callback handle to the selected event, has no effect if handle was already attached or if it is not callable
@@ -241,7 +246,6 @@ class MediaPlayer():
 
 	def on_song_end(self, event, name, player, player_one):
 		if not self._updated:
-			self._media = None
 			self._paused = False
 			self.call_attached_handlers(name, event, player)
 
