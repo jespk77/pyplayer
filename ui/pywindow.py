@@ -204,6 +204,10 @@ class PyWindow(BaseWindow):
 	def frame(self):
 		""" The base frame of this window, this is where all root elements should be added to """
 		return self.window
+	@property
+	def is_alive(self):
+		""" Returns true when this window has not been closed """
+		return self.window.winfo_exists()
 
 	@property
 	def transient(self): return None
