@@ -86,8 +86,8 @@ class PyPlayer(pywindow.RootPyWindow):
 			self.row_options(2, weight=0)
 			self.row_options(3, weight=1)
 		else:
-			self.row_options(2, minsize=200, weight=4)
-			self.row_options(3, weight=0)
+			self.row_options(2, minsize=200, weight=70)
+			self.row_options(3, weight=20)
 
 	def show_lyrics(self, title):
 		from modules.utilities.lyricviewer import LyricViewer
