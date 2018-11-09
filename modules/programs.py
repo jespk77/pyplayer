@@ -47,8 +47,16 @@ def tell_joke(arg, argc):
 		import pyjokes
 		return messagetypes.Reply(pyjokes.get_joke())
 
+def get_random_number(arg, argc):
+	try: value = int(arg[0])
+	except (IndexError, ValueError): value = 100
+	import random
+	if value <= 0: return messagetypes.Reply("The number must at least be greater than 0")
+	else: return messagetypes.Reply("Your random number between 0 and {} is {}".format(value, random.choice(range(value))))
+
 commands = {
 	"counter": start_timer,
 	"joke": tell_joke,
-	"noise": start_catching_noises
+	"noise": start_catching_noises,
+	"number": get_random_number
 }
