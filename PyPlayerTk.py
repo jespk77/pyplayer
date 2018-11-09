@@ -91,8 +91,13 @@ class PyPlayer(pywindow.RootPyWindow):
 
 	def show_lyrics(self, title):
 		from modules.utilities.lyricviewer import LyricViewer
-		wd = LyricViewer(self.window)
-		self.open_window("lyric_viewer", wd)
+		wd = self.children.get("lyric_viewer")
+		if wd is not None: create_new = not wd.is_alive
+		else: create_new = True
+
+		if create_new:
+			wd = LyricViewer(self.window)
+			self.open_window("lyric_viewer", wd)
 
 		title = title.split(" - ", maxsplit=1)
 		if len(title) == 2:
