@@ -163,7 +163,9 @@ def command_info_reload(arg, argc):
 def command_lyrics(arg, argc):
 	path, song = parse_song(arg)
 	if path is not None and song is not None:
-		song = get_displayname(song)
+		try: song = get_displayname(song)
+		except TypeError: return messagetypes.Reply("Multiple songs found, be more specific")
+
 		if client.show_lyrics(song): return messagetypes.Reply("Lyrics for '{}' opened in window".format(song))
 		else: return messagetypes.Reply("Invalid title")
 	else: return messagetypes.Reply("No song found")
