@@ -290,7 +290,8 @@ commands = {
 		"next": command_next_song,
 		"next_song": command_next_song,
 		"pause": command_pause,
-		"position": command_position,
+		# TODO: progressbar not updating if song was restarted
+		#"position": command_position,
 		"previous": command_prev_song,
 		"prev_song": command_prev_song,
 		"random": command_random,
