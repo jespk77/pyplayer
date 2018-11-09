@@ -13,8 +13,8 @@ class LyricViewer(pywindow.PyWindow):
 		lyric.bind("<Button-1>&&<B1-Motion>", self.block_action)
 		lyric.configure(cursor="arrow")
 		self.set_widget("lyrics", lyric, initial_cfg=initial_cfg)
-		self.row_options(0, weight=0)
-		self.column_options(0, weight=0)
+		self.row_options(0, weight=1)
+		self.column_options(0, weight=1)
 
 	def load_lyrics(self, artist, title):
 		import requests
