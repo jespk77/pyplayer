@@ -42,7 +42,7 @@ class PyPlayer(pywindow.RootPyWindow):
 		self.focus_followsmouse()
 		self.update_label()
 		self.update_loglevel()
-		self.add_cfg_keyhandler("loglevel", self.update_loglevel)
+		self.cfg_register_listener("loglevel", self.update_loglevel)
 
 	def subscribe_event(self, name, callback):
 		if name in self.event_handlers and callable(callback):
