@@ -37,6 +37,7 @@ class MediaPlayer():
 		self._player2 = self._vlc.media_player_new()
 		self._player2.audio_output_set("mmdevice")
 
+		self._muted = False
 		self._paused = False
 		self._player_one = True
 		self._media = None
@@ -156,6 +157,7 @@ class MediaPlayer():
 		player.set_media(self._media)
 		player.play()
 
+		self.mute_player(self._muted)
 		self._paused = False
 		self._updated = True
 		return self._media_data
@@ -169,6 +171,15 @@ class MediaPlayer():
 			pl.set_media(self._media)
 			pl.play()
 			pl.set_position(pos)
+
+	def mute_player(self, mute=None):
+		""" Update mute status of this player to given value
+			When no value is given the mute satus is toggled """
+		if mute is None: mute = not self._muted
+		self._muted = mute
+		self._player1.audio_set_mute(mute)
+		self._player2.audio_set_mute(mute)
+		return self._muted
 
 	def pause_player(self):
 		""" Toggle player pause (has no effect if nothing is playing) """

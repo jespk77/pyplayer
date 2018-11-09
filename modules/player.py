@@ -170,6 +170,11 @@ def command_lyrics(arg, argc):
 		else: return messagetypes.Reply("Invalid title")
 	else: return messagetypes.Reply("No song found")
 
+def command_mute(arg, argc):
+	if argc == 0:
+		media_player.mute_player()
+		return messagetypes.Reply("Player mute toggled")
+
 # - player specific commands
 def command_pause(arg, argc):
 	if argc == 0:
@@ -281,6 +286,7 @@ commands = {
 	"player": {
 		"": command_play,
 		"last_random": command_last_random,
+		"mute": command_mute,
 		"next": command_next_song,
 		"next_song": command_next_song,
 		"pause": command_pause,
