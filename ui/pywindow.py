@@ -101,6 +101,7 @@ class BaseWindow:
 			print("INFO", "Removing existing widget bound to id")
 			wd.destroy()
 			del self.widgets[id]
+		if widget is None: return None
 		elif not isinstance(widget, pyelement.PyElement): raise TypeError("Can only create widgets from 'PyElement' instances, not from '{}'".format(type(widget).__name__))
 
 		if widget is None: return widget
@@ -139,19 +140,19 @@ class BaseWindow:
 
 		if self._children is None: self._children = {}
 		success = self.close_window(id)
-		if not success:
-			print("ERROR", "Cannot close previously bound window with id '{}':".format(id))
-			return False
+		if not success: raise RuntimeError("Cannot close previously bound window with id '{}'".format(id))
 
+		window.id = id
 		self._children[id] = window
 		return self.children[id]
 
 	def close_window(self, id):
 		""" Destroy and remove window assigned to passed identifier (has no effect if identifier was not bound) """
 		id = id.lower()
-		if self._children is not None and id in self._children:
+		wd = self.children.get(id)
+		if self._children is not None and wd is not None:
 			try:
-				self._children[id].destroy()
+				wd.destroy()
 				del self._children[id]
 			except Exception as e: print("ERROR", "Couldn't destroy window '{}' properly: ".format(id), e); return False
 		return True
@@ -223,6 +224,12 @@ class PyWindow(BaseWindow):
 		else: self.window.deiconify()
 	def toggle_hidden(self): self.hidden = not self.hidden
 
+	def _check_valid(self):
+		if not hasattr(self, "id"):
+			print("INFO", "Window '{}' might not be assigned to a parent window".format(self.window_id))
+			return False
+		else: return True
+
 	def load_configuration(self):
 		""" (Re)load configuration from file """
 		self.geometry = self._configuration.get("geometry", "")
@@ -233,6 +240,7 @@ class PyWindow(BaseWindow):
 		if root_cfg is not None: self.window.configure(**root_cfg.to_dict())
 
 	def bind(self, sequence, callback=None, add=None):
+		self._check_valid()
 		sequence = sequence.split("&&")
 		for s in sequence: self.window.bind(s, callback, add)
 		return self
@@ -326,6 +334,7 @@ class PyWindow(BaseWindow):
 		self.window.destroy()
 
 	def after(self, s, *args):
+		self._check_valid()
 		self.window.after(int(s * 1000) if s < 1000 else s, *args)
 
 	def try_autosave(self, event=None):
@@ -343,3 +352,5 @@ class RootPyWindow(PyWindow):
 		self.window = tkinter.Tk()
 		BaseWindow.__init__(self, id, initial_cfg)
 		self.title = BaseWindow.default_title
+
+	def _check_valid(self): return True
