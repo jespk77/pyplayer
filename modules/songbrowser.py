@@ -94,7 +94,7 @@ def command_browser(arg, argc):
 	if isinstance(sorting, str) and len(sorting) > 0:
 		if sorting in commands["browser"]: return commands["browser"][sorting](arg, argc)
 		else: return messagetypes.Reply("Invalid default sorting set in configuration '{}'".format(sorting))
-	return messagetypes.Reply("No default sorting set {songbrowser::default-sort} and none or invalid one specified")
+	return messagetypes.Reply("No default sorting set {songbrowser_sorting} and none or invalid one specified")
 
 commands = {
 	"browser": {
