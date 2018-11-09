@@ -20,6 +20,7 @@ class BaseWindow:
 		self.last_size = -1
 		self._configuration = pyconfiguration.Configuration(initial_value=initial_cfg, filepath=cfg_file)
 		self.load_configuration()
+		self._cfg_listen = {}
 
 	@property
 	def window_id(self):
@@ -90,6 +91,13 @@ class BaseWindow:
 				self._configuration.write_configuration()
 				self._dirty = False
 			except Exception as e: print("ERROR", "Error writing configuration file for '{}':".format(self.window_id), e)
+
+	def cfg_register_listener(self, option, callback):
+		""" Register callback to be called whenever the given configuration option is updated
+		 	The callback must be callable and take one parameter which is the new value """
+		ls = self._cfg_listen.get(option)
+		if ls is None: self._cfg_listen[option] = []
+		self._cfg_listen[option].append(callback)
 
 	def set_widget(self, id, widget, initial_cfg=None, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		""" Add given widget to this window, location for the widget on this window can be customized with the various parameters
@@ -176,6 +184,12 @@ class BaseWindow:
 		if not self._configuration.error:
 			if key in BaseWindow.invalid_cfg_keys: raise ValueError("Tried to set option '{}' which should not be changed manually".format(key))
 			self._configuration[key] = value
+			cbs = self._cfg_listen.get(key)
+			if cbs is not None:
+				for c in cbs:
+					try: c(value)
+					except Exception as e: print("WARNING", "Exception occured while handling ")
+
 			key = key.split("::", maxsplit=1)
 			if len(key) > 1 and key[0] in self.widgets:
 				try: self.widgets[key[0]][key[1]] = value
