@@ -104,7 +104,6 @@ class BaseWindow:
 			If there is no widget specified, the widget bound to given id will be destroyed. Otherwise the new widget will be replace the old onw """
 		id = id.lower()
 		wd = self.widgets.get(id)
-		print("INFO", "Adding widget with id '{}'".format(id))
 		if wd is not None:
 			print("INFO", "Removing existing widget bound to id")
 			wd.destroy()
