@@ -2,6 +2,12 @@ from ui import pywindow, pyelement
 
 initial_cfg = { "foreground": "white", "background": "gray5" }
 
+def _check_lyrics(tag):
+	if tag.name == "div":
+		try: return ' '.join(tag["class"]) == "lyrics"
+		except KeyError: pass
+	return False
+
 class LyricViewer(pywindow.PyWindow):
 	def __init__(self, parent):
 		pywindow.PyWindow.__init__(self, parent, id="LyricViewer")
@@ -10,27 +16,33 @@ class LyricViewer(pywindow.PyWindow):
 
 		lyric = pyelement.PyTextfield(self.frame)
 		lyric.accept_input = False
-		lyric.bind("<Button-1>&&<B1-Motion>", self.block_action)
 		lyric.configure(cursor="arrow")
 		self.set_widget("lyrics", lyric, initial_cfg=initial_cfg)
 		self.row_options(0, weight=1)
 		self.column_options(0, weight=1)
 
 	def load_lyrics(self, artist, title):
-		import requests
+		import requests, re
 		print("INFO", "Looking for lyrics for artist:'{}' and title:'{}'".format(artist, title))
-		rq = requests.get("https://api.lyrics.ovh/v1/{artist}/{title}".format(artist=artist.replace(' ', '-'), title=title.replace(' ', '-')))
-
-		try:
-			result = rq.json()
-			print("INFO", "Received json data: ", result.keys())
-			err = result.get("error")
-			if err is not None: return self.update_lyrics(err)
-			else: return self.update_lyrics(result["lyrics"])
+		q = artist + ' ' + title
+		url = "https://genius.com/{}-lyrics".format(re.sub(r"[ =]", "-", re.sub(r"[^a-z0-9= -]", "", q, flags=re.IGNORECASE)))
+		try: rq = requests.get(url)
 		except Exception as e:
-			print("ERROR", "Decoding received data into json:", e)
+			print("ERROR", "Getting data from url")
 			return self.update_lyrics(str(e))
 
+		if rq.status_code == 200:
+			from bs4 import BeautifulSoup
+			html = BeautifulSoup(rq.content, features="html.parser")
+			ls = html.find_all(_check_lyrics)
+			try:
+				ly = re.sub(r"<.+?>", "", str(ls[0].contents[3]), flags=re.DOTALL)
+				self.title = "Lyrics: {} - {}".format(artist, title)
+				return self.update_lyrics(ly)
+			except IndexError:
+				print("INFO", "Lyrics cannot be parsed; html might have changed!")
+				return self.update_lyrics("Lyrics not found")
+		else: return self.update_lyrics("Error: HTTP request code {}".format(rq.status_code))
+
 	def update_lyrics(self, lyrics):
-		import itertools
-		self.widgets["lyrics"].text = "\n\n".join(["".join([t for t,_ in itertools.groupby(g)]) for g in lyrics.split("\n\n\n\n")])
+		self.widgets["lyrics"].text = lyrics
