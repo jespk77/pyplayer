@@ -21,8 +21,22 @@ def command_twitch_limited(arg, argc):
 
 def command_twitch_resetcache(arg, argc):
 	if argc == 0:
-		twitchviewer.reset_twitch_cache()
-		return messagetypes.Reply("Twitch cache cleared")
+		for id, wd in list(client.children.items()):
+			if id.startswith("twitch_") and wd.is_alive: client.close_window(id)
+
+		import shutil, os
+		try: shutil.rmtree(twitchviewer.twitchchat.TwitchChat.emote_cache_folder)
+		except FileNotFoundError: pass
+		try: os.remove(twitchviewer.twitchchat.TwitchChat.emotemap_cache_file)
+		except FileNotFoundError: pass
+
+		file = open(".cfg/twitch", "r")
+		import json
+		js = json.load(file)
+		js = js.get("account_data")
+		file.close()
+		if js is not None and "access-token" not in js: return messagetypes.URL(twitchviewer.twitchchat.TwitchChat.token_url.format(client_id=js.get("client-id")))
+		else: return messagetypes.Reply("Twitch cache cleared")
 
 def command_twitch_say(arg, argc):
 	if argc > 1:
@@ -36,7 +50,7 @@ def command_twitch_say(arg, argc):
 commands = {
 	"twitch": {
 		"": command_twitch,
-		"reset_cache": command_twitch_resetcache,
+		"reset": command_twitch_resetcache,
 		"limited": command_twitch_limited,
 		"say": command_twitch_say
 	}

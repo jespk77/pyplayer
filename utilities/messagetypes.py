@@ -111,6 +111,7 @@ class URL(Empty):
 	def get_contents(self):
 		import webbrowser
 		webbrowser.open(self.url)
+		return self.get_prefix() + "URL opened", ("reply",)
 
 def from_str(str):
 	str = str.split(st)

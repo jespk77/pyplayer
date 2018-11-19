@@ -7,12 +7,6 @@ initial_cfg = { "account_data": {"username": "user", "client-id": "6adynlxibzw3u
 				"chat_limit": 300, "message_blacklist": [], "emote_toggle": {"background": "gray3", "foreground": "white"}, "enable_timestamp": "true", "enable_triggers": "false",
 				"chat_viewer": {"background": "gray3", "foreground": "white", "font":{"family": "segoeui", "size": 10}, "notice.foreground": "gray50", "deleted.foreground": "gray75"}}
 
-#TODO: make sure we're not currently loading cache
-def reset_twitch_cache():
-	import os
-	os.remove(twitchchat.TwitchChat.emote_cache_folder)
-	os.remove(twitchchat.TwitchChat.emotemap_cache_file)
-
 class TwitchViewer(pywindow.PyWindow):
 	channel_meta_url = "https://api.twitch.tv/kraken/channels/{channel}?client_id={client_id}"
 
