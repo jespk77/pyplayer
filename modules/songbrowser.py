@@ -21,6 +21,7 @@ def bind_events():
 	try: client.widgets["songbrowser"].bind("<Button-1>", client.block_action).bind("<Double-Button-1>", on_browser_doubleclick).bind("<Button-3>", on_browser_rightclick)
 	except KeyError: print("ERROR", "Cannot bind events because the browser could not be found")
 	client.subscribe_event("title_update", title_update)
+	client.widgets["songbrowser"].select_song()
 
 def unbind_events():
 	client.unsubscribe_event("title_update", title_update)
