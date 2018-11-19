@@ -33,9 +33,10 @@ def command_twitch_resetcache(arg, argc):
 		file = open(".cfg/twitch", "r")
 		import json
 		js = json.load(file)
-		js = js.get("account_data")
 		file.close()
-		if js is not None and "access-token" not in js: return messagetypes.URL(twitchviewer.twitchchat.TwitchChat.token_url.format(client_id=js.get("client-id")))
+		js = js.get("account_data")
+		tk = js.get("access-token")
+		if js is not None and tk is not None: return messagetypes.URL(twitchviewer.twitchchat.TwitchChat.token_url.format(client_id=js.get("client-id")))
 		else: return messagetypes.Reply("Twitch cache cleared")
 
 def command_twitch_say(arg, argc):
