@@ -83,10 +83,7 @@ class Configuration:
 					else: self._cfg[key] = ConfigurationEntry(value)
 
 	def __str__(self): return self.__descstr__()
-	def __descstr__(self):
-		s = "Configuration("
-		for key, value in self._cfg.items(): s += "'{}': ".format(key) + value.__descstr__() + ", "
-		return s + ")"
+	def __descstr__(self): return "Configuration({})".format(", ".join(["'{}': {}".format(key, value.__descstr__()) for key, value in self._cfg.items()]))
 
 	def __getitem__(self, key):
 		key = str(key).split("::", maxsplit=1)
