@@ -78,6 +78,7 @@ class TwitchChat(pyelement.PyTextfield):
 	twitch_badge_url = "https://api.twitch.tv/kraken/chat/{channel}/badges?client_id={client_id}"
 	channel_badge_url = "https://badges.twitch.tv/v1/badges/channels/{channel_id}/display"
 	twitch_emote_url = "http://static-cdn.jtvnw.net/emoticons/v1/{emote_id}/1.0"
+	token_url = "https://id.twitch.tv/oauth2/authorize?client_id={client_id}&redirect_uri=http://localhost&response_type=token&scope=user_subscriptions"
 	bit_url = "https://api.twitch.tv/kraken/bits/actions?api_version=5&client_id={client_id}&channel_id={channel_id}"
 	bit_format = re.compile(r"(.+?)([0-9]+)")
 	bttv_emote_list = "https://api.betterttv.net/2/emotes"
