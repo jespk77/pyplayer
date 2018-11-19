@@ -20,6 +20,12 @@ def command_twitch_limited(arg, argc):
 	return command_twitch(arg, argc, limit=True)
 
 def command_twitch_resetcache(arg, argc):
+	if argc == 1 and arg[0] == "token":
+		refresh_token = True
+		arg.pop(0)
+		argc = len(arg)
+	else: refresh_token = False
+
 	if argc == 0:
 		for id, wd in list(client.children.items()):
 			if id.startswith("twitch_") and wd.is_alive: client.close_window(id)
@@ -36,7 +42,7 @@ def command_twitch_resetcache(arg, argc):
 		file.close()
 		js = js.get("account_data")
 		tk = js.get("access-token")
-		if js is not None and tk is not None: return messagetypes.URL(twitchviewer.twitchchat.TwitchChat.token_url.format(client_id=js.get("client-id")))
+		if refresh_token or (js is not None and tk is None): return messagetypes.URL(twitchviewer.twitchchat.TwitchChat.token_url.format(client_id=js.get("client-id")))
 		else: return messagetypes.Reply("Twitch cache cleared")
 
 def command_twitch_say(arg, argc):
