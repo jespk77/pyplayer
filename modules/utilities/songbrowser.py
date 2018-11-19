@@ -12,12 +12,9 @@ class SongBrowser(pyelement.PyItemlist):
 		self.configure(activestyle="none", highlightthickness=0)
 		self._path = None
 		self.path_valid = False
-		self.bind("<Enter>", self.set_focus, True).bind("<Leave>", self.set_focus)
 
 	@property
-	def path(self):
-		return self._path
-
+	def path(self): return self._path
 	@path.setter
 	def path(self, path):
 		""" Path secifies the directory in which items need to be sorted
@@ -33,7 +30,7 @@ class SongBrowser(pyelement.PyItemlist):
 			self.insert(0, "Invalid path selected: " + str(self._path))
 
 	def select_song(self, song=None):
-		if song is None: song = self.master.title_song
+		if song is None: song = self.window.title_song
 
 		index = -1
 		for s in self.itemlist:
@@ -75,10 +72,6 @@ class SongBrowser(pyelement.PyItemlist):
 
 	def get_song_from_event(self, event):
 		return self.itemlist[self.nearest(event.y)].replace(" - ", " ") if self.path_valid else None
-
-	def set_focus(self, event, next=True):
-		if next: event.widget.tk_focusNext().focus()
-		else: event.widget.focus()
 
 	def add_count(self, song, add=1):
 		if self.path_valid:
