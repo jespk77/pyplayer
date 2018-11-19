@@ -34,7 +34,7 @@ class TwitchViewer(pywindow.PyWindow):
 		if error is None:
 			print("INFO", "no errors, starting chat...")
 			if not os.path.isdir("twitch"): os.mkdir("twitch")
-			self.bind("<Destroy>", self.disconnect)
+			self.bind("<Destroy>", self.on_destroy)
 
 			chat = twitchchat.TwitchChat(self.frame, limited_mode)
 			chat.command_callback = command_callback
@@ -85,4 +85,4 @@ class TwitchViewer(pywindow.PyWindow):
 	def on_destroy(self, event=None):
 		self.disconnect(event)
 		self.write_configuration()
-		self.master.destroy()
+		self.window.destroy()
