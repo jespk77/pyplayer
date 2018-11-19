@@ -422,7 +422,7 @@ class TwitchChat(pyelement.PyTextfield):
 		elif type == "subgift":
 			text = meta["display-name"] + " gifted a subscription to " + meta["msg-param-recipient-display-name"]
 			amt = meta.get("msg-param-sender-count", 0)
-			if amt > 0: text += "({} total)".format(meta["msg-param-sender-count"])
+			if amt > "0": text += "({} total)".format(meta["msg-param-sender-count"])
 		else: return
 
 		if meta["msg-param-sub-plan"] == "Prime": level = " with Prime"
