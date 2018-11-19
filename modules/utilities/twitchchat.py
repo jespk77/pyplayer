@@ -297,8 +297,11 @@ class TwitchChat(pyelement.PyTextfield):
 			json.dump(self._emotenamecache, jfile)
 			jfile.close()
 		except Exception as e:
-			if "access-token" in str(e):
-				print("ERROR", "No access token found")
+			msg = str(e)
+			if "access-token" in msg: print("ERROR", "No access token found")
+			elif "invalid oauth" in msg:
+				print("ERROR", "Invalid access token, it will be deleted")
+				del self.window["account_data::access-token"]
 			else: print("ERROR", "Getting emote cache:", e)
 
 	# ===== END OF BUILT-IN HELPER METHODS =====
