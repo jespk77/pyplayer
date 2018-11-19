@@ -298,9 +298,7 @@ class TwitchChat(pyelement.PyTextfield):
 			jfile.close()
 		except Exception as e:
 			if "access-token" in str(e):
-				print("ERROR", "No access token found, get one from https://id.twitch.tv/oauth2/authorize?client_id=" +
-					login["client-id"] + "&redirect_uri=http://localhost&response_type=code&scope=user_subscriptions")
-				raise ConnectionError("No access token found, see log for details...")
+				print("ERROR", "No access token found")
 			else: print("ERROR", "Getting emote cache:", e)
 
 	# ===== END OF BUILT-IN HELPER METHODS =====
