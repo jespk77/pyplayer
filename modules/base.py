@@ -95,7 +95,8 @@ def command_cfg(arg, argc):
 			else: wd.write_configuration()
 			return messagetypes.Reply(reply)
 		elif argc == 1:
-			vl = wd[arg[0]]
+			try: vl = wd[arg[0]]
+			except KeyError: vl = None
 			if vl is not None: return messagetypes.Reply("Configuration option '{}' is set to '{}'".format(arg[0], vl))
 			else: return messagetypes.Reply("Configuration option '{}' is not set".format(arg[0]))
 		else: return messagetypes.Reply("cfg {module} option1{::option2...} ['get', 'set' value]")
