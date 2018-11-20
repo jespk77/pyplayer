@@ -25,24 +25,36 @@ autoplay = Autoplay.OFF
 autoplay_ignore = False
 
 # ===== HELPER OPERATIONS =====
-def parse_song(arg):
+def get_song(arg, auto_fix=True):
+	dir = client.get_or_create("directory", {}).to_dict()
 	if len(arg) > 0:
-		dir = client["directory"]
-		if arg[0] in dir:
-			path = dir[arg[0]]
-			arg = arg[1:]
-		else:
-			path = dir.get(dir["default"])
-			if path is None: return (None, None)
-		song = media_player.find_song(path=path, keyword=arg)
-		return (path, song)
-	else:
-		meta = media_player.current_media
-		if meta is not None:
-			path = meta.path
-			song = meta.song
-			return (path, song)
-		else: return (None, None)
+		path = dir.get(arg[0])
+		if path is not None:
+			path = path["path"]
+			arg.pop(0)
+			return path, media_player.find_song(path, " ".join(arg[1:]))
+
+		try: paths = [(key, vl["path"], vl["priority"]) for key, vl in dir.items()]
+		except TypeError:
+			if not auto_fix: return None, None
+			priority = 1
+			pdir = { "directory": {} }
+			for key, vl in dir.items():
+				if key != "default":
+					pdir["directory"][key] = { "priority": priority, "path": vl }
+					priority += 1
+			client.update_configuration(pdir)
+			return get_song(arg, False)
+
+		paths.sort(key=lambda a: a[2])
+		keyword = " ".join(arg)
+		songs = None
+		for pt in paths:
+			path = pt
+			songs = media_player.find_song(pt[1], keyword)
+			if len(songs) > 0: break
+		return path, songs
+	return None, None
 
 def get_displayname(song): return os.path.splitext(song)[0]
 
@@ -129,15 +141,20 @@ def command_filter(arg, argc):
 def command_info_info(arg, argc):
 	return messagetypes.Info("'info' ['added' [song, |'current'|], 'played' [song [|'month'|, 'all']], 'reload']")
 
-def command_info_added(arg, argc):
-	(path, song) = parse_song(arg)
-	if path is not None and song is not None:
-		if isinstance(song, list): return messagetypes.Reply("More than one song found, be more specific")
+def get_addtime(value, data, path):
+	time = datetime.fromtimestamp(os.path.getctime(os.path.join(path[1], data[0])))
+	return messagetypes.Reply("'" + value + "' was added on " + str(time.strftime("%b %d, %Y")))
 
-		if not path.endswith("/"): path += "/"
-		time = datetime.fromtimestamp(os.path.getctime(path + song))
-		return messagetypes.Reply("'" + get_displayname(song) + "' was added on " + str(time.strftime("%b %d, %Y")))
-	else: return messagetypes.Reply("That song doesn't exist and there is no song currently playing")
+def command_info_added(arg, argc):
+	(path, song) = get_song(arg)
+	if argc > 0 and arg[0] and path is not None and song is not None:
+		if isinstance(song, list):
+			if len(song) > 1: return messagetypes.Select("Multiple songs found", get_addtime, [(get_displayname(s), s) for s in song], path=path)
+			elif len(song) == 0: return messagetypes.Reply("Nothing found :(")
+			else: song = song[0]
+
+		return get_addtime(song, path)
+	return messagetypes.Reply("That song doesn't exist and there is no song currently playing")
 
 def command_info_played(arg, argc):
 	alltime = False
