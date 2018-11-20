@@ -80,6 +80,8 @@ class Select(Question):
 		return "\n".join(["  {}. {}".format(i, self.choices[i][0]) for i in range(len(self.choices))])
 
 	def get_contents(self):
+		if len(self.choices) > 30: return "< {} options is way too many! Refine your keyword a little".format(len(self.choices)), ("reply",)
+
 		res = self._callback()
 		if res is not None: return res.get_contents()
 		else: return self.get_prefix() + self.message + "\n" + self._display_options() + "\n < Select item:", ("reply",), self
