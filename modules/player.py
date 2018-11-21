@@ -15,6 +15,7 @@ media_player = MediaPlayer()
 song_queue = Queue()
 song_history = history.History()
 invalid_cfg = messagetypes.Reply("Invalid directory configuration, check your options")
+unknown_song = messagetypes.Reply("That song doesn't exist and there is nothing playing")
 MAX_LIST = 15
 
 class Autoplay(enum.Enum):
@@ -54,16 +55,46 @@ def get_song(arg, auto_fix=True):
 			songs = media_player.find_song(pt[1], keyword)
 			if len(songs) > 0: break
 		return path, songs
-	return None, None
+	else:
+		meta = media_player.current_media
+		if meta is not None:
+			path = meta.path
+			song = meta.display_name, meta.song
+			return path, [song]
+		return None, None
+
+def get_addtime(display, song, path):
+	time = datetime.fromtimestamp(os.path.getctime(os.path.join(path[1], song)))
+	return messagetypes.Reply("'" + display + "' was added on " + "{dt:%B} {dt.day}, {dt.year}".format(dt=time))
 
 def get_displayname(song): return os.path.splitext(song)[0]
+
+def get_lyrics(display, song):
+	if client.show_lyrics(display): return messagetypes.Reply("Lyrics for '{}' opened in window".format(display))
+	else: return messagetypes.Reply("Invalid title")
+
+def get_playcount(display, song, alltime):
+	freq = song_tracker.get_freq(song=display, alltime=alltime)
+	if freq > 0:
+		if not alltime: return messagetypes.Reply("'{}' has played {} times this month".format(display, freq))
+		else: return messagetypes.Reply("'{}' has played {} times overall".format(display, freq))
+	else: return messagetypes.Reply("'{}' has not been played".format(display))
+
+def play_song(display, song, path):
+	meta = media_player.play_song(path=path[1], song=song)
+	if meta is not None: return messagetypes.Reply("Playing: " + meta.display_name)
+	else: return unknown_song
+
+def put_queue(display, song, path):
+	song_queue.put_nowait((path[1], song))
+	return messagetypes.Reply("Song '{}' added to queue".format(display))
 
 def search_youtube(arg, argc, keywords, path):
 	if argc > 0 and len(keywords) > 0:
 		try: from modules import youtube
 		except ImportError: return messagetypes.Reply("Youtube module is not installed")
 		if " ".join(arg).lower() == "y": return youtube.command_youtube_find(keywords, len(keywords), path=path)
-	return messagetypes.Reply("No song found")
+	return unknown_song
 
 # ===== MAIN COMMANDS =====
 # - configure autoplay
@@ -141,36 +172,20 @@ def command_filter(arg, argc):
 def command_info_info(arg, argc):
 	return messagetypes.Info("'info' ['added' [song, |'current'|], 'played' [song [|'month'|, 'all']], 'reload']")
 
-def get_addtime(value, data, path):
-	time = datetime.fromtimestamp(os.path.getctime(os.path.join(path[1], data[0])))
-	return messagetypes.Reply("'" + value + "' was added on " + str(time.strftime("%b %d, %Y")))
-
 def command_info_added(arg, argc):
 	(path, song) = get_song(arg)
-	if argc > 0 and arg[0] and path is not None and song is not None:
-		if isinstance(song, list):
-			if len(song) > 1: return messagetypes.Select("Multiple songs found", get_addtime, [(get_displayname(s), s) for s in song], path=path)
-			elif len(song) == 0: return messagetypes.Reply("Nothing found :(")
-			else: song = song[0]
-
-		return get_addtime(song, path)
-	return messagetypes.Reply("That song doesn't exist and there is no song currently playing")
+	if path is not None and song is not None: return messagetypes.Select("Multiple songs found", get_addtime, song, path=path)
+	else: return unknown_song
 
 def command_info_played(arg, argc):
-	alltime = False
 	if argc > 0 and arg[-1] == "all":
 		alltime = True
-		arg = arg[:-1]
+		arg.pop(-1)
+	else: alltime = False
 
-	(path, song) = parse_song(arg)
-	if path is not None and song is not None:
-		if isinstance(song, list): return messagetypes.Reply("More than one song found, be more specific")
-		freq = song_tracker.get_freq(song=get_displayname(song), alltime=alltime)
-		if freq > 0:
-			if not alltime: return messagetypes.Reply("'" + get_displayname(song) + "' played " + str(freq) + " times this month")
-			else: return messagetypes.Reply("'" + get_displayname(song) + "' played " + str(freq) + " times overall")
-		else: return messagetypes.Reply("'" + get_displayname(song) + " has not been played")
-	else: return messagetypes.Reply("That song doesn't even exist")
+	(path, song) = get_song(arg)
+	if path is not None and song is not None: return messagetypes.Select("Multiple songs found", get_playcount, song, alltime=alltime)
+	else: return unknown_song
 
 def command_info_reload(arg, argc):
 	if argc == 0:
@@ -178,14 +193,9 @@ def command_info_reload(arg, argc):
 		return messagetypes.Reply("Song tracker reloaded")
 
 def command_lyrics(arg, argc):
-	path, song = parse_song(arg)
-	if path is not None and song is not None:
-		try: song = get_displayname(song)
-		except TypeError: return messagetypes.Reply("Multiple songs found, be more specific")
-
-		if client.show_lyrics(song): return messagetypes.Reply("Lyrics for '{}' opened in window".format(song))
-		else: return messagetypes.Reply("Invalid title")
-	else: return messagetypes.Reply("No song found")
+	path, song = get_song(arg)
+	if path is not None and song is not None: return messagetypes.Select("Multiple songs found", get_lyrics, song)
+	else: return unknown_song
 
 def command_mute(arg, argc):
 	if argc == 0:
@@ -209,26 +219,13 @@ def command_position(arg, argc):
 
 def command_play(arg, argc):
 	if argc > 0:
-		(path, song) = parse_song(arg)
-		if path is not None and isinstance(song, str):
-			meta = media_player.play_song(path=path, song=song)
-			if meta is not None: return messagetypes.Reply("Playing: " + meta.display_name)
-		elif song is not None and len(song) > 1:
-			reply = "Multiple songs ({:d} total) found: ".format(len(song))
-			count = 0
-			for s in song:
-				if count > MAX_LIST: reply += "\n and more..."; break
-				else:
-					reply += "\n {}. {}".format(count, get_displayname(s))
-					count += 1
-			return messagetypes.Reply(reply)
+		(path, song) = get_song(arg)
+		if path is not None and song is not None: return messagetypes.Select("Multiple songs found", play_song, song, path=path)
 		else: return messagetypes.Question("Can't find that song, search for it on youtube?", search_youtube, keywords=arg, path=path)
 
 def command_last_random(arg, argc):
 	if argc == 0:
-		r = media_player.play_last_random()
-		if r is not None: return messagetypes.Reply("Playing: " + r.display_name)
-		else: return messagetypes.Reply("There haven't been any randomly picked songs")
+		return messagetypes.Pass()
 
 def command_prev_song(arg, argc):
 	if argc == 0:
@@ -256,16 +253,9 @@ def command_queue_next(arg, argc):
 
 def command_queue(arg, argc):
 	if argc > 0:
-		(path, song) = parse_song(arg)
-		if isinstance(song, list):
-			r = "Found multiple choices:"
-			for item in song: r += "\n - {}".format(get_displayname(item))
-			return messagetypes.Reply(r)
-
-		if path is not None and song is not None:
-			song_queue.put_nowait((path, song))
-			return messagetypes.Reply("'" + get_displayname(song) + "' added to queue")
-		else: return messagetypes.Reply("There is not a song like that around here")
+		(path, song) = get_song(arg)
+		if path is not None and song is not None: return messagetypes.Select("Multiple songs found", put_queue, song, path=path)
+		else: return unknown_song
 
 def command_random(arg, argc):
 	dirs = client["directory"]
