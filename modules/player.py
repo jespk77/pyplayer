@@ -55,9 +55,6 @@ def search_youtube(arg, argc, keywords, path):
 
 # ===== MAIN COMMANDS =====
 # - configure autoplay
-def command_autoplay_info(arg, argc):
-	return messagetypes.Info("'autoplay' ['on', 'off', 'queue', 'skip']")
-
 def command_autoplay_ignore(arg, argc):
 	if argc == 0:
 		global autoplay_ignore
@@ -100,9 +97,6 @@ def command_autoplay_next(arg, argc):
 		return messagetypes.Empty()
 
 # - configure random song filter
-def command_filter_info(arg, argc):
-	return messagetypes.Info("'filter' ['clear', keyword]")
-
 def command_filter_clear(arg, argc):
 	if argc == 0:
 		dir = client["directory"]
@@ -126,9 +120,6 @@ def command_filter(arg, argc):
 		else: return invalid_cfg
 
 # - provide song or song tracker information
-def command_info_info(arg, argc):
-	return messagetypes.Info("'info' ['added' [song, |'current'|], 'played' [song [|'month'|, 'all']], 'reload']")
-
 def command_info_added(arg, argc):
 	(path, song) = parse_song(arg)
 	if path is not None and song is not None:
@@ -268,17 +259,14 @@ def command_stop(arg, argc):
 commands = {
 	"autoplay": {
 		"next": command_autoplay_next,
-		"info": command_autoplay_info,
 		"off": command_autoplay_off,
 		"on": command_autoplay_on,
 		"skip": command_autoplay_ignore,
 		"queue": command_autoplay_queue
 	}, "filter": {
-		"info": command_filter_info,
 		"": command_filter,
 		"none": command_filter_clear
 	}, "info": {
-		"info": command_info_info,
 		"added": command_info_added,
 		"played": command_info_played,
 		"reload": command_info_reload
