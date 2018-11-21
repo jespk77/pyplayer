@@ -74,7 +74,7 @@ class Select(Question):
 			if len(self.choices) == 1:
 				self.kwargs["value"] = self.choices[0][0]
 				self.kwargs["data"] = self.choices[0][1:]
-			return self.callback(**self.kwargs)
+				return self.callback(**self.kwargs)
 
 	def _display_options(self):
 		return "\n".join(["  {}. {}".format(i, self.choices[i][0]) for i in range(len(self.choices))])
@@ -84,6 +84,7 @@ class Select(Question):
 
 		res = self._callback()
 		if res is not None: return res.get_contents()
+		elif len(self.choices) == 0: return "< Nothing found", ("reply",)
 		else: return self.get_prefix() + self.message + "\n" + self._display_options() + "\n < Select item:", ("reply",), self
 
 class Error(Empty):
