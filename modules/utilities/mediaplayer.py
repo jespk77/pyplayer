@@ -119,9 +119,15 @@ class MediaPlayer():
 
 	def find_song(self, path, keyword=""):
 		""" Find songs in given path that contain given keyword, when the keyword ends in a '.'
-			only an exact match (if it exists) is returned """
+			only an exact match (if it exists) is returned
+			-> Returns a list of songs found where each item is a tuple: (displayname, song) """
 		keyword = str(keyword)
-		return self.list_songs(path, keyword, exact_search=keyword.endswith("."))
+		if keyword.endswith("."):
+			exact = True
+			keyword = keyword[:-1]
+		else: exact = False
+		ls = self.list_songs(path, keyword, exact_search=exact)
+		return [(get_displayname(s), s) for s in ls]
 
 	def play_song(self, path, song):
 		""" Plays a song only when the full path and song name are known and they exist in the given path
