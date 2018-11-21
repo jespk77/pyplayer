@@ -51,7 +51,7 @@ class Select(Question):
 		Each request reduces the list, when there is only one left (or zero if no matches) the callback is called with remaining value
 		When the list is empty the callback is called with a 'None' value """
 	def __init__(self, message, callback, choices, **kwargs):
-		Question.__init__(self, message, callback, value=None, **kwargs)
+		Question.__init__(self, message, callback, **kwargs)
 		self.choices = choices
 
 	def __call__(self, cmd):
@@ -70,11 +70,7 @@ class Select(Question):
 		else: return self
 
 	def _callback(self):
-		if len(self.choices) < 2:
-			if len(self.choices) == 1:
-				self.kwargs["value"] = self.choices[0][0]
-				self.kwargs["data"] = self.choices[0][1:]
-				return self.callback(**self.kwargs)
+		if len(self.choices) == 1: return self.callback(*self.choices[0], **self.kwargs)
 
 	def _display_options(self):
 		return "\n".join(["  {}. {}".format(i, self.choices[i][0]) for i in range(len(self.choices))])
