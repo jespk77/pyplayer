@@ -1,4 +1,3 @@
-from tkinter.font import Font
 from collections import Counter
 from ui import pyelement
 import os
@@ -26,8 +25,7 @@ class SongBrowser(pyelement.PyItemlist):
 		else: self._path = None
 
 		self.path_valid = self._path is not None and os.path.isdir(self._path[1])
-		if not self.path_valid:
-			self.insert(0, "Invalid path selected: " + str(self._path))
+		if not self.path_valid: self.insert(0, "Invalid path selected: " + str(self._path))
 
 	def select_song(self, song=None):
 		if song is None: song = self.window.title_song
