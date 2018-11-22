@@ -27,6 +27,7 @@ autoplay_ignore = False
 
 # ===== HELPER OPERATIONS =====
 def update_cfg():
+	print("INFO", "Found old directory configuration, trying to update it automatically")
 	dir = client["directory"]
 	priority = 1
 	pdir = {"directory": {}}
@@ -36,21 +37,17 @@ def update_cfg():
 			priority += 1
 	client.update_configuration(pdir)
 
-def get_song(arg, auto_fix=True):
+def get_song(arg):
 	dir = client.get_or_create("directory", {}).to_dict()
+	if "default" in dir: update_cfg()
+
 	if len(arg) > 0:
 		path = dir.get(arg[0])
 		if path is not None:
 			path = path["path"]
-			arg.pop(0)
 			return path, media_player.find_song(path, arg[1:])
 
-		try: paths = [(key, vl["path"], vl["priority"]) for key, vl in dir.items()]
-		except TypeError:
-			if not auto_fix: return None, None
-			update_cfg()
-			return get_song(arg, False)
-
+		paths = [(key, vl["path"], vl["priority"]) for key, vl in dir.items()]
 		paths.sort(key=lambda a: a[2])
 		songs = None
 		for pt in paths:
@@ -67,7 +64,8 @@ def get_song(arg, auto_fix=True):
 		return None, None
 
 def get_addtime(display, song, path):
-	time = datetime.fromtimestamp(os.path.getctime(os.path.join(path[1], song)))
+	if isinstance(path, tuple): path = path[1]
+	time = datetime.fromtimestamp(os.path.getctime(os.path.join(path, song)))
 	return messagetypes.Reply("'" + display + "' was added on " + "{dt:%B} {dt.day}, {dt.year}".format(dt=time))
 
 def get_displayname(song): return os.path.splitext(song)[0]
@@ -84,7 +82,8 @@ def get_playcount(display, song, alltime):
 	else: return messagetypes.Reply("'{}' has not been played".format(display))
 
 def play_song(display, song, path):
-	meta = media_player.play_song(path=path[1], song=song)
+	if isinstance(path, tuple): path = path[1]
+	meta = media_player.play_song(path=path, song=song)
 	if meta is not None: return messagetypes.Reply("Playing: " + meta.display_name)
 	else: return unknown_song
 
