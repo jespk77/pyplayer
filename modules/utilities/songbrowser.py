@@ -31,12 +31,13 @@ class SongBrowser(pyelement.PyItemlist):
 		if song is None: song = self.window.title_song
 
 		index = -1
+		found = False
 		for s in self.itemlist:
-			if s == song: index = max(0, index + 1); break
+			if s == song: index = max(0, index + 1); found = True; break
 			else: index += 1
 
-		if index >= 0:
-			self.selection_clear(0, "end")
+		self.selection_clear(0, "end")
+		if found:
 			self.selection_set(index)
 			self.see(index)
 

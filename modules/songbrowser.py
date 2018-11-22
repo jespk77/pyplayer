@@ -7,18 +7,18 @@ interpreter = None
 client = None
 
 # VARIABLES SPECIFIC TO THIS MODULE
-default_path_key = "songbrowser_path"
+default_path_key = "default_path"
 default_sort_key = "songbrowser_sorting"
 
 # ===== HELPER OPERATIONS ===== #
 def parse_path(arg, argc):
 	dir = client["directory"]
 	if argc > 0:
-		try: return (arg[0], dir[arg[0]])
+		try: return (arg[0], dir[arg[0]]["path"])
 		except KeyError: return "No directory with name: '{}'".format(arg[0]),
 	else:
-		path = client.get_or_create(default_path_key)
-		if path is not None:
+		path = client[default_path_key]
+		if path:
 			try: return path, dir[path]["path"]
 			except KeyError: return "Invalid default directory '{}' set".format(path),
 		else: return "No default directory set, set one using key '{}'".format(default_path_key),

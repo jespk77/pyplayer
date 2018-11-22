@@ -1,6 +1,5 @@
 import datetime, os, json
 from utilities import messagetypes
-from ui import pyelement
 
 # DEFAULT MODULE VARIABLES
 priority = 0

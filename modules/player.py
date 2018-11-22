@@ -35,11 +35,13 @@ def update_cfg():
 		if key != "default":
 			pdir["directory"][key] = {"priority": priority, "path": vl}
 			priority += 1
+		else: client["default_path"] = vl
 	client.update_configuration(pdir)
+	client["version"] = 1
 
 def get_song(arg):
-	dir = client.get_or_create("directory", {}).to_dict()
-	if "default" in dir: update_cfg()
+	dir = client["directory"]
+	if client["version"] == 0: update_cfg()
 
 	if len(arg) > 0:
 		path = dir.get(arg[0])
@@ -146,7 +148,7 @@ def command_filter_clear(arg, argc):
 	if argc == 0:
 		dir = client["directory"]
 		if isinstance(dir, dict):
-			media_player.update_filter(path=dir.get(dir.get("default"), ""), keyword="")
+			media_player.update_filter(path=dir[client["default_path"]]["path"], keyword="")
 			return messagetypes.Reply("Filter cleared")
 		else: return invalid_cfg
 
@@ -154,15 +156,19 @@ def command_filter(arg, argc):
 	if argc > 0:
 		dirs = client["directory"]
 		if isinstance(dirs, dict):
-			if arg[0] in dirs: path = dirs[arg[0]]; displaypath = arg.pop(0)
-			else: path = dirs.get(dirs.get("default")); displaypath = dirs.get("default")
+			if arg[0] in dirs:
+				displaypath = arg.pop(0)
+				path = dirs[displaypath]
+			else:
+				displaypath = client["default_path"]
+				path = dirs.get(displaypath)
 
 			if path is not None:
 				arg = " ".join(arg)
-				media_player.update_filter(path=path, keyword=arg)
+				media_player.update_filter(path=path["path"], keyword=arg)
 				if len(arg) > 0: return messagetypes.Reply("Filter set to '" + arg + "' from '" + displaypath + "'")
 				else: return messagetypes.Reply("Filter set to directory '{}'".format(displaypath))
-		else: return invalid_cfg
+		return invalid_cfg
 
 # - provide song or song tracker information
 def command_info_added(arg, argc):
@@ -176,7 +182,7 @@ def command_info_played(arg, argc):
 		arg.pop(-1)
 	else: alltime = False
 
-	(path, song) = get_song(arg)
+	path, song = get_song(arg)
 	if path is not None and song is not None: return messagetypes.Select("Multiple songs found", get_playcount, song, alltime=alltime)
 	else: return unknown_song
 
@@ -252,13 +258,13 @@ def command_queue(arg, argc):
 
 def command_random(arg, argc):
 	dirs = client["directory"]
-	if not isinstance(dirs, dict): return invalid_cfg
-
-	if argc > 0 and arg[0] in dirs: path = dirs[arg[0]]; arg = arg[1:]
+	if argc > 0:
+		try:
+			path = dirs[arg[0]]["path"]
+			arg.pop(0)
+		except KeyError: path = ""
 	else: path = ""
-
-	if path is not None: return messagetypes.Reply(media_player.random_song(path=path, keyword=" ".join(arg)))
-	else: return messagetypes.Reply("I've never heard of that path")
+	return messagetypes.Reply(media_player.random_song(path=path, keyword=" ".join(arg)))
 
 def command_stop(arg, argc):
 	if argc == 0:
@@ -309,8 +315,8 @@ def initialize():
 	media_player.attach_event("stopped", on_stopped)
 	if not song_tracker.is_loaded(): song_tracker.load_tracker()
 
-	dr = client.get_or_create("directory", {})
-	media_player.update_filter(path=dr.get(dr.get("default")))
+	client.get_or_create("directory", {})
+	command_filter_clear(None, 0)
 
 def on_destroy():
 	media_player.on_destroy()
@@ -328,7 +334,6 @@ def on_player_update(event, player):
 	md = event.data
 	directory = client["directory"]
 	default_directory = directory.get(directory.get("default"), "")
-	if not default_directory.endswith("/"): default_directory += "/"
 
 	if md.path == default_directory:
 		song_tracker.add(md.display_name)

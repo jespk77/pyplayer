@@ -1,4 +1,3 @@
-from tkinter import ttk
 from traceback import format_exception
 import datetime
 
@@ -10,7 +9,7 @@ class PyPlayerEvent:
 		for key, value in kwargs.items():
 			setattr(self, key, value)
 
-initial_cfg = { "autosave_delay": 5, "directory":{"default": ""}, "header_format": "PyPlayer - %a %b %d, %Y %I:%M %p -", "loglevel": "warning" }
+initial_cfg = { "autosave_delay": 5, "directory":{}, "default_path": "", "header_format": "PyPlayer - %a %b %d, %Y %I:%M %p -", "loglevel": "warning", "version": 1 }
 progressbar_cfg = {"background": "cyan", "foreground": "white"}
 header_cfg = { "background": "black", "foreground": "white" }
 browser_cfg = { "background": "black", "foreground": "white", "selectforeground": "cyan" }
