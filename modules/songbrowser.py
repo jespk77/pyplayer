@@ -6,16 +6,22 @@ priority = 3
 interpreter = None
 client = None
 
+# VARIABLES SPECIFIC TO THIS MODULE
+default_path_key = "songbrowser_path"
+default_sort_key = "songbrowser_sorting"
+
 # ===== HELPER OPERATIONS ===== #
 def parse_path(arg, argc):
 	dir = client["directory"]
 	if argc > 0:
-		if arg[0] in dir: return (arg[0], dir[arg[0]])
-		else: return ("No directory with name: '{}'".format(arg[0]),)
+		try: return (arg[0], dir[arg[0]])
+		except KeyError: return "No directory with name: '{}'".format(arg[0]),
 	else:
-		path = dir.get("default")
-		if isinstance(path, str): return (path, dir[path])
-		else: return ("No default directory set",)
+		path = client.get_or_create(default_path_key)
+		if path is not None:
+			try: return path, dir[path]["path"]
+			except KeyError: return "Invalid default directory '{}' set".format(path),
+		else: return "No default directory set, set one using key '{}'".format(default_path_key),
 
 def bind_events():
 	try: client.widgets["songbrowser"].bind("<Button-1>", client.block_action).bind("<Double-Button-1>", on_browser_doubleclick).bind("<Button-3>", on_browser_rightclick)
@@ -35,13 +41,17 @@ def on_browser_doubleclick(event):
 def on_browser_rightclick(event):
 	interpreter.put_command("queue {path} {song}.".format(path=client.widgets["songbrowser"].path[0], song=client.widgets["songbrowser"].get_song_from_event(event)))
 
+def unsupported_path(): print("INFO", "Tried to open songbrowser sorted on plays with unsupported path, using name sorting instead...")
+
 # ===== MAIN COMMANDS =====
 # - browser configure
 def command_browser_played_month(arg, argc):
 	if argc <= 2:
 		path = parse_path(arg, argc)
 		if len(path) == 2:
-			if path[0] != client["directory"].get("default"): return command_browser_name(arg, argc)
+			if path[0] != client[default_path_key]:
+				unsupported_path()
+				return command_browser_name(arg, argc)
 
 			browser = SongBrowser(client.frame)
 			browser.create_list_from_frequency(path, song_tracker.get_songlist(alltime=False))
@@ -54,7 +64,9 @@ def command_browser_played_all(arg, argc):
 	if argc <= 2:
 		path = parse_path(arg, argc)
 		if len(path) == 2:
-			if path[0] != client["directory"].get("default"): return command_browser_name(arg, argc)
+			if path[0] != client[default_path_key]:
+				unsupported_path()
+				return command_browser_name(arg, argc)
 
 			browser = SongBrowser(client.frame)
 			browser.create_list_from_frequency(path, song_tracker.get_songlist(alltime=True))
@@ -91,11 +103,11 @@ def command_browser_remove(arg, argc):
 		return messagetypes.Reply("Browser closed")
 
 def command_browser(arg, argc):
-	sorting = client["songbrowser_sorting"]
+	sorting = client[default_sort_key]
 	if isinstance(sorting, str) and len(sorting) > 0:
-		if sorting in commands["browser"]: return commands["browser"][sorting](arg, argc)
-		else: return messagetypes.Reply("Invalid default sorting set in configuration '{}'".format(sorting))
-	return messagetypes.Reply("No default sorting set {songbrowser_sorting} and none or invalid one specified")
+		try: return commands["browser"][sorting](arg, argc)
+		except KeyError: return messagetypes.Reply("Invalid default sorting set in configuration '{}'".format(sorting))
+	return messagetypes.Reply("No default sorting set '{}' and none or invalid one specified".format(default_sort_key))
 
 commands = {
 	"browser": {
