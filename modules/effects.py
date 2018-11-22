@@ -57,13 +57,12 @@ class SoundEffectPlayer:
 				self.md = None
 				return
 
-		sound_path = client["directory"].get("sounds")
-		if sound_path is not None and not sound_path.endswith("/"): sound_path += "/"
+		sound_path = client["directory"].get("sounds", {}).get("path")
 		if sound_path is None or not os.path.isdir(sound_path): print("ERROR", "Invalid sound folder:", sound_path); return
 		effects = [file for file in os.listdir(sound_path) if arg == os.path.splitext(file)[0]]
 		if len(effects) == 1:
-			if loop: self.player.set_mrl(sound_path + effects[0], "input-repeat=-1")
-			else: self.player.set_mrl(sound_path + effects[0])
+			if loop: self.player.set_mrl(os.path.join(sound_path, effects[0]), "input-repeat=-1")
+			else: self.player.set_mrl(os.path.join(sound_path, effects[0]))
 			self.md = self.player.get_media()
 			self.player.play()
 			self.last_effect = os.path.splitext(effects[0])[0]
