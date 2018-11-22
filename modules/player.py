@@ -26,6 +26,16 @@ autoplay = Autoplay.OFF
 autoplay_ignore = False
 
 # ===== HELPER OPERATIONS =====
+def update_cfg():
+	dir = client["directory"]
+	priority = 1
+	pdir = {"directory": {}}
+	for key, vl in dir.items():
+		if key != "default":
+			pdir["directory"][key] = {"priority": priority, "path": vl}
+			priority += 1
+	client.update_configuration(pdir)
+
 def get_song(arg, auto_fix=True):
 	dir = client.get_or_create("directory", {}).to_dict()
 	if len(arg) > 0:
@@ -33,26 +43,19 @@ def get_song(arg, auto_fix=True):
 		if path is not None:
 			path = path["path"]
 			arg.pop(0)
-			return path, media_player.find_song(path, " ".join(arg[1:]))
+			return path, media_player.find_song(path, arg[1:])
 
 		try: paths = [(key, vl["path"], vl["priority"]) for key, vl in dir.items()]
 		except TypeError:
 			if not auto_fix: return None, None
-			priority = 1
-			pdir = { "directory": {} }
-			for key, vl in dir.items():
-				if key != "default":
-					pdir["directory"][key] = { "priority": priority, "path": vl }
-					priority += 1
-			client.update_configuration(pdir)
+			update_cfg()
 			return get_song(arg, False)
 
 		paths.sort(key=lambda a: a[2])
-		keyword = " ".join(arg)
 		songs = None
 		for pt in paths:
 			path = pt
-			songs = media_player.find_song(pt[1], keyword)
+			songs = media_player.find_song(pt[1], arg)
 			if len(songs) > 0: break
 		return path, songs
 	else:
