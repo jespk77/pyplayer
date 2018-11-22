@@ -41,15 +41,13 @@ def update_cfg():
 
 def get_song(arg):
 	dir = client["directory"]
-	if client["version"] == 0: update_cfg()
-
 	if len(arg) > 0:
 		path = dir.get(arg[0])
 		if path is not None:
 			path = path["path"]
 			return path, media_player.find_song(path, arg[1:])
 
-		paths = [(key, vl["path"], vl["priority"]) for key, vl in dir.items()]
+		paths = [(key, vl["path"], vl["priority"]) for key, vl in dir.items() if vl["priority"] > 0]
 		paths.sort(key=lambda a: a[2])
 		songs = None
 		for pt in paths:
@@ -307,6 +305,7 @@ commands = {
 }
 
 def initialize():
+	if client["version"] == 0: update_cfg()
 	media_player.update_blacklist(client.get_or_create("artist_blacklist", []))
 	media_player.attach_event("media_changed", on_media_change)
 	media_player.attach_event("pos_changed", on_pos_change)
