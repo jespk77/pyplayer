@@ -40,6 +40,7 @@ class SongBrowser(pyelement.PyItemlist):
 		if index >= 0:
 			self.selection_clear(0, "end")
 			self.selection_set(index)
+			self.see(index)
 
 	def create_list_from_frequency(self, path, songcounter):
 		self.path = path
