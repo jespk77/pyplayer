@@ -171,6 +171,10 @@ class BaseWindow:
 		if i is None and default is not None: self._configuration[item] = default
 		return self._configuration.get(item)
 
+	def update_configuration(self, dt):
+		self._configuration.update_dict(dt)
+		self.mark_dirty()
+
 	def __getitem__(self, item):
 		""" Get configuration option for this window/widget in this window or None if no such value was stored
 		 	For a nested search in configuration seperate keys with '::' """
