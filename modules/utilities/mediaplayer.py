@@ -127,7 +127,7 @@ class MediaPlayer():
 		if keyword and len(keyword) > 0:
 			if keyword[-1].endswith("."):
 				exact = True
-				keyword = keyword[:-1]
+				keyword[-1] = keyword[-1][:-1]
 			else:
 				try:
 					index = int(keyword[-1])
