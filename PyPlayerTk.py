@@ -87,7 +87,7 @@ class PyPlayer(pywindow.RootPyWindow):
 	def set_songbrowser(self, browser):
 		self.set_widget("songbrowser", browser, row=2, columnspan=9)
 		if browser is None:
-			self.row_options(2, weight=0)
+			self.row_options(2, minsize=0, weight=0)
 			self.row_options(3, weight=1)
 		else:
 			self.row_options(2, minsize=200, weight=70)
