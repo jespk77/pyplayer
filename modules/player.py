@@ -306,7 +306,7 @@ commands = {
 
 def initialize():
 	if client["version"] == 0: update_cfg()
-	media_player.update_blacklist(client.get_or_create("artist_blacklist", []))
+	media_player.update_blacklist(client.get_or_create("artist_blacklist", []).value)
 	media_player.attach_event("media_changed", on_media_change)
 	media_player.attach_event("pos_changed", on_pos_change)
 	media_player.attach_event("player_updated", on_player_update)

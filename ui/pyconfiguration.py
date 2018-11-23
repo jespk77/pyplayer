@@ -10,7 +10,13 @@ def parse_arg(arg):
 	if id in arg_keys: return arg_keys[id]
 	else: return arg
 
-class ConfigurationItem: pass
+class ConfigurationItem:
+	""" Interface for different types of configuration items. Ensures that errors are thrown in certain cases, that otherwise would result in undefined behavior """
+	@property
+	def value(self): raise TypeError("This configuration item does not support values!")
+	@value.setter
+	def value(self, val): self.value()
+	def __iter__(self): raise TypeError("This configuration item is not an iterator!")
 
 class ConfigurationEntry(ConfigurationItem):
 	""" Helper class for configuration that represents an entry in a file (everything that isn't a dictionary)
@@ -40,7 +46,7 @@ class ConfigurationEntry(ConfigurationItem):
 		try: return int(self._vl)
 		except (TypeError, ValueError): return 0
 
-	def __iter__(self): return iter(self._vl) if self._vl is not None else []
+	def __iter__(self): return iter(self._vl) if self._vl is not None else iter([])
 	def __str__(self): return str(self._vl) if self._vl is not None else "{empty}"
 	def __bool__(self): return bool(self._vl)
 	def __descstr__(self): return "ConfigurationEntry(value={}, type={})".format(self._vl, self._tp.__name__)
@@ -73,6 +79,7 @@ class ConfigurationList(ConfigurationItem):
 	def __getitem__(self, item):
 		try: return self._items[item]
 		except IndexError: return None
+	def __iter__(self): return iter(self._items)
 
 	def _verify_type(self, value):
 		tp = type(value)
@@ -134,8 +141,6 @@ class Configuration(ConfigurationItem):
 				if value is not None:
 					entry_type = type_class.get(type(value), type_class[None])
 					self._cfg[key] = entry_type(value)
-					if isinstance(value, dict): self._cfg[key] = Configuration(value)
-					else: self._cfg[key] = ConfigurationEntry(value)
 
 	def __str__(self): return self.__descstr__()
 	def __descstr__(self): return "Configuration({})".format(", ".join(["'{}': {}".format(key, value.__descstr__()) for key, value in self._cfg.items()]))
@@ -169,9 +174,10 @@ class Configuration(ConfigurationItem):
 		if arg is not None:
 			try: self._cfg[key[0]].value = value
 			except TypeError: raise TypeError("Key '{}' corresponds to a configuration, therefore it cannot be directly to another value. Append '::(subkey)' to the index to set subkeys".format(key[0]))
-		elif isinstance(value, dict): self._cfg[key[0]] = Configuration(initial_value=value)
-		elif isinstance(value, list): self._cfg[key[0]] = ConfigurationList(initial_value=value)
-		else: self._cfg[key[0]] = ConfigurationEntry(value)
+		else:
+			tp = type_class.get(type(value))
+			if tp is not None: self._cfg[key[0]] = tp(initial_value=value)
+			else: self._cfg[key[0]] = ConfigurationEntry(value)
 
 	def to_dict(self, force_remake=False):
 		if self._cfgvalue is not None:
