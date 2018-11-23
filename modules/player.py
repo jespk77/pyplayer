@@ -172,7 +172,7 @@ def command_filter(arg, argc):
 def command_info_added(arg, argc):
 	(path, song) = get_song(arg)
 	if path is not None and song is not None: return messagetypes.Select("Multiple songs found", get_addtime, song, path=path)
-	else: return unknown_song
+	else: return messagetypes.Info("PyHelper (the original) was created on August 19, 2016 - PyPlayer was introduced on May 14, 2018")
 
 def command_info_played(arg, argc):
 	if argc > 0 and arg[-1] == "all":
