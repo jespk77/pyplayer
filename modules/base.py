@@ -113,6 +113,10 @@ def command_timer(arg, argc):
 			else: return messagetypes.Reply(str(time))
 		else: return messagetypes.Reply("Cannot decode time syntax, try again...")
 
+def initialize():
+	cmds = client.get_or_create("startup_commands", [])
+	for c in cmds: interpreter.put_command(c)
+
 commands = {
 	"cfg": command_cfg,
 	"timer": command_timer
