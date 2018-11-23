@@ -104,7 +104,6 @@ def stop_listener(arg, argc):
 def initialize():
 	try: start_listener(None, 0)
 	except: pass
-	if len(interpreter.arguments) == 0: interpreter.put_command("effect startup")
 
 def on_destroy():
 	global effect_player
