@@ -1,5 +1,5 @@
 from utilities import messagetypes
-from modules.utilities import time_counter, drink_window
+from modules.utilities import time_counter
 import datetime
 
 # DEFAULT MODULE VARIABLES
