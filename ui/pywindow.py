@@ -191,7 +191,7 @@ class BaseWindow:
 			if cbs is not None:
 				for c in cbs:
 					try: c(value)
-					except Exception as e: print("WARNING", "Exception occured while handling ")
+					except Exception as e: print("WARNING", "Exception occured while handling:", e)
 
 			key = key.split("::", maxsplit=1)
 			if len(key) > 1 and key[0] in self.widgets:
@@ -360,7 +360,9 @@ class PyWindow(BaseWindow):
 
 	def try_autosave(self, event=None):
 		""" Autosave configuration to file (if dirty) """
-		self.write_configuration()
+		try: self.write_configuration()
+		except Exception as e: print("ERROR", "writing configuration during autosave:", e)
+
 		if event is None:
 			self.autosave_delay = int(self._configuration["autosave_delay"])
 

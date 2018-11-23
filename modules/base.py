@@ -1,5 +1,6 @@
-import datetime, os, json
+import datetime, os
 from utilities import messagetypes
+from ui import pyconfiguration
 
 # DEFAULT MODULE VARIABLES
 priority = 0
@@ -54,51 +55,34 @@ def timer_check():
 # ===== MAIN COMMANDS =====
 def command_cfg(arg, argc):
 	if argc > 0:
-		path = cfg_folder + arg[0]
-		write_file = False
-		if arg[0] in client.children:
-			wd = client.children[arg.pop(0)]
-			argc -= 1
-		else:
-			if os.path.isfile(path):
-				arg = arg[1:]
-				argc -= 1
-				write_file = True
-				file = open(path, "r")
-				try: wd = json.load(file)
-				except json.JSONDecodeError as e:
-					file.close()
-					return messagetypes.Reply("Error parsing configuration file: {}".format(e))
-			else: wd = client
+		cg = client.children.get(arg[0])
+		if cg is None:
+			file = os.path.join(cfg_folder, arg[0])
+			if os.path.isfile(file):
+				cg = pyconfiguration.Configuration(filepath=file)
+				arg.pop(0)
+			else: cg = client
+		else: arg.pop(0)
 
-		if argc >= 2:
-			arg[1] = " ".join(arg[1:])
-			try:
-				cl = wd[arg[0]]
-				if isinstance(cl, dict) or isinstance(cl, list): return messagetypes.Reply("Cannot set a nested option")
-			except KeyError: pass
-
-			if arg[1] == "none":
-				del wd[arg[0]]
-				reply = "Configuration option '{}' deleted".format(arg[0])
+		if len(arg) == 2:
+			key, value = arg
+			if value == "none":
+				try:
+					del cg[key]
+					msg = messagetypes.Reply("Option '{}' was deleted".format(key))
+				except Exception as e: return messagetypes.Reply(str(e))
 			else:
 				try:
-					wd[arg[0]] = arg[1]
-					reply = "Configuration option '{}' updated to '{}'".format(arg[0], wd[arg[0]])
-				except TypeError as e: reply = str(e)
-
-			if write_file:
-				file = open(path, "w")
-				json.dump(wd, file, indent=5)
-				file.close()
-			else: wd.write_configuration()
-			return messagetypes.Reply(reply)
-		elif argc == 1:
-			try: vl = wd[arg[0]]
-			except KeyError: vl = None
-			if vl is not None: return messagetypes.Reply("Configuration option '{}' is set to '{}'".format(arg[0], vl))
-			else: return messagetypes.Reply("Configuration option '{}' is not set".format(arg[0]))
-		else: return messagetypes.Reply("cfg {module} option1{::option2...} ['get', 'set' value]")
+					cg[key] = value
+					msg = messagetypes.Reply("Option '{}' is updated to '{}'".format(key, value))
+				except Exception as e: return messagetypes.Reply(str(e))
+			cg.write_configuration()
+			return msg
+		elif len(arg) == 1:
+			ot = cg[arg[0]]
+			if ot is None: return messagetypes.Reply("Option '{}' is not set".format(arg[0]))
+			else: return messagetypes.Reply("Option '{}' is set to '{}'".format(arg[0], ot))
+		else: return messagetypes.Reply("Invalid syntax, expected 1 or 2 options")
 
 def command_timer(arg, argc):
 	if argc == 1:

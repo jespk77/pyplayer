@@ -10,7 +10,9 @@ def parse_arg(arg):
 	if id in arg_keys: return arg_keys[id]
 	else: return arg
 
-class ConfigurationEntry:
+class ConfigurationItem: pass
+
+class ConfigurationEntry(ConfigurationItem):
 	""" Helper class for configuration that represents an entry in a file (everything that isn't a dictionary)
 		When no value set, it represents None but can be used as other types representing default values
 	 	Ensures that once the value is set, this value can only be updated to value of the same type or None to mark as deleted """
@@ -43,7 +45,53 @@ class ConfigurationEntry:
 	def __bool__(self): return bool(self._vl)
 	def __descstr__(self): return "ConfigurationEntry(value={}, type={})".format(self._vl, self._tp.__name__)
 
-class Configuration:
+class ConfigurationList(ConfigurationItem):
+	""" Containter class for an option represented by a list of values
+		Ensures all items in the list have the same (sub)type """
+	def __init__(self, initial_value=None):
+		self._items = []
+		self._itemtype = None
+		if isinstance(initial_value, list):
+			for i in initial_value:
+				if i is None: continue
+				tp = type(i)
+				if self._itemtype is None: self._itemtype = tp
+				elif tp != self._itemtype: raise TypeError("All items in 'initial_value' must have the same type: '{.__name__}' is not the same as '{.__name__}'".format(tp,self._itemtype))
+				else: self._items.append(i)
+		elif initial_value is not None: raise TypeError("'initial_value' must either be a list or None, not '{.__name__}'".format(type(initial_value)))
+
+	@property
+	def value_type(self):
+		""" Get the type for all items in the list, all items in it should have the same type
+		 	Returns 'None' when the list is empty """
+		return self._itemtype
+	@property
+	def value(self): return self._items
+	@value.setter
+	def value(self, vl): print("value!", vl)
+
+	def __getitem__(self, item):
+		try: return self._items[item]
+		except IndexError: return None
+
+	def _verify_type(self, value):
+		tp = type(value)
+		if self._itemtype is None: self._itemtype = tp
+		elif self._itemtype != tp: raise TypeError("Expected a value of type '{.__name__}' and '{.__name__}' is not the same type".format(self._itemtype, tp))
+
+	def append(self, item):
+		""" Add new item to the list, if the list is not empty the type of 'item' must match the other items """
+		self._verify_type(item)
+		self._items.append(item)
+
+	def remove(self, item):
+		""" Remove item from the list, has no effect if the list does not contain this item """
+		try: self._items.remove(item)
+		except ValueError: pass
+		if len(self._items) == 0: self._itemtype = None
+
+
+class Configuration(ConfigurationItem):
 	def __init__(self, initial_value=None, filepath=None):
 		self._cfg = {}
 		self._error = False
@@ -73,12 +121,19 @@ class Configuration:
 	def cfg_file(self): return self._file is not None
 	@property
 	def error(self): return self._error
+	@property
+	def value(self): return None
+	@value.setter
+	def value(self, val):
+		if not isinstance(val, dict): raise TypeError
 
 	def update_dict(self, dt):
 		self._cfgvalue = None
 		if isinstance(dt, dict):
 			for key, value in dt.items():
 				if value is not None:
+					entry_type = type_class.get(type(value), type_class[None])
+					self._cfg[key] = entry_type(value)
 					if isinstance(value, dict): self._cfg[key] = Configuration(value)
 					else: self._cfg[key] = ConfigurationEntry(value)
 
@@ -115,6 +170,7 @@ class Configuration:
 			try: self._cfg[key[0]].value = value
 			except TypeError: raise TypeError("Key '{}' corresponds to a configuration, therefore it cannot be directly to another value. Append '::(subkey)' to the index to set subkeys".format(key[0]))
 		elif isinstance(value, dict): self._cfg[key[0]] = Configuration(initial_value=value)
+		elif isinstance(value, list): self._cfg[key[0]] = ConfigurationList(initial_value=value)
 		else: self._cfg[key[0]] = ConfigurationEntry(value)
 
 	def to_dict(self, force_remake=False):
@@ -130,8 +186,8 @@ class Configuration:
 			except Exception as e: print("ERROR", "Cannot get value for key '{}':", e)
 
 			if vl is None: continue
-			if not isinstance(vl, Configuration) and not isinstance(vl, ConfigurationEntry): self._cfgvalue[key] = vl
-			else: print("ERROR", "Invalid value for key '{}':".format(key), vl)
+			if isinstance(vl, ConfigurationItem): print("ERROR", "Invalid value for key '{}':".format(key), vl)
+			else: self._cfgvalue[key] = vl
 		return self._cfgvalue
 
 	def write_configuration(self, sort_keys=True):
@@ -151,3 +207,9 @@ class Configuration:
 
 	def __del__(self):
 		if self._file is not None: self._file.close()
+
+type_class = {
+	dict: Configuration,
+	list: ConfigurationList,
+	None: ConfigurationEntry
+}
