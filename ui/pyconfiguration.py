@@ -118,15 +118,18 @@ class Configuration:
 		else: self._cfg[key[0]] = ConfigurationEntry(value)
 
 	def to_dict(self, force_remake=False):
-		if self._cfgvalue is not None and not force_remake: return self._cfgvalue
+		if self._cfgvalue is not None:
+			if not force_remake: return self._cfgvalue
+			self._cfgvalue.clear()
+		else: self._cfgvalue = {}
 
-		self._cfgvalue = {}
 		for key, value in self._cfg.items():
 			vl = None
 			try: vl = value.to_dict()
 			except AttributeError: vl = value.value
 			except Exception as e: print("ERROR", "Cannot get value for key '{}':", e)
 
+			if vl is None: continue
 			if not isinstance(vl, Configuration) and not isinstance(vl, ConfigurationEntry): self._cfgvalue[key] = vl
 			else: print("ERROR", "Invalid value for key '{}':".format(key), vl)
 		return self._cfgvalue
@@ -139,7 +142,6 @@ class Configuration:
 		if self._file is not None:
 			self._file.seek(0)
 			self._file.truncate()
-			#TODO: create custom JSONencoder
 			json.dump(self.to_dict(force_remake=True), self._file, indent=5, sort_keys=sort_keys)
 			self._file.flush()
 			os.fsync(self._file.fileno())
