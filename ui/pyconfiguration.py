@@ -18,6 +18,7 @@ class ConfigurationItem:
 	def value(self, val): self.value()
 	def __iter__(self): raise TypeError("This configuration item is not an iterator!")
 
+
 class ConfigurationEntry(ConfigurationItem):
 	""" Helper class for configuration that represents an entry in a file (everything that isn't a dictionary)
 		When no value set, it represents None but can be used as other types representing default values
@@ -51,6 +52,7 @@ class ConfigurationEntry(ConfigurationItem):
 	def __bool__(self): return bool(self._vl)
 	def __descstr__(self): return "ConfigurationEntry(value={}, type={})".format(self._vl, self._tp.__name__)
 
+
 class ConfigurationList(ConfigurationItem):
 	""" Containter class for an option represented by a list of values
 		Ensures all items in the list have the same (sub)type """
@@ -74,7 +76,10 @@ class ConfigurationList(ConfigurationItem):
 	@property
 	def value(self): return self._items
 	@value.setter
-	def value(self, vl): print("value!", vl)
+	def value(self, vl): self.append(vl)
+
+	def __str__(self): return self.__descstr__()
+	def __descstr__(self): return "ConfigurationList({})".format(','.join(["'{}'".format(s) for s in self._items]))
 
 	def __getitem__(self, item):
 		try: return self._items[item]
@@ -87,15 +92,17 @@ class ConfigurationList(ConfigurationItem):
 		elif self._itemtype != tp: raise TypeError("Expected a value of type '{.__name__}' and '{.__name__}' is not the same type".format(self._itemtype, tp))
 
 	def append(self, item):
-		""" Add new item to the list, if the list is not empty the type of 'item' must match the other items """
+		""" Add new item to the list, if the list is not empty the type of 'item' must match the other items
+		 	Has no effect if the item was already in the list; it cannot contain duplicates """
 		self._verify_type(item)
-		self._items.append(item)
+		if not item in self._items: self._items.append(item)
 
 	def remove(self, item):
 		""" Remove item from the list, has no effect if the list does not contain this item """
 		try: self._items.remove(item)
-		except ValueError: pass
+		except ValueError: return False
 		if len(self._items) == 0: self._itemtype = None
+		return True
 
 
 class Configuration(ConfigurationItem):
@@ -129,7 +136,7 @@ class Configuration(ConfigurationItem):
 	@property
 	def error(self): return self._error
 	@property
-	def value(self): return None
+	def value(self): return self.to_dict()
 	@value.setter
 	def value(self, val):
 		if not isinstance(val, dict): raise TypeError
