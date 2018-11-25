@@ -16,6 +16,7 @@ song_queue = Queue()
 song_history = history.History()
 invalid_cfg = messagetypes.Reply("Invalid directory configuration, check your options")
 unknown_song = messagetypes.Reply("That song doesn't exist and there is nothing playing")
+no_songs = messagetypes.Reply("No songs found")
 MAX_LIST = 15
 
 class Autoplay(enum.Enum):
@@ -85,7 +86,7 @@ def play_song(display, song, path):
 	if isinstance(path, tuple): path = path[1]
 	meta = media_player.play_song(path=path, song=song)
 	if meta is not None: return messagetypes.Reply("Playing: " + meta.display_name)
-	else: return unknown_song
+	else: return no_songs
 
 def put_queue(display, song, path):
 	song_queue.put_nowait((path[1], song))
@@ -96,7 +97,7 @@ def search_youtube(arg, argc, keywords, path):
 		try: from modules import youtube
 		except ImportError: return messagetypes.Reply("Youtube module is not installed")
 		if " ".join(arg).lower() == "y": return youtube.command_youtube_find(keywords, len(keywords), path=path)
-	return unknown_song
+	return no_songs
 
 # ===== MAIN COMMANDS =====
 # - configure autoplay
@@ -219,7 +220,7 @@ def command_play(arg, argc):
 		path, song = get_song(arg)
 		if path is not None and song is not None: return messagetypes.Select("Multiple songs found", play_song, song, path=path)
 		elif len(arg) > 1: return messagetypes.Question("Can't find that song, search for it on youtube?", search_youtube, keywords=arg, path=path)
-		else: return messagetypes.Reply("Nothing found")
+		else: return no_songs
 
 def command_last_random(arg, argc):
 	if argc == 0:
