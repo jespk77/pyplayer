@@ -85,7 +85,9 @@ def get_playcount(display, song, alltime):
 def play_song(display, song, path):
 	if isinstance(path, tuple): path = path[1]
 	meta = media_player.play_song(path=path, song=song)
-	if meta is not None: return messagetypes.Reply("Playing: " + meta.display_name)
+	if meta is not None:
+		set_autoplay_ignore(False)
+		return messagetypes.Reply("Playing: " + meta.display_name)
 	else: return no_songs
 
 def put_queue(display, song, path):
@@ -99,40 +101,42 @@ def search_youtube(arg, argc, keywords, path):
 		if " ".join(arg).lower() == "y": return youtube.command_youtube_find(keywords, len(keywords), path=path)
 	return no_songs
 
+def set_autoplay_ignore(ignore):
+	global autoplay_ignore
+	autoplay_ignore = bool(ignore)
+
 # ===== MAIN COMMANDS =====
 # - configure autoplay
 def command_autoplay_ignore(arg, argc):
 	if argc == 0:
-		global autoplay_ignore
-		autoplay_ignore = True
+		set_autoplay_ignore(True)
 		return messagetypes.Reply("Autoplay will be skipped for one song")
 
 def command_autoplay_off(arg, argc):
 	if argc == 0:
-		global autoplay, autoplay_ignore
+		global autoplay
 		autoplay = Autoplay.OFF
-		autoplay_ignore = False
 		return messagetypes.Reply("Autoplay is off")
 
 def command_autoplay_on(arg, argc):
 	if argc == 0:
-		global autoplay, autoplay_ignore
+		global autoplay
 		autoplay = Autoplay.ON
-		autoplay_ignore = False
+		set_autoplay_ignore(False)
 		return messagetypes.Reply("Autoplay is turned on")
 
 def command_autoplay_queue(arg, argc):
 	if argc == 0:
-		global autoplay, autoplay_ignore
+		global autoplay
 		autoplay = Autoplay.QUEUE
-		autoplay_ignore = False
+		set_autoplay_ignore(False)
 		return messagetypes.Reply("Autoplay is enabled for queued songs")
 
 def command_autoplay_next(arg, argc):
 	if argc == 0:
 		global autoplay_ignore
 		if autoplay_ignore:
-			autoplay_ignore = False
+			set_autoplay_ignore(False)
 			return messagetypes.Empty()
 
 		global autoplay
@@ -229,7 +233,9 @@ def command_last_random(arg, argc):
 def command_prev_song(arg, argc):
 	if argc == 0:
 		item = song_history.get_previous(song_history.head)
-		if item is not None: media_player.play_song(item[0], item[1])
+		if item is not None:
+			set_autoplay_ignore(False)
+			media_player.play_song(item[0], item[1])
 		return messagetypes.Empty()
 
 def command_next_song(arg, argc):
@@ -247,6 +253,7 @@ def command_queue_next(arg, argc):
 		if not song_queue.empty():
 			item = song_queue.get_nowait()
 			media_player.play_song(path=item[0], song=item[1])
+			set_autoplay_ignore(False)
 			return messagetypes.Empty()
 		else: return messagetypes.Reply("Queue is empty")
 
@@ -258,12 +265,13 @@ def command_queue(arg, argc):
 
 def command_random(arg, argc):
 	dirs = client["directory"]
+	path = ""
 	if argc > 0:
 		try:
 			path = dirs[arg[0]]["path"]
 			arg.pop(0)
-		except KeyError: path = ""
-	else: path = ""
+		except KeyError: pass
+	set_autoplay_ignore(False)
 	return messagetypes.Reply(media_player.random_song(path=path, keyword=" ".join(arg)))
 
 def command_stop(arg, argc):
