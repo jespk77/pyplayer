@@ -54,7 +54,7 @@ def get_song(arg):
 			path = pt
 			songs = media_player.find_song(pt[1], arg)
 			if len(songs) > 0: break
-		return path, songs
+		return (path, songs) if songs else (None, None)
 	else:
 		meta = media_player.current_media
 		if meta is not None:
@@ -216,9 +216,10 @@ def command_position(arg, argc):
 
 def command_play(arg, argc):
 	if argc > 0:
-		(path, song) = get_song(arg)
+		path, song = get_song(arg)
 		if path is not None and song is not None: return messagetypes.Select("Multiple songs found", play_song, song, path=path)
-		else: return messagetypes.Question("Can't find that song, search for it on youtube?", search_youtube, keywords=arg, path=path)
+		elif len(arg) > 1: return messagetypes.Question("Can't find that song, search for it on youtube?", search_youtube, keywords=arg, path=path)
+		else: return messagetypes.Reply("Nothing found")
 
 def command_last_random(arg, argc):
 	if argc == 0:
