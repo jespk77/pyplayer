@@ -2,6 +2,8 @@ from collections import Counter
 from ui import pyelement
 import os
 
+def get_songlist(path): return [os.path.splitext(entry.name)[0] for entry in os.scandir(path) if entry.is_file()]
+
 class SongBrowser(pyelement.PyItemlist):
 	""" Can list all items (songs) from a directory in a specified order
 		possible orderings: frequency(counter), creation time, name
@@ -68,7 +70,16 @@ class SongBrowser(pyelement.PyItemlist):
 		if self.path_valid:
 			self.is_dynamic = False
 			self.songcounter = None
-			self.itemlist = [os.path.splitext(entry.name)[0] for entry in os.scandir(self.path[1]) if entry.is_file()]
+			self.itemlist = get_songlist(path[1])
+
+	def create_list_random(self, path):
+		self.path = path
+		if self.path_valid:
+			self.is_dynamic = False
+			self.songcounter = None
+			sl = get_songlist(path[1])
+			import random; random.shuffle(sl)
+			self.itemlist = sl
 
 	def get_song_from_event(self, event):
 		return self.itemlist[self.nearest(event.y)].replace(" - ", " ") if self.path_valid else None

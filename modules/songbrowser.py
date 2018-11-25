@@ -72,7 +72,7 @@ def command_browser_played_all(arg, argc):
 			browser.create_list_from_frequency(path, song_tracker.get_songlist(alltime=True))
 			client.set_songbrowser(browser)
 			bind_events()
-			return messagetypes.Reply("Browser enabled on all time plays in '{}'".format(path[0]))
+			return messagetypes.Reply("Browser sorted on all time plays in '{}'".format(path[0]))
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
 def command_browser_recent(arg, argc):
@@ -83,7 +83,18 @@ def command_browser_recent(arg, argc):
 			browser.create_list_from_recent(path)
 			client.set_songbrowser(browser)
 			bind_events()
-			return messagetypes.Reply("Browser enabled on recent songs in '{}'".format(path[0]))
+			return messagetypes.Reply("Browser sorted on recent songs in '{}'".format(path[0]))
+		elif len(path) == 1: return messagetypes.Reply(path[0])
+
+def command_browser_shuffle(arg, argc):
+	if argc < 1:
+		path = parse_path(arg, argc)
+		if len(path) == 2:
+			browser = SongBrowser(client.frame)
+			browser.create_list_random(path)
+			client.set_songbrowser(browser)
+			bind_events()
+			return messagetypes.Reply("Browser enabled for shuffled songs in '{}'".format(path[0]))
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
 def command_browser_name(arg, argc):
@@ -116,6 +127,7 @@ commands = {
 		"name": command_browser_name,
 		"played-month": command_browser_played_month,
 		"played": command_browser_played_all,
-		"recent": command_browser_recent
+		"recent": command_browser_recent,
+		"shuffle": command_browser_shuffle
 	}
 }
