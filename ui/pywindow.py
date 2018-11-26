@@ -343,13 +343,6 @@ class PyWindow(BaseWindow):
 		""" The widget under mouse will get focus, cannot be disabled! """
 		self.window.tk_focusFollowsMouse()
 
-	def start(self):
-		""" Initialize and start GUI """
-		try: self.window.mainloop()
-		except KeyboardInterrupt:
-			print("INFO", "Received keyboard interrupt, closing program...")
-			self.destroy()
-
 	def destroy(self):
 		""" Close window """
 		self.window.destroy()
@@ -377,3 +370,10 @@ class RootPyWindow(PyWindow):
 		self.title = BaseWindow.default_title
 
 	def _check_valid(self): return True
+
+	def start(self):
+		""" Initialize and start GUI """
+		try: self.window.mainloop()
+		except KeyboardInterrupt:
+			print("INFO", "Received keyboard interrupt, closing program...")
+			self.destroy()
