@@ -296,6 +296,12 @@ class PyWindow(BaseWindow):
 	def geometry(self, value):
 		""" Update geometry for this window (use geometry format defined for this property) """
 		self.window.geometry(value)
+	@property
+	def decorator(self):
+		""" Set true to prevent the window from being decorated; it won't have an icon or title """
+		return self.window.overrideredirect()
+	@decorator.setter
+	def decorator(self, vl): self.window.overrideredirect(not vl)
 
 	def column_options(self, index, **kwargs):
 		""" Set whether the column at the given index is allowed to change size when the window gets wider/smaller
