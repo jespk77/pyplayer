@@ -144,6 +144,7 @@ class PyButton(PyElement, tkinter.Button):
 		tkinter.Button.__init__(self, master)
 		self._string_var = None
 		self._callback = None
+		self._image = None
 
 	@property
 	def accept_input(self): return self.cget("state") == "normal"
@@ -170,6 +171,7 @@ class PyButton(PyElement, tkinter.Button):
 	def image(self, vl):
 		""" Set the image displayed on this button """
 		self.configure(image=vl)
+		self._image = vl
 
 	@property
 	def callback(self):
