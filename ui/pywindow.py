@@ -4,7 +4,7 @@ from ui import pyelement, pyconfiguration
 class BaseWindow:
 	""" Framework class for PyWindow and RootPyWindow, should not be created on its own """
 	default_title = "PyWindow"
-	invalid_cfg_keys = ["geometry", "height"]
+	invalid_cfg_keys = ["geometry", "height", "width"]
 
 	def __init__(self, id, initial_cfg=None, cfg_file=None):
 		self._windowid = id
@@ -296,6 +296,20 @@ class PyWindow(BaseWindow):
 	def geometry(self, value):
 		""" Update geometry for this window (use geometry format defined for this property) """
 		self.window.geometry(value)
+
+	@property
+	def screen_height(self): return self.window.winfo_screenheight()
+	@property
+	def screen_width(self): return self.window.winfo_screenwidth()
+	@property
+	def width(self): return self.window.winfo_width()
+	@width.setter
+	def width(self, vl): self.window.configure(width=vl)
+	@property
+	def height(self): return self.window.winfo_height()
+	@height.setter
+	def height(self, vl): self.window.configure(height=vl)
+
 	@property
 	def decorator(self):
 		""" Set true to prevent the window from being decorated; it won't have an icon or title """
@@ -348,6 +362,9 @@ class PyWindow(BaseWindow):
 	def focus_followsmouse(self):
 		""" The widget under mouse will get focus, cannot be disabled! """
 		self.window.tk_focusFollowsMouse()
+
+	def center_window(self, width, height):
+		self.geometry = "{}x{}+{}+{}".format(width, height, (self.screen_width // 2) - (width // 2), (self.screen_height // 2) - (height // 2))
 
 	def destroy(self):
 		""" Close window """
