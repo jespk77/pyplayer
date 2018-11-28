@@ -98,7 +98,7 @@ def command_youtube_find(arg, argc, path=None):
 		for title, link, desc in ls: res.append((title, link[9:], desc))
 		if scan_official:
 			officals = [(title, link, desc) for title, link, desc in res if desc.startswith("Provided to YouTube by")]
-			if len(officals) > 0: return messagetypes.Select("Found official videos:", handle_url, choices=res, path=path)
+			if len(officals) > 0: return messagetypes.Select("Found official videos:", handle_url, choices=officals, path=path)
 		return messagetypes.Select("Found multiple videos:", handle_url, choices=res, path=path)
 
 commands = {
