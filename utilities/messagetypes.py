@@ -94,7 +94,7 @@ class Error(Empty):
 	def __str__(self): return self.__name__() + st + str(self.error) + st + self.message
 
 	def get_contents(self):
-		try: print("\n".join(format_exception(None, self.error, self.error.__traceback__)))
+		try: print("ERROR", "\n".join(format_exception(None, self.error, self.error.__traceback__)))
 		except: print(self.error, self.message)
 
 		if len(self.message) > 0: return (self.get_prefix() + self.message + ", see log for details"), ("error",)
