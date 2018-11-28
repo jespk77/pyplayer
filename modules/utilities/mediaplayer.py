@@ -11,8 +11,7 @@ class MediaPlayerData:
 		self.song = song
 		self.display_name = get_displayname(song)
 
-	def __str__(self):
-		return "[MediaData] {!s}: {!s}".format(self.path, self.song)
+	def __str__(self): return "MediaData(path='{}', song='{}', display_name='{}')".format(self.path, self.song, self.display_name)
 
 class MediaPlayerEventUpdate:
 	id = 0
@@ -20,8 +19,7 @@ class MediaPlayerEventUpdate:
 	def __init__(self, data):
 		self.data = data
 
-	def __str__(self):
-		return "MediaPlayerEventUpdate {:d}: {!s}".format(self.id, self.data)
+	def __str__(self): return "MediaPlayerEventUpdate(id='', data={})".format(self.id, self.data)
 
 class MediaPlayer():
 	""" Helper class for playing music using the vlc python bindings
