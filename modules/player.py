@@ -325,6 +325,7 @@ def initialize():
 	if not song_tracker.is_loaded(): song_tracker.load_tracker()
 
 	client.get_or_create("directory", {})
+	client.get_or_create("default_directory", "")
 	command_filter_clear(None, 0)
 
 def on_destroy():
@@ -344,7 +345,6 @@ def on_player_update(event, player):
 	default_directory = client["directory"].get(client["default_path"])
 
 	if default_directory is not None and md.path == default_directory["path"]:
-		print("adding to tracker!")
 		song_tracker.add(md.display_name)
 		try: client.widgets["songbrowser"].add_count(md.display_name)
 		except KeyError: pass
