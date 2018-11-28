@@ -78,7 +78,7 @@ class PyLog:
 		if l != PyLogLevel.NDEFINE: objects = objects[1:]
 
 		if self._level.is_match(level):
-			return self._prev_print(datetime.datetime.today().strftime("[%I:%M:%S]"), PyLog._get_traceback_string(level), *objects,
+			return self._prev_print(datetime.datetime.today().strftime("[%H:%M:%S]"), PyLog._get_traceback_string(level), *objects,
 									sep=sep, end=end, file=file, flush=flush)
 		return False
 
