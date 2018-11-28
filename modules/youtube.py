@@ -22,8 +22,10 @@ def ensure_yt():
 	global yt, download_options
 	if yt is None:
 		import youtube_dl, os
-		dir = client["directory"].get("youtube")
-		if dir is not None: download_options["outtmpl"] = os.path.join(dir, download_options["outtmpl"])
+		try:
+			dir = client["directory"]["youtube"]["path"]
+			download_options["outtmpl"] = os.path.join(dir, download_options["outtmpl"])
+		except KeyError: print("WARNING", "")
 		yt = youtube_dl.YoutubeDL(download_options)
 
 def _check_link(tag):
@@ -70,16 +72,20 @@ def convert(url, filename=None):
 def process_song(cmd, data=None, url=None, path=None):
 	import os
 	cmd = " ".join(cmd)
-	if path is None: path = client["directory"].get("youtube")
+	if path is None:
+		try: path = client["directory"]["youtube"]
+		except KeyError: return messagetypes.Reply("No path for 'youtube' set")
+
+	try: path = path["path"]
+	except KeyError: return messagetypes.Reply("No path set in '{}'".format(path))
 	res = convert(url, os.path.join(path, cmd))
-	if res == 0:
-		if path is not None: interpreter.put_command("player {} {}".format(path, cmd))
-		return messagetypes.Reply("Song downloaded as '{}'".format(cmd))
+
+	if res == 0: return messagetypes.Reply("Song downloaded as '{}'".format(cmd))
 	else: return messagetypes.Reply("Error downloading file: code {}".format(res))
 
 def handle_url(value, data=None, path=None):
 	if value is not None and data is not None:
-		return messagetypes.Question("What should the file be named?", process_song, text=value, url=data[0], path=path)
+		return messagetypes.Question("What should the file be named?", process_song, text=value, url=data, path=path)
 	else: return messagetypes.Reply("Nothing found")
 # --- END OF HELPER FUNCTIONS
 
@@ -94,12 +100,14 @@ def command_youtube_find(arg, argc, path=None):
 		ls = search(arg)
 		if ls is None: return messagetypes.Reply("There was an error looking for file, see log for details...")
 
-		res = []
-		for title, link, desc in ls: res.append((title, link[9:], desc))
-		if scan_official:
-			officals = [(title, link, desc) for title, link, desc in res if desc.startswith("Provided to YouTube by")]
-			if len(officals) > 0: return messagetypes.Select("Found official videos:", handle_url, choices=officals, path=path)
-		return messagetypes.Select("Found multiple videos:", handle_url, choices=res, path=path)
+		res, officals = [], []
+		for title, link, desc in ls:
+			link = link[9:]
+			if scan_official and desc.startswith("Provided to YouTube by"): officals.append((title, link))
+			res.append((title, link))
+
+		if len(officals) > 0: return messagetypes.Select("Found official videos:", handle_url, choices=officals, path=path)
+		else: return messagetypes.Select("Found multiple videos:", handle_url, choices=res, path=path)
 
 commands = {
 	"youtube": {
