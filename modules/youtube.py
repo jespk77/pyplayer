@@ -69,18 +69,23 @@ def convert(url, filename=None):
 		print("INFO", "Passed argument was not a valid url:", e)
 		return -1
 
-def process_song(cmd, data=None, url=None, path=None):
-	import os
-	cmd = " ".join(cmd)
-	if path is None:
-		try: path = client["directory"]["youtube"]
-		except KeyError: return messagetypes.Reply("No path for 'youtube' set")
+def process_path(narg, nargc, **data):
+	if nargc == 1:
+		argn = " ".join(narg)
+		path = client["directory"].get(argn)
+		if path is not None: return process_song(**data, path=path)
+		else: return messagetypes.Reply("Unknown path '{}'".format(argn))
+
+def process_song(arg, argc, url=None, path=None):
+	if path is None: return messagetypes.Question("Where should it be saved to?", process_path, arg=arg, argc=argc, text=client["default_path"], url=url)
+	arg = " ".join(arg)
 
 	try: path = path["path"]
 	except KeyError: return messagetypes.Reply("No path set in '{}'".format(path))
-	res = convert(url, os.path.join(path, cmd))
+	import os
+	res = convert(url, os.path.join(path, arg))
 
-	if res == 0: return messagetypes.Reply("Song downloaded as '{}'".format(cmd))
+	if res == 0: return messagetypes.Reply("Song downloaded as '{}'".format(arg))
 	else: return messagetypes.Reply("Error downloading file: code {}".format(res))
 
 def handle_url(value, data=None, path=None):
