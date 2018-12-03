@@ -94,11 +94,11 @@ def put_queue(display, song, path):
 	song_queue.put_nowait((path[1], song))
 	return messagetypes.Reply("Song '{}' added to queue".format(display))
 
-def search_youtube(arg, argc, keywords, path):
-	if argc > 0 and len(keywords) > 0:
+def search_youtube(arg, argc, path):
+	if argc > 0:
 		try: from modules import youtube
 		except ImportError: return messagetypes.Reply("Youtube module is not installed")
-		if " ".join(arg).lower() == "y": return youtube.command_youtube_find(keywords, len(keywords), path=path)
+		if arg[0]: return youtube.command_youtube_find(arg, argc, path=path)
 	return no_songs
 
 def set_autoplay_ignore(ignore):
@@ -222,8 +222,8 @@ def command_position(arg, argc):
 def command_play(arg, argc):
 	if argc > 0:
 		path, song = get_song(arg)
-		if path is not None and song is not None: return messagetypes.Select("Multiple songs found", play_song, song, path=path)
-		elif len(arg) > 1: return messagetypes.Question("Can't find that song, search for it on youtube?", search_youtube, keywords=arg, path=path)
+		if path and song: return messagetypes.Select("Multiple songs found", play_song, song, path=path)
+		elif len(arg) > 1: return messagetypes.Question("Can't find that song, search for it on youtube?", search_youtube, text=arg, path=path)
 		else: return no_songs
 
 def command_last_random(arg, argc):
