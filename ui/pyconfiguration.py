@@ -144,7 +144,6 @@ class Configuration(ConfigurationItem):
 	def update_dict(self, dt):
 		self._cfgvalue = None
 		if isinstance(dt, dict):
-			print(self._filepath, dt.get("startup_commands"))
 			for key, value in dt.items():
 				if value is not None:
 					entry_type = type_class.get(type(value), type_class[None])
