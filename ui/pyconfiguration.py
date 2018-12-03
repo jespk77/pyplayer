@@ -65,7 +65,7 @@ class ConfigurationList(ConfigurationItem):
 				tp = type(i)
 				if self._itemtype is None: self._itemtype = tp
 				elif tp != self._itemtype: raise TypeError("All items in 'initial_value' must have the same type: '{.__name__}' is not the same as '{.__name__}'".format(tp,self._itemtype))
-				else: self._items.append(i)
+				self._items.append(i)
 		elif initial_value is not None: raise TypeError("'initial_value' must either be a list or None, not '{.__name__}'".format(type(initial_value)))
 
 	@property
@@ -144,6 +144,7 @@ class Configuration(ConfigurationItem):
 	def update_dict(self, dt):
 		self._cfgvalue = None
 		if isinstance(dt, dict):
+			print(self._filepath, dt.get("startup_commands"))
 			for key, value in dt.items():
 				if value is not None:
 					entry_type = type_class.get(type(value), type_class[None])
