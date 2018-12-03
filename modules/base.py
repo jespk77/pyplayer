@@ -64,7 +64,8 @@ def command_cfg(arg, argc):
 			else: cg = client
 		else: arg.pop(0)
 
-		if len(arg) == 2:
+		if len(arg) > 1:
+			arg = [arg[0], " ".join(arg[1:])]
 			key, value = arg
 			if value == "none":
 				try:
@@ -82,7 +83,6 @@ def command_cfg(arg, argc):
 			ot = cg[arg[0]]
 			if ot is None: return messagetypes.Reply("Option '{}' is not set".format(arg[0]))
 			else: return messagetypes.Reply("Option '{}' is set to '{}'".format(arg[0], ot))
-		else: return messagetypes.Reply("Invalid syntax, expected 1 or 2 options")
 
 def command_timer(arg, argc):
 	if argc == 1:
