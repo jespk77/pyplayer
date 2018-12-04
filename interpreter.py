@@ -1,8 +1,11 @@
 from threading import Thread
 from multiprocessing import Queue
-import os, importlib, sys, subprocess
+import importlib, sys, subprocess, json
 
 from utilities import messagetypes
+
+program_info_file = "pyplayer.json"
+def get_version_string(): return "{0.major}.{0.minor}".format(sys.version_info)
 
 class Interpreter(Thread):
 	""" Process commands from modules defined in the modules package
@@ -29,13 +32,31 @@ class Interpreter(Thread):
 		self._configuration = None
 		self._checks = []
 		self._platform = sys.platform
-		self._pycmd = ["py", "-m", "pip", "install"] if "win" in self._platform else ["python3", "-m", "pip", "install", "--user"]
-		self._set_sys_arg()
+		self._pycmd = [sys.executable, "-m", "pip", "install"]
+		if self._platform == "linux": self._pycmd.append("--user")
 
+		self._set_sys_arg()
 		self._modules = []
-		for module in [f for f in os.listdir("modules") if f.endswith(".py")]:
-			r = self._load_module(module)
-			if isinstance(r, messagetypes.Error): client.add_message(r.get_contents())
+		with open(program_info_file, "r") as file: cfg = json.load(file)
+		vs = get_version_string()
+		if cfg["python_version"] != vs:
+			print("WARNING", "Installed Python version ({}) different from build version ({}), things might not work correctly".format(vs, cfg["python_version"]))
+
+		for module_id, module_options in cfg["modules"].items():
+			try:
+				platform = module_options["platform"]
+				if platform is not None and platform != self._platform:
+					print("WARNING", "Unsupported platform detected! Module '{}' will not be loaded!".format(module_id))
+					continue
+
+				if module_options.get("dependencies"):
+					print("INFO", "Dependencies found for module '{}', installing/updating them now...".format(module_id))
+					i = subprocess.run(self._pycmd + ["--upgrade"] + module_options["dependencies"])
+					if i.returncode != 0: client.add_message(messagetypes.Error("Installing dependencies for module '{}' failed with code {}".format(module_id, i.returncode)).get_contents()); continue
+
+				r = self._load_module(module_id)
+				if isinstance(r, messagetypes.Error): client.add_message(r.get_contents())
+			except Exception as e: print("ERROR", "While loading module '{}':".format(module_id), e)
 		self.start()
 
 	def _set_sys_arg(self):
