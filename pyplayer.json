@@ -1,0 +1,41 @@
+{
+  "dependencies": ["Pillow"],
+  "modules": {
+    "base": {
+      "dependencies": [],
+      "platform": null,
+      "priority": 0,
+      "required": true
+    }, "effects": {
+      "dependencies": ["python-vlc"],
+      "platform": "win32",
+      "priority": 4,
+      "required": false
+    }, "player": {
+      "dependencies": ["python-vlc"],
+      "platform": null,
+      "priority": 2,
+      "required": false
+    }, "programs": {
+      "dependencies": ["pyjokes"],
+      "platform": null,
+      "priority": 7,
+      "required": false
+    }, "songbrowser": {
+      "dependencies": [],
+      "platform": null,
+      "priority": 3,
+      "required": false
+    }, "twitch": {
+      "dependencies": ["requests"],
+      "platform": null,
+      "priority": 5,
+      "required": true
+    }, "youtube": {
+      "dependencies": ["beautifulsoup4","requests","youtube_dl"],
+      "platform": null,
+      "priority": 10,
+      "required": false
+    }
+  }, "python_version": "3.6"
+}
