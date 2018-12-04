@@ -49,9 +49,10 @@ class Interpreter(Thread):
 					print("WARNING", "Unsupported platform detected! Module '{}' will not be loaded!".format(module_id))
 					continue
 
-				if module_options.get("dependencies"):
+				deps = module_options.get("dependencies")
+				if deps:
 					print("INFO", "Dependencies found for module '{}', installing/updating them now...".format(module_id))
-					i = subprocess.run(self._pycmd + ["--upgrade"] + module_options["dependencies"])
+					i = subprocess.run(self._pycmd + ["--upgrade"] + deps, shell=False)
 					if i.returncode != 0: client.add_message(messagetypes.Error("Installing dependencies for module '{}' failed with code {}".format(module_id, i.returncode)).get_contents()); continue
 
 				r = self._load_module(module_id)
@@ -189,7 +190,7 @@ class Interpreter(Thread):
 	def _load_dependencies(self, module):
 		try: d = module.dependencies
 		except AttributeError as e:
-			if not str(e).endswith("'dependencies'"): raise e
+			if not str(e).endswith("'dependencies'"): raise
 			else: return True
 
 		if isinstance(d, dict):
