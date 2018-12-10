@@ -377,47 +377,55 @@ class PyItemlist(PyElement, tkinter.Listbox):
 		self.list_var.set(self._items)
 
 
-from PIL import Image, ImageTk
-class PyImage(ImageTk.PhotoImage):
-	def __init__(self, file=None, url=None, bin_file=None):
-		self._success = False
-		if url:
-			from urllib.request import urlopen
-			import io
-			u = urlopen(url)
-			self._bytes = io.BytesIO(u.read())
-			u.close()
-			self._img = Image.open(self._bytes)
-			ImageTk.PhotoImage.__init__(self, self._img)
-			self._success = True
+try:
+	from PIL import Image, ImageTk
+	class PyImage(ImageTk.PhotoImage):
+		def __init__(self, file=None, url=None, bin_file=None):
+			self._success = False
+			if url:
+				from urllib.request import urlopen
+				import io
+				u = urlopen(url)
+				self._bytes = io.BytesIO(u.read())
+				u.close()
+				self._img = Image.open(self._bytes)
+				ImageTk.PhotoImage.__init__(self, self._img)
+				self._success = True
 
-		elif bin_file:
-			import io
-			self._bytes = io.BytesIO()
-			with open(bin_file, "rb") as file:
-				self._img = Image.open(file, self._bytes)
-			ImageTk.PhotoImage.__init__(self, self._img)
-			self._success = True
+			elif bin_file:
+				import io
+				self._bytes = io.BytesIO()
+				with open(bin_file, "rb") as file:
+					self._img = Image.open(file, self._bytes)
+				ImageTk.PhotoImage.__init__(self, self._img)
+				self._success = True
 
-		elif file:
-			import os
-			img, ext = os.path.splitext(file)
-			if not ext: file = "{}.png".format(file)
+			elif file:
+				import os
+				img, ext = os.path.splitext(file)
+				if not ext: file = "{}.png".format(file)
 
-			try: ImageTk.PhotoImage.__init__(self, file=file)
-			except FileNotFoundError as e:
-				print("ERROR", "Loading image:", e)
-				ImageTk.PhotoImage.__init__(self, file="assets/blank.png")
+				try: ImageTk.PhotoImage.__init__(self, file=file)
+				except FileNotFoundError as e:
+					print("ERROR", "Loading image:", e)
+					ImageTk.PhotoImage.__init__(self, file="assets/blank.png")
 
-			self._bytes = None
-			self._success = True
-		else: raise ValueError("Must specify either file, bin_file or url argument")
+				self._bytes = None
+				self._success = True
+			else: raise ValueError("Must specify either file, bin_file or url argument")
 
-	def write(self, filename, format=None, from_coords=None):
-		if self._bytes is not None:
-			with open(filename, "wb") as file:
-				file.write(self._bytes.getvalue())
+		def write(self, filename, format=None, from_coords=None):
+			if self._bytes is not None:
+				with open(filename, "wb") as file:
+					file.write(self._bytes.getvalue())
 
-	def __del__(self):
-		if self._success: ImageTk.PhotoImage.__del__(self)
-		else: print("INFO", "Skipped image cleanup since there was an error loading image")
+		def __del__(self):
+			if self._success: ImageTk.PhotoImage.__del__(self)
+			else: print("INFO", "Skipped image cleanup since there was an error loading image")
+except ImportError:
+	print("ERROR", "'Pillow' module not found, images will not be visible!")
+	class PyImage:
+		""" Placeholder to avoid type errors in the rest of the program """
+		def __init__(self, file=None, url=None, bin_file=None): pass
+		def write(self, filename, format=None, from_coords=None): pass
+		def __del__(self): pass

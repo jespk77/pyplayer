@@ -1,5 +1,6 @@
 {
-  "dependencies": ["Pillow"],
+  "dependencies": ["Pillow", "psutil", "humanize"],
+  "platform": "win32//linux",
   "modules": {
     "base": {
       "dependencies": [],
