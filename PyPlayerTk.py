@@ -1,5 +1,5 @@
 from traceback import format_exception
-import datetime
+import datetime, humanize
 
 from ui import pywindow, pyelement
 from console import TextConsole
@@ -26,6 +26,15 @@ class PyPlayer(pywindow.RootPyWindow):
 		self.title_song = ""
 		self.icon = "assets/icon"
 		self.interp = None
+
+		try:
+			import psutil
+			self._process = psutil.Process()
+			self._boottime = datetime.datetime.fromtimestamp(psutil.boot_time())
+		except ImportError:
+			print("INFO", "psutil package not found, extra info cannot be displayed")
+			self._process = None
+			self._boottime = datetime.datetime.today()
 
 		self.set_widget("progressbar", pyelement.PyProgressbar(self.frame), initial_cfg=progressbar_cfg, row=1, columnspan=9).maximum = 1
 		self.set_widget("console", TextConsole(self, command_callback=self.parse_command), initial_cfg=console_cfg, row=3, columnspan=9).focus()
@@ -67,6 +76,10 @@ class PyPlayer(pywindow.RootPyWindow):
 	def update_label(self):
 		self.date = datetime.datetime.today()
 		self.widgets["header"].display_text = self.date.strftime(self["header_format"])
+		uptime = str(self.date - self._boottime).split(".")[0]
+		if self._process is not None: self.widgets["header_right"].display_text = "{} / {}".format(uptime, humanize.naturalsize(self._process.memory_info().rss))
+		else: self.widgets["header_right"].display_text = uptime
+
 		self.post_event("tick_second", PyPlayerEvent(date=self.date))
 		self.after(1, self.update_label)
 
