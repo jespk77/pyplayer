@@ -104,6 +104,7 @@ class PyElement:
 	For widgets that don't have a parent, use the frame of the window (using the 'frame' attribute on window)
 	The window the frame is currently in can be accessed with the 'window' attribute (is None if not placed on a window)
 """
+# === ELEMENT CONTAINERS ===
 class PyFrame(PyElement, tkinter.Frame):
 	""" Use as container for a collection of elements, parameter 'master' must be another pyelement """
 	def __init__(self, master):
@@ -111,12 +112,26 @@ class PyFrame(PyElement, tkinter.Frame):
 		PyElement.__init__(self)
 		tkinter.Frame.__init__(self, master)
 
+class PyLabelframe(PyElement, tkinter.LabelFrame):
+	""" Same as PyFrame but has an outline around it and can add label at the top of the frame """
+	def __init__(self, master):
+		check_master(master)
+		PyElement.__init__(self)
+		tkinter.LabelFrame.__init__(self, master)
+
+	@property
+	def label(self): return self.cget("text")
+	@label.setter
+	def label(self, vl): self.configure(text=vl)
+
 class PyCanvas(PyElement, tkinter.Canvas):
-	""" Similar to Frame, but this has more advanced features such as scrolling """
+	""" Similar to PyFrame, but this has more advanced features such as scrolling """
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self)
 		tkinter.Canvas.__init__(self, master)
+
+# === ELEMENT ITEMS ===
 
 class PyTextlabel(PyElement, tkinter.Label):
 	""" Element for displaying a line of text """
@@ -135,6 +150,43 @@ class PyTextlabel(PyElement, tkinter.Label):
 			self._string_var = tkinter.StringVar()
 			self.configure(textvariable=self._string_var)
 		self._string_var.set(value)
+
+class PyCheckbox(PyElement, tkinter.Checkbutton):
+	def __init__(self, master):
+		check_master(master)
+		PyElement.__init__(self)
+		self._value = tkinter.IntVar()
+		self._desc = tkinter.StringVar()
+		tkinter.Checkbutton.__init__(self, master, variable=self._value, textvariable=self._desc)
+
+	@property
+	def description(self): return self._desc.get()
+	@description.setter
+	def description(self, vl): self._desc.set(vl)
+
+	@property
+	def image(self): return self.cget("image")
+	@image.setter
+	def image(self, ig):
+		if not isinstance(ig, PyImage): raise TypeError("Image must be a PyImage, not {.__name__}".format(type(ig)))
+		self.configure(image=ig)
+
+	@property
+	def checked(self): return self._value.get()
+	@checked.setter
+	def checked(self, check): self._value.set(check)
+
+	@property
+	def accept_input(self): return self.cget("state") == "normal"
+	@accept_input.setter
+	def accept_input(self, vl): self.configure(state="normal" if vl else "disabled")
+
+	@property
+	def command(self): return self.cget("command")
+	@command.setter
+	def command(self, cb):
+		if not callable(cb): raise TypeError("Callback must be callable!")
+		self.configure(command=cb)
 
 class PyButton(PyElement, tkinter.Button):
 	""" Element to create a clickable button  """
