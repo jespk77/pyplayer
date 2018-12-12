@@ -29,8 +29,16 @@ class PySplashWindow(pywindow.RootPyWindow):
 		self.set_widget("label_status", label_status, row=1)
 
 		self._platform = sys.platform
-		self.after(1, self._load_program)
+		self.after(1, self._update_program)
 		self.bind("<Button-1>", self.clicked)
+
+	def _update_program(self):
+		process_command("git pull --progress", output=self._git_status)
+		self.after(1, self._load_program)
+
+	def _git_status(self, out):
+		self.status_text = out
+		self.window.update_idletasks()
 
 	def _load_program(self):
 		import json
@@ -56,11 +64,14 @@ class PySplashWindow(pywindow.RootPyWindow):
 
 	def pip_install(self, module):
 		import sys
-		process_command("{} -m pip install {} --user".format(sys.executable, module), output=self.pip_status)
+		process_command("{} -m pip install {} --user".format(sys.executable, module), output=self._pip_status)
 
-	def pip_status(self, out):
-		self.status_text = out.split(" in ")[0]
-		self.window.update_idletasks()
+	def _pip_status(self, out):
+		try:
+			self.status_text = out.split(" in ")[0]
+			self.window.update_idletasks()
+		except: pass
+
 	@property
 	def status_text(self): return self.widgets["label_status"].display_text
 	@status_text.setter
