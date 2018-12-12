@@ -3,36 +3,43 @@
   "platform": "win32//linux",
   "modules": {
     "base": {
+      "enabled": true,
       "dependencies": [],
       "platform": null,
       "priority": 0,
       "required": true
     }, "effects": {
+      "enabled": true,
       "dependencies": ["python-vlc"],
       "platform": "win32",
       "priority": 4,
       "required": false
     }, "player": {
+      "enabled": true,
       "dependencies": ["python-vlc"],
       "platform": null,
       "priority": 2,
       "required": false
     }, "programs": {
+      "enabled": true,
       "dependencies": ["pyjokes"],
       "platform": null,
       "priority": 7,
       "required": false
     }, "songbrowser": {
+      "enabled": true,
       "dependencies": [],
       "platform": null,
       "priority": 3,
       "required": false
     }, "twitch": {
+      "enabled": true,
       "dependencies": ["requests"],
       "platform": null,
       "priority": 5,
       "required": true
     }, "youtube": {
+      "enabled": true,
       "dependencies": ["beautifulsoup4","requests","youtube_dl"],
       "platform": null,
       "priority": 10,
