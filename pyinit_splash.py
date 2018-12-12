@@ -3,15 +3,24 @@ import sys
 
 initial_cfg = {"background": "black"}
 
-resolution = 300, 400
+resolution = 400, 300
 program_info_file = "pyplayer.json"
 def get_version_string(): return "{0.major}.{0.minor}".format(sys.version_info)
+
+def process_command(cmd, output=print):
+	import subprocess
+	pc = subprocess.Popen(cmd.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	while True:
+		data = pc.stdout.readline()
+		if data: output(data.decode().rstrip('\n'))
+		else: break
+	return pc
 
 class PySplashWindow(pywindow.RootPyWindow):
 	def __init__(self):
 		pywindow.RootPyWindow.__init__(self, "splash", initial_cfg)
-		self.center_window(*resolution)
 		self.decorator = False
+		self.center_window(*resolution)
 		self.column_options(0, weight=1)
 		self.row_options(0, weight=1)
 
@@ -30,19 +39,28 @@ class PySplashWindow(pywindow.RootPyWindow):
 		if cfg["python_version"] != vs:
 			print("WARNING", "Installed Python version ({}) different from build version ({}), things might not work correctly".format(vs, cfg["python_version"]))
 
+		modules = {mid: mot for mid, mot in cfg["modules"].items() if mot.get("enabled")}
 		self.status_text = "Checking dependencies..."
+		dependencies = cfg.get("dependencies", [])
+		for module_id, module_options in modules.items():
+			dps = module_options.get("dependencies")
+			if dps: dependencies += [d for d in dps if d not in dependencies]
 
-		for module_id, module_options in cfg["modules"].items():
-			pass
+		if dependencies:
+			print("INFO", "Found dependencies:", dependencies)
+			for i in range(len(dependencies)):
+				self.status_text = "Checking '{}'"
+				self.pip_install(dependencies[i])
+		else: print("INFO", "No dependencies found, continuing...")
+		self.destroy()
 
 	def pip_install(self, module):
-		from pip._internal import main
-		main(["install", "--upgrade", module, "--user"])
+		import sys
+		process_command("{} -m pip install {} --user".format(sys.executable, module), output=self.pip_status)
 
-	def pip_list_upgrades(self):
-		from pip._internal import main
-		main(["list", "--outdated"])
-
+	def pip_status(self, out):
+		self.status_text = out.split(" in ")[0]
+		self.window.update_idletasks()
 	@property
 	def status_text(self): return self.widgets["label_status"].display_text
 	@status_text.setter
