@@ -89,9 +89,11 @@ class PySplashWindow(pywindow.RootPyWindow):
 
 		if dependencies:
 			print("INFO", "Found dependencies:", dependencies)
+			pip_install = "{} -m pip install {}"
+			if self._platform == "linux": pip_install += " --user"
 			for i in range(len(dependencies)):
 				self.status_text = "Checking '{}'"
-				process_command("{} -m pip install {} --user".format(sys.executable, dependencies[i]), stdout=self._pip_status)
+				process_command(pip_install.format(sys.executable, dependencies[i]), stdout=self._pip_status)
 		else: print("INFO", "No dependencies found, continuing...")
 		self.after(5, self.destroy)
 
