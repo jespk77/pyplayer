@@ -1,44 +1,47 @@
 from ui import pywindow, pyelement
 import sys
 
-initial_cfg = {"background": "black"}
-
-resolution = 400, 300
+resolution = 300, 200
 program_info_file = "pyplayer.json"
 def get_version_string(): return "{0.major}.{0.minor}".format(sys.version_info)
 
 def process_command(cmd, stdin=None, stdout=None, stderr=None, timeout=None):
 	""" Run a command that can be interacted with using standard IO: 'stdin', 'stdout', 'stderr'
 			- If stdin is provided, it must be a bytes object
-			- If stdout is provided, it must be callable: all command output is directed to this method' when not provided all output is ignored
+			- If stdout is provided, it must be callable: all command output is directed to this method'; when not provided all output is ignored
 			- If stderr is provided, must be callable, it receives any error messages from the command; when not provided errors are directed to stdout
-	 	Waits for the process to be finished but can be aborted if it takes longer than n seconds using timeout argument
+	 	Waits for the process to be finished but can be aborted if it takes longer than n seconds using 'timeout' argument
 	 	Returns the finished process when termated """
 	if stderr is None: stderr = stdout
 	import subprocess
 	pc = subprocess.Popen(cmd.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-	while not pc.poll():
+	while pc.returncode is None:
 		try:
-			out, err = pc.communicate(stdin)
-			if out and stdout: stdout(out.decode().rstrip('\n'))
-			elif err and stderr: stderr(err.decode().rstrip('\n'))
+			out, err = pc.communicate(stdin, timeout=1)
+			if out and stdout: stdout(out.decode())
+			if err and stderr: stderr(err.decode())
+		except subprocess.TimeoutExpired: pass
 		except Exception as e: print("error communicating:", e); break
 	pc.wait(timeout)
 	return pc
 
 class PySplashWindow(pywindow.RootPyWindow):
 	def __init__(self):
-		pywindow.RootPyWindow.__init__(self, "splash", initial_cfg)
+		pywindow.RootPyWindow.__init__(self, "splash", {"background": "black"})
 		self.decorator = False
 		self.center_window(*resolution)
 		self.column_options(0, weight=1)
 		self.row_options(0, weight=1)
 
 		img = pyelement.PyCanvas(self.window)
-		self.set_widget("splash_logo", img, row=0, initial_cfg={"background": "black", "borderwidth": 0})
+		self._logo = pyelement.PyImage(file="assets/logo")
+		try: img.create_image(resolution[0]//2, resolution[1]//2, image=self._logo)
+		except: pass
+		self.set_widget("splash_logo", img, row=0, initial_cfg={"background": "gray10", "highlightthickness": 0, "cursor": "watch"})
+
 		label_status = pyelement.PyTextlabel(self.window)
 		label_status.display_text = "Initializing..."
-		self.set_widget("label_status", label_status, row=1, initial_cfg={"background": "black", "foreground": "white"})
+		self.set_widget("label_status", label_status, row=2, initial_cfg={"background": "gray10", "foreground": "white", "cursor": "watch"})
 
 		self._cfg = None
 		self._platform = sys.platform
@@ -95,6 +98,7 @@ class PySplashWindow(pywindow.RootPyWindow):
 				self.status_text = "Checking '{}'"
 				process_command(pip_install.format(sys.executable, dependencies[i]), stdout=self._pip_status)
 		else: print("INFO", "No dependencies found, continuing...")
+		self.status_text = "Loading PyPlayer..."
 		self.after(5, self.destroy)
 
 	def _pip_status(self, out):
@@ -106,7 +110,8 @@ class PySplashWindow(pywindow.RootPyWindow):
 	@property
 	def status_text(self): return self.widgets["label_status"].display_text
 	@status_text.setter
-	def status_text(self, vl): self.widgets["label_status"].display_text = vl
+	def status_text(self, vl):
+		self.widgets["label_status"].display_text = vl.split("\n")[0]
 
 	def on_click(self, event=None):
 		if self._clickclose: self.destroy()
