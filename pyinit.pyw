@@ -27,7 +27,7 @@ def process_command(cmd, stdin=None, stdout=None, stderr=None, timeout=None):
 
 class PySplashWindow(pywindow.RootPyWindow):
 	def __init__(self):
-		pywindow.RootPyWindow.__init__(self, "splash", {"background": "black"})
+		pywindow.RootPyWindow.__init__(self, "splash", {"background": "black", "locked": True})
 		self.decorator = False
 		self.center_window(*resolution)
 		self.column_options(0, weight=1)
@@ -47,6 +47,14 @@ class PySplashWindow(pywindow.RootPyWindow):
 		self._platform = sys.platform
 		self.after(1, self._update_program)
 
+	def _load_cache(self):
+		try:
+			with open(program_cache_file, "r") as file:
+				import json
+				try: self._cache = json.load(file)
+				except json.JSONDecodeError: pass
+		except FileNotFoundError: pass
+
 	def _update_program(self):
 		if "no_update" not in sys.argv:
 			print("INFO", "Doing an update check!")
@@ -60,15 +68,28 @@ class PySplashWindow(pywindow.RootPyWindow):
 			if pc.returncode:
 				self.status_text = "Failed to update PyPlayer, continuing in 5 seconds or click to close..."
 				self.bind("<Button-1>", lambda e: self.destroy())
-				return self.after(5, self._load_dependencies)
-		else: self.status_text = "Updating skipped"
-		self.after(1, self._load_dependencies)
+				return self.after(5, self._load_modules)
+			process_command("git rev-parse HEAD", stdout=self.git_hash)
+		else:
+			self.status_text = "Updating skipped."
+			self.after(1, self._load_modules, False)
 
 	def _git_status(self, out):
 		self.status_text = out
 		self.window.update_idletasks()
 
-	def _load_dependencies(self):
+	def git_hash(self, out):
+		hash = self.get_or_create("hash", "")
+		out = out.rstrip("\n")
+		if hash != out:
+			print("INFO", "Git hash updated: '{}', checking dependencies".format(out))
+			self["hash"] = out
+			self.after(1, self._load_modules)
+		else:
+			print("INFO", "Git hash equal to last time, skip dependency checking")
+			self.after(1, self._load_modules, False)
+
+	def _load_modules(self, dependency_check=True):
 		import json
 		with open(program_info_file, "r") as file:
 			try: self._cfg = json.load(file)
@@ -81,26 +102,27 @@ class PySplashWindow(pywindow.RootPyWindow):
 			print("WARNING", "Installed Python version ({}) different from build version ({}), things might not work correctly".format(vs, self._cfg["python_version"]))
 
 		self._loaded_modules = {mid: mot for mid, mot in self._cfg["modules"].items() if mot.get("enabled")}
-		self.status_text = "Checking dependencies..."
-		dependencies = self._cfg.get("dependencies", [])
-		for module_id, module_options in self._loaded_modules.copy().items():
-			pt = module_options.get("platform")
-			if pt is not None and pt != self._platform:
-				print("ERROR", "Module '{}' was enabled but isn't supported on this platform! Skipping loading...".format(module_id))
-				del self._loaded_modules[module_id]
-				continue
+		if dependency_check:
+			self.status_text = "Checking dependencies..."
+			dependencies = self._cfg.get("dependencies", [])
+			for module_id, module_options in self._loaded_modules.copy().items():
+				pt = module_options.get("platform")
+				if pt is not None and pt != self._platform:
+					print("ERROR", "Module '{}' was enabled but isn't supported on this platform! Skipping loading...".format(module_id))
+					del self._loaded_modules[module_id]
+					continue
 
-			dps = module_options.get("dependencies")
-			if dps: dependencies += [d for d in dps if d not in dependencies]
+				dps = module_options.get("dependencies")
+				if dps: dependencies += [d for d in dps if d not in dependencies]
 
-		if dependencies:
-			print("INFO", "Found dependencies:", dependencies)
-			pip_install = "{} -m pip install {}"
-			if self._platform == "linux": pip_install += " --user"
-			self.status_text = "Checking dependencies"
-			for i in range(len(dependencies)):
-				process_command(pip_install.format(sys.executable, dependencies[i]), stdout=self._pip_status)
-		else: print("INFO", "No dependencies found, continuing...")
+			if dependencies:
+				print("INFO", "Found dependencies:", dependencies)
+				pip_install = "{} -m pip install {}"
+				if self._platform == "linux": pip_install += " --user"
+				self.status_text = "Checking dependencies"
+				for i in range(len(dependencies)):
+					process_command(pip_install.format(sys.executable, dependencies[i]), stdout=self._pip_status)
+			else: print("INFO", "No dependencies found, continuing...")
 		self.status_text = "Loading PyPlayer..."
 		self.after(1, self._load_program)
 
