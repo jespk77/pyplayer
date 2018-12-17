@@ -49,7 +49,7 @@ class TwitchViewer(pywindow.PyWindow):
 			self.open_window("emotelist", emotelist_window)
 			self.set_title()
 			self.start()
-		else: self.add_widget("error_message", pyelement.PyTextlabel(self.frame)).display_text = "Error getting metadata for '{}': {}".format(channel, error)
+		else: self.set_widget("error_message", pyelement.PyTextlabel(self.frame)).display_text = "Error getting metadata for '{}': {}".format(channel, error)
 
 	def on_emotetoggle(self): self.children["emotelist"].toggle_hidden()
 	def on_emoteclick(self, emote_name): self.widgets["chat_input"].add_emote(emote_name)
