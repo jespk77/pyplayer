@@ -145,6 +145,7 @@ class PySplashWindow(pywindow.RootPyWindow):
 		client.interp = self._interp
 		client.bind("<Destroy>", self.on_close, add=True)
 		self.open_window("client", client)
+		client.hidden = False
 		self.hidden = True
 
 	@property
