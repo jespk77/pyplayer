@@ -16,9 +16,10 @@ browser_cfg = { "background": "black", "foreground": "white", "selectforeground"
 console_cfg = { "background": "black", "error.foreground": "red", "font":{"family":"terminal","size":10}, "foreground": "white", "info.foreground": "yellow",
 				"insertbackground": "white", "reply.foreground": "gray", "selectbackground": "gray30" }
 
-class PyPlayer(pywindow.RootPyWindow):
-	def __init__(self):
-		pywindow.RootPyWindow.__init__(self, "client", initial_cfg)
+class PyPlayer(pywindow.PyWindow):
+	def __init__(self, root):
+		pywindow.PyWindow.__init__(self, master=root, id="client", initial_cfg=initial_cfg)
+		self.hidden = True
 		self.set_widget("header_left", pyelement.PyTextlabel(self.frame), initial_cfg=header_cfg)
 		self.set_widget("header", pyelement.PyTextlabel(self.frame), initial_cfg=header_cfg, column=1)
 		self.set_widget("header_right", pyelement.PyTextlabel(self.frame), initial_cfg=header_cfg, column=2)

@@ -104,6 +104,7 @@ class PyElement:
 	For widgets that don't have a parent, use the frame of the window (using the 'frame' attribute on window)
 	The window the frame is currently in can be accessed with the 'window' attribute (is None if not placed on a window)
 """
+# === ELEMENT CONTAINERS ===
 class PyFrame(PyElement, tkinter.Frame):
 	""" Use as container for a collection of elements, parameter 'master' must be another pyelement """
 	def __init__(self, master):
@@ -111,12 +112,26 @@ class PyFrame(PyElement, tkinter.Frame):
 		PyElement.__init__(self)
 		tkinter.Frame.__init__(self, master)
 
+class PyLabelframe(PyElement, tkinter.LabelFrame):
+	""" Same as PyFrame but has an outline around it and can add label at the top of the frame """
+	def __init__(self, master):
+		check_master(master)
+		PyElement.__init__(self)
+		tkinter.LabelFrame.__init__(self, master)
+
+	@property
+	def label(self): return self.cget("text")
+	@label.setter
+	def label(self, vl): self.configure(text=vl)
+
 class PyCanvas(PyElement, tkinter.Canvas):
-	""" Similar to Frame, but this has more advanced features such as scrolling """
+	""" Similar to PyFrame, but this has more advanced features such as scrolling """
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self)
 		tkinter.Canvas.__init__(self, master)
+
+# === ELEMENT ITEMS ===
 
 class PyTextlabel(PyElement, tkinter.Label):
 	""" Element for displaying a line of text """
@@ -135,6 +150,43 @@ class PyTextlabel(PyElement, tkinter.Label):
 			self._string_var = tkinter.StringVar()
 			self.configure(textvariable=self._string_var)
 		self._string_var.set(value)
+
+class PyCheckbox(PyElement, tkinter.Checkbutton):
+	def __init__(self, master):
+		check_master(master)
+		PyElement.__init__(self)
+		self._value = tkinter.IntVar()
+		self._desc = tkinter.StringVar()
+		tkinter.Checkbutton.__init__(self, master, variable=self._value, textvariable=self._desc)
+
+	@property
+	def description(self): return self._desc.get()
+	@description.setter
+	def description(self, vl): self._desc.set(vl)
+
+	@property
+	def image(self): return self.cget("image")
+	@image.setter
+	def image(self, ig):
+		if not isinstance(ig, PyImage): raise TypeError("Image must be a PyImage, not {.__name__}".format(type(ig)))
+		self.configure(image=ig)
+
+	@property
+	def checked(self): return self._value.get()
+	@checked.setter
+	def checked(self, check): self._value.set(check)
+
+	@property
+	def accept_input(self): return self.cget("state") == "normal"
+	@accept_input.setter
+	def accept_input(self, vl): self.configure(state="normal" if vl else "disabled")
+
+	@property
+	def command(self): return self.cget("command")
+	@command.setter
+	def command(self, cb):
+		if not callable(cb): raise TypeError("Callback must be callable!")
+		self.configure(command=cb)
 
 class PyButton(PyElement, tkinter.Button):
 	""" Element to create a clickable button  """
@@ -377,47 +429,55 @@ class PyItemlist(PyElement, tkinter.Listbox):
 		self.list_var.set(self._items)
 
 
-from PIL import Image, ImageTk
-class PyImage(ImageTk.PhotoImage):
-	def __init__(self, file=None, url=None, bin_file=None):
-		self._success = False
-		if url:
-			from urllib.request import urlopen
-			import io
-			u = urlopen(url)
-			self._bytes = io.BytesIO(u.read())
-			u.close()
-			self._img = Image.open(self._bytes)
-			ImageTk.PhotoImage.__init__(self, self._img)
-			self._success = True
+try:
+	from PIL import Image, ImageTk
+	class PyImage(ImageTk.PhotoImage):
+		def __init__(self, file=None, url=None, bin_file=None):
+			self._success = False
+			if url:
+				from urllib.request import urlopen
+				import io
+				u = urlopen(url)
+				self._bytes = io.BytesIO(u.read())
+				u.close()
+				self._img = Image.open(self._bytes)
+				ImageTk.PhotoImage.__init__(self, self._img)
+				self._success = True
 
-		elif bin_file:
-			import io
-			self._bytes = io.BytesIO()
-			with open(bin_file, "rb") as file:
-				self._img = Image.open(file, self._bytes)
-			ImageTk.PhotoImage.__init__(self, self._img)
-			self._success = True
+			elif bin_file:
+				import io
+				self._bytes = io.BytesIO()
+				with open(bin_file, "rb") as file:
+					self._img = Image.open(file, self._bytes)
+				ImageTk.PhotoImage.__init__(self, self._img)
+				self._success = True
 
-		elif file:
-			import os
-			img, ext = os.path.splitext(file)
-			if not ext: file = "{}.png".format(file)
+			elif file:
+				import os
+				img, ext = os.path.splitext(file)
+				if not ext: file = "{}.png".format(file)
 
-			try: ImageTk.PhotoImage.__init__(self, file=file)
-			except FileNotFoundError as e:
-				print("ERROR", "Loading image:", e)
-				ImageTk.PhotoImage.__init__(self, file="assets/blank.png")
+				try: ImageTk.PhotoImage.__init__(self, file=file)
+				except FileNotFoundError as e:
+					print("ERROR", "Loading image:", e)
+					ImageTk.PhotoImage.__init__(self, file="assets/blank.png")
 
-			self._bytes = None
-			self._success = True
-		else: raise ValueError("Must specify either file, bin_file or url argument")
+				self._bytes = None
+				self._success = True
+			else: raise ValueError("Must specify either file, bin_file or url argument")
 
-	def write(self, filename, format=None, from_coords=None):
-		if self._bytes is not None:
-			with open(filename, "wb") as file:
-				file.write(self._bytes.getvalue())
+		def write(self, filename, format=None, from_coords=None):
+			if self._bytes is not None:
+				with open(filename, "wb") as file:
+					file.write(self._bytes.getvalue())
 
-	def __del__(self):
-		if self._success: ImageTk.PhotoImage.__del__(self)
-		else: print("INFO", "Skipped image cleanup since there was an error loading image")
+		def __del__(self):
+			if self._success: ImageTk.PhotoImage.__del__(self)
+			else: print("INFO", "Skipped image cleanup since there was an error loading image")
+except ImportError:
+	print("ERROR", "'Pillow' module not found, images will not be visible!")
+	class PyImage:
+		""" Placeholder to avoid type errors in the rest of the program """
+		def __init__(self, file=None, url=None, bin_file=None): pass
+		def write(self, filename, format=None, from_coords=None): pass
+		def __del__(self): pass
