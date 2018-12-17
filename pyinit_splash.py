@@ -45,8 +45,6 @@ class PySplashWindow(pywindow.RootPyWindow):
 
 		self._cfg = None
 		self._platform = sys.platform
-		self._clickclose = False
-		self.bind("<Button-1>", self.on_click)
 		self.after(1, self._update_program)
 
 	def _update_program(self):
@@ -61,7 +59,7 @@ class PySplashWindow(pywindow.RootPyWindow):
 
 			if pc.returncode:
 				self.status_text = "Failed to update PyPlayer, continuing in 5 seconds or click to close..."
-				self._clickclose = True
+				self.bind("<Button-1>", lambda e: self.destroy())
 				return self.after(5, self._load_dependencies)
 		else: self.status_text = "Updating skipped"
 		self.after(1, self._load_dependencies)
@@ -71,7 +69,6 @@ class PySplashWindow(pywindow.RootPyWindow):
 		self.window.update_idletasks()
 
 	def _load_dependencies(self):
-		self._clickclose = True
 		import json
 		with open(program_info_file, "r") as file:
 			try: self._cfg = json.load(file)
@@ -133,9 +130,6 @@ class PySplashWindow(pywindow.RootPyWindow):
 	@status_text.setter
 	def status_text(self, vl):
 		self.widgets["label_status"].display_text = vl.split("\n")[0]
-
-	def on_click(self, event=None):
-		if self._clickclose: self.destroy()
 
 	def on_close(self, event=None):
 		print("INFO", "Pyplayer closed, shutting down!")
