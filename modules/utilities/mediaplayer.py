@@ -285,7 +285,6 @@ class MediaPlayer():
 
 # ====== DESTROY PLAYER INSTANCE =====
 	def on_destroy(self):
-		self.stop_player()
 		print("INFO", "Looks like we're done here, release all player stuffs")
 		self._player1.release()
 		self._player2.release()
