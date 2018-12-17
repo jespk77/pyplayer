@@ -1,11 +1,8 @@
 from threading import Thread
 from multiprocessing import Queue
-import importlib, sys, subprocess, json
+import importlib, sys, json
 
 from utilities import messagetypes
-
-program_info_file = "pyplayer.json"
-def get_version_string(): return "{0.major}.{0.minor}".format(sys.version_info)
 
 class Interpreter(Thread):
 	""" Process commands from modules defined in the modules package
@@ -25,7 +22,7 @@ class Interpreter(Thread):
 					- use "" for default commands and "info" to display help messages, the top level cannot have a default command
 					- after processing a command the module must return an instance of 'messagetypes', if nothing is returned the interpreter will continue to next module
 	"""
-	def __init__(self, client):
+	def __init__(self, client, modules=None):
 		super().__init__(name="PyInterpreterThread")
 		self._client = client
 		self._queue = Queue()
@@ -37,24 +34,9 @@ class Interpreter(Thread):
 
 		self._set_sys_arg()
 		self._modules = []
-		with open(program_info_file, "r") as file: cfg = json.load(file)
-		vs = get_version_string()
-		if cfg["python_version"] != vs:
-			print("WARNING", "Installed Python version ({}) different from build version ({}), things might not work correctly".format(vs, cfg["python_version"]))
-
-		for module_id, module_options in cfg["modules"].items():
+		if modules is None: modules = {}
+		for module_id, module_options in modules.items():
 			try:
-				platform = module_options["platform"]
-				if platform is not None and platform != self._platform:
-					print("WARNING", "Unsupported platform detected! Module '{}' will not be loaded!".format(module_id))
-					continue
-
-				deps = module_options.get("dependencies")
-				if deps:
-					print("INFO", "Dependencies found for module '{}', installing/updating them now...".format(module_id))
-					i = subprocess.run(self._pycmd + ["--upgrade"] + deps, shell=False)
-					if i.returncode != 0: client.add_message(messagetypes.Error("Installing dependencies for module '{}' failed with code {}".format(module_id, i.returncode)).get_contents()); continue
-
 				r = self._load_module(module_id)
 				if isinstance(r, messagetypes.Error): client.add_message(r.get_contents())
 			except Exception as e: print("ERROR", "While loading module '{}':".format(module_id), e)
@@ -86,7 +68,7 @@ class Interpreter(Thread):
 			try:
 				if cmd is False:
 					self.on_destroy()
-					break
+					return
 				try: cmd, cb = cmd
 				except ValueError: cb = None
 				print("INFO", "Processing command '{}' with callback:".format(cmd), cb)
@@ -175,8 +157,6 @@ class Interpreter(Thread):
 			try: m.priority
 			except AttributeError as e: return messagetypes.Error(e, "Cannot import '{}', it's missing a priority value".format(m.__name__))
 
-			try: self._load_dependencies(m)
-			except Exception as e: print("WARNING", "Failed to get dependencies for '{}', it might not work correctly:".format(m.__name__), e)
 			try: m.initialize()
 			except AttributeError as a:
 				if "initialize" not in str(a): raise a
@@ -186,27 +166,6 @@ class Interpreter(Thread):
 			self._modules = sorted(self._modules, key= lambda me: me.priority)
 			return messagetypes.Reply("Module successfully loaded")
 		except Exception as e: return messagetypes.Error(e, "Failed to import module '{}'".format(md))
-
-	def _load_dependencies(self, module):
-		try: d = module.dependencies
-		except AttributeError as e:
-			if not str(e).endswith("'dependencies'"): raise
-			else: return True
-
-		if isinstance(d, dict):
-			print("INFO", "Loading found keyword dependencies in module")
-			deps = [(k,v) for k,v in d.items()]
-		else: raise TypeError("Invalid type for dependencies for module '{}': must be dict, not '{}'".format(module.__name__, type(d).__name__))
-
-		for i in range(0, len(deps)):
-			key, vl = deps[i]
-			res = subprocess.call(self._pycmd + [vl])
-			if res == 0:
-				print("INFO", "Import module and set module attribute to key:", key)
-				setattr(module, key, importlib.import_module(key))
-			else: print("WARNING", "Failed to install dependency '{}' for module '{}', it might not work correctly".format(vl, module.__name__))
-
-		print("INFO", "Finished installing dependencies")
 
 	def on_destroy(self):
 		for module in self._modules:

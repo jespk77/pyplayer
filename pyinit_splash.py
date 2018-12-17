@@ -1,7 +1,7 @@
 from ui import pywindow, pyelement
 import sys
 
-resolution = 300, 200
+resolution = 350, 200
 program_info_file = "pyplayer.json"
 def get_version_string(): return "{0.major}.{0.minor}".format(sys.version_info)
 
@@ -62,15 +62,15 @@ class PySplashWindow(pywindow.RootPyWindow):
 			if pc.returncode:
 				self.status_text = "Failed to update PyPlayer, continuing in 5 seconds or click to close..."
 				self._clickclose = True
-				return self.after(5, self._load_program)
+				return self.after(5, self._load_dependencies)
 		else: self.status_text = "Updating skipped"
-		self.after(1, self._load_program)
+		self.after(1, self._load_dependencies)
 
 	def _git_status(self, out):
 		self.status_text = out
 		self.window.update_idletasks()
 
-	def _load_program(self):
+	def _load_dependencies(self):
 		self._clickclose = True
 		import json
 		with open(program_info_file, "r") as file:
@@ -83,10 +83,16 @@ class PySplashWindow(pywindow.RootPyWindow):
 		if self._cfg["python_version"] != vs:
 			print("WARNING", "Installed Python version ({}) different from build version ({}), things might not work correctly".format(vs, self._cfg["python_version"]))
 
-		modules = {mid: mot for mid, mot in self._cfg["modules"].items() if mot.get("enabled")}
+		self._loaded_modules = {mid: mot for mid, mot in self._cfg["modules"].items() if mot.get("enabled")}
 		self.status_text = "Checking dependencies..."
 		dependencies = self._cfg.get("dependencies", [])
-		for module_id, module_options in modules.items():
+		for module_id, module_options in self._loaded_modules.copy().items():
+			pt = module_options.get("platform")
+			if pt is not None and pt != self._platform:
+				print("ERROR", "Module '{}' was enabled but isn't supported on this platform! Skipping loading...".format(module_id))
+				del self._loaded_modules[module_id]
+				continue
+
 			dps = module_options.get("dependencies")
 			if dps: dependencies += [d for d in dps if d not in dependencies]
 
@@ -94,18 +100,33 @@ class PySplashWindow(pywindow.RootPyWindow):
 			print("INFO", "Found dependencies:", dependencies)
 			pip_install = "{} -m pip install {}"
 			if self._platform == "linux": pip_install += " --user"
+			self.status_text = "Checking dependencies"
 			for i in range(len(dependencies)):
-				self.status_text = "Checking '{}'"
 				process_command(pip_install.format(sys.executable, dependencies[i]), stdout=self._pip_status)
 		else: print("INFO", "No dependencies found, continuing...")
 		self.status_text = "Loading PyPlayer..."
-		self.after(5, self.destroy)
+		self.after(1, self._load_program)
 
 	def _pip_status(self, out):
 		try:
 			self.status_text = out.split(" in ")[0]
 			self.window.update_idletasks()
 		except: pass
+
+	def _load_program(self):
+		print("INFO", "Creating PyPlayer and interpreter")
+		from PyPlayerTk import PyPlayer
+		from interpreter import Interpreter
+		import pylogging
+		pylogging.get_logger()
+
+		print("initializing client...")
+		client = PyPlayer(self.window)
+		self._interp = Interpreter(client, modules=self._loaded_modules)
+		client.interp = self._interp
+		client.bind("<Destroy>", self.on_close, add=True)
+		self.open_window("client", client)
+		self.hidden = True
 
 	@property
 	def status_text(self): return self.widgets["label_status"].display_text
@@ -115,6 +136,13 @@ class PySplashWindow(pywindow.RootPyWindow):
 
 	def on_click(self, event=None):
 		if self._clickclose: self.destroy()
+
+	def on_close(self, event=None):
+		print("INFO", "Pyplayer closed, shutting down!")
+		if self._interp is not None and self._interp.is_alive():
+			self._interp.stop_command()
+			self._interp.join()
+		self.after(2, self.destroy)
 
 if __name__ == "__main__":
 	w = PySplashWindow()
