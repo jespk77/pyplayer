@@ -18,8 +18,8 @@ console_cfg = { "background": "black", "error.foreground": "red", "font":{"famil
 
 class PyPlayer(pywindow.PyWindow):
 	def __init__(self, root):
-		self.hidden = True
 		pywindow.PyWindow.__init__(self, master=root, id="client", initial_cfg=initial_cfg)
+		self.hidden = True
 		self.set_widget("header_left", pyelement.PyTextlabel(self.frame), initial_cfg=header_cfg)
 		self.set_widget("header", pyelement.PyTextlabel(self.frame), initial_cfg=header_cfg, column=1)
 		self.set_widget("header_right", pyelement.PyTextlabel(self.frame), initial_cfg=header_cfg, column=2)
