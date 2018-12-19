@@ -56,11 +56,7 @@ class PySplashWindow(pywindow.RootPyWindow):
 		if "no_update" not in sys.argv:
 			print("INFO", "Doing an update check!")
 			self.status_text = "Checking for updates..."
-			pc = process_command("git pull", stdout=self._git_status)
-			if pc.returncode:
-				print("INFO", "Cannot update directly, trying to do a hard reset")
-				process_command("git reset --hard")
-				pc = process_command("git pull", stdout=self._git_status)
+			pc = process_command("git pull -s recursive -Xtheirs", stdout=self._git_status)
 
 			if pc.returncode:
 				self.status_text = "Failed to update PyPlayer, continuing in 5 seconds or click to close..."
@@ -76,10 +72,10 @@ class PySplashWindow(pywindow.RootPyWindow):
 		self.window.update_idletasks()
 
 	def git_hash(self, out):
-		hash = self.get_or_create("hash", "")
+		hash = self.get_or_create("hash", "none")
 		out = out.rstrip("\n")
 		if hash != out:
-			print("INFO", "Git hash updated: '{}', checking dependencies".format(out))
+			print("INFO", "Git hash updated from '{}' to '{}', checking dependencies".format(hash, out))
 			self["hash"] = out
 			self.after(1, self._load_modules)
 		else:
