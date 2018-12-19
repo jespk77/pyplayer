@@ -14,7 +14,12 @@ def process_command(cmd, stdin=None, stdout=None, stderr=None, timeout=None):
 	 	Returns the finished process when termated """
 	if stderr is None: stderr = stdout
 	import subprocess
-	pc = subprocess.Popen(cmd.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	if "win" in sys.platform:
+		pi = subprocess.STARTUPINFO()
+		pi.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+	else: pi = None
+
+	pc = subprocess.Popen(cmd.split(" "), startupinfo=pi, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	while pc.returncode is None:
 		try:
 			out, err = pc.communicate(stdin, timeout=1)
@@ -46,14 +51,6 @@ class PySplashWindow(pywindow.RootPyWindow):
 		self._cfg = None
 		self._platform = sys.platform
 		self.after(1, self._update_program)
-
-	def _load_cache(self):
-		try:
-			with open(program_cache_file, "r") as file:
-				import json
-				try: self._cache = json.load(file)
-				except json.JSONDecodeError: pass
-		except FileNotFoundError: pass
 
 	def _update_program(self):
 		if "no_update" not in sys.argv:
