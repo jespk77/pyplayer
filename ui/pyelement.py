@@ -151,6 +151,48 @@ class PyTextlabel(PyElement, tkinter.Label):
 			self.configure(textvariable=self._string_var)
 		self._string_var.set(value)
 
+class PyTextInput(PyElement, tkinter.Entry):
+	def __init__(self, master):
+		check_master(master)
+		PyElement.__init__(self)
+		tkinter.Entry.__init__(self, master)
+		self._format_str = None
+		self._input_length = 0
+		self._strvar = tkinter.StringVar()
+		self._input_cmd = self.register(self._on_input_key)
+		self.configure(textvariable=self._strvar, validate="key", validatecommand=(self._input_cmd, "%P"))
+
+	@property
+	def accept_input(self): return self.cget("state") == "disabled"
+	@accept_input.setter
+	def accept_input(self, vl): self.configure(state="normal" if vl else "disabled")
+
+	@property
+	def format_str(self): return self._format_str if self._format_str else ""
+	@format_str.setter
+	def format_str(self, fs):
+		""" Allows to set specific characters that can be entered into this field, set None to allow everything """
+		if fs:
+			import re
+			self._format_str = re.compile("[^{}]".format(fs))
+		else: self._format_str = None
+
+	@property
+	def value(self): return self._strvar.get()
+	@value.setter
+	def value(self, vl):
+		if vl and not self._on_input_key(vl): raise ValueError("Cannot set value; contains non-allowed characters")
+		self._strvar.set(vl)
+
+	@property
+	def max_length(self): return self._input_length
+	@max_length.setter
+	def max_length(self, ln): self._input_length = ln
+
+	def _on_input_key(self, entry):
+		if not self._format_str: return True
+		return self._input_length > 0 and len(entry) <= self._input_length and not self._format_str.search(entry)
+
 class PyCheckbox(PyElement, tkinter.Checkbutton):
 	def __init__(self, master):
 		check_master(master)
@@ -336,8 +378,7 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 		self._style = ttk.Style()
 		self._horizontal = True
 		PyElement.__init__(self)
-		try: ttk.Progressbar.__init__(self, master)
-		except AttributeError: ttk.Progressbar.__init__(self, window)
+		ttk.Progressbar.__init__(self, master)
 		self.configure(mode="determinate", variable=self._progress_var)
 
 	@property
