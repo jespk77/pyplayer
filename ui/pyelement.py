@@ -4,7 +4,8 @@ import tkinter
 from ui import pyconfiguration
 
 def check_master(master):
-	if not isinstance(master, tkinter.Wm): raise TypeError("'master' parameter must be a 'Tk' instance, not '{}'".format(type(master).__name__))
+	if not isinstance(master, tkinter.Wm) and isinstance(master, PyElement) and not master._supports_children:
+		raise TypeError("'{.__name__}' cannot contain additional widgets".format(type(master)))
 
 class PyElement:
 	""" Framework for elements that can be parented from other pyelements, should not be created on its own """
@@ -44,6 +45,11 @@ class PyElement:
 
 	@property
 	def dirty(self): return self._dirty
+	@property
+	def _supports_children(self):
+		""" Signals whether new elements can be made a parent from this element,
+		 	by default they cannot (exceptions being "window manager" like elements) """
+		return False
 
 	def mark_dirty(self, event=None):
 		""" Mark this element as dirty (configuration options will be written to file next save)
@@ -111,6 +117,8 @@ class PyFrame(PyElement, tkinter.Frame):
 		check_master(master)
 		PyElement.__init__(self)
 		tkinter.Frame.__init__(self, master)
+	@property
+	def _supports_children(self): return True
 
 class PyLabelframe(PyElement, tkinter.LabelFrame):
 	""" Same as PyFrame but has an outline around it and can add label at the top of the frame """
@@ -118,6 +126,8 @@ class PyLabelframe(PyElement, tkinter.LabelFrame):
 		check_master(master)
 		PyElement.__init__(self)
 		tkinter.LabelFrame.__init__(self, master)
+	@property
+	def _supports_children(self): return True
 
 	@property
 	def label(self): return self.cget("text")
@@ -130,6 +140,8 @@ class PyCanvas(PyElement, tkinter.Canvas):
 		check_master(master)
 		PyElement.__init__(self)
 		tkinter.Canvas.__init__(self, master)
+	@property
+	def _supports_children(self): return True
 
 # === ELEMENT ITEMS ===
 
