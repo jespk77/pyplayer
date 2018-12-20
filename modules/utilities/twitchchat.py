@@ -432,6 +432,7 @@ class TwitchChat(pyelement.PyTextfield):
 			text = meta["display-name"] + " gifted a subscription to " + meta["msg-param-recipient-display-name"]
 			amt = meta.get("msg-param-sender-count", "0")
 			if amt > "0": text += " ({} total)".format(meta["msg-param-sender-count"])
+		elif type == "charity": return self.on_charity(meta, data)
 		else: return
 
 		if meta["msg-param-sub-plan"] == "Prime": level = " with Prime"
@@ -439,8 +440,10 @@ class TwitchChat(pyelement.PyTextfield):
 		elif meta["msg-param-sub-plan"] == "2000": level = " at tier 2"
 		else: level = " at tier 3"
 		self.insert("end", "\n" + text + level, ("notice",))
-		self.configure(state="disabled")
 		if len(data) > 0: self.on_privmsg(meta, data)
+
+	def on_charity(self, meta, data):
+		self.insert("end", "${:,} raised for {} so far! {} days left".format(meta["msg-param-total"], meta["msg-param-charity-name"], meta["msg-param-charity-days-remaining"]), ("notice",))
 
 	def on_notice(self, meta, data):
 		self.insert("end", "\n" + data, ("notice",))
