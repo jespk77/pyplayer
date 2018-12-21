@@ -120,6 +120,48 @@ class PyFrame(PyElement, tkinter.Frame):
 	@property
 	def _supports_children(self): return True
 
+class PyScrollableFrame(PyFrame):
+	""" Same as PyFrame but supports scrolling, horizontal and vertical scrollbars can optionally be added """
+	def __init__(self, master):
+		check_master(master)
+		PyFrame.__init__(self, master)
+		self._canvas = PyCanvas(self)
+		self._content = PyFrame(self._canvas)
+		self.grid_rowconfigure(0, weight=1)
+		self.grid_columnconfigure(0, weight=1)
+		self._content.bind("<Configure>", self._update_scrollregion, add=True)
+		self._canvas.bind("<Configure>", self._update_width, add=True)
+		self._canvas.grid(row=0, column=0, sticky="news")
+		self._canvas.create_window((0,0), window=self._content, anchor="nw", tags="content_frame")
+		self._scrollx = self._scrolly = None
+
+	@property
+	def frame(self): return self._content
+	def _update_width(self, event): self._canvas.itemconfigure("content_frame", width=event.width)
+	def _update_scrollregion(self, event): self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+
+	@property
+	def horizontal_scrollbar(self): return self._scrollx is not None
+	@property
+	def vertical_scrollbar(self): return self._scrolly is not None
+
+	@horizontal_scrollbar.setter
+	def horizontal_scrollbar(self, vl):
+		if vl and not self.horizontal_scrollbar:
+			self._scrollx = PyScrollbar(self)
+			self._scrollx.configure(orient="horizontal", command=self._canvas.xview)
+			self._canvas.configure(xscrollcommand=self._scrollx.set)
+			self._scrollx.grid(row=1, column=0, sticky="ew")
+
+	@vertical_scrollbar.setter
+	def vertical_scrollbar(self, vl):
+		if vl and not self.vertical_scrollbar:
+			import sys
+			self._scrolly = PyScrollbar(self)
+			self._scrolly.configure(orient="vertical", command=self._canvas.yview)
+			self._canvas.configure(yscrollcommand=self._scrolly.set)
+			self._scrolly.grid(row=0, column=1, sticky="ns")
+
 class PyLabelframe(PyElement, tkinter.LabelFrame):
 	""" Same as PyFrame but has an outline around it and can add label at the top of the frame """
 	def __init__(self, master):
@@ -135,7 +177,7 @@ class PyLabelframe(PyElement, tkinter.LabelFrame):
 	def label(self, vl): self.configure(text=vl)
 
 class PyCanvas(PyElement, tkinter.Canvas):
-	""" Similar to PyFrame, but this has more advanced features such as scrolling """
+	""" Similar to PyFrame, but allows for drawing of geometric shapes, other widgets and images """
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self)
