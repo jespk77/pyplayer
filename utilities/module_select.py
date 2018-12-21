@@ -1,0 +1,64 @@
+from ui import pywindow, pyelement
+import sys
+
+frame_width = 100
+
+"""
+	SELECTOR: Window
+		[0,0] module_options: Canvas
+			[0,0] mod_base: Labelframe
+				[l,0] mod_options: Widgets[l]
+			[1,0] mod_player: LabelFrame
+		[1,0..9] scrollx: Scrollbar
+		[0..9,1] scrolly: Scrollbar
+"""
+
+class ModuleSelector(pywindow.PyWindow):
+	def __init__(self, root, modules):
+		pywindow.PyWindow.__init__(self, root, "module_select")
+		self._modules = modules
+		self.title = "Pyplayer Modules"
+		self.column_options(0, weight=1)
+		self.row_options(0, weight=1)
+		self.center_window(width=350, height=300)
+		moptions = pyelement.PyScrollableFrame(self.frame)
+		moptions.vertical_scrollbar = True
+		moptions.frame.grid_columnconfigure(0, weight=1, minsize=100)
+		self.set_widget("module_options", moptions)
+
+		index = 0
+		for module_id, module_options in self._modules.items():
+			pt = module_options.get("platform")
+			invalid_platform = pt is not None and pt != sys.platform
+			moptions.frame.grid_rowconfigure(index, weight=1, minsize=100)
+
+			mod_frame = pyelement.PyLabelframe(moptions.frame)
+			mod_frame.label = "Module: {}".format(module_id)
+			mod_frame.grid_columnconfigure(0, weight=1)
+			mod_frame.grid(row=index, sticky="news")
+
+			mod_enable = pyelement.PyCheckbox(mod_frame)
+			mod_enable.module = module_id
+			mod_enable.checked = not invalid_platform and module_options.get("enabled", False)
+			mod_enable.accept_input = not invalid_platform and not module_options.get("required", False)
+			mod_enable.description = "Enable" if mod_enable.accept_input else ("Module required" if mod_enable.checked else "Module incompatible")
+			mod_enable.command = lambda check=mod_enable: self._module_enable(check)
+			mod_enable.grid(row=index, columnspan=2)
+
+			mod_platform = pyelement.PyTextlabel(mod_frame)
+			mod_platform.display_text = "Supported platform: " + (pt if pt else "any")
+			if invalid_platform: mod_platform.configure(foreground="red")
+			mod_platform.grid(row=index+1, columnspan=2)
+
+			mod_priority_text = pyelement.PyTextlabel(mod_frame)
+			mod_priority_text.display_text = "Command priority:"
+			mod_priority_text.grid(row=index+2)
+
+			mod_priority = pyelement.PyTextInput(mod_frame)
+			mod_priority.format_str = "0-9"
+			mod_priority.max_length = 2
+			mod_priority.grid(row=index+2, column=1)
+			index += 1
+
+	def _module_enable(self, checkbox):
+		print("module_enable", checkbox.module, checkbox.checked)
