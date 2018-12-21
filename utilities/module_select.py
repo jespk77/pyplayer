@@ -2,17 +2,6 @@ from ui import pywindow, pyelement
 import sys
 
 frame_width = 100
-
-"""
-	SELECTOR: Window
-		[0,0] module_options: Canvas
-			[0,0] mod_base: Labelframe
-				[l,0] mod_options: Widgets[l]
-			[1,0] mod_player: LabelFrame
-		[1,0..9] scrollx: Scrollbar
-		[0..9,1] scrolly: Scrollbar
-"""
-
 class ModuleSelector(pywindow.PyWindow):
 	def __init__(self, root, modules):
 		pywindow.PyWindow.__init__(self, root, "module_select")
@@ -30,7 +19,7 @@ class ModuleSelector(pywindow.PyWindow):
 		for module_id, module_options in self._modules.items():
 			pt = module_options.get("platform")
 			invalid_platform = pt is not None and pt != sys.platform
-			moptions.frame.grid_rowconfigure(index, weight=1, minsize=100)
+			moptions.frame.grid_rowconfigure(index, weight=1, minsize=85)
 
 			mod_frame = pyelement.PyLabelframe(moptions.frame)
 			mod_frame.label = "Module: {}".format(module_id)
@@ -57,8 +46,14 @@ class ModuleSelector(pywindow.PyWindow):
 			mod_priority = pyelement.PyTextInput(mod_frame)
 			mod_priority.format_str = "0-9"
 			mod_priority.max_length = 2
+			mod_priority.value = module_options.get("priority", "")
+			mod_priority.command = lambda field=mod_priority: self._module_priority(field)
 			mod_priority.grid(row=index+2, column=1)
 			index += 1
+		self.frame.focus_set()
 
 	def _module_enable(self, checkbox):
 		print("module_enable", checkbox.module, checkbox.checked)
+
+	def _module_priority(self, field):
+		print("module_priority", field.value)
