@@ -14,7 +14,12 @@ def process_command(cmd, stdin=None, stdout=None, stderr=None, timeout=None):
 	 	Returns the finished process when termated """
 	if stderr is None: stderr = stdout
 	import subprocess
-	pc = subprocess.Popen(cmd.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	if "win" in sys.platform:
+		pi = subprocess.STARTUPINFO()
+		pi.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+	else: pi = None
+
+	pc = subprocess.Popen(cmd.split(" "), startupinfo=pi, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	while pc.returncode is None:
 		try:
 			out, err = pc.communicate(stdin, timeout=1)
@@ -47,23 +52,11 @@ class PySplashWindow(pywindow.RootPyWindow):
 		self._platform = sys.platform
 		self.after(1, self._update_program)
 
-	def _load_cache(self):
-		try:
-			with open(program_cache_file, "r") as file:
-				import json
-				try: self._cache = json.load(file)
-				except json.JSONDecodeError: pass
-		except FileNotFoundError: pass
-
 	def _update_program(self):
 		if "no_update" not in sys.argv:
 			print("INFO", "Doing an update check!")
 			self.status_text = "Checking for updates..."
-			pc = process_command("git pull", stdout=self._git_status)
-			if pc.returncode:
-				print("INFO", "Cannot update directly, trying to do a hard reset")
-				process_command("git reset --hard")
-				pc = process_command("git pull", stdout=self._git_status)
+			pc = process_command("git pull -s recursive -Xtheirs", stdout=self._git_status)
 
 			if pc.returncode:
 				self.status_text = "Failed to update PyPlayer, continuing in 5 seconds or click to close..."
@@ -75,14 +68,18 @@ class PySplashWindow(pywindow.RootPyWindow):
 			self.after(1, self._load_modules, False)
 
 	def _git_status(self, out):
-		self.status_text = out
+		out = out.split("\n")
+		if len(out) > 1:
+			for o in out:
+				if o.startswith("Updating"): self.status_text = o; break
+		elif len(out) == 1: self.status_text = out[0]
 		self.window.update_idletasks()
 
 	def git_hash(self, out):
-		hash = self.get_or_create("hash", "")
+		hash = self.get_or_create("hash", "none")
 		out = out.rstrip("\n")
 		if hash != out:
-			print("INFO", "Git hash updated: '{}', checking dependencies".format(out))
+			print("INFO", "Git hash updated from '{}' to '{}', checking dependencies".format(hash, out))
 			self["hash"] = out
 			self.after(1, self._load_modules)
 		else:

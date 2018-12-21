@@ -123,19 +123,6 @@ class BaseWindow:
 		self.widgets[id].grid(row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 		return self.widgets[id]
 
-	def add_widget(self, id, widget, initial_cfg=None, disable_packing=False, **pack_args):
-		"""  [DEPRECATED, use 'set_widget' instead]
-			Add new 'pyelement' widget to this window using passed (unique) identifier, add all needed pack parameters for this widget to the end
-		 	(any widget already assigned to this identifier will be destroyed)
-		 	Returns the bound widget if successful, False otherwise"""
-		raise DeprecationWarning("This operation is deprecated, use 'set_widget' instead")
-
-	def remove_widget(self, id):
-		""" [DEPRECATED, widgets cannot be removed while the window is open]
-			Destroy and removes widget that was assigned to the passed identifier (has no effect if identifier was not bound)
-		 	Returns true if the identifier was bound and the widget has been removed """
-		raise DeprecationWarning("This operation is deprecated, widgets can no longer be removed from window")
-
 	def open_window(self, id, window):
 		""" Adds new child window to this window using passed (unique) identifier
 		 	(any window already assigned to this identifier will be destroyed)

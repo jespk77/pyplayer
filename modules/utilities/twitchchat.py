@@ -5,7 +5,7 @@ from ui import pyelement
 from utilities import history
 
 import re, threading, time, datetime
-import io, socket, requests, random
+import socket, requests, random
 import os, json
 
 re_emote_translation = {
@@ -70,24 +70,26 @@ class IRCClient(threading.Thread):
 			except UnicodeDecodeError: pass
 			except Exception as e: print("ERROR", "receiving from IRC socket:", e)
 		self.message_queue.put_nowait(False)
-		self.socket.close()
+		if self.socket: self.socket.close()
+
+
+chat_server = "irc.chat.twitch.tv"
+chat_port = 6667
+twitch_badge_url = "https://api.twitch.tv/kraken/chat/{channel}/badges?client_id={client_id}"
+channel_badge_url = "https://badges.twitch.tv/v1/badges/channels/{channel_id}/display"
+twitch_emote_url = "http://static-cdn.jtvnw.net/emoticons/v1/{emote_id}/1.0"
+token_url = "https://id.twitch.tv/oauth2/authorize?client_id={client_id}&redirect_uri=http://localhost&response_type=token&scope=user_subscriptions"
+bit_url = "https://api.twitch.tv/kraken/bits/actions?api_version=5&client_id={client_id}&channel_id={channel_id}"
+bit_format = re.compile(r"(.+?)([0-9]+)")
+bttv_emote_list = "https://api.betterttv.net/2/emotes"
+bttv_emote_url = "https://cdn.betterttv.net/emote/{id}/1x"
+bttv_padx_emotes = ["SantaHat", "IceCold", "CandyCane", "ReinDeer", "TopHat", "SoSnowy"]
+
+emote_cache_folder = "twitch/emotecache"
+emotemap_cache_file = "twitch/emotemap_cache"
+emotemap_url = "https://api.twitch.tv/kraken/users/{user}/emotes"
 
 class TwitchChat(pyelement.PyTextfield):
-	chat_server = "irc.chat.twitch.tv"
-	chat_port = 6667
-	twitch_badge_url = "https://api.twitch.tv/kraken/chat/{channel}/badges?client_id={client_id}"
-	channel_badge_url = "https://badges.twitch.tv/v1/badges/channels/{channel_id}/display"
-	twitch_emote_url = "http://static-cdn.jtvnw.net/emoticons/v1/{emote_id}/1.0"
-	token_url = "https://id.twitch.tv/oauth2/authorize?client_id={client_id}&redirect_uri=http://localhost&response_type=token&scope=user_subscriptions"
-	bit_url = "https://api.twitch.tv/kraken/bits/actions?api_version=5&client_id={client_id}&channel_id={channel_id}"
-	bit_format = re.compile(r"(.+?)([0-9]+)")
-	bttv_emote_list = "https://api.betterttv.net/2/emotes"
-	bttv_emote_url = "https://cdn.betterttv.net/emote/{id}/1x"
-
-	emote_cache_folder = "twitch/emotecache"
-	emotemap_cache_file = "twitch/emotemap_cache"
-	emotemap_url = "https://api.twitch.tv/kraken/users/{user}/emotes"
-
 	def __init__(self, master, limited_mode=False):
 		pyelement.PyTextfield.__init__(self, master)
 		self._callback = None
@@ -108,9 +110,10 @@ class TwitchChat(pyelement.PyTextfield):
 
 		self._message_queue = Queue()
 		self.configure(cursor="left_ptr", wrap="word", spacing1=3, padx=5)
+		self.tag_configure("wide_line", offset=5)
 		self.bind("<End>", self.adjust_scroll).bind("<Enter>&&<Leave>", self.set_scroll)
 		self.update_time()
-		if not os.path.isdir(self.emote_cache_folder): os.mkdir(self.emote_cache_folder)
+		if not os.path.isdir(emote_cache_folder): os.mkdir(emote_cache_folder)
 
 	@property
 	def command_callback(self): return self._callback
@@ -135,7 +138,7 @@ class TwitchChat(pyelement.PyTextfield):
 			if isinstance(login, dict):
 				self._channel_meta = channel_meta
 				self._irc_client = IRCClient(self._message_queue, extra_info=True)
-				self._irc_client.start_client(TwitchChat.chat_server, TwitchChat.chat_port, login["username"], login["oauth"], self._channel_meta["name"])
+				self._irc_client.start_client(chat_server, chat_port, login["username"], login["oauth"], self._channel_meta["name"])
 
 				self._load_badges(login)
 				self._load_local_emote()
@@ -157,16 +160,17 @@ class TwitchChat(pyelement.PyTextfield):
 	# ===== BUILT-IN HELPER METHODS =====
 	# === BTTV emote support ===
 	def _load_bttv(self):
-		u = requests.get(self.bttv_emote_list).json()
+		u = requests.get(bttv_emote_list).json()
+		allow_gif = self.window.get_or_create("allow_gif", True)
 		for emote in u["emotes"]:
-			if emote["imageType"] != "gif": self._bttv_emotecache[emote["code"]] = emote["id"]
+			if emote["imageType"] != "gif" or allow_gif: self._bttv_emotecache[emote["code"]] = emote["id"]
 
 	def _get_bttv_emote(self, name):
 		img = self._bttv_emotecache.get(name)
 		if img is None: return None
 
 		if isinstance(img, str):
-			try: self._bttv_emotecache[name] = pyelement.PyImage(url=self.bttv_emote_url.format(id=img))
+			try: self._bttv_emotecache[name] = pyelement.PyImage(url=bttv_emote_url.format(id=img))
 			except Exception as e:
 				print("ERROR", "Cannot load bttv emote '{}':".format(name), e)
 				del self._bttv_emotecache[name]
@@ -175,7 +179,7 @@ class TwitchChat(pyelement.PyTextfield):
 
 	# === Bit support ===
 	def _load_bits(self, login):
-		bit_motes = requests.get(self.bit_url.format(client_id=login["client-id"],channel_id=self._channel_meta["_id"])).json()
+		bit_motes = requests.get(bit_url.format(client_id=login["client-id"],channel_id=self._channel_meta["_id"])).json()
 		self.tag_configure("cheer1", font=self.bold_font, foreground="gray")
 		self.tag_configure("cheer100", font=self.bold_font, foreground="purple")
 		self.tag_configure("cheer1000", font=self.bold_font, foreground="cyan")
@@ -209,7 +213,7 @@ class TwitchChat(pyelement.PyTextfield):
 
 	# === MULTI TIERED SUBSCRIPTION + DEFAULT BADGE SUPPORT ===
 	def _load_badges(self, login):
-		badges = requests.get(self.twitch_badge_url.format(channel=self._channel_meta["name"], client_id=login["client-id"])).json()
+		badges = requests.get(twitch_badge_url.format(channel=self._channel_meta["name"], client_id=login["client-id"])).json()
 		self._badgecache["global_mod"] = badges["global_mod"]["alpha"]
 		self._badgecache["admin"] = badges["admin"]["alpha"]
 		self._badgecache["broadcaster"] = badges["broadcaster"]["alpha"]
@@ -217,7 +221,7 @@ class TwitchChat(pyelement.PyTextfield):
 		self._badgecache["moderator"] = badges["mod"]["alpha"]
 
 		if self._channel_meta["partner"]:
-			badges = requests.get(self.channel_badge_url.format(channel_id=self._channel_meta["_id"])).json()
+			badges = requests.get(channel_badge_url.format(channel_id=self._channel_meta["_id"])).json()
 			badge_set = badges["badge_sets"]
 			if "subscriber" in badge_set:
 				self._versioned_badges.append("subscriber")
@@ -245,7 +249,7 @@ class TwitchChat(pyelement.PyTextfield):
 		except: pass
 
 	def _load_emote(self, emote_id):
-		file = self.emote_cache_folder + "/" + emote_id + ".bin"
+		file = emote_cache_folder + "/" + emote_id + ".bin"
 		if os.path.isfile(file):
 			try:
 				img = pyelement.PyImage(file=file)
@@ -253,7 +257,7 @@ class TwitchChat(pyelement.PyTextfield):
 				return img
 			except Exception as e: print("ERROR", "Getting emote", emote_id, "from cache:", e)
 
-		url = self.twitch_emote_url.format(emote_id=emote_id)
+		url = twitch_emote_url.format(emote_id=emote_id)
 		try: img = pyelement.PyImage(url=url)
 		except Exception as e:
 			print("ERROR", "Getting emote", emote_id, "from url:", e)
@@ -276,16 +280,16 @@ class TwitchChat(pyelement.PyTextfield):
 	@property
 	def emotemap_cache(self): return self._emotenamecache
 	def _load_emotemap(self, login):
-		if os.path.isfile(self.emotemap_cache_file) and time.time() - os.path.getmtime(self.emotemap_cache_file) < 86400:
+		if os.path.isfile(emotemap_cache_file) and time.time() - os.path.getmtime(emotemap_cache_file) < 86400:
 			try:
-				jfile = open(self.emotemap_cache_file, "r")
+				jfile = open(emotemap_cache_file, "r")
 				self._emotenamecache = json.load(jfile)
 				jfile.close()
 				return
 			except Exception as e: print("ERROR", "Parsing previously written emote name cache:", e)
 
 		try:
-			emote_map = requests.get(self.emotemap_url.format(user=login["username"]), headers={"Client-ID": login["client-id"], "Authorization": "OAuth " + login["access-token"]}).json()
+			emote_map = requests.get(emotemap_url.format(user=login["username"]), headers={"Client-ID": login["client-id"], "Authorization": "OAuth " + login["access-token"]}).json()
 			if "error" in emote_map: raise ConnectionError(emote_map["message"])
 
 			for set, emotes in emote_map["emoticon_sets"].items():
@@ -293,7 +297,7 @@ class TwitchChat(pyelement.PyTextfield):
 					if emote["code"] in re_emote_translation: self._emotenamecache[re_emote_translation[emote["code"]]] = str(emote["id"])
 					else: self._emotenamecache[emote["code"]] = str(emote["id"])
 
-			jfile = open(self.emotemap_cache_file, "w")
+			jfile = open(emotemap_cache_file, "w")
 			json.dump(self._emotenamecache, jfile)
 			jfile.close()
 		except Exception as e:
@@ -375,28 +379,33 @@ class TwitchChat(pyelement.PyTextfield):
 				if callable(self._callback): self._callback(self.window["chat_triggers"][word])
 
 			if word in emote_map:
-				try: self.image_create(index="end", image=self._emotecache[emote_map[word]])
+				try: self.image_create(index="end", image=self._emotecache[emote_map[word]], align="bottom")
 				except Exception as e: print("ERROR", "Creating emote for word '{}' from id:".format(word), e)
 				continue
 
 			elif emote and word in self._emotenamecache:
 				if not self._emotenamecache[word] in self._emotecache: self._load_emote(self._emotenamecache[word])
-				try: self.image_create(index="end", image=self._emotecache[self._emotenamecache[word]])
+				try: self.image_create(index="end", image=self._emotecache[self._emotenamecache[word]], align="bottom")
 				except Exception as e: print("ERROR", "Creating emote for word '{}' from name: ", e)
 				continue
 
 			elif bits:
-				bit = self.bit_format.findall(word)
+				bit = bit_format.findall(word)
 				if len(bit) > 0:
 					try:
 						im = self._get_bit_emote(name=bit[0][0], amount=bit[0][1])
 						self.image_create("end", image=im[1])
 						self.insert("end", str(bit[0][1]), "cheer"+str(im[0]))
-					except: self.insert("end", "".join(bit))
+					except: self.insert("end", "".join(["".join(str(b)) for b in bit]))
 					continue
 
 			elif word in self._bttv_emotecache:
-				try: self.image_create("end", image=self._get_bttv_emote(word))
+				try:
+					if word in bttv_padx_emotes:
+						self.image_create("end", name="emote", image=self._get_bttv_emote(word), padx=-29)
+						self.tag_add("wide_line", "emote")
+						self.insert("end", "        ")
+					else: self.image_create("end", image=self._get_bttv_emote(word))
 				except Exception as e: print("ERROR", "Error creating image for bttv emote '{}':".format(word), e)
 				continue
 
@@ -421,8 +430,9 @@ class TwitchChat(pyelement.PyTextfield):
 		elif type == "sub": text = meta["display-name"] + " subscribed"
 		elif type == "subgift":
 			text = meta["display-name"] + " gifted a subscription to " + meta["msg-param-recipient-display-name"]
-			amt = meta.get("msg-param-sender-count", 0)
-			if amt > "0": text += "({} total)".format(meta["msg-param-sender-count"])
+			amt = meta.get("msg-param-sender-count", "0")
+			if amt > "0": text += " ({} total)".format(meta["msg-param-sender-count"])
+		elif type == "charity": return self.on_charity(meta, data)
 		else: return
 
 		if meta["msg-param-sub-plan"] == "Prime": level = " with Prime"
@@ -430,8 +440,10 @@ class TwitchChat(pyelement.PyTextfield):
 		elif meta["msg-param-sub-plan"] == "2000": level = " at tier 2"
 		else: level = " at tier 3"
 		self.insert("end", "\n" + text + level, ("notice",))
-		self.configure(state="disabled")
 		if len(data) > 0: self.on_privmsg(meta, data)
+
+	def on_charity(self, meta, data):
+		self.insert("end", "${:,} raised for {} so far! {} days left".format(meta["msg-param-total"], meta["msg-param-charity-name"], meta["msg-param-charity-days-remaining"]), ("notice",))
 
 	def on_notice(self, meta, data):
 		self.insert("end", "\n" + data, ("notice",))
