@@ -117,6 +117,10 @@ class PyFrame(PyElement, tkinter.Frame):
 		check_master(master)
 		PyElement.__init__(self)
 		tkinter.Frame.__init__(self, master)
+
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.Frame.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
+
 	@property
 	def _supports_children(self): return True
 
@@ -156,7 +160,6 @@ class PyScrollableFrame(PyFrame):
 	@vertical_scrollbar.setter
 	def vertical_scrollbar(self, vl):
 		if vl and not self.vertical_scrollbar:
-			import sys
 			self._scrolly = PyScrollbar(self)
 			self._scrolly.configure(orient="vertical", command=self._canvas.yview)
 			self._canvas.configure(yscrollcommand=self._scrolly.set)
@@ -168,6 +171,9 @@ class PyLabelframe(PyElement, tkinter.LabelFrame):
 		check_master(master)
 		PyElement.__init__(self)
 		tkinter.LabelFrame.__init__(self, master)
+
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.LabelFrame.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 	@property
 	def _supports_children(self): return True
 
@@ -182,6 +188,9 @@ class PyCanvas(PyElement, tkinter.Canvas):
 		check_master(master)
 		PyElement.__init__(self)
 		tkinter.Canvas.__init__(self, master)
+
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.Canvas.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 	@property
 	def _supports_children(self): return True
 
@@ -194,6 +203,9 @@ class PyTextlabel(PyElement, tkinter.Label):
 		PyElement.__init__(self)
 		tkinter.Label.__init__(self, master)
 		self._string_var = None
+
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.Label.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 
 	@property
 	def display_text(self):
@@ -215,6 +227,9 @@ class PyTextInput(PyElement, tkinter.Entry):
 		self._strvar = tkinter.StringVar()
 		self._input_cmd = self.register(self._on_input_key)
 		self.configure(textvariable=self._strvar, validate="key", validatecommand=(self._input_cmd, "%P"))
+
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.Entry.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 
 	@property
 	def accept_input(self): return self.cget("state") == "disabled"
@@ -251,9 +266,13 @@ class PyCheckbox(PyElement, tkinter.Checkbutton):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self)
+		tkinter.Checkbutton.__init__(self, master)
 		self._value = tkinter.IntVar()
 		self._desc = tkinter.StringVar()
-		tkinter.Checkbutton.__init__(self, master, variable=self._value, textvariable=self._desc)
+		self.configure(variable=self._value, textvariable=self._desc)
+
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.Checkbutton.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 
 	@property
 	def description(self): return self._desc.get()
@@ -293,6 +312,9 @@ class PyButton(PyElement, tkinter.Button):
 		self._string_var = None
 		self._callback = None
 		self._image = None
+
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.Button.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 
 	@property
 	def accept_input(self): return self.cget("state") == "normal"
@@ -347,6 +369,9 @@ class PyTextfield(PyElement, tkinter.Text):
 		self.configure(font=self._font)
 		self._accept_input = True
 		self._boldfont = None
+
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.Text.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 
 	@property
 	def accept_input(self): return self._accept_input
@@ -435,6 +460,9 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 		ttk.Progressbar.__init__(self, master)
 		self.configure(mode="determinate", variable=self._progress_var)
 
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		ttk.Progressbar.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
+
 	@property
 	def progress(self, actual=True):
 		""" Gets the current progress of the bar
@@ -477,6 +505,9 @@ class PyScrollbar(PyElement, tkinter.Scrollbar):
 		PyElement.__init__(self)
 		tkinter.Scrollbar.__init__(self, master)
 
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.Scrollbar.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
+
 	@property
 	def scrollcommand(self): return
 	@scrollcommand.setter
@@ -491,6 +522,9 @@ class PyItemlist(PyElement, tkinter.Listbox):
 		self.list_var = None
 		self._items = None
 		self._font = None
+
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.Listbox.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 
 	def _load_configuration(self):
 		PyElement._load_configuration(self)
