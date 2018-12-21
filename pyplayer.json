@@ -37,7 +37,7 @@
       "dependencies": ["requests"],
       "platform": null,
       "priority": 5,
-      "required": true
+      "required": false
     }, "youtube": {
       "enabled": true,
       "dependencies": ["beautifulsoup4","requests","youtube_dl"],
