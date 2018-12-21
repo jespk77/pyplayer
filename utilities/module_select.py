@@ -22,11 +22,13 @@ class ModuleSelector(pywindow.PyWindow):
 			moptions.frame.grid_rowconfigure(index, weight=1, minsize=85)
 
 			mod_frame = pyelement.PyLabelframe(moptions.frame)
+			mod_frame.set_configuration()
 			mod_frame.label = "Module: {}".format(module_id)
 			mod_frame.grid_columnconfigure(0, weight=1)
 			mod_frame.grid(row=index, sticky="news")
 
 			mod_enable = pyelement.PyCheckbox(mod_frame)
+			mod_enable.set_configuration()
 			mod_enable.module = module_id
 			mod_enable.checked = not invalid_platform and module_options.get("enabled", False)
 			mod_enable.accept_input = not invalid_platform and not module_options.get("required", False)
@@ -35,15 +37,19 @@ class ModuleSelector(pywindow.PyWindow):
 			mod_enable.grid(row=index, columnspan=2)
 
 			mod_platform = pyelement.PyTextlabel(mod_frame)
+			mod_platform.set_configuration()
 			mod_platform.display_text = "Supported platform: " + (pt if pt else "any")
 			if invalid_platform: mod_platform.configure(foreground="red")
 			mod_platform.grid(row=index+1, columnspan=2)
 
 			mod_priority_text = pyelement.PyTextlabel(mod_frame)
+			mod_priority_text.set_configuration()
 			mod_priority_text.display_text = "Command priority:"
 			mod_priority_text.grid(row=index+2)
 
 			mod_priority = pyelement.PyTextInput(mod_frame)
+			mod_priority.set_configuration()
+			mod_priority.module = module_id
 			mod_priority.format_str = "0-9"
 			mod_priority.max_length = 2
 			mod_priority.value = module_options.get("priority", "")
@@ -53,7 +59,11 @@ class ModuleSelector(pywindow.PyWindow):
 		self.frame.focus_set()
 
 	def _module_enable(self, checkbox):
-		print("module_enable", checkbox.module, checkbox.checked)
+		print("INFO", "Module '{}' was".format(checkbox.module), "enabled" if checkbox.checked else "disbled")
+		try: self._modules[checkbox.module]["enabled"] = checkbox.checked
+		except KeyError: print("WARNING", "Module '{}' was not found in the module list!".format(checkbox.module))
 
 	def _module_priority(self, field):
 		print("module_priority", field.value)
+		try: self._modules[field.module]["priority"] = int(field.value)
+		except KeyError: print("WARNING", "Module '{}' was not found in the module list!".format(field.module))
