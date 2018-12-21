@@ -11,12 +11,21 @@ def scroll_event():
 	import sys
 	return "<MouseWheel>" if "win" in sys.platform else "<Button-4>&&<Button-5>"
 
+# PREDEFINED DEFAULT COLORS USED IN ELEMENT CONFIGURATIONS
+background_color = "gray15"
+foreground_color = "white"
+disabled_color = "gray75"
+highlight_color = "cyan"
+sel_background_color = "gray"
+sel_foreground_color = "white"
+
 class PyElement:
 	""" Framework for elements that can be parented from other pyelements, should not be created on its own """
 	block_action = "break"
 
-	def __init__(self, id="<???>"):
-		self._configuration = {}
+	def __init__(self, id="<???>", initial_cfg=None):
+		if not initial_cfg: initial_cfg = {}
+		self._configuration = initial_cfg
 		self._dirty = False
 		self._boundids = {}
 		self.id = id
@@ -115,11 +124,12 @@ class PyElement:
 	The window the frame is currently in can be accessed with the 'window' attribute (is None if not placed on a window)
 """
 # === ELEMENT CONTAINERS ===
+frame_cfg = { "background": background_color }
 class PyFrame(PyElement, tkinter.Frame):
 	""" Use as container for a collection of elements, parameter 'master' must be another pyelement """
 	def __init__(self, master):
 		check_master(master)
-		PyElement.__init__(self)
+		PyElement.__init__(self, initial_cfg=frame_cfg)
 		tkinter.Frame.__init__(self, master)
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
@@ -171,11 +181,13 @@ class PyScrollableFrame(PyFrame):
 			self._canvas.configure(yscrollcommand=self._scrolly.set)
 			self._scrolly.grid(row=0, column=1, sticky="ns")
 
+element_cfg = { "foreground": foreground_color }
+element_cfg.update(frame_cfg)
 class PyLabelframe(PyElement, tkinter.LabelFrame):
 	""" Same as PyFrame but has an outline around it and can add label at the top of the frame """
 	def __init__(self, master):
 		check_master(master)
-		PyElement.__init__(self)
+		PyElement.__init__(self, initial_cfg=element_cfg)
 		tkinter.LabelFrame.__init__(self, master)
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
@@ -188,11 +200,13 @@ class PyLabelframe(PyElement, tkinter.LabelFrame):
 	@label.setter
 	def label(self, vl): self.configure(text=vl)
 
+canvas_cfg = { "highlightthickness": 0 }
+canvas_cfg.update(frame_cfg)
 class PyCanvas(PyElement, tkinter.Canvas):
 	""" Similar to PyFrame, but allows for drawing of geometric shapes, other widgets and images """
 	def __init__(self, master):
 		check_master(master)
-		PyElement.__init__(self)
+		PyElement.__init__(self, initial_cfg=canvas_cfg)
 		tkinter.Canvas.__init__(self, master)
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
@@ -201,12 +215,11 @@ class PyCanvas(PyElement, tkinter.Canvas):
 	def _supports_children(self): return True
 
 # === ELEMENT ITEMS ===
-
 class PyTextlabel(PyElement, tkinter.Label):
 	""" Element for displaying a line of text """
 	def __init__(self, master):
 		check_master(master)
-		PyElement.__init__(self)
+		PyElement.__init__(self, initial_cfg=element_cfg)
 		tkinter.Label.__init__(self, master)
 		self._string_var = None
 
@@ -223,6 +236,8 @@ class PyTextlabel(PyElement, tkinter.Label):
 			self.configure(textvariable=self._string_var)
 		self._string_var.set(value)
 
+input_cfg = { "insertbackground": foreground_color, "selectforeground": sel_foreground_color, "selectbackground": sel_background_color }
+input_cfg.update(element_cfg)
 class PyTextInput(PyElement, tkinter.Entry):
 	def __init__(self, master):
 		check_master(master)
@@ -288,10 +303,12 @@ class PyTextInput(PyElement, tkinter.Entry):
 	def _on_input_key(self, entry):
 		return self._input_length > 0 and len(entry) <= self._input_length and (not self._format_str or not self._format_str.search(entry))
 
+checkbox_cfg = { "activebackground": background_color, "activeforeground": foreground_color, "selectcolor": background_color }
+checkbox_cfg.update(element_cfg)
 class PyCheckbox(PyElement, tkinter.Checkbutton):
 	def __init__(self, master):
 		check_master(master)
-		PyElement.__init__(self)
+		PyElement.__init__(self, initial_cfg=checkbox_cfg)
 		tkinter.Checkbutton.__init__(self, master)
 		self._value = tkinter.IntVar()
 		self._desc = tkinter.StringVar()
@@ -333,7 +350,7 @@ class PyButton(PyElement, tkinter.Button):
 	""" Element to create a clickable button  """
 	def __init__(self, master):
 		check_master(master)
-		PyElement.__init__(self)
+		PyElement.__init__(self, initial_cfg=checkbox_cfg)
 		tkinter.Button.__init__(self, master)
 		self._string_var = None
 		self._callback = None
@@ -388,7 +405,7 @@ class PyTextfield(PyElement, tkinter.Text):
 
 	def __init__(self, master):
 		check_master(master)
-		PyElement.__init__(self)
+		PyElement.__init__(self, initial_cfg=input_cfg)
 		tkinter.Text.__init__(self, master)
 
 		self._font = font.Font(family="segoeui", size="11")
@@ -475,6 +492,7 @@ class PyTextfield(PyElement, tkinter.Text):
 		else: PyElement.__setitem__(self, key, value)
 		if dirty: self.mark_dirty()
 
+progress_cfg = { "background": "cyan", "troughcolor": background_color }
 class PyProgressbar(PyElement, ttk.Progressbar):
 	""" Widget that displays a bar indicating progress made by the application """
 	def __init__(self, master):
@@ -482,7 +500,7 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 		self._progress_var = tkinter.IntVar()
 		self._style = ttk.Style()
 		self._horizontal = True
-		PyElement.__init__(self)
+		PyElement.__init__(self, initial_cfg=progress_cfg)
 		ttk.Progressbar.__init__(self, master)
 		self.configure(mode="determinate", variable=self._progress_var)
 
@@ -539,11 +557,13 @@ class PyScrollbar(PyElement, tkinter.Scrollbar):
 	@scrollcommand.setter
 	def scrollcommand(self, value): self.configure(command=value)
 
+list_cfg = { "selectbackground": background_color, "selectforeground": highlight_color }
+list_cfg.update(element_cfg)
 class PyItemlist(PyElement, tkinter.Listbox):
 	""" A list of options where the user can select one or more lines """
 	def __init__(self, master):
 		check_master(master)
-		PyElement.__init__(self)
+		PyElement.__init__(self, initial_cfg=list_cfg)
 		tkinter.Listbox.__init__(self, master, selectmode="single")
 		self.list_var = None
 		self._items = None
@@ -582,7 +602,6 @@ class PyItemlist(PyElement, tkinter.Listbox):
 
 		self._items = value
 		self.list_var.set(self._items)
-
 
 try:
 	from PIL import Image, ImageTk
