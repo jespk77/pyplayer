@@ -231,6 +231,7 @@ class PyTextInput(PyElement, tkinter.Entry):
 		self._format_str = None
 		self._input_length = 0
 		self._strvar = tkinter.StringVar()
+		self._cmd = None
 		self._input_cmd = self.register(self._on_input_key)
 		self.configure(textvariable=self._strvar, validate="key", validatecommand=(self._input_cmd, "%P"))
 
@@ -240,7 +241,9 @@ class PyTextInput(PyElement, tkinter.Entry):
 	@property
 	def accept_input(self): return self.cget("state") == "disabled"
 	@accept_input.setter
-	def accept_input(self, vl): self.configure(state="normal" if vl else "disabled")
+	def accept_input(self, vl):
+		""" Control whether the current input value can be adjusted """
+		self.configure(state="normal" if vl else "disabled")
 
 	@property
 	def format_str(self): return self._format_str if self._format_str else ""
@@ -250,12 +253,26 @@ class PyTextInput(PyElement, tkinter.Entry):
 		if fs:
 			import re
 			self._format_str = re.compile("[^{}]".format(fs))
+			self.value = self._format_str.sub(self.value, "")
 		else: self._format_str = None
+
+	@property
+	def command(self): return self._cmd
+	@command.setter
+	def command(self, vl):
+		""" Gets called whenever the input value is updated by the user """
+		if vl:
+			if not callable(vl): raise TypeError("Command callback for 'PyTextInput' must be callable or None!")
+			self._cmd = self._strvar.trace_add("write", lambda *args: vl())
+		else:
+			self._strvar.trace_remove("write", self._cmd)
+			self._cmd = None
 
 	@property
 	def value(self): return self._strvar.get()
 	@value.setter
 	def value(self, vl):
+		""" Current value currently set for this input field """
 		vl = str(vl)
 		if vl and not self._on_input_key(vl): raise ValueError("Cannot set value; contains non-allowed characters")
 		self._strvar.set(vl)
@@ -264,12 +281,12 @@ class PyTextInput(PyElement, tkinter.Entry):
 	def max_length(self): return self._input_length
 	@max_length.setter
 	def max_length(self, ln):
+		""" Character limit for this input field, when this limit is reached, no more characters can be entered; set to 0 to disable limit """
 		self._input_length = ln
 		self.configure(width=self._input_length*10)
 
 	def _on_input_key(self, entry):
-		if not self._format_str: return True
-		return self._input_length > 0 and len(entry) <= self._input_length and not self._format_str.search(entry)
+		return self._input_length > 0 and len(entry) <= self._input_length and (not self._format_str or not self._format_str.search(entry))
 
 class PyCheckbox(PyElement, tkinter.Checkbutton):
 	def __init__(self, master):
