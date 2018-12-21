@@ -292,7 +292,7 @@ class PyCheckbox(PyElement, tkinter.Checkbutton):
 	def checked(self, check): self._value.set(check)
 
 	@property
-	def accept_input(self): return self.cget("state") == "normal"
+	def accept_input(self): return self.cget("state") != "disabled"
 	@accept_input.setter
 	def accept_input(self, vl): self.configure(state="normal" if vl else "disabled")
 
