@@ -70,6 +70,8 @@ class PyElement:
 		if self._master_cfg: self._dirty = True
 
 	def _load_configuration(self): self.configure(**self._configuration)
+	# dirty workaround; TODO create a way to add widgets to other widgets (if supported), similar to windows
+	set_configuration = _load_configuration
 
 	def __setitem__(self, key, value):
 		""" Update configuration item for this element """
