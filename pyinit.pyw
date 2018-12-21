@@ -68,7 +68,11 @@ class PySplashWindow(pywindow.RootPyWindow):
 			self.after(1, self._load_modules, False)
 
 	def _git_status(self, out):
-		self.status_text = out
+		out = out.split("\n")
+		if len(out) > 1:
+			for o in out:
+				if o.startswith("Updating"): self.status_text = o; break
+		elif len(out) == 1: self.status_text = out[0]
 		self.window.update_idletasks()
 
 	def git_hash(self, out):
