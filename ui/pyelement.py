@@ -7,6 +7,10 @@ def check_master(master):
 	if not isinstance(master, tkinter.Wm) and isinstance(master, PyElement) and not master._supports_children:
 		raise TypeError("'{.__name__}' cannot contain additional widgets".format(type(master)))
 
+def scroll_event():
+	import sys
+	return "<MouseWheel>" if "win" in sys.platform else "<Button-4>&&<Button-5>"
+
 class PyElement:
 	""" Framework for elements that can be parented from other pyelements, should not be created on its own """
 	block_action = "break"
@@ -133,6 +137,8 @@ class PyScrollableFrame(PyFrame):
 		self._content = PyFrame(self._canvas)
 		self.grid_rowconfigure(0, weight=1)
 		self.grid_columnconfigure(0, weight=1)
+
+		self._content.bind_all(scroll_event(), lambda e: self._canvas.yview_scroll(-(e.delta//100), "units"))
 		self._content.bind("<Configure>", self._update_scrollregion, add=True)
 		self._canvas.bind("<Configure>", self._update_width, add=True)
 		self._canvas.grid(row=0, column=0, sticky="news")
@@ -141,8 +147,8 @@ class PyScrollableFrame(PyFrame):
 
 	@property
 	def frame(self): return self._content
-	def _update_width(self, event): self._canvas.itemconfigure("content_frame", width=event.width)
-	def _update_scrollregion(self, event): self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+	def _update_width(self, event): self._canvas.itemconfigure("content_frame", width=event.width-1)
+	def _update_scrollregion(self, event=None): self._canvas.configure(scrollregion=self._canvas.bbox("all"))
 
 	@property
 	def horizontal_scrollbar(self): return self._scrollx is not None
@@ -250,13 +256,16 @@ class PyTextInput(PyElement, tkinter.Entry):
 	def value(self): return self._strvar.get()
 	@value.setter
 	def value(self, vl):
+		vl = str(vl)
 		if vl and not self._on_input_key(vl): raise ValueError("Cannot set value; contains non-allowed characters")
 		self._strvar.set(vl)
 
 	@property
 	def max_length(self): return self._input_length
 	@max_length.setter
-	def max_length(self, ln): self._input_length = ln
+	def max_length(self, ln):
+		self._input_length = ln
+		self.configure(width=self._input_length*10)
 
 	def _on_input_key(self, entry):
 		if not self._format_str: return True
