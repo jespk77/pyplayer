@@ -106,7 +106,6 @@ class BaseWindow:
 		wd = self.widgets.get(id)
 		if wd is not None:
 			print("INFO", "Removing existing widget bound to id")
-			wd.destroy()
 			del self.widgets[id]
 		if widget is None: return None
 		elif not isinstance(widget, pyelement.PyElement): raise TypeError("Can only create widgets from 'PyElement' instances, not from '{}'".format(type(widget).__name__))
