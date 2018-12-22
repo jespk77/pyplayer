@@ -443,7 +443,8 @@ class TwitchChat(pyelement.PyTextfield):
 		if len(data) > 0: self.on_privmsg(meta, data)
 
 	def on_charity(self, meta, data):
-		self.insert("end", "${:,} raised for {} so far! {} days left".format(int(meta["msg-param-total"]), meta["msg-param-charity-name"], meta["msg-param-charity-days-remaining"]), ("notice",))
+		self.insert("end", "\n${:,} raised for {} so far! {} days left".format(int(meta["msg-param-total"]), meta["msg-param-charity-name"].replace("\s", " "),
+																			   meta["msg-param-charity-days-remaining"]), ("notice",))
 
 	def on_notice(self, meta, data):
 		self.insert("end", "\n" + data, ("notice",))
