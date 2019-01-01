@@ -396,7 +396,7 @@ class TwitchChat(pyelement.PyTextfield):
 						im = self._get_bit_emote(name=bit[0][0], amount=bit[0][1])
 						self.image_create("end", image=im[1])
 						self.insert("end", str(bit[0][1]), "cheer"+str(im[0]))
-					except: self.insert("end", "".join(["".join(str(b)) for b in bit]))
+					except: self.insert("end", "".join(["".join(*bit)]))
 					continue
 
 			elif word in self._bttv_emotecache:
