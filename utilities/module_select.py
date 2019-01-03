@@ -32,9 +32,9 @@ class ModuleSelector(pywindow.PyWindow):
 			mod_enable.module = module_id
 			mod_enable.checked = not invalid_platform and module_options.get("enabled", False)
 			mod_enable.accept_input = not invalid_platform and not module_options.get("required", False)
-			mod_enable.description = "Enable" if mod_enable.accept_input else ("Module required" if mod_enable.checked else "Module incompatible")
 			mod_enable.command = lambda check=mod_enable: self._module_enable(check)
 			mod_enable.grid(row=index, columnspan=2)
+			self._update_checkbox(mod_enable)
 
 			mod_platform = pyelement.PyTextlabel(mod_frame)
 			mod_platform.set_configuration()
@@ -58,12 +58,19 @@ class ModuleSelector(pywindow.PyWindow):
 			index += 1
 		self.frame.focus_set()
 
+	def _update_checkbox(self, checkbox):
+		if checkbox.accept_input: checkbox.description = "Enabled" if checkbox.checked else "Disabled"
+		else: checkbox.description = "Module required" if checkbox.checked else "Module incompatible"
+
 	def _module_enable(self, checkbox):
 		print("INFO", "Module '{}' was".format(checkbox.module), "enabled" if checkbox.checked else "disbled")
-		try: self._modules[checkbox.module]["enabled"] = checkbox.checked
+		try:
+			self._modules[checkbox.module]["enabled"] = checkbox.checked
+			self._update_checkbox(checkbox)
 		except KeyError: print("WARNING", "Module '{}' was not found in the module list!".format(checkbox.module))
 
 	def _module_priority(self, field):
 		print("module_priority", field.value)
 		try: self._modules[field.module]["priority"] = int(field.value)
+		except ValueError: pass
 		except KeyError: print("WARNING", "Module '{}' was not found in the module list!".format(field.module))
