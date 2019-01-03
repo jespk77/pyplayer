@@ -151,12 +151,14 @@ class PySplashWindow(pywindow.RootPyWindow):
 	def status_text(self, vl):
 		self.widgets["label_status"].display_text = vl.split("\n")[0]
 
-	def on_close(self, event=None):
-		print("INFO", "Pyplayer closed, shutting down!")
-		if self._interp is not None and self._interp.is_alive():
-			self._interp.stop_command()
-			self._interp.join()
-		self.after(2, self.destroy)
+	def on_close(self, event):
+		wn = str(event.widget)
+		if len(wn.split(".")) <= 2:
+			print("INFO", "Pyplayer closed, shutting down!")
+			if self._interp is not None and self._interp.is_alive():
+				self._interp.stop_command()
+				self._interp.join()
+			self.after(2, self.destroy)
 
 if __name__ == "__main__":
 	w = PySplashWindow()
