@@ -4,14 +4,28 @@ import tkinter
 from ui import pyconfiguration
 
 def check_master(master):
-	if not isinstance(master, tkinter.Wm): raise TypeError("'master' parameter must be a 'Tk' instance, not '{}'".format(type(master).__name__))
+	if not isinstance(master, tkinter.Wm) and isinstance(master, PyElement) and not master._supports_children:
+		raise TypeError("'{.__name__}' cannot contain additional widgets".format(type(master)))
+
+def scroll_event():
+	import sys
+	return "<MouseWheel>" if "win" in sys.platform else "<Button-4>&&<Button-5>"
+
+# PREDEFINED DEFAULT COLORS USED IN ELEMENT CONFIGURATIONS
+background_color = "gray15"
+foreground_color = "white"
+disabled_color = "gray75"
+highlight_color = "cyan"
+sel_background_color = "gray"
+sel_foreground_color = "white"
 
 class PyElement:
 	""" Framework for elements that can be parented from other pyelements, should not be created on its own """
 	block_action = "break"
 
-	def __init__(self, id="<???>"):
-		self._configuration = {}
+	def __init__(self, id="<???>", initial_cfg=None):
+		if not initial_cfg: initial_cfg = {}
+		self._configuration = initial_cfg
 		self._dirty = False
 		self._boundids = {}
 		self.id = id
@@ -44,6 +58,11 @@ class PyElement:
 
 	@property
 	def dirty(self): return self._dirty
+	@property
+	def _supports_children(self):
+		""" Signals whether new elements can be made a parent from this element,
+		 	by default they cannot (exceptions being "window manager" like elements) """
+		return False
 
 	def mark_dirty(self, event=None):
 		""" Mark this element as dirty (configuration options will be written to file next save)
@@ -51,6 +70,8 @@ class PyElement:
 		if self._master_cfg: self._dirty = True
 
 	def _load_configuration(self): self.configure(**self._configuration)
+	# dirty workaround; TODO create a way to add widgets to other widgets (if supported), similar to windows
+	set_configuration = _load_configuration
 
 	def __setitem__(self, key, value):
 		""" Update configuration item for this element """
@@ -105,41 +126,107 @@ class PyElement:
 	The window the frame is currently in can be accessed with the 'window' attribute (is None if not placed on a window)
 """
 # === ELEMENT CONTAINERS ===
+frame_cfg = { "background": background_color }
 class PyFrame(PyElement, tkinter.Frame):
 	""" Use as container for a collection of elements, parameter 'master' must be another pyelement """
 	def __init__(self, master):
 		check_master(master)
-		PyElement.__init__(self)
+		PyElement.__init__(self, initial_cfg=frame_cfg)
 		tkinter.Frame.__init__(self, master)
 
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.Frame.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
+
+	@property
+	def _supports_children(self): return True
+
+class PyScrollableFrame(PyFrame):
+	""" Same as PyFrame but supports scrolling, horizontal and vertical scrollbars can optionally be added """
+	def __init__(self, master):
+		check_master(master)
+		PyFrame.__init__(self, master)
+		self._canvas = PyCanvas(self)
+		self._content = PyFrame(self._canvas)
+		self.grid_rowconfigure(0, weight=1)
+		self.grid_columnconfigure(0, weight=1)
+
+		self._content.bind_all(scroll_event(), lambda e: self._canvas.yview_scroll(-(e.delta//100), "units"))
+		self._content.bind("<Configure>", self._update_scrollregion, add=True)
+		self._canvas.bind("<Configure>", self._update_width, add=True)
+		self._canvas.grid(row=0, column=0, sticky="news")
+		self._canvas.create_window((0,0), window=self._content, anchor="nw", tags="content_frame")
+		self._scrollx = self._scrolly = None
+
+	@property
+	def frame(self): return self._content
+	def _update_width(self, event): self._canvas.itemconfigure("content_frame", width=event.width-1)
+	def _update_scrollregion(self, event=None): self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+
+	@property
+	def horizontal_scrollbar(self): return self._scrollx is not None
+	@property
+	def vertical_scrollbar(self): return self._scrolly is not None
+
+	@horizontal_scrollbar.setter
+	def horizontal_scrollbar(self, vl):
+		if vl and not self.horizontal_scrollbar:
+			self._scrollx = PyScrollbar(self)
+			self._scrollx.configure(orient="horizontal", command=self._canvas.xview)
+			self._canvas.configure(xscrollcommand=self._scrollx.set)
+			self._scrollx.grid(row=1, column=0, sticky="ew")
+
+	@vertical_scrollbar.setter
+	def vertical_scrollbar(self, vl):
+		if vl and not self.vertical_scrollbar:
+			self._scrolly = PyScrollbar(self)
+			self._scrolly.configure(orient="vertical", command=self._canvas.yview)
+			self._canvas.configure(yscrollcommand=self._scrolly.set)
+			self._scrolly.grid(row=0, column=1, sticky="ns")
+
+element_cfg = { "foreground": foreground_color }
+element_cfg.update(frame_cfg)
 class PyLabelframe(PyElement, tkinter.LabelFrame):
 	""" Same as PyFrame but has an outline around it and can add label at the top of the frame """
 	def __init__(self, master):
 		check_master(master)
-		PyElement.__init__(self)
+		PyElement.__init__(self, initial_cfg=element_cfg)
 		tkinter.LabelFrame.__init__(self, master)
+
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.LabelFrame.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
+	@property
+	def _supports_children(self): return True
 
 	@property
 	def label(self): return self.cget("text")
 	@label.setter
 	def label(self, vl): self.configure(text=vl)
 
+canvas_cfg = { "highlightthickness": 0 }
+canvas_cfg.update(frame_cfg)
 class PyCanvas(PyElement, tkinter.Canvas):
-	""" Similar to PyFrame, but this has more advanced features such as scrolling """
+	""" Similar to PyFrame, but allows for drawing of geometric shapes, other widgets and images """
 	def __init__(self, master):
 		check_master(master)
-		PyElement.__init__(self)
+		PyElement.__init__(self, initial_cfg=canvas_cfg)
 		tkinter.Canvas.__init__(self, master)
 
-# === ELEMENT ITEMS ===
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.Canvas.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
+	@property
+	def _supports_children(self): return True
 
+# === ELEMENT ITEMS ===
 class PyTextlabel(PyElement, tkinter.Label):
 	""" Element for displaying a line of text """
 	def __init__(self, master):
 		check_master(master)
-		PyElement.__init__(self)
+		PyElement.__init__(self, initial_cfg=element_cfg)
 		tkinter.Label.__init__(self, master)
 		self._string_var = None
+
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.Label.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 
 	@property
 	def display_text(self):
@@ -151,13 +238,86 @@ class PyTextlabel(PyElement, tkinter.Label):
 			self.configure(textvariable=self._string_var)
 		self._string_var.set(value)
 
-class PyCheckbox(PyElement, tkinter.Checkbutton):
+input_cfg = { "insertbackground": foreground_color, "selectforeground": sel_foreground_color, "selectbackground": sel_background_color }
+input_cfg.update(element_cfg)
+class PyTextInput(PyElement, tkinter.Entry):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self)
+		tkinter.Entry.__init__(self, master)
+		self._format_str = None
+		self._input_length = 0
+		self._strvar = tkinter.StringVar()
+		self._cmd = None
+		self._input_cmd = self.register(self._on_input_key)
+		self.configure(textvariable=self._strvar, validate="key", validatecommand=(self._input_cmd, "%P"))
+
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.Entry.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
+
+	@property
+	def accept_input(self): return self.cget("state") == "disabled"
+	@accept_input.setter
+	def accept_input(self, vl):
+		""" Control whether the current input value can be adjusted """
+		self.configure(state="normal" if vl else "disabled")
+
+	@property
+	def format_str(self): return self._format_str if self._format_str else ""
+	@format_str.setter
+	def format_str(self, fs):
+		""" Allows to set specific characters that can be entered into this field, set None to allow everything """
+		if fs:
+			import re
+			self._format_str = re.compile("[^{}]".format(fs))
+			self.value = self._format_str.sub(self.value, "")
+		else: self._format_str = None
+
+	@property
+	def command(self): return self._cmd
+	@command.setter
+	def command(self, vl):
+		""" Gets called whenever the input value is updated by the user """
+		if vl:
+			if not callable(vl): raise TypeError("Command callback for 'PyTextInput' must be callable or None!")
+			self._cmd = self._strvar.trace_add("write", lambda *args: vl())
+		else:
+			self._strvar.trace_remove("write", self._cmd)
+			self._cmd = None
+
+	@property
+	def value(self): return self._strvar.get()
+	@value.setter
+	def value(self, vl):
+		""" Current value currently set for this input field """
+		vl = str(vl)
+		if vl and not self._on_input_key(vl): raise ValueError("Cannot set value; contains non-allowed characters")
+		self._strvar.set(vl)
+
+	@property
+	def max_length(self): return self._input_length
+	@max_length.setter
+	def max_length(self, ln):
+		""" Character limit for this input field, when this limit is reached, no more characters can be entered; set to 0 to disable limit """
+		self._input_length = ln
+		self.configure(width=self._input_length*10)
+
+	def _on_input_key(self, entry):
+		return self._input_length > 0 and len(entry) <= self._input_length and (not self._format_str or not self._format_str.search(entry))
+
+checkbox_cfg = { "activebackground": background_color, "activeforeground": foreground_color, "selectcolor": background_color }
+checkbox_cfg.update(element_cfg)
+class PyCheckbox(PyElement, tkinter.Checkbutton):
+	def __init__(self, master):
+		check_master(master)
+		PyElement.__init__(self, initial_cfg=checkbox_cfg)
+		tkinter.Checkbutton.__init__(self, master)
 		self._value = tkinter.IntVar()
 		self._desc = tkinter.StringVar()
-		tkinter.Checkbutton.__init__(self, master, variable=self._value, textvariable=self._desc)
+		self.configure(variable=self._value, textvariable=self._desc)
+
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.Checkbutton.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 
 	@property
 	def description(self): return self._desc.get()
@@ -177,7 +337,7 @@ class PyCheckbox(PyElement, tkinter.Checkbutton):
 	def checked(self, check): self._value.set(check)
 
 	@property
-	def accept_input(self): return self.cget("state") == "normal"
+	def accept_input(self): return self.cget("state") != "disabled"
 	@accept_input.setter
 	def accept_input(self, vl): self.configure(state="normal" if vl else "disabled")
 
@@ -192,11 +352,14 @@ class PyButton(PyElement, tkinter.Button):
 	""" Element to create a clickable button  """
 	def __init__(self, master):
 		check_master(master)
-		PyElement.__init__(self)
+		PyElement.__init__(self, initial_cfg=checkbox_cfg)
 		tkinter.Button.__init__(self, master)
 		self._string_var = None
 		self._callback = None
 		self._image = None
+
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.Button.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 
 	@property
 	def accept_input(self): return self.cget("state") == "normal"
@@ -244,13 +407,16 @@ class PyTextfield(PyElement, tkinter.Text):
 
 	def __init__(self, master):
 		check_master(master)
-		PyElement.__init__(self)
+		PyElement.__init__(self, initial_cfg=input_cfg)
 		tkinter.Text.__init__(self, master)
 
 		self._font = font.Font(family="segoeui", size="11")
 		self.configure(font=self._font)
 		self._accept_input = True
 		self._boldfont = None
+
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.Text.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 
 	@property
 	def accept_input(self): return self._accept_input
@@ -328,6 +494,7 @@ class PyTextfield(PyElement, tkinter.Text):
 		else: PyElement.__setitem__(self, key, value)
 		if dirty: self.mark_dirty()
 
+progress_cfg = { "background": "cyan", "troughcolor": background_color }
 class PyProgressbar(PyElement, ttk.Progressbar):
 	""" Widget that displays a bar indicating progress made by the application """
 	def __init__(self, master):
@@ -335,10 +502,12 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 		self._progress_var = tkinter.IntVar()
 		self._style = ttk.Style()
 		self._horizontal = True
-		PyElement.__init__(self)
-		try: ttk.Progressbar.__init__(self, master)
-		except AttributeError: ttk.Progressbar.__init__(self, window)
+		PyElement.__init__(self, initial_cfg=progress_cfg)
+		ttk.Progressbar.__init__(self, master)
 		self.configure(mode="determinate", variable=self._progress_var)
+
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		ttk.Progressbar.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 
 	@property
 	def progress(self, actual=True):
@@ -382,20 +551,28 @@ class PyScrollbar(PyElement, tkinter.Scrollbar):
 		PyElement.__init__(self)
 		tkinter.Scrollbar.__init__(self, master)
 
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.Scrollbar.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
+
 	@property
 	def scrollcommand(self): return
 	@scrollcommand.setter
 	def scrollcommand(self, value): self.configure(command=value)
 
+list_cfg = { "selectbackground": background_color, "selectforeground": highlight_color }
+list_cfg.update(element_cfg)
 class PyItemlist(PyElement, tkinter.Listbox):
 	""" A list of options where the user can select one or more lines """
 	def __init__(self, master):
 		check_master(master)
-		PyElement.__init__(self)
+		PyElement.__init__(self, initial_cfg=list_cfg)
 		tkinter.Listbox.__init__(self, master, selectmode="single")
 		self.list_var = None
 		self._items = None
 		self._font = None
+
+	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		tkinter.Listbox.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 
 	def _load_configuration(self):
 		PyElement._load_configuration(self)
@@ -427,7 +604,6 @@ class PyItemlist(PyElement, tkinter.Listbox):
 
 		self._items = value
 		self.list_var.set(self._items)
-
 
 try:
 	from PIL import Image, ImageTk

@@ -60,13 +60,13 @@ class BaseWindow:
 	def always_on_top(self): return False
 
 	@property
-	def resizable_height(self): return self.root.resizable()[0]
+	def resizable_height(self): return self.window.resizable()[0]
 	@resizable_height.setter
-	def resizable_height(self, value): self.root.resizable((value, self.resizable_width))
+	def resizable_height(self, value): self.window.resizable(value, self.resizable_width)
 	@property
-	def resizable_width(self): return self.root.resizable()[1]
+	def resizable_width(self): return self.window.resizable()[1]
 	@resizable_width.setter
-	def resizable_width(self, value): self.root.resizable((self.resizable_height, value))
+	def resizable_width(self, value): self.window.resizable(self.resizable_height, value)
 
 	def mark_dirty(self, event=None):
 		""" Mark this window as dirty, event parameter only used for tkinter event handling """
