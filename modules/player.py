@@ -332,7 +332,12 @@ def on_destroy():
 	media_player.on_destroy()
 
 def on_media_change(event, player):
-	client.after(.1, client.update_title, media_player.current_media.display_name)
+	color = None
+	for key, options in client["directory"].items():
+		if media_player.current_media.path == options["path"]:
+			color = options.get("color")
+			break
+	client.after(.1, client.update_title_media, media_player.current_media, color)
 
 def on_pos_change(event, player):
 	client.after(.1, client.update_progressbar, event.u.new_position)
