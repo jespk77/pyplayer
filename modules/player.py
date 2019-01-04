@@ -332,13 +332,13 @@ def on_destroy():
 	media_player.on_destroy()
 
 def on_media_change(event, player):
-	client.after(.5, client.update_title, media_player.current_media.display_name)
+	client.after(.1, client.update_title, media_player.current_media.display_name)
 
 def on_pos_change(event, player):
-	client.after(.5, client.update_progressbar, event.u.new_position)
+	client.after(.1, client.update_progressbar, event.u.new_position)
 
 def on_stopped(event, player):
-	client.after(.5, client.update_progressbar, 0)
+	client.after(.1, client.update_progressbar, 0)
 
 def on_player_update(event, player):
 	md = event.data
