@@ -19,6 +19,9 @@ class MediaPlayerData(DynamicClass):
 
 class MediaPlayerEventUpdate(DynamicClass):
 	id = 0
+	def __init__(self, data, **kwargs):
+		self.data = data
+		DynamicClass.__init__(self, **kwargs)
 
 class MediaPlayer():
 	""" Helper class for playing music using the vlc python bindings
