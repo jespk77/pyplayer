@@ -5,21 +5,20 @@ import os, random
 def get_displayname(filepath):
 	return os.path.splitext(filepath)[0]
 
-class MediaPlayerData:
-	def __init__(self, path, song):
+class DynamicClass:
+	def __init__(self, **kwargs):
+		for it in kwargs.items(): self.__setattr__(*it)
+	def __str__(self): return "{}({})".format(self.__class__.__name__, ", ".join(["{}='{}'".format(*it) for it in self.__dict__.items()]))
+
+class MediaPlayerData(DynamicClass):
+	def __init__(self, path, song, **kwargs):
 		self.path = path
 		self.song = song
 		self.display_name = get_displayname(song)
+		DynamicClass.__init__(self, **kwargs)
 
-	def __str__(self): return "MediaData(path='{}', song='{}', display_name='{}')".format(self.path, self.song, self.display_name)
-
-class MediaPlayerEventUpdate:
+class MediaPlayerEventUpdate(DynamicClass):
 	id = 0
-
-	def __init__(self, data):
-		self.data = data
-
-	def __str__(self): return "MediaPlayerEventUpdate(id='', data={})".format(self.id, self.data)
 
 class MediaPlayer():
 	""" Helper class for playing music using the vlc python bindings
