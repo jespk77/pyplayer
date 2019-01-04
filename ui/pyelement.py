@@ -538,6 +538,10 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 		except: pass
 		self.configure(style=style)
 
+	def configure(self, cnf=None, **kw):
+		try: ttk.Progressbar.configure(self, cnf, **kw)
+		except tkinter.TclError: self._style.configure(self.cget("style"), **kw)
+
 	@property
 	def maximum(self):
 		""" Returns the total size of the bar, if the progress is set to this value the bar is full (default is 100) """
