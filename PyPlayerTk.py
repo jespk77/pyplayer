@@ -85,10 +85,9 @@ class PyPlayer(pywindow.PyWindow):
 		self.after(1, self.update_label)
 
 	def update_title(self, title, checks=None):
-		prefix = ""
-		for c in (checks if checks is not None else self.interp.arguments): prefix += "[" + str(c) + "] "
+		prefix = " ".join(["[{}]".format(c) for c in (checks if checks is not None else self.interp.arguments)])
 		self.title_song = title
-		self.title = prefix + title
+		self.title = prefix + ' ' + title
 		self.post_event("title_update", PyPlayerEvent(title=title))
 
 	def update_progressbar(self, progress):
