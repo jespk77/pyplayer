@@ -68,8 +68,17 @@ class MediaPlayer():
 	# === PLAYER PROPERTIES ===
 	@property
 	def active_player(self):
-		""" Returns the player that is currenty playing music, or None if nothing playing """
-		return self._player1 if self._player_one else self._player2 if self._media_data is not None else None
+		""" Get the player that is currenty playing music (this player is currently using the assigned media)
+			Returns this player or None if there is nothing playing """
+		play1 = self._player1.is_playing()
+		play2 = self._player2.is_playing()
+		if play1: return self._player2 if play2 and self._updated else self._player1
+		elif play2:	return self._player1 if play1 and self._updated else self._player2
+		else: return None
+	@property
+	def next_player(self):
+		""" Returns the player that should be used to play the next song """
+		return self._player1 if self._player_one else self._player2
 	@property
 	def current_media(self):
 		""" Returns information about the current song playing, or None if nothing playing """
@@ -150,7 +159,7 @@ class MediaPlayer():
 		self._media = self._vlc.media_new(file)
 		self._media_data = MediaPlayerData(path, song)
 		if self._paused: self.stop_player()
-		player = self.active_player
+		player = self.next_player
 		player.set_media(self._media)
 		player.play()
 
