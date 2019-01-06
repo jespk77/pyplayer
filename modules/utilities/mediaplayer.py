@@ -175,9 +175,8 @@ class MediaPlayer():
 			print("INFO", "Trying to update player position to {}".format(pos))
 			pl = self.active_player
 			if pl is not None:
-				pl.set_media(self._media)
-				pl.play()
 				pl.set_position(pos)
+				pl.play()
 				return True
 			else: return False
 		else:
