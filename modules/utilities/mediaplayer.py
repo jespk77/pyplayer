@@ -160,14 +160,20 @@ class MediaPlayer():
 		return self._media_data
 
 	def set_position(self, pos):
-		""" Update the position the player is currently at, if the player has finished it will replay the last song at given position
-		 	Has no effect if the player hasn't played any songs yet """
+		""" Update the position the player is currently at, has no effect if the player is stopped/finished
+		 	Returns true if the position was updated, false otherwise"""
 		if self._media is not None:
+			print("INFO", "Trying to update player position to {}".format(pos))
 			pl = self.active_player
-			if pl is None: pl = self._player1 if self._player_one else self._player2
-			pl.set_media(self._media)
-			pl.play()
-			pl.set_position(pos)
+			if pl is not None:
+				pl.set_media(self._media)
+				pl.play()
+				pl.set_position(pos)
+				return True
+			else: return False
+		else:
+			print("INFO", "Cannot update position since no previous media was found")
+			return False
 
 	def mute_player(self, mute=None):
 		""" Update mute status of this player to given value
