@@ -272,6 +272,31 @@ def command_random(arg, argc):
 	set_autoplay_ignore(False)
 	return messagetypes.Reply(media_player.random_song(path=path, keyword=" ".join(arg)))
 
+def play_rss(display, url):
+	media_player.play_url(url, display)
+	return messagetypes.Reply("Playing: {}".format(display))
+
+def command_rss(arg, argc):
+	n = 5
+	if argc == 1:
+		try: n = int(arg.pop(0))
+		except ValueError: return messagetypes.Reply("Invalid number")
+		argc -= 1
+
+	if argc == 0:
+		url = client.get_or_create("rss_url", "")
+		if url:
+			import feedparser
+			fp = feedparser.parse(url)
+			if not fp.entries: return messagetypes.Reply("Nothing found on 'rss_url'")
+			else:
+				try:
+					entry_list = fp.entries
+					if len(entry_list) > n: entry_list = entry_list[:n]
+					return messagetypes.Select("Which item should be played?", play_rss, [(et["title"], et["links"][0]["href"]) for et in entry_list], text="0")
+				except: return messagetypes.Reply("Invalid data returned")
+		else: return messagetypes.Reply("What url? Enter one using key 'rss_url'")
+
 def command_stop(arg, argc):
 	if argc == 0:
 		media_player.stop_player()
@@ -308,7 +333,7 @@ commands = {
 		"": command_queue,
 		"clear": command_queue_clear,
 		"next": command_queue_next
-	}
+	}, "rss": command_rss
 }
 
 def initialize():
