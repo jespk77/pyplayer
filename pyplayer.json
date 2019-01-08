@@ -16,7 +16,7 @@
       "required": false
     }, "player": {
       "enabled": true,
-      "dependencies": ["python-vlc"],
+      "dependencies": ["python-vlc", "feedparser"],
       "platform": null,
       "priority": 2,
       "required": false
