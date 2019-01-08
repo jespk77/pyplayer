@@ -121,6 +121,13 @@ class PyElement:
 		except tkinter.TclError as e: print("ERROR", "Cannot set configuration for item '{}':".format(self.id), e)
 		return self
 
+	def destroy(self):
+		try:
+			super().destroy()
+			self.window = None
+		except AttributeError: pass
+		except Exception as e: print("ERROR", "Destroying element '{}':".format(self.id), e)
+
 """ Initializer of each 'PyElement' instance must contain a reference to its parent, which must also be a 'PyElement' instance
 	For widgets that don't have a parent, use the frame of the window (using the 'frame' attribute on window)
 	The window the frame is currently in can be accessed with the 'window' attribute (is None if not placed on a window)

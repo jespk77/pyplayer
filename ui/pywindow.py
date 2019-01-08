@@ -1,6 +1,8 @@
 import tkinter, os, sys
 from ui import pyelement, pyconfiguration
 
+import weakref
+
 class BaseWindow:
 	""" Framework class for PyWindow and RootPyWindow, should not be created on its own """
 	default_title = "PyWindow"
@@ -37,7 +39,7 @@ class BaseWindow:
 	@property
 	def children(self):
 		""" All windows that are active and have this window as parent """
-		if self._children is None: self._children = {}
+		if self._children is None: self._children = weakref.WeakValueDictionary()
 		return self._children
 	def load_configuration(self): pass
 
@@ -132,7 +134,7 @@ class BaseWindow:
 			print("ERROR", "Tried to create window with id '{}' but it is not a valid widget: {}".format(id, window))
 			return False
 
-		if self._children is None: self._children = {}
+		if self._children is None: self._children = weakref.WeakValueDictionary()
 		success = self.close_window(id)
 		if not success: raise RuntimeError("Cannot close previously bound window with id '{}'".format(id))
 
