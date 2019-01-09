@@ -14,7 +14,7 @@ class BaseWindow:
 		elif not cfg_file.startswith(".cfg/"): cfg_file = ".cfg/" + cfg_file
 
 		self._elements = {}
-		self._children = None
+		self._children = weakref.WeakValueDictionary()
 		self._dirty = False
 		self._autosave = 0
 
@@ -39,7 +39,6 @@ class BaseWindow:
 	@property
 	def children(self):
 		""" All windows that are active and have this window as parent """
-		if self._children is None: self._children = weakref.WeakValueDictionary()
 		return self._children
 	def load_configuration(self): pass
 
@@ -134,7 +133,6 @@ class BaseWindow:
 			print("ERROR", "Tried to create window with id '{}' but it is not a valid widget: {}".format(id, window))
 			return False
 
-		if self._children is None: self._children = weakref.WeakValueDictionary()
 		success = self.close_window(id)
 		if not success: raise RuntimeError("Cannot close previously bound window with id '{}'".format(id))
 
