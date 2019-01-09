@@ -396,15 +396,16 @@ class PyButton(PyElement, tkinter.Button):
 		self._image = vl
 
 	@property
-	def callback(self):
+	def command(self):
 		""" Returns the callback that is currently assigned to when the button is pressed or None if nothing bound (or if it cannot be called) """
 		if not callable(self._callback): self._callback = None
 		return self._callback
-	@callback.setter
-	def callback(self, value):
+	@command.setter
+	def command(self, value):
 		""" Set the callback that gets called when the button is pressed """
 		self._callback = value
 		self.configure(command=value)
+	callback = command
 
 class PyTextfield(PyElement, tkinter.Text):
 	""" Element to display multiple lines of text, includes support for user input, images and markers/tags
