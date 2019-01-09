@@ -163,6 +163,8 @@ class MediaPlayer():
 		return self._play(url=url, display_meta=displayname)
 
 	def _play(self, path='', song='', url=None, display_meta=''):
+		if self._paused: self.stop_player()
+
 		if song:
 			self._media_data = MediaPlayerData(path, song)
 			url = os.path.join(path, song)
@@ -170,8 +172,6 @@ class MediaPlayer():
 
 		if self._media is not None: self._media.release()
 		self._media = self._vlc.media_new(url)
-
-		if self._paused: self.stop_player()
 		player = self.next_player
 		player.set_media(self._media)
 		player.play()
