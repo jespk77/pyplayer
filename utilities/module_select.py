@@ -39,7 +39,9 @@ class ModuleSelector(pywindow.PyWindow):
 			mod_platform = pyelement.PyTextlabel(mod_frame)
 			mod_platform.set_configuration()
 			mod_platform.display_text = "Supported platform: " + (pt if pt else "any")
-			if invalid_platform: mod_platform.configure(foreground="red")
+			if invalid_platform:
+				mod_platform.configure(foreground="red")
+				module_options["enabled"] = False
 			mod_platform.grid(row=index+1, columnspan=2)
 
 			mod_priority_text = pyelement.PyTextlabel(mod_frame)
@@ -57,6 +59,10 @@ class ModuleSelector(pywindow.PyWindow):
 			mod_priority.grid(row=index+2, column=1)
 			index += 1
 		self.frame.focus_set()
+
+	@property
+	def modules(self):
+		return {key:value for key, value in self._modules.items() if value["enabled"]}
 
 	def _update_checkbox(self, checkbox):
 		if checkbox.accept_input: checkbox.description = "Enabled" if checkbox.checked else "Disabled"
