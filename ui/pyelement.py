@@ -121,6 +121,13 @@ class PyElement:
 		except tkinter.TclError as e: print("ERROR", "Cannot set configuration for item '{}':".format(self.id), e)
 		return self
 
+	def destroy(self):
+		try:
+			super().destroy()
+			self.window = None
+		except AttributeError: pass
+		except Exception as e: print("ERROR", "Destroying element '{}':".format(self.id), e)
+
 """ Initializer of each 'PyElement' instance must contain a reference to its parent, which must also be a 'PyElement' instance
 	For widgets that don't have a parent, use the frame of the window (using the 'frame' attribute on window)
 	The window the frame is currently in can be accessed with the 'window' attribute (is None if not placed on a window)
@@ -389,15 +396,16 @@ class PyButton(PyElement, tkinter.Button):
 		self._image = vl
 
 	@property
-	def callback(self):
+	def command(self):
 		""" Returns the callback that is currently assigned to when the button is pressed or None if nothing bound (or if it cannot be called) """
 		if not callable(self._callback): self._callback = None
 		return self._callback
-	@callback.setter
-	def callback(self, value):
+	@command.setter
+	def command(self, value):
 		""" Set the callback that gets called when the button is pressed """
 		self._callback = value
 		self.configure(command=value)
+	callback = command
 
 class PyTextfield(PyElement, tkinter.Text):
 	""" Element to display multiple lines of text, includes support for user input, images and markers/tags
@@ -537,6 +545,10 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 		try: self._style.configure(style, **self.configuration)
 		except: pass
 		self.configure(style=style)
+
+	def configure(self, cnf=None, **kw):
+		try: ttk.Progressbar.configure(self, cnf, **kw)
+		except tkinter.TclError: self._style.configure(self.cget("style"), **kw)
 
 	@property
 	def maximum(self):

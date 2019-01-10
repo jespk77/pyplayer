@@ -1,6 +1,8 @@
 import tkinter, os, sys
 from ui import pyelement, pyconfiguration
 
+import weakref
+
 class BaseWindow:
 	""" Framework class for PyWindow and RootPyWindow, should not be created on its own """
 	default_title = "PyWindow"
@@ -12,7 +14,7 @@ class BaseWindow:
 		elif not cfg_file.startswith(".cfg/"): cfg_file = ".cfg/" + cfg_file
 
 		self._elements = {}
-		self._children = None
+		self._children = weakref.WeakValueDictionary()
 		self._dirty = False
 		self._autosave = 0
 
@@ -37,7 +39,6 @@ class BaseWindow:
 	@property
 	def children(self):
 		""" All windows that are active and have this window as parent """
-		if self._children is None: self._children = {}
 		return self._children
 	def load_configuration(self): pass
 
@@ -132,7 +133,6 @@ class BaseWindow:
 			print("ERROR", "Tried to create window with id '{}' but it is not a valid widget: {}".format(id, window))
 			return False
 
-		if self._children is None: self._children = {}
 		success = self.close_window(id)
 		if not success: raise RuntimeError("Cannot close previously bound window with id '{}'".format(id))
 
@@ -329,13 +329,14 @@ class PyWindow(BaseWindow):
 	@icon.setter
 	def icon(self, value):
 		""" Set window icon """
-		if value is None: value = "assets/blank"
+		if not value: value = "assets/blank"
 
-		if "linux" in sys.platform:
-			path = os.path.dirname(os.path.realpath(__file__))
-			try: self.window.tk.call("wm", "iconphoto", self.window._w, pyelement.PyImage(file=os.path.join(path, os.pardir, value + ".png")))
-			except Exception as e: print("ERROR", "Setting icon bitmap {}".format(e))
-		elif "win" in sys.platform: self.window.iconbitmap(value + ".ico")
+		try:
+			if "linux" in sys.platform:
+				path = os.path.dirname(os.path.realpath(__file__))
+				self.window.tk.call("wm", "iconphoto", self.window._w, pyelement.PyImage(file=os.path.join(path, os.pardir, value + ".png")))
+			elif "win" in sys.platform: self.window.iconbitmap(value + ".ico")
+		except Exception as e: print("ERROR", "Setting icon bitmap {}".format(e)); raise
 
 	@property
 	def always_on_top(self):

@@ -37,7 +37,10 @@ class PyPlayer(pywindow.PyWindow):
 			self._process = None
 			self._boottime = datetime.datetime.today()
 
-		self.set_widget("progressbar", pyelement.PyProgressbar(self.frame), initial_cfg=progressbar_cfg, row=1, columnspan=9).maximum = 1
+		pbar = pyelement.PyProgressbar(self.frame)
+		pbar.maximum = 1
+		pbar.bind("<Button-1>", self.on_progressbar_click)
+		self.set_widget("progressbar", pbar, initial_cfg=progressbar_cfg, row=1, columnspan=9)
 		self.set_widget("console", TextConsole(self, command_callback=self.parse_command), initial_cfg=console_cfg, row=3, columnspan=9).focus()
 		self.row_options(3, minsize=100, weight=1)
 
@@ -85,11 +88,15 @@ class PyPlayer(pywindow.PyWindow):
 		self.after(1, self.update_label)
 
 	def update_title(self, title, checks=None):
-		prefix = ""
-		for c in (checks if checks is not None else self.interp.arguments): prefix += "[" + str(c) + "] "
+		prefix = " ".join(["[{}]".format(c) for c in (checks if checks is not None else self.interp.arguments)])
 		self.title_song = title
-		self.title = prefix + title
+		self.title = prefix + ' ' + title
 		self.post_event("title_update", PyPlayerEvent(title=title))
+
+	def update_title_media(self, media_data, color=None):
+		self.update_title(media_data.display_name)
+		self.widgets["progressbar"].progress = 0
+		self.widgets["progressbar"].configure(background=color if color else self["progressbar::background"])
 
 	def update_progressbar(self, progress):
 		if progress > self.widgets["progressbar"].maximum: progress = self["progressbar"].maximum
@@ -121,6 +128,10 @@ class PyPlayer(pywindow.PyWindow):
 			wd.load_lyrics(title[0], title[1])
 			return True
 		else: return False
+
+	def on_progressbar_click(self, event):
+		try: self.interp.put_command("player position {}".format(event.x / event.widget.winfo_width()))
+		except Exception as e: print("WARNING", "Error while updating position:", e)
 
 	def parse_command(self, cmd, dt=None):
 		try: self.interp.put_command(cmd, dt)
