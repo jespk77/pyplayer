@@ -140,7 +140,7 @@ class PySplashWindow(pywindow.RootPyWindow):
 		client = PyPlayer(self.window)
 		self._interp = Interpreter(client, modules=self._loaded_modules)
 		client.interp = self._interp
-		client.bind("<Destroy>", self.on_close, add=True)
+		client.bind("<Destroy>", lambda e: self.on_close(e, client), add=True)
 		self.open_window("client", client)
 		client.hidden = False
 		self.hidden = True
@@ -151,14 +151,19 @@ class PySplashWindow(pywindow.RootPyWindow):
 	def status_text(self, vl):
 		self.widgets["label_status"].display_text = vl.split("\n")[0]
 
-	def on_close(self, event):
+	def on_close(self, event, client):
 		wn = str(event.widget)
 		if len(wn.split(".")) <= 2:
-			print("INFO", "Pyplayer closed, shutting down!")
-			if self._interp is not None and self._interp.is_alive():
-				self._interp.stop_command()
-				self._interp.join()
-			self.after(2, self.destroy)
+			if client.flags == 1:
+				print("INFO", "Restarting player!")
+				import os
+				os.execl(sys.executable, sys.executable, *sys.argv)
+			else:
+				print("INFO", "Pyplayer closed, shutting down!")
+				if self._interp is not None and self._interp.is_alive():
+					self._interp.stop_command()
+					self._interp.join()
+				self.after(2, self.destroy)
 
 if __name__ == "__main__":
 	w = PySplashWindow()

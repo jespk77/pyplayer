@@ -84,6 +84,11 @@ def command_cfg(arg, argc):
 			if ot is None: return messagetypes.Reply("Option '{}' is not set".format(arg[0]))
 			else: return messagetypes.Reply("Option '{}' is set to '{}'".format(arg[0], ot))
 
+def command_restart(arg, argc):
+	if argc == 0:
+		client.restart()
+		return messagetypes.Reply("Pyplayer will restart soon...")
+
 def command_timer(arg, argc):
 	if argc == 1:
 		time = get_time_from_string(arg[0])
@@ -103,5 +108,6 @@ def initialize():
 
 commands = {
 	"cfg": command_cfg,
+	"restart": command_restart,
 	"timer": command_timer
 }
