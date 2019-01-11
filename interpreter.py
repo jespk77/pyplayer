@@ -77,7 +77,7 @@ class Interpreter(Thread):
 				op = None
 				self.print_additional_debug()
 				if cb is not None: op = cb(cmd)
-				elif cmd[0] == "reload": op = self._load_module(" ".join(cmd[1:]))
+				elif cmd[0] == "reload": op = messagetypes.Reply("Reloading modules is no longer supported, use 'restart' instead")
 
 				if op is None:
 					try: res = self._parse_cmd(cmd)
@@ -124,32 +124,9 @@ class Interpreter(Thread):
 		if not md.startswith("modules."): md = "modules." + md
 		if md.endswith(".py"): md = md[:-3]
 
-		print("INFO", "Searching for module '{}' for (re)load".format(md))
-		for m in self._modules:
-			if m.__name__ == md:
-				print("INFO", "Found existing module, reloading...")
-				prev_priority = m.priority
-				try: m.on_destroy()
-				except AttributeError as a:
-					if not "on_destroy" in str(a): print("ERROR", "Couldn't close module '{}' properly: ".format(m.__name__), a)
-				except Exception as e: print("ERROR", "Couldn't close module '{}' properly: ".format(m.__name__), e)
-
-				try:
-					importlib.reload(m)
-					if prev_priority != m.priority: print("WARNING", "Priority has changed on reload, this change will not take effect unless the program is restarted")
-					m.interpreter = self
-					m.client = self._client
-					m.platform = self._platform
-				except Exception as e: return messagetypes.Error(e, "Failed to load module '{}'".format(m.__name__))
-
-				try: m.initialize()
-				except AttributeError as a:
-					if not "initialize" in str(a): raise a
-				except Exception as e: return messagetypes.Error(e, "Failed to initialize module '{}'".format(m.__name__))
-				return messagetypes.Reply("Successfully reloaded module '{}'".format(m.__name__))
-
-		print("INFO", "No module found, trying to import as new module")
+		if md in [n.__name__ for n in self._modules]: raise NameError("Another module with name '{}' was already registered!".format(md))
 		try:
+			print("INFO", "Loading module '{}'...".format(md))
 			m = importlib.import_module(md)
 			m.interpreter = self
 			m.client = self._client
