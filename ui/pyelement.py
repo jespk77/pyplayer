@@ -231,6 +231,7 @@ class PyTextlabel(PyElement, tkinter.Label):
 		PyElement.__init__(self, initial_cfg=element_cfg)
 		tkinter.Label.__init__(self, master)
 		self._string_var = None
+		self._img = None
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		tkinter.Label.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
@@ -244,6 +245,13 @@ class PyTextlabel(PyElement, tkinter.Label):
 			self._string_var = tkinter.StringVar()
 			self.configure(textvariable=self._string_var)
 		self._string_var.set(value)
+
+	@property
+	def image(self): return self._img
+	@image.setter
+	def image(self, img):
+		self._img = img
+		self.configure(image=img)
 
 input_cfg = { "insertbackground": foreground_color, "selectforeground": sel_foreground_color, "selectbackground": sel_background_color }
 input_cfg.update(element_cfg)
