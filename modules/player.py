@@ -105,7 +105,24 @@ def set_autoplay_ignore(ignore):
 	global autoplay_ignore
 	autoplay_ignore = bool(ignore)
 
+def album_process(type, songs):
+	for s in songs: interpreter.put_command("{} {} {}.".format(type, "music", s.replace(" - ", " ")))
+
 # ===== MAIN COMMANDS =====
+def command_album(arg, argc):
+	if argc > 0:
+		from modules.utilities import albumwindow
+		try: aw = albumwindow.AlbumWindow(client.window, album_process, "_".join(argc))
+		except: return messagetypes.Reply("Unknown album")
+
+		client.open_window("albumviewer", aw)
+		return messagetypes.Reply("Album opened")
+
+def command_album_add(arg, argc):
+	from modules.utilities import albumwindow
+	client.open_window("albumimput", albumwindow.AlbumWindowInput(client.window))
+	return messagetypes.Empty()
+
 # - configure autoplay
 def command_autoplay_ignore(arg, argc):
 	if argc == 0:
@@ -303,7 +320,10 @@ def command_stop(arg, argc):
 		return messagetypes.Empty()
 
 commands = {
-	"autoplay": {
+	"album": {
+		"": command_album,
+		#"add": command_album_add
+	}, "autoplay": {
 		"next": command_autoplay_next,
 		"off": command_autoplay_off,
 		"on": command_autoplay_on,
