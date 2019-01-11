@@ -622,6 +622,10 @@ class PyItemlist(PyElement, tkinter.Listbox):
 		self._items = value
 		self.list_var.set(self._items)
 
+	def get_item_from_event(self, event):
+		""" Get the element at the mouse pointer when processing event from bound callback """
+		return self._items[self.nearest(event.y)]
+
 try:
 	from PIL import Image, ImageTk
 	class PyImage(ImageTk.PhotoImage):
@@ -658,7 +662,8 @@ try:
 				try: ImageTk.PhotoImage.__init__(self, file=file, **kwargs)
 				except FileNotFoundError as e:
 					print("ERROR", "Loading image:", e)
-					ImageTk.PhotoImage.__init__(self, file="assets/blank.png")
+					self._img = "assets/blank.png"
+					ImageTk.PhotoImage.__init__(self, file=self._img)
 
 			if not self._img: raise ValueError("Must specify either 'url', 'bin_file' or 'file'")
 
