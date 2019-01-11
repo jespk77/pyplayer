@@ -112,7 +112,7 @@ def album_process(type, songs):
 def command_album(arg, argc):
 	if argc > 0:
 		from modules.utilities import albumwindow
-		try: aw = albumwindow.AlbumWindow(client.window, album_process, "_".join(argc))
+		try: aw = albumwindow.AlbumWindow(client.window, album_process, "_".join(arg))
 		except: return messagetypes.Reply("Unknown album")
 
 		client.open_window("albumviewer", aw)
