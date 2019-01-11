@@ -9,6 +9,7 @@ class AlbumWindow(pywindow.PyWindow):
 		with open(album_format.format(album_file, "json"), "r") as file:
 			self._metadata = json.load(file)
 
+		self.icon = "assets/blank"
 		self.title = "Album: {}".format(self._metadata["name"])
 		self.set_widget("artist", pyelement.PyTextlabel(self.window)).display_text = "{}: {}".format(self._metadata["artist"], self._metadata["name"])
 		self.set_widget("release_date", pyelement.PyTextlabel(self.window), row=1).display_text = "Released {}".format(self._metadata["release_date"])
@@ -51,4 +52,6 @@ class AlbumWindowInput(pywindow.PyWindow):
 		self.set_widget("input_songlist", pyelement.PyTextfield(self.window), row=3)
 		self.set_widget("input_image", pyelement.PyTextInput(self.window), row=4)
 
+		self.icon = "assets/blank"
+		self.title = "Create new album..."
 		self.row_options(3, weight=1)
