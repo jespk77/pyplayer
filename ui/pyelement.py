@@ -139,7 +139,7 @@ class PyFrame(PyElement, tkinter.Frame):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self, initial_cfg=frame_cfg)
-		tkinter.Frame.__init__(self, master)
+		tkinter.Frame.__init__(self, master, **frame_cfg)
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		tkinter.Frame.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
@@ -197,7 +197,7 @@ class PyLabelframe(PyElement, tkinter.LabelFrame):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self, initial_cfg=element_cfg)
-		tkinter.LabelFrame.__init__(self, master)
+		tkinter.LabelFrame.__init__(self, master, **element_cfg)
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		tkinter.LabelFrame.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
@@ -216,7 +216,7 @@ class PyCanvas(PyElement, tkinter.Canvas):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self, initial_cfg=canvas_cfg)
-		tkinter.Canvas.__init__(self, master)
+		tkinter.Canvas.__init__(self, master, **canvas_cfg)
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		tkinter.Canvas.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
@@ -229,9 +229,8 @@ class PyTextlabel(PyElement, tkinter.Label):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self, initial_cfg=element_cfg)
-		tkinter.Label.__init__(self, master)
-		self._string_var = None
-		self._img = None
+		tkinter.Label.__init__(self, master, **element_cfg)
+		self._string_var = self._img = None
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		tkinter.Label.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
@@ -259,8 +258,8 @@ class PyTextInput(PyElement, tkinter.Entry):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self)
-		tkinter.Entry.__init__(self, master)
-		self._format_str = None
+		tkinter.Entry.__init__(self, master, **input_cfg)
+		self._format_str = self._cmd = None
 		self._input_length = 0
 		self._strvar = tkinter.StringVar()
 		self._input_cmd = self.register(self._on_input_key)
@@ -325,7 +324,7 @@ class PyCheckbox(PyElement, tkinter.Checkbutton):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self, initial_cfg=checkbox_cfg)
-		tkinter.Checkbutton.__init__(self, master)
+		tkinter.Checkbutton.__init__(self, master, **checkbox_cfg)
 		self._value = tkinter.IntVar()
 		self._desc = tkinter.StringVar()
 		self.configure(variable=self._value, textvariable=self._desc)
@@ -368,11 +367,9 @@ class PyButton(PyElement, tkinter.Button):
 	""" Element to create a clickable button  """
 	def __init__(self, master):
 		check_master(master)
-		PyElement.__init__(self, initial_cfg=checkbox_cfg)
-		tkinter.Button.__init__(self, master)
-		self._string_var = None
-		self._callback = None
-		self._image = None
+		PyElement.__init__(self, initial_cfg=button_cfg)
+		tkinter.Button.__init__(self, master, **button_cfg)
+		self._string_var = self._callback = self._image = None
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		tkinter.Button.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
@@ -425,7 +422,7 @@ class PyTextfield(PyElement, tkinter.Text):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self, initial_cfg=input_cfg)
-		tkinter.Text.__init__(self, master)
+		tkinter.Text.__init__(self, master, **input_cfg)
 
 		self._font = font.Font(family="segoeui", size="11")
 		self.configure(font=self._font)
@@ -522,6 +519,7 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 		PyElement.__init__(self, initial_cfg=progress_cfg)
 		ttk.Progressbar.__init__(self, master)
 		self.configure(mode="determinate", variable=self._progress_var)
+		self._load_configuration()
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		ttk.Progressbar.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
@@ -587,10 +585,8 @@ class PyItemlist(PyElement, tkinter.Listbox):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self, initial_cfg=list_cfg)
-		tkinter.Listbox.__init__(self, master, selectmode="single")
-		self.list_var = None
-		self._items = None
-		self._font = None
+		tkinter.Listbox.__init__(self, master, selectmode="single", **list_cfg)
+		self.list_var = self._items = self._font = None
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		tkinter.Listbox.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
