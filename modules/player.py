@@ -294,7 +294,7 @@ def play_rss(display, url):
 	return messagetypes.Reply("Playing: {}".format(display))
 
 def command_rss(arg, argc):
-	n = 5
+	n = 1
 	if argc == 1:
 		try: n = int(arg.pop(0))
 		except ValueError: return messagetypes.Reply("Invalid number")
