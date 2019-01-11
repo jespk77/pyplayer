@@ -247,7 +247,7 @@ class PyWindow(BaseWindow):
 		root_cfg = self._configuration.get("root")
 		if root_cfg is not None: self.window.configure(**root_cfg.to_dict())
 
-	def bind(self, sequence, callback=None, add=None):
+	def bind(self, sequence, callback=None, add=True):
 		self._check_valid()
 		sequence = sequence.split("&&")
 		for s in sequence: self.window.bind(s, callback, add)
