@@ -2,20 +2,20 @@ from ui import pywindow, pyelement
 import json
 
 album_format = "albums/{}.{}"
-
 class AlbumWindow(pywindow.PyWindow):
 	def __init__(self, master, command_callback, album_file):
 		pywindow.PyWindow.__init__(self, master, "album_window")
-		with open(album_format.format(album_file, "json"), "r") as file:
-			self._metadata = json.load(file)
+		with open(album_format.format(album_file, "json"), "r") as file: self._metadata = json.load(file)
 
 		self.icon = "assets/blank"
+		self.transient = True
 		self.title = "Album: {}".format(self._metadata["name"])
 		self.set_widget("artist", pyelement.PyTextlabel(self.window)).display_text = "{}: {}".format(self._metadata["artist"], self._metadata["name"])
 		self.set_widget("release_date", pyelement.PyTextlabel(self.window), row=1).display_text = "Released {}".format(self._metadata["release_date"])
 		items = pyelement.PyItemlist(self.window)
 		items.itemlist = self._metadata["songlist"]
 		items.bind("<Double-Button-1>", self._callback)
+		items.bind("<Button-1>", lambda e: self.block_action())
 		self.set_widget("songlist", items, row=2)
 		bt = pyelement.PyButton(self.window)
 		bt.command = self._callback
@@ -28,8 +28,9 @@ class AlbumWindow(pywindow.PyWindow):
 		self.column_options(0, weight=5, minsize=200)
 
 		import os
-		if os.path.exists(album_format.format(self._metadata["image"], "png")):
-			img = pyelement.PyImage(file=album_format.format(self._metadata["image"], "png"))
+		img_path = album_format.format(self._metadata["image"], "png")
+		if os.path.exists(img_path):
+			img = pyelement.PyImage(file=img_path)
 			cover = pyelement.PyTextlabel(self.window)
 			cover.image = img
 			self.set_widget("cover", cover, column=1, rowspan=4)
