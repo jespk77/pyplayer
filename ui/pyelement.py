@@ -263,7 +263,6 @@ class PyTextInput(PyElement, tkinter.Entry):
 		self._format_str = None
 		self._input_length = 0
 		self._strvar = tkinter.StringVar()
-		self._cmd = None
 		self._input_cmd = self.register(self._on_input_key)
 		self.configure(textvariable=self._strvar, validate="key", validatecommand=(self._input_cmd, "%P"))
 
@@ -363,6 +362,8 @@ class PyCheckbox(PyElement, tkinter.Checkbutton):
 		if not callable(cb): raise TypeError("Callback must be callable!")
 		self.configure(command=cb)
 
+button_cfg = { "activebackground": background_color, "activeforeground": foreground_color }
+button_cfg.update(element_cfg)
 class PyButton(PyElement, tkinter.Button):
 	""" Element to create a clickable button  """
 	def __init__(self, master):
@@ -510,7 +511,7 @@ class PyTextfield(PyElement, tkinter.Text):
 		else: PyElement.__setitem__(self, key, value)
 		if dirty: self.mark_dirty()
 
-progress_cfg = { "background": "cyan", "troughcolor": background_color }
+progress_cfg = { "background": "green", "troughcolor": background_color }
 class PyProgressbar(PyElement, ttk.Progressbar):
 	""" Widget that displays a bar indicating progress made by the application """
 	def __init__(self, master):
