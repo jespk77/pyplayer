@@ -107,7 +107,7 @@ def get_logger():
 
 def open_logfile(file=None):
 	if not file: file = get_logger().filename
-	file = "logs/{}".format(file)
+	else: file = "logs/{}".format(file)
 	if not file or not os.path.isfile(file): raise FileNotFoundError("'{}' is not a file".format(file))
 	import webbrowser
 	return webbrowser.open(file)
