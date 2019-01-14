@@ -93,7 +93,7 @@ def command_log_open(arg, argc):
 
 def command_restart(arg, argc):
 	if argc == 0:
-		client.restart()
+		client.close_with_reason("restart")
 		return messagetypes.Reply("Pyplayer will restart soon...")
 
 def command_timer(arg, argc):
