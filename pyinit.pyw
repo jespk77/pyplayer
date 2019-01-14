@@ -50,6 +50,9 @@ class PySplashWindow(pywindow.RootPyWindow):
 
 		self._cfg = None
 		self._platform = sys.platform
+		self._actions = {
+			"restart": self._restart
+		}
 		self.after(1, self._update_program)
 
 	def _update_program(self):
@@ -154,16 +157,20 @@ class PySplashWindow(pywindow.RootPyWindow):
 	def on_close(self, event, client):
 		wn = str(event.widget)
 		if len(wn.split(".")) <= 2:
-			if client.flags == 1:
-				print("INFO", "Restarting player!")
-				import os
-				os.execl(sys.executable, sys.executable, *sys.argv)
-			else:
-				print("INFO", "Pyplayer closed, shutting down!")
-				if self._interp is not None and self._interp.is_alive():
-					self._interp.stop_command()
-					self._interp.join()
-				self.after(2, self.destroy)
+			cd = self._actions.get(client.flags, self._terminate)
+			if cd: cd()
+
+	def _restart(self):
+		print("INFO", "Restarting player!")
+		import os
+		os.execl(sys.executable, sys.executable, *sys.argv)
+
+	def _terminate(self):
+		print("INFO", "Pyplayer closed, shutting down!")
+		if self._interp is not None and self._interp.is_alive():
+			self._interp.stop_command()
+			self._interp.join()
+		self.after(2, self.destroy)
 
 if __name__ == "__main__":
 	w = PySplashWindow()
