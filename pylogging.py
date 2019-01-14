@@ -59,6 +59,8 @@ class PyLog:
 	def log_level(self): return self._level
 	@log_level.setter
 	def log_level(self, value): self._level = PyLogLevel.from_arg(value)
+	@property
+	def filename(self): return self._filename
 
 	@staticmethod
 	def _get_class_from_stack(stack):
@@ -102,3 +104,10 @@ def get_logger():
 	global logger
 	if logger is None: logger = PyLog(log_to_file="console" not in sys.argv)
 	return logger
+
+def open_logfile(file=None):
+	if not file: file = get_logger().filename
+	file = "logs/{}".format(file)
+	if not file or not os.path.isfile(file): raise FileNotFoundError("'{}' is not a file".format(file))
+	import webbrowser
+	return webbrowser.open(file)
