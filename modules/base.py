@@ -91,10 +91,15 @@ def command_log_open(arg, argc):
 		except FileNotFoundError: return messagetypes.Reply("Log file not found! Are you using console?")
 		return messagetypes.Reply("Log file opened")
 
+def command_module_configure(arg, argc):
+	if argc == 0:
+		client.close_with_reason("module_configure")
+		return messagetypes.Reply("Module configuration loading...")
+
 def command_restart(arg, argc):
 	if argc == 0:
 		client.close_with_reason("restart")
-		return messagetypes.Reply("Pyplayer will restart soon...")
+		return messagetypes.Reply("Restarting Pyplayer...")
 
 def command_timer(arg, argc):
 	if argc == 1:
@@ -116,6 +121,7 @@ def initialize():
 commands = {
 	"cfg": command_cfg,
 	"log": command_log_open,
+	"modules": command_module_configure,
 	"restart": command_restart,
 	"timer": command_timer
 }
