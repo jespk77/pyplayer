@@ -113,15 +113,25 @@ def command_album(arg, argc):
 	if argc > 0:
 		from modules.utilities import albumwindow
 		try: aw = albumwindow.AlbumWindow(client.window, album_process, "_".join(arg))
-		except: return messagetypes.Reply("Unknown album")
+		except FileNotFoundError: return messagetypes.Reply("Unknown album")
 
 		client.open_window("albumviewer", aw)
 		return messagetypes.Reply("Album opened")
 
 def command_album_add(arg, argc):
-	from modules.utilities import albumwindow
-	client.open_window("albumimput", albumwindow.AlbumWindowInput(client.window))
-	return messagetypes.Empty()
+	if argc == 0:
+		from modules.utilities import albumwindow
+		client.open_window("albumimput", albumwindow.AlbumWindowInput(client.window))
+		return messagetypes.Reply("Album creator opened")
+
+def command_album_remove(arg, argc):
+	if argc > 0:
+		import os
+		from modules.utilities import albumwindow
+		filename = albumwindow.album_format.format("_".join(arg), "json")
+		try: os.remove(filename)
+		except FileNotFoundError: return messagetypes.Reply("Unknown album")
+		return messagetypes.Reply("Album deleted")
 
 # - configure autoplay
 def command_autoplay_ignore(arg, argc):
@@ -322,7 +332,8 @@ def command_stop(arg, argc):
 commands = {
 	"album": {
 		"": command_album,
-		#"add": command_album_add
+		"add": command_album_add,
+		"delete": command_album_remove
 	}, "autoplay": {
 		"next": command_autoplay_next,
 		"off": command_autoplay_off,
