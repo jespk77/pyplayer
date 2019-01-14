@@ -1,0 +1,8 @@
+{
+  "id": "base",
+  "enabled": true,
+  "dependencies": [],
+  "platform": null,
+  "priority": 0,
+  "required": true
+}

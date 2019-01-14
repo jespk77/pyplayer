@@ -1,0 +1,8 @@
+{
+  "id": "programs",
+  "enabled": true,
+  "dependencies": ["pyjokes"],
+  "platform": null,
+  "priority": 7,
+  "required": false
+}
