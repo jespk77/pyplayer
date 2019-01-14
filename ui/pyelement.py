@@ -305,7 +305,7 @@ class PyTextInput(PyElement, tkinter.Entry):
 	def value(self, vl):
 		""" Current value currently set for this input field """
 		vl = str(vl)
-		if vl and not self._on_input_key(vl): raise ValueError("Cannot set value; contains non-allowed characters")
+		if vl and not self._on_input_key(vl): raise ValueError("Cannot set value {}; contains non-allowed characters".format(vl))
 		self._strvar.set(vl)
 
 	@property
@@ -316,7 +316,7 @@ class PyTextInput(PyElement, tkinter.Entry):
 		self._input_length = ln
 
 	def _clear_input(self, event=None): self.value = ""
-	def _on_input_key(self, entry): return self._input_length == 0 or (len(entry) <= self._input_length and (not self._format_str or self._format_str.search(entry)))
+	def _on_input_key(self, entry): return self._input_length == 0 or (len(entry) <= self._input_length and (not self._format_str or not self._format_str.search(entry)))
 
 checkbox_cfg = { "activebackground": background_color, "activeforeground": foreground_color, "selectcolor": background_color }
 checkbox_cfg.update(element_cfg)

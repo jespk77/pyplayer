@@ -51,8 +51,10 @@ class PySplashWindow(pywindow.RootPyWindow):
 		self._cfg = None
 		self._platform = sys.platform
 		self._actions = {
+			"module_configure": self._module_configure,
 			"restart": self._restart
 		}
+
 		self.after(1, self._update_program)
 
 	def _update_program(self):
@@ -94,12 +96,21 @@ class PySplashWindow(pywindow.RootPyWindow):
 		with open(program_info_file, "r") as file:
 			try: self._cfg = json.load(file)
 			except json.JSONDecodeError as e:
-				self.status_text = "Cannot load 'modules.json': {}, exiting in 5 seconds...".format(e)
+				self.status_text = "Cannot load 'pyplayer.json': {}, exiting in 5 seconds...".format(e)
 				self.after(5, self.destroy)
 				return
+
 		vs = get_version_string()
 		if self._cfg["python_version"] != vs:
 			print("WARNING", "Installed Python version ({}) different from build version ({}), things might not work correctly".format(vs, self._cfg["python_version"]))
+
+		try:
+			with open("modules.json", "r") as file:
+				import json
+				self._cfg["modules"] = json.load(file)
+		except (FileNotFoundError, json.JSONDecodeError):
+			print("INFO", "Invalid module configuration, launching module options window...")
+			return self.after(1, self._module_configure)
 
 		self._loaded_modules = {mid: mot for mid, mot in self._cfg["modules"].items() if mot.get("enabled")}
 		if dependency_check:
@@ -159,6 +170,37 @@ class PySplashWindow(pywindow.RootPyWindow):
 		if len(wn.split(".")) <= 2:
 			cd = self._actions.get(client.flags, self._terminate)
 			if cd: cd()
+
+	def _module_configure(self):
+		import os, json
+		print("INFO", "Opening module configuration window")
+		self.status_text = "Configuring modules..."
+		modules = self._cfg.get("modules")
+		if not modules: self._cfg["modules"] = modules = {}
+
+		for m in ["modules/{}".format(mfile) for mfile in os.listdir("modules") if mfile.endswith(".json")]:
+			with open(m, "r") as file: mop = json.load(file)
+			mid = mop["id"]
+			del mop["id"]
+			mop["enabled"] = mop["required"]
+			mop["new"] = True
+
+			if mid not in modules: modules[mid] = mop
+
+		from utilities import module_select
+		ms = module_select.ModuleSelector(self.window, modules)
+		ms.bind("<Destroy>", lambda e: self._module_done(e, ms))
+		self.status_text = "Modules configured"
+		self.hidden = True
+		self.open_window("module_select", ms)
+
+	def _module_done(self, event, selector):
+		if len(str(event.widget).split(".")) == 2:
+			self._cfg["modules"] = selector.modules
+			import json
+			with open("modules.json", "w") as file: json.dump(self._cfg["modules"], file)
+			self.hidden = False
+			self.after(1, self._load_modules, True)
 
 	def _restart(self):
 		print("INFO", "Restarting player!")

@@ -12,7 +12,8 @@ class PyPlayerEvent:
 import enum
 class PyPlayerCloseReason(enum.Enum):
 	NONE = 0,
-	RESTART = 1
+	RESTART = 1,
+	MODULE_CONFIGURE = 2
 
 initial_cfg = { "autosave_delay": 5, "directory":{}, "default_path": "", "header_format": "PyPlayer - %a %b %d, %Y %I:%M %p -", "loglevel": "warning", "version": 1 }
 progressbar_cfg = {"background": "cyan", "foreground": "white"}
