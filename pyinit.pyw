@@ -191,16 +191,16 @@ class PySplashWindow(pywindow.RootPyWindow):
 		ms = module_select.ModuleSelector(self.window, modules)
 		ms.bind("<Destroy>", lambda e: self._module_done(e, ms))
 		self.status_text = "Modules configured"
-		self.hidden = True
 		self.open_window("module_select", ms)
+		self.hidden = True
 
 	def _module_done(self, event, selector):
 		if len(str(event.widget).split(".")) == 2:
+			self.hidden = False
 			self._cfg["modules"] = selector.modules
 			import json
 			with open("modules.json", "w") as file: json.dump(self._cfg["modules"], file)
-			self.hidden = False
-			self.after(1, self._load_modules, True)
+			self.after(1, self._restart)
 
 	def _restart(self):
 		print("INFO", "Restarting player!")
