@@ -427,7 +427,7 @@ class PyTextfield(PyElement, tkinter.Text):
 		self._font = font.Font(family="segoeui", size="11")
 		self.configure(font=self._font)
 		self._accept_input = True
-		self._boldfont = None
+		self._boldfont = self._cmd = self._bd = None
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		tkinter.Text.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
@@ -460,6 +460,25 @@ class PyTextfield(PyElement, tkinter.Text):
 		self.delete(self.front, self.back)
 		self.insert(self.back, value)
 
+	@property
+	def command(self):
+		""" Get the callback that is registered when any character is entered, returns None if not set """
+		return self._cmd
+	@command.setter
+	def command(self, vl):
+		if vl:
+			if not callable(vl): raise ValueError("Callback must be callable!")
+			self._bd = self.bind("<Key>", self._on_key_press)
+		elif self._bd:
+			self.unbind("<Key>", self._bd)
+			self._bd = None
+		self._cmd = vl
+
+	def _on_key_press(self, event=None):
+		if self._cmd:
+			try: self._cmd()
+			except Exception as e: print("ERROR", "Processing callback for textfield:", e)
+
 	has_focus = tkinter.Text.focus_get
 	current_focus = tkinter.Text.focus_displayof
 	previous_focus = tkinter.Text.focus_lastfor
@@ -474,11 +493,13 @@ class PyTextfield(PyElement, tkinter.Text):
 	def insert(self, index, chars, *args):
 		self.configure(state="normal")
 		tkinter.Text.insert(self, index, chars, *args)
+		self._on_key_press()
 		if not self.accept_input: self.configure(state="disabled")
 
 	def delete(self, index1, index2=None):
 		self.configure(state="normal")
 		tkinter.Text.delete(self, index1, index2)
+		self._on_key_press()
 		if not self.accept_input: self.configure(state="disabled")
 
 	def _load_configuration(self):
