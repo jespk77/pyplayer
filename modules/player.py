@@ -105,7 +105,34 @@ def set_autoplay_ignore(ignore):
 	global autoplay_ignore
 	autoplay_ignore = bool(ignore)
 
+def album_process(type, songs):
+	for s in songs: interpreter.put_command("{} {} {}.".format(type, "music", s.replace(" - ", " ")))
+
 # ===== MAIN COMMANDS =====
+def command_album(arg, argc):
+	if argc > 0:
+		from modules.utilities import albumwindow
+		try: aw = albumwindow.AlbumWindow(client.window, album_process, "_".join(arg))
+		except FileNotFoundError: return messagetypes.Reply("Unknown album")
+
+		client.open_window("albumviewer", aw)
+		return messagetypes.Reply("Album opened")
+
+def command_album_add(arg, argc):
+	if argc == 0:
+		from modules.utilities import albumwindow
+		client.open_window("albumimput", albumwindow.AlbumWindowInput(client.window))
+		return messagetypes.Reply("Album creator opened")
+
+def command_album_remove(arg, argc):
+	if argc > 0:
+		import os
+		from modules.utilities import albumwindow
+		filename = albumwindow.album_format.format("_".join(arg), "json")
+		try: os.remove(filename)
+		except FileNotFoundError: return messagetypes.Reply("Unknown album")
+		return messagetypes.Reply("Album deleted")
+
 # - configure autoplay
 def command_autoplay_ignore(arg, argc):
 	if argc == 0:
@@ -277,7 +304,7 @@ def play_rss(display, url):
 	return messagetypes.Reply("Playing: {}".format(display))
 
 def command_rss(arg, argc):
-	n = 5
+	n = 1
 	if argc == 1:
 		try: n = int(arg.pop(0))
 		except ValueError: return messagetypes.Reply("Invalid number")
@@ -303,7 +330,11 @@ def command_stop(arg, argc):
 		return messagetypes.Empty()
 
 commands = {
-	"autoplay": {
+	"album": {
+		"": command_album,
+		"add": command_album_add,
+		"delete": command_album_remove
+	}, "autoplay": {
 		"next": command_autoplay_next,
 		"off": command_autoplay_off,
 		"on": command_autoplay_on,

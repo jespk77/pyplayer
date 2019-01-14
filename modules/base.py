@@ -84,6 +84,18 @@ def command_cfg(arg, argc):
 			if ot is None: return messagetypes.Reply("Option '{}' is not set".format(arg[0]))
 			else: return messagetypes.Reply("Option '{}' is set to '{}'".format(arg[0], ot))
 
+def command_log_open(arg, argc):
+	if argc == 0:
+		import pylogging
+		try: pylogging.open_logfile()
+		except FileNotFoundError: return messagetypes.Reply("Log file not found! Are you using console?")
+		return messagetypes.Reply("Log file opened")
+
+def command_restart(arg, argc):
+	if argc == 0:
+		client.close_with_reason("restart")
+		return messagetypes.Reply("Pyplayer will restart soon...")
+
 def command_timer(arg, argc):
 	if argc == 1:
 		time = get_time_from_string(arg[0])
@@ -103,5 +115,7 @@ def initialize():
 
 commands = {
 	"cfg": command_cfg,
+	"log": command_log_open,
+	"restart": command_restart,
 	"timer": command_timer
 }

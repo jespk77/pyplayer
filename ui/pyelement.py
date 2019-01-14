@@ -139,7 +139,7 @@ class PyFrame(PyElement, tkinter.Frame):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self, initial_cfg=frame_cfg)
-		tkinter.Frame.__init__(self, master)
+		tkinter.Frame.__init__(self, master, **frame_cfg)
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		tkinter.Frame.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
@@ -197,7 +197,7 @@ class PyLabelframe(PyElement, tkinter.LabelFrame):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self, initial_cfg=element_cfg)
-		tkinter.LabelFrame.__init__(self, master)
+		tkinter.LabelFrame.__init__(self, master, **element_cfg)
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		tkinter.LabelFrame.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
@@ -216,7 +216,7 @@ class PyCanvas(PyElement, tkinter.Canvas):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self, initial_cfg=canvas_cfg)
-		tkinter.Canvas.__init__(self, master)
+		tkinter.Canvas.__init__(self, master, **canvas_cfg)
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		tkinter.Canvas.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
@@ -229,8 +229,8 @@ class PyTextlabel(PyElement, tkinter.Label):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self, initial_cfg=element_cfg)
-		tkinter.Label.__init__(self, master)
-		self._string_var = None
+		tkinter.Label.__init__(self, master, **element_cfg)
+		self._string_var = self._img = None
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		tkinter.Label.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
@@ -245,18 +245,25 @@ class PyTextlabel(PyElement, tkinter.Label):
 			self.configure(textvariable=self._string_var)
 		self._string_var.set(value)
 
+	@property
+	def image(self): return self._img
+	@image.setter
+	def image(self, img):
+		self._img = img
+		self.configure(image=img)
+
 input_cfg = { "insertbackground": foreground_color, "selectforeground": sel_foreground_color, "selectbackground": sel_background_color }
 input_cfg.update(element_cfg)
 class PyTextInput(PyElement, tkinter.Entry):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self)
-		tkinter.Entry.__init__(self, master)
-		self._format_str = None
+		tkinter.Entry.__init__(self, master, **input_cfg)
+		self._format_str = self._cmd = None
 		self._input_length = 0
 		self._strvar = tkinter.StringVar()
-		self._cmd = None
 		self._input_cmd = self.register(self._on_input_key)
+		self.bind("<Escape>", self._clear_input)
 		self.configure(textvariable=self._strvar, validate="key", validatecommand=(self._input_cmd, "%P"))
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
@@ -273,7 +280,7 @@ class PyTextInput(PyElement, tkinter.Entry):
 	def format_str(self): return self._format_str if self._format_str else ""
 	@format_str.setter
 	def format_str(self, fs):
-		""" Allows to set specific characters that can be entered into this field, set None to allow everything """
+		""" Allows to set a regular expression for characters that can be entered into this field, or None to allow everything """
 		if fs:
 			import re
 			self._format_str = re.compile("[^{}]".format(fs))
@@ -307,10 +314,9 @@ class PyTextInput(PyElement, tkinter.Entry):
 	def max_length(self, ln):
 		""" Character limit for this input field, when this limit is reached, no more characters can be entered; set to 0 to disable limit """
 		self._input_length = ln
-		self.configure(width=self._input_length*10)
 
-	def _on_input_key(self, entry):
-		return self._input_length > 0 and len(entry) <= self._input_length and (not self._format_str or not self._format_str.search(entry))
+	def _clear_input(self, event=None): self.value = ""
+	def _on_input_key(self, entry): return self._input_length == 0 or (len(entry) <= self._input_length and (not self._format_str or self._format_str.search(entry)))
 
 checkbox_cfg = { "activebackground": background_color, "activeforeground": foreground_color, "selectcolor": background_color }
 checkbox_cfg.update(element_cfg)
@@ -318,7 +324,7 @@ class PyCheckbox(PyElement, tkinter.Checkbutton):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self, initial_cfg=checkbox_cfg)
-		tkinter.Checkbutton.__init__(self, master)
+		tkinter.Checkbutton.__init__(self, master, **checkbox_cfg)
 		self._value = tkinter.IntVar()
 		self._desc = tkinter.StringVar()
 		self.configure(variable=self._value, textvariable=self._desc)
@@ -355,15 +361,15 @@ class PyCheckbox(PyElement, tkinter.Checkbutton):
 		if not callable(cb): raise TypeError("Callback must be callable!")
 		self.configure(command=cb)
 
+button_cfg = { "activebackground": background_color, "activeforeground": foreground_color }
+button_cfg.update(element_cfg)
 class PyButton(PyElement, tkinter.Button):
 	""" Element to create a clickable button  """
 	def __init__(self, master):
 		check_master(master)
-		PyElement.__init__(self, initial_cfg=checkbox_cfg)
-		tkinter.Button.__init__(self, master)
-		self._string_var = None
-		self._callback = None
-		self._image = None
+		PyElement.__init__(self, initial_cfg=button_cfg)
+		tkinter.Button.__init__(self, master, **button_cfg)
+		self._string_var = self._callback = self._image = None
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		tkinter.Button.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
@@ -416,12 +422,12 @@ class PyTextfield(PyElement, tkinter.Text):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self, initial_cfg=input_cfg)
-		tkinter.Text.__init__(self, master)
+		tkinter.Text.__init__(self, master, **input_cfg)
 
 		self._font = font.Font(family="segoeui", size="11")
 		self.configure(font=self._font)
 		self._accept_input = True
-		self._boldfont = None
+		self._boldfont = self._cmd = self._bd = None
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		tkinter.Text.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
@@ -454,6 +460,25 @@ class PyTextfield(PyElement, tkinter.Text):
 		self.delete(self.front, self.back)
 		self.insert(self.back, value)
 
+	@property
+	def command(self):
+		""" Get the callback that is registered when any character is entered, returns None if not set """
+		return self._cmd
+	@command.setter
+	def command(self, vl):
+		if vl:
+			if not callable(vl): raise ValueError("Callback must be callable!")
+			self._bd = self.bind("<Key>", self._on_key_press)
+		elif self._bd:
+			self.unbind("<Key>", self._bd)
+			self._bd = None
+		self._cmd = vl
+
+	def _on_key_press(self, event=None):
+		if self._cmd:
+			try: self._cmd()
+			except Exception as e: print("ERROR", "Processing callback for textfield:", e)
+
 	has_focus = tkinter.Text.focus_get
 	current_focus = tkinter.Text.focus_displayof
 	previous_focus = tkinter.Text.focus_lastfor
@@ -468,11 +493,13 @@ class PyTextfield(PyElement, tkinter.Text):
 	def insert(self, index, chars, *args):
 		self.configure(state="normal")
 		tkinter.Text.insert(self, index, chars, *args)
+		self._on_key_press()
 		if not self.accept_input: self.configure(state="disabled")
 
 	def delete(self, index1, index2=None):
 		self.configure(state="normal")
 		tkinter.Text.delete(self, index1, index2)
+		self._on_key_press()
 		if not self.accept_input: self.configure(state="disabled")
 
 	def _load_configuration(self):
@@ -502,7 +529,7 @@ class PyTextfield(PyElement, tkinter.Text):
 		else: PyElement.__setitem__(self, key, value)
 		if dirty: self.mark_dirty()
 
-progress_cfg = { "background": "cyan", "troughcolor": background_color }
+progress_cfg = { "background": "green", "troughcolor": background_color }
 class PyProgressbar(PyElement, ttk.Progressbar):
 	""" Widget that displays a bar indicating progress made by the application """
 	def __init__(self, master):
@@ -513,6 +540,7 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 		PyElement.__init__(self, initial_cfg=progress_cfg)
 		ttk.Progressbar.__init__(self, master)
 		self.configure(mode="determinate", variable=self._progress_var)
+		self._load_configuration()
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		ttk.Progressbar.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
@@ -578,10 +606,8 @@ class PyItemlist(PyElement, tkinter.Listbox):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self, initial_cfg=list_cfg)
-		tkinter.Listbox.__init__(self, master, selectmode="single")
-		self.list_var = None
-		self._items = None
-		self._font = None
+		tkinter.Listbox.__init__(self, master, selectmode="single", **list_cfg)
+		self.list_var = self._items = self._font = None
 
 	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		tkinter.Listbox.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
@@ -616,6 +642,10 @@ class PyItemlist(PyElement, tkinter.Listbox):
 
 		self._items = value
 		self.list_var.set(self._items)
+
+	def get_item_from_event(self, event):
+		""" Get the element at the mouse pointer when processing event from bound callback """
+		return self._items[self.nearest(event.y)]
 
 try:
 	from PIL import Image, ImageTk
@@ -653,7 +683,8 @@ try:
 				try: ImageTk.PhotoImage.__init__(self, file=file, **kwargs)
 				except FileNotFoundError as e:
 					print("ERROR", "Loading image:", e)
-					ImageTk.PhotoImage.__init__(self, file="assets/blank.png")
+					self._img = "assets/blank.png"
+					ImageTk.PhotoImage.__init__(self, file=self._img)
 
 			if not self._img: raise ValueError("Must specify either 'url', 'bin_file' or 'file'")
 

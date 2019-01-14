@@ -9,6 +9,11 @@ class PyPlayerEvent:
 		for key, value in kwargs.items():
 			setattr(self, key, value)
 
+import enum
+class PyPlayerCloseReason(enum.Enum):
+	NONE = 0,
+	RESTART = 1
+
 initial_cfg = { "autosave_delay": 5, "directory":{}, "default_path": "", "header_format": "PyPlayer - %a %b %d, %Y %I:%M %p -", "loglevel": "warning", "version": 1 }
 progressbar_cfg = {"background": "cyan", "foreground": "white"}
 header_cfg = { "background": "black", "foreground": "white" }
@@ -44,6 +49,7 @@ class PyPlayer(pywindow.PyWindow):
 		self.set_widget("console", TextConsole(self, command_callback=self.parse_command), initial_cfg=console_cfg, row=3, columnspan=9).focus()
 		self.row_options(3, minsize=100, weight=1)
 
+		self._flags = PyPlayerCloseReason.NONE
 		self.last_cmd = None
 		self.event_handlers = {
 			"progressbar_update": [],  # parameters [ progress: int ]
@@ -55,6 +61,9 @@ class PyPlayer(pywindow.PyWindow):
 		self.update_label()
 		self.update_loglevel()
 		self.cfg_register_listener("loglevel", self.update_loglevel)
+
+	@property
+	def flags(self): return self._flags.name.lower()
 
 	def subscribe_event(self, name, callback):
 		if name in self.event_handlers and callable(callback):
@@ -142,3 +151,10 @@ class PyPlayer(pywindow.PyWindow):
 
 	def add_message(self, args, s=0.1):
 		self.after(s, self.widgets["console"].set_notification, *args)
+
+	def close_with_reason(self, reason):
+		reason = reason.upper()
+		try:
+			self._flags = PyPlayerCloseReason[reason]
+			self.after(1, self.destroy)
+		except KeyError: raise ValueError("Unknown reason '{}'".format(reason))

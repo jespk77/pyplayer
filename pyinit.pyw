@@ -47,29 +47,13 @@ class PySplashWindow(pywindow.RootPyWindow):
 		label_status = pyelement.PyTextlabel(self.window)
 		label_status.display_text = "Initializing..."
 		self.set_widget("label_status", label_status, row=2, initial_cfg={"background": "gray10", "foreground": "white", "cursor": "watch"})
+
+		self._cfg = None
+		self._platform = sys.platform
+		self._actions = {
+			"restart": self._restart
+		}
 		self.after(1, self._update_program)
-
-	def _enable_clickclose(self, event):
-		self.after(1, self.destroy)
-
-	def _git_status(self, out):
-		out = out.split("\n")
-		if len(out) > 1:
-			for o in out:
-				if o.startswith("Updating"): self.status_text = o; break
-		elif len(out) == 1: self.status_text = out[0]
-		self.window.update_idletasks()
-
-	def _git_hash(self, out):
-		hash = self.get_or_create("hash", "none")
-		out = out.rstrip("\n")
-		if hash != out:
-			print("INFO", "Git hash updated from '{}' to '{}', checking dependencies".format(hash, out))
-			self["hash"] = out
-			self.after(1, self._load_modules if "no_module" in sys.argv else self._load_moduleselect, False)
-		else:
-			print("INFO", "Git hash equal to last time, skip dependency checking")
-			self.after(1, self._load_modules)
 
 	def _update_program(self):
 		if "no_update" not in sys.argv:
@@ -79,59 +63,65 @@ class PySplashWindow(pywindow.RootPyWindow):
 
 			if pc.returncode:
 				self.status_text = "Failed to update PyPlayer, continuing in 5 seconds or click to close..."
-				self.bind("<Button-1>", self._enable_clickclose)
-			else: process_command("git rev-parse HEAD", stdout=self._git_hash)
-		else: self.status_text = "Updating skipped."
-		self.after(1, self._load_moduleselect)
+				self.bind("<Button-1>", lambda e: self.destroy())
+				return self.after(5, self._load_modules)
+			process_command("git rev-parse HEAD", stdout=self.git_hash)
+		else:
+			self.status_text = "Updating skipped."
+			self.after(1, self._load_modules, False)
 
-	def _load_module_file(self):
-		import json
-		try:
-			with open(program_info_file, "r") as file:
-				self._info = json.load(file)
-				return self._info["modules"]
-		except FileNotFoundError:
-			print("ERROR", "Cannot find file '{}', loading cannot continue...".format(program_info_file))
-			self.status_text = "ERROR: Cannot find '{}', click to close...".format(program_info_file)
-		except json.JSONDecodeError as e:
-			print("ERROR", "Parsing '{}' as JSON:".format(program_info_file), e)
-			self.status_text = "ERROR: Parsing '{}' (see log for details), click to close..."
-		except Exception as e:
-			print("ERROR", "Processing '{}' as JSON:".format(program_info_file), e)
-			self.status_text = "Something went wrong"
-		self.bind("<Button-1>", self._enable_clickclose)
+	def _git_status(self, out):
+		out = out.split("\n")
+		if len(out) > 1:
+			for o in out:
+				if o.startswith("Updating"): self.status_text = o; break
+		elif len(out) == 1: self.status_text = out[0]
+		self.window.update_idletasks()
 
-
-	def _load_moduleselect(self):
-		mds = self._load_module_file()
-		if mds:
-			from utilities import module_select
-			ms = module_select.ModuleSelector(self.window, mds)
-			ms.bind("<Destroy>", lambda e: self._done_moduleselect(e, ms))
-			self.hidden = True
-			self.open_window("module_select", ms)
-
-	def _done_moduleselect(self, event, wd):
-		if len(str(event.widget).split('.')) < 3:
-			print("INFO", "Module selector closed, continuing to load modules...")
-			self.hidden = False
-			self._info["modules"] = wd.modules
-			print(self._info["modules"])
+	def git_hash(self, out):
+		hash = self.get_or_create("hash", "none")
+		out = out.rstrip("\n")
+		if hash != out:
+			print("INFO", "Git hash updated from '{}' to '{}', checking dependencies".format(hash, out))
+			self["hash"] = out
 			self.after(1, self._load_modules)
+		else:
+			print("INFO", "Git hash equal to last time, skip dependency checking")
+			self.after(1, self._load_modules, False)
 
 	def _load_modules(self, dependency_check=True):
+		import json
+		with open(program_info_file, "r") as file:
+			try: self._cfg = json.load(file)
+			except json.JSONDecodeError as e:
+				self.status_text = "Cannot load 'modules.json': {}, exiting in 5 seconds...".format(e)
+				self.after(5, self.destroy)
+				return
+		vs = get_version_string()
+		if self._cfg["python_version"] != vs:
+			print("WARNING", "Installed Python version ({}) different from build version ({}), things might not work correctly".format(vs, self._cfg["python_version"]))
+
+		self._loaded_modules = {mid: mot for mid, mot in self._cfg["modules"].items() if mot.get("enabled")}
 		if dependency_check:
 			self.status_text = "Checking dependencies..."
-			dependencies = set(self._info.get("dependencies", []))
-			for module_options in self._info["modules"].values():
-				for d in module_options.get("dependencies", []): dependencies.add(d)
+			dependencies = self._cfg.get("dependencies", [])
+			for module_id, module_options in self._loaded_modules.copy().items():
+				pt = module_options.get("platform")
+				if pt is not None and pt != self._platform:
+					print("ERROR", "Module '{}' was enabled but isn't supported on this platform! Skipping loading...".format(module_id))
+					del self._loaded_modules[module_id]
+					continue
+
+				dps = module_options.get("dependencies")
+				if dps: dependencies += [d for d in dps if d not in dependencies]
 
 			if dependencies:
 				print("INFO", "Found dependencies:", dependencies)
 				pip_install = "{} -m pip install {}"
-				if sys.platform == "linux": pip_install += " --user"
+				if self._platform == "linux": pip_install += " --user"
 				self.status_text = "Checking dependencies"
-				for dp in dependencies: process_command(pip_install.format(sys.executable, dp), stdout=self._pip_status)
+				for i in range(len(dependencies)):
+					process_command(pip_install.format(sys.executable, dependencies[i]), stdout=self._pip_status)
 			else: print("INFO", "No dependencies found, continuing...")
 		self.status_text = "Loading PyPlayer..."
 		self.after(1, self._load_program)
@@ -151,9 +141,9 @@ class PySplashWindow(pywindow.RootPyWindow):
 
 		print("initializing client...")
 		client = PyPlayer(self.window)
-		self._interp = Interpreter(client, modules=self._info["modules"])
+		self._interp = Interpreter(client, modules=self._loaded_modules)
 		client.interp = self._interp
-		client.bind("<Destroy>", self.on_close, add=True)
+		client.bind("<Destroy>", lambda e: self.on_close(e, client), add=True)
 		self.open_window("client", client)
 		client.hidden = False
 		self.hidden = True
@@ -164,14 +154,23 @@ class PySplashWindow(pywindow.RootPyWindow):
 	def status_text(self, vl):
 		self.widgets["label_status"].display_text = vl.split("\n")[0]
 
-	def on_close(self, event):
+	def on_close(self, event, client):
 		wn = str(event.widget)
 		if len(wn.split(".")) <= 2:
-			print("INFO", "Pyplayer closed, shutting down!")
-			if self._interp is not None and self._interp.is_alive():
-				self._interp.stop_command()
-				self._interp.join()
-			self.after(2, self.destroy)
+			cd = self._actions.get(client.flags, self._terminate)
+			if cd: cd()
+
+	def _restart(self):
+		print("INFO", "Restarting player!")
+		import os
+		os.execl(sys.executable, sys.executable, *sys.argv)
+
+	def _terminate(self):
+		print("INFO", "Pyplayer closed, shutting down!")
+		if self._interp is not None and self._interp.is_alive():
+			self._interp.stop_command()
+			self._interp.join()
+		self.after(2, self.destroy)
 
 if __name__ == "__main__":
 	w = PySplashWindow()
