@@ -24,6 +24,9 @@ class ModuleSelector(pywindow.PyWindow):
 			mod_frame = pyelement.PyLabelframe(moptions.frame)
 			mod_frame.set_configuration()
 			mod_frame.label = "Module: {}".format(module_id)
+			if module_options.get("new"):
+				del module_options["new"]
+				mod_frame.label = "NEW " + mod_frame.label
 			mod_frame.grid_columnconfigure(0, weight=1)
 			mod_frame.grid(row=index, sticky="news")
 
@@ -54,6 +57,7 @@ class ModuleSelector(pywindow.PyWindow):
 			mod_priority.module = module_id
 			mod_priority.format_str = "0-9"
 			mod_priority.max_length = 2
+			mod_priority.accept_input = mod_enable.accept_input
 			mod_priority.value = module_options.get("priority", "")
 			mod_priority.command = lambda field=mod_priority: self._module_priority(field)
 			mod_priority.grid(row=index+2, column=1)
@@ -62,7 +66,7 @@ class ModuleSelector(pywindow.PyWindow):
 
 	@property
 	def modules(self):
-		return {key:value for key, value in self._modules.items() if value["enabled"]}
+		return self._modules.copy()
 
 	def _update_checkbox(self, checkbox):
 		if checkbox.accept_input: checkbox.description = "Enabled" if checkbox.checked else "Disabled"
