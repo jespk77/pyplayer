@@ -258,7 +258,7 @@ class PyTextInput(PyElement, tkinter.Entry):
 	def __init__(self, master):
 		check_master(master)
 		PyElement.__init__(self)
-		tkinter.Entry.__init__(self, master, **input_cfg)
+		tkinter.Entry.__init__(self, master, disabledbackground=background_color, **input_cfg)
 		self._format_str = self._cmd = None
 		self._input_length = 0
 		self._strvar = tkinter.StringVar()
