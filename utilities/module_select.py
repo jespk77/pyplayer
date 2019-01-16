@@ -7,15 +7,30 @@ class ModuleSelector(pywindow.PyWindow):
 		pywindow.PyWindow.__init__(self, root, "module_select")
 		self._modules = modules
 		self.title = "Pyplayer Modules"
-		self.column_options(0, weight=1)
-		self.row_options(0, weight=1)
-		self.center_window(width=350, height=300)
+		self.center_window(width=400, height=400)
 		moptions = pyelement.PyScrollableFrame(self.frame)
 		moptions.vertical_scrollbar = True
 		moptions.frame.grid_columnconfigure(0, weight=1, minsize=100)
-		self.set_widget("module_options", moptions)
+		self.set_widget("module_options", moptions, columnspan=2)
+
+		b_cancel = pyelement.PyButton(self.frame)
+		b_cancel.text = "Cancel & close"
+		b_cancel.command = self._on_cancel
+		self.set_widget("button_cancel", b_cancel, row=1)
+
+		b_enable = pyelement.PyButton(self.frame)
+		b_enable.text = "Enable all"
+		b_enable.command = self._on_enable_all
+		self.set_widget("button_enable", b_enable, row=1, column=1)
+
+		self.confirm = True
+		self.column_options(0, weight=1)
+		self.column_options(1, weight=1)
+		self.column_options(2, weight=1)
+		self.row_options(0, weight=1)
 
 		index = 0
+		self._module_inputs = {}
 		for module_id, module_options in self._modules.items():
 			pt = module_options.get("platform")
 			invalid_platform = pt is not None and pt != sys.platform
@@ -61,8 +76,21 @@ class ModuleSelector(pywindow.PyWindow):
 			mod_priority.value = module_options.get("priority", "")
 			mod_priority.command = lambda field=mod_priority: self._module_priority(field)
 			mod_priority.grid(row=index+2, column=1)
+
 			index += 1
+			self._module_inputs[module_id] = mod_enable, mod_priority
 		self.frame.focus_set()
+
+	def _on_cancel(self):
+		self.confirm = False
+		self.destroy()
+
+	def _on_enable_all(self):
+		for check, py in self._module_inputs.values():
+			if check.accept_input:
+				check.checked = True
+				try: self._module_enable(check)
+				except AttributeError: pass
 
 	@property
 	def modules(self):

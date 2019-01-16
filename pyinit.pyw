@@ -48,7 +48,7 @@ class PySplashWindow(pywindow.RootPyWindow):
 		label_status.display_text = "Initializing..."
 		self.set_widget("label_status", label_status, row=2, initial_cfg={"background": "gray10", "foreground": "white", "cursor": "watch"})
 
-		self._cfg = None
+		self._cfg = self._interp = None
 		self._platform = sys.platform
 		self._actions = {
 			"module_configure": self._module_configure,
@@ -197,11 +197,13 @@ class PySplashWindow(pywindow.RootPyWindow):
 
 	def _module_done(self, event, selector):
 		if len(str(event.widget).split(".")) == 2:
-			self.hidden = False
-			self._cfg["modules"] = selector.modules
-			import json
-			with open("modules.json", "w") as file: json.dump(self._cfg["modules"], file)
-			self.after(1, self._restart)
+			if selector.confirm:
+				self.hidden = False
+				self._cfg["modules"] = selector.modules
+				import json
+				with open("modules.json", "w") as file: json.dump(self._cfg["modules"], file)
+				self.after(1, self._restart)
+			else: self.after(1, self._terminate)
 
 	def _restart(self):
 		print("INFO", "Restarting player!")
