@@ -84,6 +84,12 @@ def command_cfg(arg, argc):
 			if ot is None: return messagetypes.Reply("Option '{}' is not set".format(arg[0]))
 			else: return messagetypes.Reply("Option '{}' is set to '{}'".format(arg[0], ot))
 
+def command_debug_memory(arg, argc):
+	if argc == 0:
+		import gc
+		gc.collect()
+		return messagetypes.Reply("DEBUG: Garbage collection finished")
+
 def command_log_open(arg, argc):
 	if argc == 0:
 		import pylogging
@@ -120,6 +126,7 @@ def initialize():
 
 commands = {
 	"cfg": command_cfg,
+	"debug": {"garbage": command_debug_memory},
 	"log": command_log_open,
 	"modules": command_module_configure,
 	"restart": command_restart,
