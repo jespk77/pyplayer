@@ -26,7 +26,6 @@ class ModuleSelector(pywindow.PyWindow):
 		self.confirm = True
 		self.column_options(0, weight=1)
 		self.column_options(1, weight=1)
-		self.column_options(2, weight=1)
 		self.row_options(0, weight=1)
 
 		index = 0
