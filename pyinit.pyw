@@ -183,14 +183,15 @@ class PySplashWindow(pywindow.RootPyWindow):
 			mid = mop["id"]
 			del mop["id"]
 			mop["enabled"] = mop["required"]
-			mop["new"] = True
 
-			if mid not in modules: modules[mid] = mop
+			if mid not in modules:
+				mop["new"] = True
+				modules[mid] = mop
 
 		from utilities import module_select
 		ms = module_select.ModuleSelector(self.window, modules)
 		ms.bind("<Destroy>", lambda e: self._module_done(e, ms))
-		self.status_text = "Modules configured"
+		self.status_text = "Modules configured, restarting..."
 		self.open_window("module_select", ms)
 		self.hidden = True
 
