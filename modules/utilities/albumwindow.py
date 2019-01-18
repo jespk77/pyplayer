@@ -116,7 +116,7 @@ class AlbumWindowInput(pywindow.PyWindow):
 	def write_file(self):
 		import os
 		if not os.path.isdir("albums"): os.mkdir("albums")
-		filename = album_format.format(self.widgets["input_name"].value.lower(), "json")
+		filename = album_format.format(self.widgets["input_name"].value.lower().replace(' ', '_'), "json")
 		print("INFO", "Writing album info to '{}'".format(filename))
 
 		wd = self.widgets["confirm_write"]
