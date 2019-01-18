@@ -10,7 +10,7 @@ class AlbumWindow(pywindow.PyWindow):
 		pywindow.PyWindow.__init__(self, master, "album_window")
 
 		self.icon = "assets/blank"
-		self.title = "Album: {}".format(self._metadata["name"])
+		self.title = "Album: {} - {}".format(self._metadata["artist"], self._metadata["name"])
 		self.set_widget("artist", pyelement.PyTextlabel(self.window)).display_text = "{}: {}".format(self._metadata["artist"], self._metadata["name"])
 		self.set_widget("release_date", pyelement.PyTextlabel(self.window), row=1).display_text = "Released {}".format(self._metadata["release_date"])
 
