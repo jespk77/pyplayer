@@ -102,7 +102,7 @@ def command_log_open(arg, argc):
 def command_log_clear(arg, argc, all=False):
 	if argc == 0:
 		import os
-		logs = os.listdir("logs")
+		logs = [file for file in os.listdir("logs") if file.endswith(".log")]
 		try:
 			if all: logs.pop(0)
 			else: logs = logs[10:]
