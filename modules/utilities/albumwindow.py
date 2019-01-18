@@ -17,6 +17,7 @@ class AlbumWindow(pywindow.PyWindow):
 		items = pyelement.PyItemlist(self.window)
 		items.itemlist = self._metadata["songlist"]
 		items.bind("<Double-Button-1>", self._callback)
+		items.configure(activestyle="none")
 		self.set_widget("songlist", items, row=2)
 
 		bt = pyelement.PyButton(self.window)
@@ -29,10 +30,10 @@ class AlbumWindow(pywindow.PyWindow):
 		self.row_options(2, weight=1)
 		self.column_options(0, weight=5)
 
-		import os
 		img_path = self._metadata["image"]
 		if len(img_path.split("/")) == 1: img_path = "images/" + img_path
 
+		import os
 		if os.path.exists(album_format.format(img_path, "png")):
 			img = pyelement.PyImage(file=album_format.format(self._metadata["image"], "png"))
 			cover = pyelement.PyTextlabel(self.window)
