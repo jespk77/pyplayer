@@ -1,4 +1,4 @@
-import datetime, os
+import datetime
 from utilities import messagetypes
 from ui import pyconfiguration
 
@@ -57,6 +57,7 @@ def command_cfg(arg, argc):
 	if argc > 0:
 		cg = client.children.get(arg[0])
 		if cg is None:
+			import os
 			file = os.path.join(cfg_folder, arg[0])
 			if os.path.isfile(file):
 				cg = pyconfiguration.Configuration(filepath=file)
@@ -93,9 +94,25 @@ def command_debug_memory(arg, argc):
 def command_log_open(arg, argc):
 	if argc == 0:
 		import pylogging
-		try: pylogging.open_logfile()
+		try:
+			if pylogging.open_logfile(): return messagetypes.Reply("Log file opened")
+			else: return messagetypes.Reply("Cannot open log file")
 		except FileNotFoundError: return messagetypes.Reply("Log file not found! Are you using console?")
-		return messagetypes.Reply("Log file opened")
+
+def command_log_clear(arg, argc, all=False):
+	if argc == 0:
+		import os
+		logs = os.listdir("logs")
+		try:
+			if all: logs.pop(0)
+			else: logs = logs[10:]
+
+			import shutil
+			for f in logs:
+				try: os.remove("logs\{}".format(f))
+				except Exception as e: print("ERROR", "Trying to remove '{}':".format(f), e)
+		except IndexError: pass
+		return messagetypes.Reply("Cleared all log files (except for the current)" if all else "Cleaned up log files except for the last 10")
 
 def command_module_configure(arg, argc):
 	if argc == 0:
@@ -127,7 +144,11 @@ def initialize():
 commands = {
 	"cfg": command_cfg,
 	"debug": {"garbage": command_debug_memory},
-	"log": command_log_open,
+	"log": {
+		"": command_log_open,
+		"clean": command_log_clear,
+		"clear": lambda arg,argc: command_log_clear(arg, argc, all=True)
+	},
 	"modules": command_module_configure,
 	"restart": command_restart,
 	"timer": command_timer
