@@ -105,6 +105,12 @@ def set_autoplay_ignore(ignore):
 	global autoplay_ignore
 	autoplay_ignore = bool(ignore)
 
+def get_songmatches(path, keyword):
+	if not path: path = client["default_path"]
+	ls = media_player.find_song(path=client["directory"].get(path)["path"], keyword=keyword.split(" "))
+	if len(ls) == 1: return ls[0]
+	else: return None
+
 def album_process(type, songs):
 	for s in songs: interpreter.put_command("{} {} {}.".format(type, "music", s.replace(" - ", " ")))
 
@@ -121,7 +127,7 @@ def command_album(arg, argc):
 def command_album_add(arg, argc):
 	if argc == 0:
 		from modules.utilities import albumwindow
-		client.open_window("albumimput", albumwindow.AlbumWindowInput(client.window))
+		client.open_window("albumimput", albumwindow.AlbumWindowInput(client.window, autocomplete_callback=get_songmatches))
 		return messagetypes.Reply("Album creator opened")
 
 def command_album_remove(arg, argc):
