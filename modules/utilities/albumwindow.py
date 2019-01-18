@@ -71,21 +71,27 @@ class AlbumWindowInput(pywindow.PyWindow):
 		self.set_widget("release_label", pyelement.PyTextlabel(self.window), row=2).display_text = "Release date:"
 		self.set_widget("input_release_date", inpt, row=2, column=1)
 
+		inpt = pyelement.PyTextInput(self.window)
+		inpt.value = self._dt.get("song_path", "")
+		inpt.command = self._reset_button
+		self.set_widget("song_path", pyelement.PyTextlabel(self.window), row=3).display_text = "Song path:"
+		self.set_widget("input_song_path", inpt, row=3, column=1)
+
 		inpt = pyelement.PyTextfield(self.window)
 		inpt.text = self._dt.get("songlist", [])
 		inpt.command = self._reset_button
-		self.set_widget("songlist_label", pyelement.PyTextlabel(self.window), row=3).display_text = "Song list:"
-		self.set_widget("input_songlist", inpt, row=3, column=1)
+		self.set_widget("songlist_label", pyelement.PyTextlabel(self.window), row=4).display_text = "Song list:"
+		self.set_widget("input_songlist", inpt, row=4, column=1)
 
 		inpt = pyelement.PyTextInput(self.window)
 		inpt.value = self._dt.get("image", "")
 		inpt.command = self._reset_button
-		self.set_widget("image_label", pyelement.PyTextlabel(self.window), row=4).display_text = "Cover image:"
-		self.set_widget("input_image", pyelement.PyTextInput(self.window), row=4, column=1)
+		self.set_widget("image_label", pyelement.PyTextlabel(self.window), row=5).display_text = "Cover image:"
+		self.set_widget("input_image", pyelement.PyTextInput(self.window), row=5, column=1)
 
 		self.column_options(0, minsize=30)
 		self.column_options(1, weight=1)
-		self.row_options(3, weight=1)
+		self.row_options(4, weight=1)
 		for i in range(5): self.row_options(i, minsize=30)
 
 		bt = pyelement.PyButton(self.window)
@@ -120,6 +126,7 @@ class AlbumWindowInput(pywindow.PyWindow):
 				self._dt["name"] = self.widgets["input_name"].value
 				if not self._dt["name"]: raise LookupError
 				self._dt["release_date"] = self.widgets["input_release_date"].value
+				self._dt["song_path"] = self.widgets["input_song_path"].value
 				self._dt["songlist"] = self.widgets["input_songlist"].text.split("\n")
 				if not self._dt["songlist"]: raise LookupError
 				self._dt["image"] = self.widgets["input_image"].value
