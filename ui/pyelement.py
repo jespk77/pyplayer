@@ -128,6 +128,16 @@ class PyElement:
 		except AttributeError: pass
 		except Exception as e: print("ERROR", "Destroying element '{}':".format(self.id), e)
 
+	@staticmethod
+	def focus_next(event):
+		event.widget.tk_focusNext().focus()
+		return "break"
+
+	@staticmethod
+	def focus_prev(event):
+		event.widget.tk_focusPrev().focus()
+		return "break"
+
 """ Initializer of each 'PyElement' instance must contain a reference to its parent, which must also be a 'PyElement' instance
 	For widgets that don't have a parent, use the frame of the window (using the 'frame' attribute on window)
 	The window the frame is currently in can be accessed with the 'window' attribute (is None if not placed on a window)
