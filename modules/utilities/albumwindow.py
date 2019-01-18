@@ -49,7 +49,8 @@ class AlbumWindow(pywindow.PyWindow):
 
 
 class AlbumWindowInput(pywindow.PyWindow):
-	def __init__(self, master, file=None):
+	def __init__(self, master, file=None, autocomplete_callback=None):
+		self._autocomplete = autocomplete_callback
 		if file:
 			with open(album_format.format(file, "json")) as file:
 				self._dt = json.load(file)
@@ -84,6 +85,7 @@ class AlbumWindowInput(pywindow.PyWindow):
 		inpt.text = self._dt.get("songlist", [])
 		inpt.command = self._reset_button
 		inpt.bind("<Tab>", inpt.focus_next)
+		inpt.bind("<Return>", self._autocomplete_line)
 		self.set_widget("songlist_label", pyelement.PyTextlabel(self.window), row=4).display_text = "Song list:"
 		self.set_widget("input_songlist", inpt, row=4, column=1)
 
@@ -116,6 +118,17 @@ class AlbumWindowInput(pywindow.PyWindow):
 	def _reset_button(self):
 		self.status_display = "Save & Close"
 		self.widgets["confirm_write"].accept_input = True
+
+	def _autocomplete_line(self, event):
+		textfield = self.widgets["input_songlist"]
+		line = textfield.get("insert linestart", "insert lineend")
+		if line and self._autocomplete:
+			try:
+				sg = self._autocomplete(self.widgets["input_song_path"].value, line)
+				if sg:
+					textfield.delete("insert linestart", "insert lineend")
+					textfield.insert("insert", sg[0])
+			except Exception as e: print("ERROR", "Trying to autocomplete '{}':".format(line), e); raise
 
 	def write_file(self):
 		import os
