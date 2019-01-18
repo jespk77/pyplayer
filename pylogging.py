@@ -36,7 +36,7 @@ class PyLog:
 			self._file = None
 			attempts = 0
 			while self._file is None:
-				self._filename = file_format.format(date_str, ("_{}".format(attempts) if attempts > 0 else ""))
+				self._filename = file_format.format(date_str, ("_{:02}".format(attempts) if attempts > 0 else ""))
 				try: self._file = open(self._filename, "x")
 				except FileExistsError: attempts += 1
 			sys.stdout = self
