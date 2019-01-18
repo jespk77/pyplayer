@@ -80,6 +80,7 @@ class AlbumWindowInput(pywindow.PyWindow):
 		inpt = pyelement.PyTextfield(self.window)
 		inpt.text = self._dt.get("songlist", [])
 		inpt.command = self._reset_button
+		inpt.bind("<Tab>", inpt.focus_next)
 		self.set_widget("songlist_label", pyelement.PyTextlabel(self.window), row=4).display_text = "Song list:"
 		self.set_widget("input_songlist", inpt, row=4, column=1)
 
