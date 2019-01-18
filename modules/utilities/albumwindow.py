@@ -105,6 +105,7 @@ class AlbumWindowInput(pywindow.PyWindow):
 
 		self.icon = "assets/blank"
 		self.title = "Create new album..."
+		self.transient = True
 		self.row_options(3, weight=1)
 
 	@property
