@@ -30,7 +30,10 @@ class AlbumWindow(pywindow.PyWindow):
 		self.column_options(0, weight=5)
 
 		import os
-		if os.path.exists(album_format.format(self._metadata["image"], "png")):
+		img_path = self._metadata["image"]
+		if len(img_path.split("/")) == 1: img_path = "images/" + img_path
+
+		if os.path.exists(album_format.format(img_path, "png")):
 			img = pyelement.PyImage(file=album_format.format(self._metadata["image"], "png"))
 			cover = pyelement.PyTextlabel(self.window)
 			cover.image = img
