@@ -1,0 +1,8 @@
+{
+  "id": "effects",
+  "enabled": true,
+  "dependencies": ["python-vlc"],
+  "platform": "win32",
+  "priority": 4,
+  "required": false
+}

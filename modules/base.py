@@ -84,6 +84,12 @@ def command_cfg(arg, argc):
 			if ot is None: return messagetypes.Reply("Option '{}' is not set".format(arg[0]))
 			else: return messagetypes.Reply("Option '{}' is set to '{}'".format(arg[0], ot))
 
+def command_debug_memory(arg, argc):
+	if argc == 0:
+		import gc
+		gc.collect()
+		return messagetypes.Reply("DEBUG: Garbage collection finished")
+
 def command_log_open(arg, argc):
 	if argc == 0:
 		import pylogging
@@ -91,10 +97,15 @@ def command_log_open(arg, argc):
 		except FileNotFoundError: return messagetypes.Reply("Log file not found! Are you using console?")
 		return messagetypes.Reply("Log file opened")
 
+def command_module_configure(arg, argc):
+	if argc == 0:
+		client.close_with_reason("module_configure")
+		return messagetypes.Reply("Module configuration loading...")
+
 def command_restart(arg, argc):
 	if argc == 0:
 		client.close_with_reason("restart")
-		return messagetypes.Reply("Pyplayer will restart soon...")
+		return messagetypes.Reply("Restarting Pyplayer...")
 
 def command_timer(arg, argc):
 	if argc == 1:
@@ -115,7 +126,9 @@ def initialize():
 
 commands = {
 	"cfg": command_cfg,
+	"debug": {"garbage": command_debug_memory},
 	"log": command_log_open,
+	"modules": command_module_configure,
 	"restart": command_restart,
 	"timer": command_timer
 }
