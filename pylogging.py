@@ -25,22 +25,19 @@ class PyLogLevel(enum.Enum):
 
 	def __str__(self): return self.name
 
+file_format = "logs\pylog_{}{}.log"
 class PyLog:
 	def __init__(self, log_to_file=True):
 		self._level = PyLogLevel.INFO
 		if not os.path.isdir("logs"): os.mkdir("logs")
 
-		today = datetime.datetime.today()
+		date_str = datetime.datetime.today().strftime("%y-%m-%d")
 		if log_to_file:
-			self._filename = "logs/pylog_{}".format(today.strftime("%y-%m-%d"))
 			self._file = None
 			attempts = 0
 			while self._file is None:
-				if attempts > 20: raise RuntimeError("PyLog: too many attempts to create log file")
-				fname = self._filename + "_" + str(attempts) if attempts > 0 else self._filename
-				try:
-					self._file = open(fname, "x")
-					self._filename = fname
+				self._filename = file_format.format(date_str, ("_{}".format(attempts) if attempts > 0 else ""))
+				try: self._file = open(self._filename, "x")
 				except FileExistsError: attempts += 1
 			sys.stdout = self
 		else:
@@ -49,7 +46,7 @@ class PyLog:
 
 		self._prev_print = builtins.print
 		builtins.print = self.print_log
-		print("MESSAGE", "Pyplayer log", str(today))
+		print("MESSAGE", "Pyplayer log", str(date_str))
 
 	def __del__(self):
 		self.on_destroy()
@@ -107,7 +104,7 @@ def get_logger():
 
 def open_logfile(file=None):
 	if not file: file = get_logger().filename
-	else: file = "logs/{}".format(file)
+	else: file = "logs\{}.log".format(file)
 	if not file or not os.path.isfile(file): raise FileNotFoundError("'{}' is not a file".format(file))
 	import webbrowser
 	return webbrowser.open(file)
