@@ -1,5 +1,6 @@
-from ui import pywindow, pyelement
 import sys
+
+from ui import pywindow, pyelement
 
 frame_width = 100
 class ModuleSelector(pywindow.PyWindow):
@@ -107,7 +108,6 @@ class ModuleSelector(pywindow.PyWindow):
 		except KeyError: print("WARNING", "Module '{}' was not found in the module list!".format(checkbox.module))
 
 	def _module_priority(self, field):
-		print("module_priority", field.value)
 		try: self._modules[field.module]["priority"] = int(field.value)
 		except ValueError: pass
 		except KeyError: print("WARNING", "Module '{}' was not found in the module list!".format(field.module))
