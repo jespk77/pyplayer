@@ -1,5 +1,5 @@
-from utilities import messagetypes
 from modules.utilities import twitchviewer
+from utilities import messagetypes
 
 # DEFAULT MODULE VARIABLES
 priority = 5
@@ -31,9 +31,9 @@ def command_twitch_resetcache(arg, argc):
 			if id.startswith("twitch_") and wd.is_alive: client.close_window(id)
 
 		import shutil, os
-		try: shutil.rmtree(twitchviewer.twitchchat.TwitchChat.emote_cache_folder)
+		try: shutil.rmtree(twitchviewer.twitchchat.emote_cache_folder)
 		except FileNotFoundError: pass
-		try: os.remove(twitchviewer.twitchchat.TwitchChat.emotemap_cache_file)
+		try: os.remove(twitchviewer.twitchchat.emotemap_cache_file)
 		except FileNotFoundError: pass
 
 		file = open(".cfg/twitch", "r")
