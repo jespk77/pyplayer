@@ -115,10 +115,10 @@ class PySplashWindow(pywindow.RootPyWindow):
 		self._loaded_modules = {mid: mot for mid, mot in self._cfg["modules"].items() if mot.get("enabled")}
 		if dependency_check:
 			self.status_text = "Checking dependencies..."
-			dependencies = self._cfg.get("dependencies", [])
+			dependencies = set(self._cfg.get("dependencies", []))
 			for module_id, module_options in self._loaded_modules.items():
 				dps = module_options.get("dependencies")
-				if dps: dependencies += [d for d in dps if d not in dependencies]
+				if dps: dependencies.update(dps)
 
 			if dependencies:
 				print("INFO", "Found dependencies:", dependencies)
