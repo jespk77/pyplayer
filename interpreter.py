@@ -1,8 +1,10 @@
-from threading import Thread
+import importlib
+import sys
 from multiprocessing import Queue
-import importlib, sys, json
+from threading import Thread
 
 from utilities import messagetypes
+
 
 class Interpreter(Thread):
 	""" Process commands from modules defined in the modules package
@@ -29,8 +31,6 @@ class Interpreter(Thread):
 		self._configuration = None
 		self._checks = []
 		self._platform = sys.platform
-		self._pycmd = [sys.executable, "-m", "pip", "install"]
-		if self._platform == "linux": self._pycmd.append("--user")
 
 		self._set_sys_arg()
 		self._modules = []
