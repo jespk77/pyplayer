@@ -116,13 +116,7 @@ class PySplashWindow(pywindow.RootPyWindow):
 		if dependency_check:
 			self.status_text = "Checking dependencies..."
 			dependencies = self._cfg.get("dependencies", [])
-			for module_id, module_options in self._loaded_modules.copy().items():
-				pt = module_options.get("platform")
-				if pt is not None and pt != self._platform:
-					print("ERROR", "Module '{}' was enabled but isn't supported on this platform! Skipping loading...".format(module_id))
-					del self._loaded_modules[module_id]
-					continue
-
+			for module_id, module_options in self._loaded_modules.items():
 				dps = module_options.get("dependencies")
 				if dps: dependencies += [d for d in dps if d not in dependencies]
 
