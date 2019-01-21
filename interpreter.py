@@ -16,7 +16,6 @@ class Interpreter(Thread):
 		Each module can define:
 			'initialize()': [optional] gets called whenever the module is imported/reloaded
 			'on_destoy()': [optional] gets called before the client is shut down or a module gets reloaded, use to clean up any previously created data/references
-			'priority': int: this defines the order in which a command gets processed by modules, the module with the highest priority (lowest value) get called first, when a module returns a 'messagetype' further processing is stopped
 			'dependencies': dict: this defines the dependencies that need to be installed using pip, this should be a dictionary where key is the name that needs to be loaded (this name will be set as a module attribure with the import assigned)
 			'commands: dict': defines the commands this module can process, if not defined this module will not receive any commands
 				Notes:
@@ -34,12 +33,13 @@ class Interpreter(Thread):
 
 		self._set_sys_arg()
 		self._modules = []
-		if modules is None: modules = {}
-		for module_id, module_options in modules.items():
-			try:
-				r = self._load_module(module_id)
-				if isinstance(r, messagetypes.Error): client.add_message(r.get_contents())
-			except Exception as e: print("ERROR", "While loading module '{}':".format(module_id), e)
+		if modules:
+			mdl = sorted(modules.items(), key=lambda it: it[1]["priority"])
+			for module_id, module_options in mdl:
+				try:
+					r = self._load_module(module_id)
+					if isinstance(r, messagetypes.Error): client.add_message(r.get_contents())
+				except Exception as e: print("ERROR", "While loading module '{}':".format(module_id), e)
 		self.start()
 
 	def _set_sys_arg(self):
@@ -131,8 +131,6 @@ class Interpreter(Thread):
 			m.interpreter = self
 			m.client = self._client
 			m.platform = self._platform
-			try: m.priority
-			except AttributeError as e: return messagetypes.Error(e, "Cannot import '{}', it's missing a priority value".format(m.__name__))
 
 			try: m.initialize()
 			except AttributeError as a:
@@ -140,7 +138,6 @@ class Interpreter(Thread):
 			except Exception as e: return messagetypes.Error(e, "Failed to initialize module '{}'".format(md))
 
 			self._modules.append(m)
-			self._modules = sorted(self._modules, key= lambda me: me.priority)
 			return messagetypes.Reply("Module successfully loaded")
 		except Exception as e: return messagetypes.Error(e, "Failed to import module '{}'".format(md))
 
