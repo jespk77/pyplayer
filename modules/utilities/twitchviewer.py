@@ -1,15 +1,18 @@
-import requests, os
+import os
+import requests
 
-from ui import pywindow, pyelement
 from modules.utilities import twitchchat, twitchemotelist
+from ui import pywindow, pyelement
 
 initial_cfg = { "account_data": {"username": "user", "client-id": "6adynlxibzw3ug8udhyzy6w3yt70pw", "oauth": "noauth"}, "autosave_delay": 5, "chat_input": {"background": "gray3", "foreground": "white", "font":{"family": "segoeui", "size": 10, "slant": "italic"}},
 				"chat_limit": 300, "message_blacklist": [], "emote_toggle": {"background": "gray3", "foreground": "white"}, "enable_timestamp": "true", "enable_triggers": "false",
 				"chat_viewer": {"background": "gray3", "foreground": "white", "font":{"family": "segoeui", "size": 10}, "notice.foreground": "gray50", "deleted.foreground": "gray75"}}
 
-class TwitchViewer(pywindow.PyWindow):
-	channel_meta_url = "https://api.twitch.tv/kraken/channels/{channel}?client_id={client_id}"
+channel_meta_url = "https://api.twitch.tv/kraken/channels/{channel}?client_id={client_id}"
+def get_meta(channel):
+	return requests.get(channel_meta_url.format(channel=channel, client_id=initial_cfg["account_data"]["client-id"])).json()
 
+class TwitchViewer(pywindow.PyWindow):
 	def __init__(self, parent, channel, command_callback, limited_mode=False):
 		if not callable(command_callback): raise TypeError("Command callback must be callable")
 		pywindow.PyWindow.__init__(self, parent, id="Twitch_"+channel, initial_cfg=initial_cfg, cfg_file="twitch")
@@ -18,10 +21,9 @@ class TwitchViewer(pywindow.PyWindow):
 		self.always_on_top = True
 		self.icon = "assets/icon_twitchviewer"
 
-		login = self["account_data"]
-		if login is not None:
+		if self["account_data"] is not None:
 			print("INFO", "Getting metadata for channel", channel)
-			self._channel_meta = requests.get(self.channel_meta_url.format(channel=channel, client_id=login["client-id"])).json()
+			self._channel_meta = get_meta(self.channel)
 			error = self._channel_meta["error"] if "error" in self._channel_meta else None
 		else: error = "No login information specified"
 
@@ -58,7 +60,9 @@ class TwitchViewer(pywindow.PyWindow):
 		toggle.text = "Emote list"
 		toggle.accept_input = True
 
-	def set_title(self):
+	def set_title(self, refresh=False):
+		if refresh: self._channel_meta = get_meta(self.channel)
+
 		title = self._channel_meta["display_name"]
 		if self._channel_meta["status"] is not None:
 			title += " - " + self._channel_meta["status"]
@@ -70,6 +74,7 @@ class TwitchViewer(pywindow.PyWindow):
 		chat = self.widgets["chat_viewer"]
 		chat.connect(self._channel_meta, login=self["account_data"])
 		self.children["emotelist"].load_emotes(chat.emotemap_cache, self.on_emoteready)
+		self.schedule(min=15, func=self.set_title, loop=True, refresh=True)
 		self.after(.5, chat.run)
 
 	def disconnect(self, event=None):
