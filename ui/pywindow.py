@@ -1,7 +1,10 @@
-import tkinter, os, sys
+import os
+import sys
+import tkinter
+import weakref
+
 from ui import pyelement, pyconfiguration
 
-import weakref
 
 class BaseWindow:
 	""" Framework class for PyWindow and RootPyWindow, should not be created on its own """
@@ -199,6 +202,7 @@ class PyWindow(BaseWindow):
 		self.window = tkinter.Toplevel(master)
 		BaseWindow.__init__(self, id, initial_cfg, cfg_file)
 		self.title = id
+		self._tick_operations = {}
 
 	@property
 	def block_action(self):
@@ -361,6 +365,34 @@ class PyWindow(BaseWindow):
 	def after(self, s, *args):
 		self._check_valid()
 		self.window.after(int(s * 1000) if s < 1000 else s, *args)
+
+	def schedule(self, min=0, sec=0, ms=0, func=None, loop=False, **kwargs):
+		""" Schedule an operation to be executed at least after the given time
+		 	 -	Amount of time to wait can be specified with minutes (keyword 'min'), seconds (keyword 'sec') and/or milliseconds (keyword 'ms')
+		 	 -	The argument passed to func must be callable and accept the extra arguments passed to this function
+		 	 -	The function can be called repeatedly by setting 'loop' to true;
+		 	 		in this case it will be called repeatedly after the given time until an error occurs or the callback returns False """
+		if not callable(func): raise ValueError("'func' argument must be callable!")
+		delay = (min * 60000) + (sec * 1000) + ms
+		if delay <= 0: raise ValueError("Must specify a positive delay using either 's' or 'ms' keywords!")
+		self._check_valid()
+		if loop:
+			self._tick_operations[func.__name__] = delay, func
+			self.window.after(delay, self._run_tickoperation, func.__name__, kwargs)
+		else: self.window.after(delay, func, *kwargs.values())
+
+	def _run_tickoperation(self, name, kwargs):
+		operation = self._tick_operations.get(name)
+		if operation:
+			delay, func = operation
+			try:
+				res = func(**kwargs)
+				if res is not False: self.after(delay, self._run_tickoperation, name, kwargs)
+				else: print("INFO", "Callback '{}' returned False, it will not be rescheduled")
+			except Exception as e:
+				print("ERROR", "Calling scheduled operation '{}', it will not be rescheduled\n".format(name), e)
+				del self._tick_operations[name]
+		else: print("WARNING", "Got operation callback for '{}', but no callback was found!".format(name))
 
 	def try_autosave(self, event=None):
 		""" Autosave configuration to file (if dirty) """
