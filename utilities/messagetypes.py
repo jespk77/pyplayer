@@ -1,5 +1,5 @@
-from traceback import format_exception
 import datetime
+from traceback import format_exception
 
 st = "###"
 class Empty():
@@ -102,15 +102,16 @@ class Error(Empty):
 
 class URL(Empty):
 	""" Return a url as a result of the command that will be opened in the default browser """
-	def __init__(self, url):
-		self.url = url
+	def __init__(self, url, message=None):
+		self._url = url
+		self._msg = message if message else "URL opened"
 
-	def __str__(self): return self.__name__() + st + self.url
+	def __str__(self): return self.__name__() + st + self._url
 
 	def get_contents(self):
 		import webbrowser
-		webbrowser.open(self.url)
-		return self.get_prefix() + "URL opened", ("reply",)
+		webbrowser.open(self._url)
+		return self.get_prefix() + self._msg, ("reply",)
 
 def from_str(str):
 	str = str.split(st)
