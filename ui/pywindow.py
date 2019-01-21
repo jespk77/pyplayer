@@ -367,7 +367,7 @@ class PyWindow(BaseWindow):
 		self.window.after(int(s * 1000) if s < 1000 else s, *args)
 
 	def schedule(self, min=0, sec=0, ms=0, func=None, loop=False, **kwargs):
-		""" Schedule an operation to be executed at least after the given time
+		""" Schedule an operation to be executed at least after the given time, all registered callbacks will stop when the window is closed
 		 	 -	Amount of time to wait can be specified with minutes (keyword 'min'), seconds (keyword 'sec') and/or milliseconds (keyword 'ms')
 		 	 -	The argument passed to func must be callable and accept the extra arguments passed to this function
 		 	 -	The function can be called repeatedly by setting 'loop' to true;
