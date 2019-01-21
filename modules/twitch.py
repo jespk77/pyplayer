@@ -6,13 +6,11 @@ priority = 5
 interpreter = None
 client = None
 
+window_id = "twitch_viewer"
 # MODULE COMMANDS
 def command_twitch(arg, argc, limit=False):
 	if argc == 1:
-		window_id = "twitch_" + arg[0]
-		rmv = client.close_window(window_id)
-		if not rmv: return messagetypes.Reply("Cannot open another window for this channel because the current open window cannot be closed")
-
+		client.close_window(window_id)
 		viewer = client.open_window(window_id, twitchviewer.TwitchViewer(client.window, arg[0], interpreter.put_command, limit))
 		return messagetypes.Reply("Twitch viewer for '{}' started".format(viewer.channel))
 
@@ -21,8 +19,7 @@ def command_twitch_limited(arg, argc):
 
 def command_twitch_resetcache(arg, argc):
 	if argc == 0:
-		for id, wd in list(client.children.items()):
-			if id.startswith("twitch_") and wd.is_alive: client.close_window(id)
+		client.close_window(window_id)
 
 		import shutil, os
 		try: shutil.rmtree(twitchviewer.twitchchat.emote_cache_folder)
@@ -42,8 +39,8 @@ def command_twitch_token(arg, argc):
 
 def command_twitch_say(arg, argc):
 	if argc > 1:
-		viewer = client.children.get("twitch_" + arg[0])
-		if viewer is not None:
+		viewer = client.children.get(window_id)
+		if viewer is not None and viewer.channel.lower() == arg[0].lower():
 			viewer.widgets["chat_viewer"].send_message(" ".join(arg[1:]))
 			return messagetypes.Reply("Message sent")
 		return messagetypes.Reply("No twitch viewer for channel '{}' open".format(arg[0]))
