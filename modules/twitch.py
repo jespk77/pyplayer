@@ -42,7 +42,7 @@ def command_twitch_resetcache(arg, argc):
 		file.close()
 		js = js.get("account_data")
 		tk = js.get("access-token")
-		if refresh_token or (js is not None and tk is None): return messagetypes.URL(twitchviewer.twitchchat.TwitchChat.token_url.format(client_id=js.get("client-id")))
+		if refresh_token or (js is not None and tk is None): return messagetypes.URL(twitchviewer.twitchchat.token_url.format(client_id=js.get("client-id")))
 		else: return messagetypes.Reply("Twitch cache cleared")
 
 def command_twitch_say(arg, argc):
