@@ -1,5 +1,6 @@
-from ui import pywindow, pyelement
 import sys
+
+from ui import pywindow, pyelement
 
 resolution = 350, 200
 program_info_file = "pyplayer.json"
@@ -32,21 +33,29 @@ def process_command(cmd, stdin=None, stdout=None, stderr=None, timeout=None):
 
 class PySplashWindow(pywindow.RootPyWindow):
 	def __init__(self):
-		pywindow.RootPyWindow.__init__(self, "splash", {"background": "black", "locked": True})
+		pywindow.RootPyWindow.__init__(self, "splash")
 		self.decorator = False
 		self.center_window(*resolution)
-		self.column_options(0, weight=1)
-		self.row_options(0, weight=1)
+		self.column_options(0, weight=1, minsize=260)
+		self.row_options(1, weight=1)
 
 		img = pyelement.PyCanvas(self.window)
 		self._logo = pyelement.PyImage(file="assets/logo")
 		try: img.create_image(resolution[0]//2, resolution[1]//2, image=self._logo)
 		except: pass
-		self.set_widget("splash_logo", img, row=0, initial_cfg={"background": "gray10", "highlightthickness": 0, "cursor": "watch"})
+
+		head = pyelement.PyTextlabel(self.window)
+		self.set_widget("header", head)
+
+		btn = pyelement.PyButton(self.window)
+		btn.text = "X"
+		btn.command = self.destroy
+		self.set_widget("close_window", btn, row=0, column=1, initial_cfg={"highlightthickness": 0, "borderwidth": 0})
+		self.set_widget("splash_logo", img, row=1, columnspan=2, initial_cfg={"highlightthickness": 0, "cursor": "watch"})
 
 		label_status = pyelement.PyTextlabel(self.window)
 		label_status.display_text = "Initializing..."
-		self.set_widget("label_status", label_status, row=2, initial_cfg={"background": "gray10", "foreground": "white", "cursor": "watch"})
+		self.set_widget("label_status", label_status, row=2, columnspan=2, initial_cfg={"foreground": "white", "cursor": "watch"})
 
 		self._cfg = self._interp = None
 		self._platform = sys.platform
@@ -64,8 +73,7 @@ class PySplashWindow(pywindow.RootPyWindow):
 			pc = process_command("git pull -s recursive -Xtheirs", stdout=self._git_status)
 
 			if pc.returncode:
-				self.status_text = "Failed to update PyPlayer, continuing in 5 seconds or click to close..."
-				self.bind("<Button-1>", lambda e: self.destroy())
+				self.status_text = "Failed to update PyPlayer, continuing in 5 seconds..."
 				return self.after(5, self._load_modules)
 			process_command("git rev-parse HEAD", stdout=self.git_hash)
 		else:
