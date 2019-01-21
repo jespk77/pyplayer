@@ -20,12 +20,6 @@ def command_twitch_limited(arg, argc):
 	return command_twitch(arg, argc, limit=True)
 
 def command_twitch_resetcache(arg, argc):
-	if argc == 1 and arg[0] == "token":
-		refresh_token = True
-		arg.pop(0)
-		argc = len(arg)
-	else: refresh_token = False
-
 	if argc == 0:
 		for id, wd in list(client.children.items()):
 			if id.startswith("twitch_") and wd.is_alive: client.close_window(id)
@@ -35,15 +29,16 @@ def command_twitch_resetcache(arg, argc):
 		except FileNotFoundError: pass
 		try: os.remove(twitchviewer.twitchchat.emotemap_cache_file)
 		except FileNotFoundError: pass
+		return messagetypes.Reply("Twitch cache cleared")
 
+def command_twitch_token(arg, argc):
+	if argc == 0:
 		file = open(".cfg/twitch", "r")
 		import json
 		js = json.load(file)
 		file.close()
 		js = js.get("account_data")
-		tk = js.get("access-token")
-		if refresh_token or (js is not None and tk is None): return messagetypes.URL(twitchviewer.twitchchat.token_url.format(client_id=js.get("client-id")))
-		else: return messagetypes.Reply("Twitch cache cleared")
+		return messagetypes.URL(twitchviewer.twitchchat.token_url.format(client_id=js.get("client-id")), message="Login to receive new token")
 
 def command_twitch_say(arg, argc):
 	if argc > 1:
@@ -58,6 +53,7 @@ commands = {
 	"twitch": {
 		"": command_twitch,
 		"reset": command_twitch_resetcache,
+		"token": command_twitch_token,
 		"limited": command_twitch_limited,
 		"say": command_twitch_say
 	}
