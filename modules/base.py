@@ -143,7 +143,6 @@ def initialize():
 
 commands = {
 	"cfg": command_cfg,
-	"debug": {"garbage": command_debug_memory},
 	"log": {
 		"": command_log_open,
 		"clean": command_log_clear,

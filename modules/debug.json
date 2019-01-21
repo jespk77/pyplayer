@@ -1,0 +1,8 @@
+{
+  "id": "debug",
+  "enabled": false,
+  "dependencies": [],
+  "platform": null,
+  "priority": 99,
+  "required": false
+}
