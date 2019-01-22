@@ -3,7 +3,7 @@ from ui import pywindow, pyelement
 initial_cfg = { "root": {"background": "black"}, "emote_button": { "background": "gray3", "foreground": "white" }, "emote_height": 30, "emote_width": 35, "column_size": 15 }
 
 class TwitchEmoteWindow(pywindow.PyWindow):
-	def __init__(self, master, click_callback, emote_cache, emote_callback):
+	def __init__(self, master, click_callback, emote_callback):
 		if not callable(click_callback): raise TypeError("Button callback must be callable!")
 		if not callable(emote_callback): raise TypeError("Emote callback must be callable!")
 
@@ -23,12 +23,14 @@ class TwitchEmoteWindow(pywindow.PyWindow):
 
 	def load_emotes(self, emote_iterator, done_callback):
 		print("INFO", "Loading emotelist")
-		for emote_name, emote_img in emote_iterator.items():
-			self.add_emote_button(emote_name, self._emote_callback(emote_img))
-			self._emote_count += 1
+		err = emote_iterator.get("error")
+		if not err:
+			for emote_name, emote_img in emote_iterator.items():
+				self.add_emote_button(emote_name, self._emote_callback(emote_img))
+				self._emote_count += 1
 
 		print("INFO", "Finished loading emotelist")
-		try: done_callback()
+		try: done_callback(err)
 		except Exception as e: print("ERROR", "Cannot call emote done callback:", e)
 
 	def add_emote_button(self, emote_name, emote_img):

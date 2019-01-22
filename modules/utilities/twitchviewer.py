@@ -38,7 +38,7 @@ class TwitchViewer(pywindow.PyWindow):
 
 			chatter = twitchchat.TwitchChatTalker(self.frame, self.widgets["chat_viewer"].send_message)
 			self.set_widget("chat_input", chatter, row=1)
-			emotelist_window = twitchemotelist.TwitchEmoteWindow(self.frame, self.on_emoteclick, chat.emotemap_cache, chat.get_emoteimage_from_cache)
+			emotelist_window = twitchemotelist.TwitchEmoteWindow(self.frame, self.on_emoteclick, chat.get_emoteimage_from_cache)
 
 			emotelist_toggle = pyelement.PyButton(self.frame)
 			emotelist_toggle.text = "Emote list loading..."
@@ -55,10 +55,12 @@ class TwitchViewer(pywindow.PyWindow):
 
 	def on_emotetoggle(self): self.children["emotelist"].toggle_hidden()
 	def on_emoteclick(self, emote_name): self.widgets["chat_input"].add_emote(emote_name)
-	def on_emoteready(self):
+	def on_emoteready(self, error):
 		toggle = self.widgets["emote_toggle"]
-		toggle.text = "Emote list"
-		toggle.accept_input = True
+		if not error:
+			toggle.text = "Emote list"
+			toggle.accept_input = True
+		else: toggle.text = error
 
 	def set_title(self, refresh=False):
 		if refresh: self._channel_meta = get_meta(self.channel)
