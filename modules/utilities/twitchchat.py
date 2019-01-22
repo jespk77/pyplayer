@@ -322,6 +322,8 @@ class TwitchChat(pyelement.PyTextfield):
 		if meta is None: return
 		for line in self.window["message_blacklist"]:
 			if line in data: return
+		data = "".join([c for c in data if ord(c) <= 65536])
+		if not data or data.startswith('/'): return
 
 		user = meta["display-name"]
 		color = meta["color"]
@@ -353,11 +355,9 @@ class TwitchChat(pyelement.PyTextfield):
 		self.add_text(user=user, text=data, emotes=emote_list, bits="bits" in meta, emote=emote)
 
 	def add_text(self, text, user="", emotes=None, bits=False, emote=False, tags=()):
-		text = "".join([c for c in text if ord(c) <= 65536])
 		if text.startswith("\x01ACTION"):
 			text = text.lstrip("\x01ACTION ").rstrip("\x01")
 			tags += (user.lower(),)
-		elif text == "": return
 
 		if self._chat_size >= self.window["chat_limit"]: self.delete("2.0", "3.0")
 		else: self._chat_size += 1
