@@ -133,8 +133,7 @@ class PySplashWindow(pywindow.RootPyWindow):
 				pip_install = "{} -m pip install {}"
 				if self._platform == "linux": pip_install += " --user"
 				self.status_text = "Checking dependencies"
-				for i in range(len(dependencies)):
-					process_command(pip_install.format(sys.executable, dependencies[i]), stdout=self._pip_status)
+				for dp in dependencies: process_command(pip_install.format(sys.executable, dp), stdout=self._pip_status)
 			else: print("INFO", "No dependencies found, continuing...")
 		self.status_text = "Loading PyPlayer..."
 		self.after(1, self._load_program)
