@@ -1,11 +1,10 @@
-from utilities import messagetypes
-from modules.utilities import time_counter
 import datetime
 
+from modules.utilities import time_counter
+from utilities import messagetypes
+
 # DEFAULT MODULE VARIABLES
-priority = 7
-interpreter = None
-client = None
+interpreter = client = None
 
 # MODULE SPECIFIC VARIABLES
 last_joke = None

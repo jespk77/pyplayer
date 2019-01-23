@@ -1,11 +1,10 @@
 import datetime
-from utilities import messagetypes
+
 from ui import pyconfiguration
+from utilities import messagetypes
 
 # DEFAULT MODULE VARIABLES
-priority = 0
-interpreter = None
-client = None
+interpreter = client = None
 
 # MODULE SPECIFIC VARIABLES
 cfg_folder = ".cfg/"

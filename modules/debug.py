@@ -1,8 +1,8 @@
-from utilities import messagetypes
 import gc
 
+from utilities import messagetypes
+
 # DEFAULT MODULE VARIABLES
-priority = 99
 client = interpreter = None
 
 def command_debug_auto_collection(arg, argc):

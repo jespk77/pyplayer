@@ -1,15 +1,15 @@
+import json
+import os
+
 from vlc import MediaPlayer
-import os, json
+
 from utilities import messagetypes
 
 try: import utilities.keyboard_intercept as keyboard_intercept
 except ImportError: keyboard_intercept = None
 
 # DEFAULT MODULE VARIABLES
-priority = 4
-interpreter = None
-client = None
-platform = None
+interpreter = client = None
 
 # MODULE SPECIFIC VARIABLES
 trigger_file = "keytriggers"

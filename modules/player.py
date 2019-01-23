@@ -1,14 +1,13 @@
+import enum
+import os
 from datetime import datetime
 from multiprocessing import Queue
-import os, enum
 
-from utilities import messagetypes, song_tracker, history
 from modules.utilities.mediaplayer import MediaPlayer
+from utilities import messagetypes, song_tracker, history
 
 # DEFAULT MODULE VARIABLES
-priority = 2
-interpreter = None
-client = None
+interpreter = client = None
 
 # MODULE SPECIFIC VARIABLES
 media_player = MediaPlayer()

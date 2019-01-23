@@ -2,9 +2,7 @@ from modules.utilities import twitchviewer
 from utilities import messagetypes
 
 # DEFAULT MODULE VARIABLES
-priority = 5
-interpreter = None
-client = None
+interpreter = client = None
 
 window_id = "twitch_viewer"
 # MODULE COMMANDS

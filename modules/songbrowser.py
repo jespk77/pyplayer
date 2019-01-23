@@ -2,9 +2,7 @@ from modules.utilities.songbrowser import SongBrowser
 from utilities import messagetypes, song_tracker
 
 # DEFAULT MODULE VARIABLES
-priority = 3
-interpreter = None
-client = None
+interpreter = client = None
 
 # VARIABLES SPECIFIC TO THIS MODULE
 default_path_key = "default_path"

@@ -1,9 +1,7 @@
 from utilities import messagetypes
 
 # DEFAULT MODULE VARIABLES
-priority = 10
-interpreter = None
-client = None
+interpreter = client = None
 
 # MODULE SPECIFIC VARIABLES
 yt = None
