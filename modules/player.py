@@ -304,6 +304,11 @@ def command_random(arg, argc):
 	set_autoplay_ignore(False)
 	return messagetypes.Reply(media_player.random_song(path=path, keyword=" ".join(arg)))
 
+def command_reset(arg, argc):
+	if argc == 0:
+		media_player.reset()
+		return messagetypes.Reply("Media player was reset")
+
 def play_rss(display, url):
 	media_player.play_url(url, display)
 	return messagetypes.Reply("Playing: {}".format(display))
@@ -364,6 +369,7 @@ commands = {
 		"previous": command_prev_song,
 		"prev_song": command_prev_song,
 		"random": command_random,
+		"reset": command_reset,
 		"stop": command_stop
 	}, "queue": {
 		"": command_queue,

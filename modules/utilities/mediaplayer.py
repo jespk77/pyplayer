@@ -1,6 +1,8 @@
+import os
+import random
+
 import vlc as VLCPlayer
 
-import os, random
 
 def get_displayname(filepath):
 	return os.path.splitext(filepath)[0]
@@ -37,15 +39,12 @@ class MediaPlayer():
 		self._player2 = self._vlc.media_player_new()
 		self._player2.audio_output_set("mmdevice")
 
-		self._muted = False
-		self._paused = False
+		self._muted = self._paused = False
 		self._player_one = True
-		self._media = None
-		self._media_data = None
+		self._media = self._media_data = None
 		self._updated = False
-		self._filter = None
-		self._blacklist = None
-		self._last_random = None
+		self._filter = self._blacklist = self._last_random = None
+		self._last_position = 0
 
 		self._events = {
 			"end_reached": (VLCPlayer.EventType.MediaPlayerEndReached, self.on_song_end, []),
@@ -182,6 +181,19 @@ class MediaPlayer():
 		return self._media_data
 
 
+	def reset(self):
+		""" Stops the player and attempts to restart the last played song from the last known position
+		 	In case of a transition this plays the song that was set last and aborts playing any other songs active
+		 	It does not however reset the update flag and won't trigger the 'player_updated' again (if it was already called) """
+		if self._media:
+			self._player1.stop()
+			self._player2.stop()
+			self._player_one = True
+			self._player1.set_media(self._media)
+			self._player1.play()
+			self._player1.set_position(self._last_position)
+
+
 	def set_position(self, pos):
 		""" Update the position the player is currently at, has no effect if the player is stopped/finished
 		 	Returns true if the position was updated, false otherwise"""
@@ -304,6 +316,7 @@ class MediaPlayer():
 	def on_pos_change(self, event, name, player, player_one):
 		if (self._player_one == self._updated) == player_one:
 			pos = event.u.new_position
+			self._last_position = pos
 			if self._updated and pos > MediaPlayer.end_pos:
 				self._player_one = not self._player_one
 				self._updated = False
