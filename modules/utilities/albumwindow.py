@@ -137,25 +137,27 @@ class AlbumWindowInput(pywindow.PyWindow):
 		import os
 		if not os.path.isdir("albums"): os.mkdir("albums")
 		filename = album_format.format(self.widgets["input_name"].value.lower().replace(' ', '_'), "json")
-		print("INFO", "Writing album info to '{}'".format(filename))
 
+		print("INFO", "Processing album information")
 		wd = self.widgets["confirm_write"]
 		try:
-			with open(filename, "w") as file:
-				self._dt["artist"] = self.widgets["input_artist"].value
-				if not self._dt["artist"]: raise LookupError("Missing required 'Artist' field")
-				self._dt["name"] = self.widgets["input_name"].value
-				if not self._dt["name"]: raise LookupError("Missing required 'Album' field")
-				self._dt["release_date"] = self.widgets["input_release_date"].value
-				self._dt["song_path"] = self.widgets["input_song_path"].value
-				self._dt["songlist"] = self.widgets["input_songlist"].text.split("\n")
-				if not self._dt["songlist"] or not self._dt["songlist"][0]: raise LookupError("Missing required 'Song list' field")
-				self._dt["image"] = self.widgets["input_image"].value
-				if not self._dt["image"].startswith("/"): self._dt["image"] = "images/" + self._dt["image"]
+			self._dt["artist"] = self.widgets["input_artist"].value
+			if not self._dt["artist"]: raise LookupError("Missing required 'Artist' field")
+			self._dt["name"] = self.widgets["input_name"].value
+			if not self._dt["name"]: raise LookupError("Missing required 'Album' field")
+			self._dt["release_date"] = self.widgets["input_release_date"].value
+			self._dt["song_path"] = self.widgets["input_song_path"].value
+			self._dt["songlist"] = self.widgets["input_songlist"].text.split("\n")
+			if not self._dt["songlist"] or not self._dt["songlist"][0]: raise LookupError("Missing required 'Song list' field")
+			self._dt["image"] = self.widgets["input_image"].value
+			if not self._dt["image"].startswith("/"): self._dt["image"] = "images/" + self._dt["image"]
 
+			with open(filename, "w") as file:
+				print("INFO", "Writing album info to '{}'".format(filename))
 				import json
 				json.dump(self._dt, file)
 				self.destroy()
+
 		except LookupError as e:
 			print("INFO", "Tried to save information but failed to fill required fields")
 			wd.text = "".join(e.args) if e.args else "Missing fields"
