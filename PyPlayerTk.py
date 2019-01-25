@@ -1,8 +1,10 @@
+import datetime
+import humanize
 from traceback import format_exception
-import datetime, humanize
 
-from ui import pywindow, pyelement
 from console import TextConsole
+from ui import pywindow, pyelement
+
 
 class PyPlayerEvent:
 	def __init__(self, **kwargs):
@@ -24,7 +26,8 @@ console_cfg = { "background": "black", "error.foreground": "red", "font":{"famil
 
 class PyPlayer(pywindow.PyWindow):
 	def __init__(self, root):
-		pywindow.PyWindow.__init__(self, master=root, id="client", initial_cfg=initial_cfg)
+		pywindow.PyWindow.__init__(self, master=root.window, id="client", initial_cfg=initial_cfg)
+		self.root = root
 		self.hidden = True
 		self.set_widget("header_left", pyelement.PyTextlabel(self.frame), initial_cfg=header_cfg)
 		self.set_widget("header", pyelement.PyTextlabel(self.frame), initial_cfg=header_cfg, column=1)

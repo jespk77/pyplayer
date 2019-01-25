@@ -59,6 +59,7 @@ class PySplashWindow(pywindow.RootPyWindow):
 
 		self._cfg = self._interp = None
 		self._platform = sys.platform
+		self._update_data = '', ''
 		self._actions = {
 			"module_configure": self._module_configure,
 			"restart": self._restart
@@ -99,7 +100,12 @@ class PySplashWindow(pywindow.RootPyWindow):
 			print("INFO", "Git hash equal to last time, skip dependency checking")
 			self.after(1, self._load_modules, False)
 
+	def _git_update(self, out):
+		out = out.split('\n')
+		self._update_data = out[0], out[1]
+
 	def _load_modules(self, dependency_check=True):
+		process_command("git log -1 --pretty=%B%cD", stdout=self._git_update)
 		import json
 		with open(program_info_file, "r") as file:
 			try: self._cfg = json.load(file)
@@ -152,13 +158,18 @@ class PySplashWindow(pywindow.RootPyWindow):
 		pylogging.get_logger()
 
 		print("initializing client...")
-		client = PyPlayer(self.window)
+		client = PyPlayer(self)
 		self._interp = Interpreter(client, modules=self._loaded_modules)
 		client.interp = self._interp
 		client.bind("<Destroy>", lambda e: self.on_close(e, client), add=True)
 		self.open_window("client", client)
 		client.hidden = False
 		self.hidden = True
+
+	@property
+	def update_message(self): return self._update_data[0]
+	@property
+	def update_date(self): return self._update_data[1]
 
 	@property
 	def status_text(self): return self.widgets["label_status"].display_text

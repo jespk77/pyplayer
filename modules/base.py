@@ -136,6 +136,10 @@ def command_timer(arg, argc):
 			else: return messagetypes.Reply(str(time))
 		else: return messagetypes.Reply("Cannot decode time syntax, try again...")
 
+def command_version(arg, argc):
+	if argc == 0:
+		return messagetypes.Reply("PyPlayer was last updated on '{date}'\n  -> '{msg}'".format(msg=client.root.update_message, date=client.root.update_date))
+
 def initialize():
 	cmds = client.get_or_create("startup_commands", [])
 	for c in cmds: interpreter.put_command(c)
@@ -149,5 +153,6 @@ commands = {
 	},
 	"modules": command_module_configure,
 	"restart": command_restart,
-	"timer": command_timer
+	"timer": command_timer,
+	"version": command_version
 }
