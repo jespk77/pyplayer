@@ -1,3 +1,4 @@
+import datetime
 import sys
 
 from ui import pywindow, pyelement
@@ -59,7 +60,7 @@ class PySplashWindow(pywindow.RootPyWindow):
 
 		self._cfg = self._interp = None
 		self._platform = sys.platform
-		self._update_data = '', ''
+		self._update_data = None
 		self._actions = {
 			"module_configure": self._module_configure,
 			"restart": self._restart
@@ -102,10 +103,10 @@ class PySplashWindow(pywindow.RootPyWindow):
 
 	def _git_update(self, out):
 		out = out.split('\n')
-		self._update_data = out[0], out[1]
+		self._update_data = out[0], datetime.datetime.strptime(out[1], "%Y-%m-%d %H:%M:%S %z")
 
 	def _load_modules(self, dependency_check=True):
-		process_command("git log -1 --pretty=%B%cD", stdout=self._git_update)
+		process_command("git log -1 --pretty=%B%ci", stdout=self._git_update)
 		import json
 		with open(program_info_file, "r") as file:
 			try: self._cfg = json.load(file)
@@ -167,9 +168,13 @@ class PySplashWindow(pywindow.RootPyWindow):
 		self.hidden = True
 
 	@property
-	def update_message(self): return self._update_data[0]
+	def update_message(self):
+		if not self._update_data: return '???'
+		else: return self._update_data[0]
 	@property
-	def update_date(self): return self._update_data[1]
+	def update_date(self):
+		if not self._update_data: return '???'
+		else: return self._update_data[1].strftime("%a %b %d, %Y - %I:%M %p")
 
 	@property
 	def status_text(self): return self.widgets["label_status"].display_text
