@@ -8,7 +8,6 @@ class ModuleSelector(pywindow.PyWindow):
 		pywindow.PyWindow.__init__(self, root, "module_select")
 		self._modules = modules
 		self.title = "Pyplayer Modules"
-		self.center_window(width=400, height=400)
 		moptions = pyelement.PyScrollableFrame(self.frame)
 		moptions.vertical_scrollbar = True
 		moptions.frame.grid_columnconfigure(0, weight=1, minsize=100)
