@@ -110,6 +110,11 @@ def get_songmatches(path, keyword):
 	if len(ls) == 1: return ls[0]
 	else: return None
 
+def album_list(keyword):
+	from modules.utilities import albumwindow
+	with os.scandir(albumwindow.album_folder) as dir:
+		return [(os.path.splitext(f.name)[0], f.name) for f in dir if f.is_file() and keyword in f.name]
+
 def album_process(type, songs):
 	for s in songs: interpreter.put_command("{} {} {}.".format(type, "music", s.replace(" - ", " ")))
 
@@ -123,11 +128,15 @@ def command_album(arg, argc):
 		client.open_window("albumviewer", aw)
 		return messagetypes.Reply("Album opened")
 
-def command_album_add(arg, argc):
-	if argc == 0:
-		from modules.utilities import albumwindow
-		client.open_window("albumimput", albumwindow.AlbumWindowInput(client.window, autocomplete_callback=get_songmatches))
-		return messagetypes.Reply("Album creator opened")
+def command_album_add(arg, argc, display=None, album=None):
+	from modules.utilities import albumwindow
+	if argc > 0 and display is album is None:
+		albums = album_list(" ".join(arg))
+		if albums: return messagetypes.Select("Multiple albums found", lambda d,a: command_album_add(arg, argc, display=d, album=a), albums)
+		else: return messagetypes.Reply("No albums found")
+
+	client.open_window("albumimput", albumwindow.AlbumWindowInput(client.window, file=album, autocomplete_callback=get_songmatches))
+	return messagetypes.Reply("Album editor for '{}' opened".format(display) if display else "Album creator opened")
 
 def command_album_remove(arg, argc):
 	if argc > 0:
@@ -137,6 +146,11 @@ def command_album_remove(arg, argc):
 		try: os.remove(filename)
 		except FileNotFoundError: return messagetypes.Reply("Unknown album")
 		return messagetypes.Reply("Album deleted")
+
+def command_album_list(arg, argc):
+	albumlist = album_list(" ".join(arg))
+	if albumlist: return messagetypes.Reply("Found albums:\n  - " + "\n  - ".join(albumlist))
+	else: return messagetypes.Reply("No albums found")
 
 # - configure autoplay
 def command_autoplay_ignore(arg, argc):
@@ -343,7 +357,8 @@ commands = {
 	"album": {
 		"": command_album,
 		"add": command_album_add,
-		"delete": command_album_remove
+		"delete": command_album_remove,
+		"list": command_album_list
 	}, "autoplay": {
 		"next": command_autoplay_next,
 		"off": command_autoplay_off,

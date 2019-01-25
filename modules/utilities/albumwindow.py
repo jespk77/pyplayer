@@ -2,7 +2,8 @@ import json
 
 from ui import pywindow, pyelement
 
-album_format = "albums/{}.{}"
+album_folder = "albums"
+album_format = album_folder + "/{}.{}"
 
 class AlbumWindow(pywindow.PyWindow):
 	def __init__(self, master, command_callback, album_file):
@@ -54,7 +55,7 @@ class AlbumWindowInput(pywindow.PyWindow):
 	def __init__(self, master, file=None, autocomplete_callback=None):
 		self._autocomplete = autocomplete_callback
 		if file:
-			with open(album_format.format(file, "json")) as file:
+			with open(album_folder + "/" + file) as file:
 				self._dt = json.load(file)
 		else: self._dt = {}
 
@@ -84,7 +85,7 @@ class AlbumWindowInput(pywindow.PyWindow):
 		self.set_widget("input_song_path", inpt, row=3, column=1)
 
 		inpt = pyelement.PyTextfield(self.window)
-		inpt.text = self._dt.get("songlist", [])
+		inpt.text = "\n".join(self._dt.get("songlist", []))
 		inpt.command = self._reset_button
 		inpt.bind("<Tab>", inpt.focus_next)
 		inpt.bind("<Return>", self._autocomplete_line)
