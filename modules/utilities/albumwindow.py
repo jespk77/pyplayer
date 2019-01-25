@@ -1,5 +1,6 @@
-from ui import pywindow, pyelement
 import json
+
+from ui import pywindow, pyelement
 
 album_format = "albums/{}.{}"
 
@@ -141,21 +142,22 @@ class AlbumWindowInput(pywindow.PyWindow):
 		try:
 			with open(filename, "w") as file:
 				self._dt["artist"] = self.widgets["input_artist"].value
-				if not self._dt["artist"]: raise LookupError
+				if not self._dt["artist"]: raise LookupError("Missing required 'Artist' field")
 				self._dt["name"] = self.widgets["input_name"].value
-				if not self._dt["name"]: raise LookupError
+				if not self._dt["name"]: raise LookupError("Missing required 'Album' field")
 				self._dt["release_date"] = self.widgets["input_release_date"].value
 				self._dt["song_path"] = self.widgets["input_song_path"].value
 				self._dt["songlist"] = self.widgets["input_songlist"].text.split("\n")
-				if not self._dt["songlist"]: raise LookupError
+				if not self._dt["songlist"] or not self._dt["songlist"][0]: raise LookupError("Missing required 'Song list' field")
 				self._dt["image"] = self.widgets["input_image"].value
+				if not self._dt["image"].startswith("/"): self._dt["image"] = "images/" + self._dt["image"]
 
 				import json
 				json.dump(self._dt, file)
 				self.destroy()
-		except LookupError:
+		except LookupError as e:
 			print("INFO", "Tried to save information but failed to fill required fields")
-			wd.text = "Missing fields"
+			wd.text = "".join(e.args) if e.args else "Missing fields"
 			wd.accept_input = False
 
 		except Exception as e:
