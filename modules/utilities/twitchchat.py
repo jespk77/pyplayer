@@ -431,12 +431,14 @@ class TwitchChat(pyelement.PyTextfield):
 	def on_usernotice(self, meta, data):
 		if meta is None or self._limited_mode: return
 		type = meta["msg-id"]
-		if type == "resub": text = meta["display-name"] + " resubscribed for " + meta["msg-param-months"] + " months"
+		if type == "resub":
+			text = "{} resubscribed for {} months".format(meta["display-name"], meta["msg-param-cumulative-months"])
+			if meta["msg-param-should-share-streak"] == '1': text += " and is on a {} month streak".format(meta["msg-param-streak-months"])
 		elif type == "sub": text = meta["display-name"] + " subscribed"
 		elif type == "subgift":
-			text = meta["display-name"] + " gifted a subscription to " + meta["msg-param-recipient-display-name"]
+			text = "{} gifted a subscription to {}".format(meta["display-name"], meta["msg-param-recipient-display-name"])
 			amt = meta.get("msg-param-sender-count", "0")
-			if amt > "0": text += " ({} total)".format(meta["msg-param-sender-count"])
+			if amt > "0": text += " for {} total gifts".format(meta["msg-param-sender-count"])
 		elif type == "charity": return self.on_charity(meta, data)
 		else: return
 
