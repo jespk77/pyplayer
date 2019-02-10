@@ -61,11 +61,16 @@ class SoundEffectPlayer:
 		if sound_path is None or not os.path.isdir(sound_path): print("ERROR", "Invalid sound folder:", sound_path); return
 		effects = [file for file in os.listdir(sound_path) if arg == os.path.splitext(file)[0]]
 		if len(effects) == 1:
-			if loop: self.player.set_mrl(os.path.join(sound_path, effects[0]), "input-repeat=-1")
-			else: self.player.set_mrl(os.path.join(sound_path, effects[0]))
+			mrl = os.path.join(sound_path, effects[0])
+			if os.path.isdir(mrl):
+				print("INFO", "Given keyword corresponds to a directory, picking a random one")
+				import random
+				mrl = os.path.join(mrl, random.choice(os.listdir(mrl)))
+
+			self.player.set_mrl(mrl, "input-repeat=-1" if loop else "input-repeat=0")
 			self.md = self.player.get_media()
-			self.player.play()
 			self.last_effect = os.path.splitext(effects[0])[0]
+			self.player.play()
 			return messagetypes.Reply("Playing sound effect: " + self.last_effect)
 		else:
 			print("INFO", "cannot determine sound effect from", arg, ", there are", len(effects), "posibilities")
