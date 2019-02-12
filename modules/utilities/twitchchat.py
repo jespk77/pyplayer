@@ -111,7 +111,7 @@ class TwitchChat(pyelement.PyTextfield):
 		self._message_queue = Queue()
 		self.configure(cursor="left_ptr", wrap="word", spacing1=3, padx=5)
 		self.tag_configure("wide_line", offset=5)
-		self.bind("<End>", self.adjust_scroll).bind("<Enter>&&<Leave>", self.set_scroll)
+		self.bind("<End>", lambda e: self.see("end")).bind("<Enter>&&<Leave>", self.set_scroll)
 		self.update_time()
 		if not os.path.isdir(emote_cache_folder): os.mkdir(emote_cache_folder)
 
@@ -126,12 +126,12 @@ class TwitchChat(pyelement.PyTextfield):
 		self._timestamp = datetime.datetime.today()
 		self.after(1, self.update_time)
 
-	def adjust_scroll(self, event):
-		self.see("end")
+	def adjust_scroll(self):
+		if self._enable_scroll: self.see("end")
 
 	def set_scroll(self, event):
 		self._enable_scroll = (event.x < 0 or event.x > event.widget.winfo_width()) or (event.y < 0 or event.y > event.widget.winfo_height())
-		if self._enable_scroll: self.adjust_scroll(event)
+		self.adjust_scroll()
 
 	def connect(self, channel_meta, login):
 		if self._irc_client is None:
@@ -415,7 +415,7 @@ class TwitchChat(pyelement.PyTextfield):
 				continue
 
 			self.insert("end", word + " ", tags)
-		if self._enable_scroll: self.see("end")
+		self.adjust_scroll()
 
 	def get_meta(self, data):
 		if not data.startswith("@"): return None
@@ -448,13 +448,16 @@ class TwitchChat(pyelement.PyTextfield):
 		else: level = " at tier 3"
 		self.insert("end", "\n" + text + level, ("notice",))
 		if len(data) > 0: self.on_privmsg(meta, data)
+		else: self.adjust_scroll()
 
 	def on_charity(self, meta, data):
 		self.insert("end", "\n${:,} raised for {} so far! {} days left".format(int(meta["msg-param-total"]), meta["msg-param-charity-name"].replace("\s", " "),
 																			   meta["msg-param-charity-days-remaining"]), ("notice",))
+		self.adjust_scroll()
 
 	def on_notice(self, meta, data):
 		self.insert("end", "\n" + data, ("notice",))
+		self.adjust_scroll()
 
 	def on_clearchat(self, user):
 		tag = user.lower() + ".last"
