@@ -12,6 +12,7 @@ interpreter = client = None
 
 # MODULE SPECIFIC VARIABLES
 trigger_file = "keytriggers"
+loop_effect_command = "effect loop {}"
 hook_running = False
 key_cache = {}
 key_cache_date = -1
@@ -50,13 +51,13 @@ class SoundEffectPlayer:
 		self._player.audio_output_set("mmdevice")
 		self._media = None
 
-		# (effect_id, is_random, loop)
-		self._last_effect = None, False, False
+		# (effect_id, loop)
+		self._last_effect = None, False
 		self._player.event_manager().event_attach(vlc.EventType.MediaPlayerEndReached, self._on_end_reached)
 
 	def _on_end_reached(self, event):
-		if self._last_effect[0] and self._last_effect[1] and self._last_effect[2]:
-			interpreter.put_command("effect loop {}".format(self._last_effect[0]))
+		if self._last_effect[0] and self._last_effect[1]:
+			interpreter.put_command(loop_effect_command.format(self._last_effect[0]))
 
 	def play_effect(self, arg, loop=False):
 		if self._player.is_playing() and not self._last_effect[1]:
@@ -78,12 +79,19 @@ class SoundEffectPlayer:
 				print("INFO", "Given keyword corresponds to a directory, picking a random one")
 				import random
 				mrl = os.path.join(mrl, random.choice(os.listdir(mrl)))
-				self._last_effect = arg, True, loop
+				self._last_effect = arg, loop
 				self._media = vlc.Media(mrl)
 
 			else:
-				self._last_effect = os.path.splitext(effects[0])[0], False, False
-				self._media = vlc.Media(mrl, "input-repeat=-1" if loop else "input-repeat=0")
+				sound_file = os.path.splitext(effects[0])
+				# dirty workaround to make ogg files loopable
+				# caused by vlc error: 'ogg demux error: No selected seekable stream found'
+				if loop and sound_file[1] == ".ogg":
+					self._last_effect = sound_file[0], True
+					self._media = vlc.Media(mrl)
+				else:
+					self._last_effect = sound_file[0], False
+					self._media = vlc.Media(mrl, "input-repeat=-1" if loop else "input-repeat=0")
 
 			self._player.set_media(self._media)
 			self._player.play()
