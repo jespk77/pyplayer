@@ -77,7 +77,6 @@ class Interpreter(Thread):
 				op = None
 				self.print_additional_debug()
 				if cb is not None: op = cb(cmd)
-				elif cmd[0] == "reload": op = messagetypes.Reply("Reloading modules is no longer supported, use 'restart' instead")
 
 				if op is None:
 					try: res = self._parse_cmd(cmd)
