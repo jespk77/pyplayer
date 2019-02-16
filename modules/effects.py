@@ -1,12 +1,11 @@
-import json
-import os
-
-from vlc import MediaPlayer
+import json, os, vlc
 
 from utilities import messagetypes
-
-try: import utilities.keyboard_intercept as keyboard_intercept
-except ImportError: keyboard_intercept = None
+try:
+	import utilities.keyboard_intercept as keyboard_intercept
+except ImportError:
+	print("WARNING", "Interception library cannot be loaded, hotkey command activation disabled")
+	keyboard_intercept = None
 
 # DEFAULT MODULE VARIABLES
 interpreter = client = None
@@ -29,7 +28,7 @@ def verify_key_cache():
 				file.close()
 			except Exception as e:
 				key_cache.clear()
-				print("ERROR", "updating keyfile:", e)
+				print("ERROR", "Updating keyfile:", e)
 	else: key_cache.clear()
 
 def on_key_down(key):
@@ -43,18 +42,23 @@ def on_key_down(key):
 	else: print("WARNING", "no entry found for keycode", key)
 
 class SoundEffectPlayer:
+	# sound effects longer than this time (im ms) are stopped when the same command is repeated, instead of replaying
+	TOGGLE_DURATION = 3000
+
 	def __init__(self):
-		self.player = MediaPlayer()
-		self.player.audio_output_set("mmdevice")
-		self.toggle_duration = 3000
-		self.md = None
+		self._player = vlc.MediaPlayer()
+		self._player.audio_output_set("mmdevice")
+		self._media = None
+
+		# (effect_id, is_random)
+		self._last_effect = None, False
 
 	def play_effect(self, arg, loop=False):
-		if self.player.is_playing():
-			if arg == self.last_effect and self.md.get_duration() > self.toggle_duration:
-				self.player.stop()
-				self.md.release()
-				self.md = None
+		if self._player.is_playing() and not self._last_effect[1]:
+			if arg == self._last_effect and self._media.get_duration() > self.TOGGLE_DURATION:
+				self._player.stop()
+				self._media.release()
+				self._media = None
 				return
 
 		sound_path = client["directory"].get("sounds", {}).get("path")
@@ -66,23 +70,25 @@ class SoundEffectPlayer:
 				print("INFO", "Given keyword corresponds to a directory, picking a random one")
 				import random
 				mrl = os.path.join(mrl, random.choice(os.listdir(mrl)))
+				self._last_effect = arg, True
+			else: self._last_effect = os.path.splitext(effects[0])[0], False
 
-			self.player.set_mrl(mrl, "input-repeat=-1" if loop else "input-repeat=0")
-			self.md = self.player.get_media()
-			self.last_effect = os.path.splitext(effects[0])[0]
-			self.player.play()
-			return messagetypes.Reply("Playing sound effect: " + self.last_effect)
+			self._media = vlc.Media(mrl, "input-repeat=-1" if loop else "input-repeat=0")
+			self._player.set_media(self._media)
+			self._player.play()
+			return messagetypes.Reply("Playing sound effect: " + self._last_effect[0])
 		else:
-			print("INFO", "cannot determine sound effect from", arg, ", there are", len(effects), "posibilities")
+			print("INFO", "Cannot determine sound effect from", arg, ", there are", len(effects), "posibilities")
 			return messagetypes.Reply("Cannot determine what sound that should be")
 
 	def stop_player(self):
-		self.player.stop()
-		self.md = None
+		self._player.stop()
+		self._media.release()
+		self._media = None
 		return messagetypes.Empty()
 
 	def on_destroy(self):
-		self.player.release()
+		self._player.release()
 
 effect_player = SoundEffectPlayer()
 def play_effect_loop(arg, argc):
