@@ -50,8 +50,13 @@ class SoundEffectPlayer:
 		self._player.audio_output_set("mmdevice")
 		self._media = None
 
-		# (effect_id, is_random)
-		self._last_effect = None, False
+		# (effect_id, is_random, loop)
+		self._last_effect = None, False, False
+		self._player.event_manager().event_attach(vlc.EventType.MediaPlayerEndReached, self._on_end_reached)
+
+	def _on_end_reached(self, event):
+		if self._last_effect[0] and self._last_effect[1] and self._last_effect[2]:
+			interpreter.put_command("effect loop {}".format(self._last_effect[0]))
 
 	def play_effect(self, arg, loop=False):
 		if self._player.is_playing() and not self._last_effect[1]:
@@ -62,7 +67,10 @@ class SoundEffectPlayer:
 				return
 
 		sound_path = client["directory"].get("sounds", {}).get("path")
-		if sound_path is None or not os.path.isdir(sound_path): print("ERROR", "Invalid sound folder:", sound_path); return
+		if sound_path is None or not os.path.isdir(sound_path):
+			print("ERROR", "Invalid sound folder:", sound_path)
+			return
+
 		effects = [file for file in os.listdir(sound_path) if arg == os.path.splitext(file)[0]]
 		if len(effects) == 1:
 			mrl = os.path.join(sound_path, effects[0])
@@ -70,10 +78,13 @@ class SoundEffectPlayer:
 				print("INFO", "Given keyword corresponds to a directory, picking a random one")
 				import random
 				mrl = os.path.join(mrl, random.choice(os.listdir(mrl)))
-				self._last_effect = arg, True
-			else: self._last_effect = os.path.splitext(effects[0])[0], False
+				self._last_effect = arg, True, loop
+				self._media = vlc.Media(mrl)
 
-			self._media = vlc.Media(mrl, "input-repeat=-1" if loop else "input-repeat=0")
+			else:
+				self._last_effect = os.path.splitext(effects[0])[0], False, False
+				self._media = vlc.Media(mrl, "input-repeat=-1" if loop else "input-repeat=0")
+
 			self._player.set_media(self._media)
 			self._player.play()
 			return messagetypes.Reply("Playing sound effect: " + self._last_effect[0])
