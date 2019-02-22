@@ -11,7 +11,6 @@ class Interpreter(Thread):
 		Each module contains:
 			'interpreter': a reference to this instance (only for reading/command queue access)
 			'client': a reference to the main window of the client
-			'platform': a string that defines the platform the program is run on
 
 		Each module can define:
 			'initialize()': [optional] gets called whenever the module is imported/reloaded
@@ -19,9 +18,9 @@ class Interpreter(Thread):
 			'dependencies': dict: this defines the dependencies that need to be installed using pip, this should be a dictionary where key is the name that needs to be loaded (this name will be set as a module attribure with the import assigned)
 			'commands: dict': defines the commands this module can process, if not defined this module will not receive any commands
 				Notes:
-					- each command callback receives two argument, the remaining command and the number of words of this command
-					- use "" for default commands and "info" to display help messages, the top level cannot have a default command
-					- after processing a command the module must return an instance of 'messagetypes', if nothing is returned the interpreter will continue to next module
+					- each command callback receives two arguments, the remaining keywords (in a list split on spaces) and the size of this list
+					- use "" for default commands, the top level of the dictionary cannot have a default command
+					- after processing a command the module must return an instance of 'messagetypes', if nothing is returned the interpreter assumes the command was ignored and will continue processing the command further
 	"""
 	def __init__(self, client, modules=None):
 		super().__init__(name="PyInterpreterThread")
@@ -56,19 +55,19 @@ class Interpreter(Thread):
 		self._client.update_title("PyPlayerTk", self._checks)
 
 	@property
-	def arguments(self): return self._checks
+	def arguments(self):
+		""" A list with all debug arguments the interpreter was started with """
+		return self._checks
 
 	def print_additional_debug(self):
 		if "MemoryLog" in self._checks: self.mem_tracker.print_diff()
 
 	def run(self):
 		print("INFO", "Interpreter thread started")
-		while True:
+		cmd = True
+		while cmd:
 			cmd = self._queue.get()
 			try:
-				if cmd is False:
-					self.on_destroy()
-					return
 				try: cmd, cb = cmd
 				except ValueError: cb = None
 				print("INFO", "Processing command '{}' with callback:".format(cmd), cb)
@@ -95,10 +94,19 @@ class Interpreter(Thread):
 				print("ERROR", "Error processing command '{}':".format(cmd), e)
 				self._client.add_reply(messagetypes.Error(e, "Error processing command").get_contents())
 
-	def put_command(self, cmd, data=None):
-		self._queue.put_nowait((cmd, data))
+		self.on_destroy()
 
-	def stop_command(self):
+	def put_command(self, cmd, callback=None):
+		""" Add command to be interpreted, this will be processed as soon as all previous commands have finished processing
+			[optional] takes a 'callback' keyword that accepts a function, this will be called (in the interpreter thread) before the regular processing,
+				this callback is treated with the same rules as regular command processing callbacks; if it doesn't return anything will continue processing in all modules
+		 	This operation uses a multiprocessing.queue and therefore is thread-safe and uses the 'put' operation without wait and therefore will not block """
+		self._queue.put_nowait((cmd, callback))
+
+	def stop(self):
+		""" Terminate the interpreter, any commands already queued will still be handled but commands added after this call are ignored
+			Once the interpreter has finished the 'on_destroy' method is called that cleans up all loaded modules before it is destroyed
+		 	This operation uses a multiprocessing.queue and therefore is thread-safe and uses the 'put' operation without wait and therefore will not block """
 		self._queue.put_nowait(False)
 
 	def _parse_cmd(self, cmd):
@@ -120,10 +128,11 @@ class Interpreter(Thread):
 			if cl is not None: return cl(cmd, len(cmd))
 
 	def _load_module(self, md):
+		import os
 		if not md.startswith("modules."): md = "modules." + md
-		if md.endswith(".py"): md = md[:-3]
+		md = os.path.splitext(md)[0]
+		if md in [n.__name__ for n in self._modules]: raise RuntimeError("Another module with name '{}' was already registered!".format(md))
 
-		if md in [n.__name__ for n in self._modules]: raise NameError("Another module with name '{}' was already registered!".format(md))
 		try:
 			print("INFO", "Loading module '{}'...".format(md))
 			m = importlib.import_module(md)

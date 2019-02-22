@@ -230,7 +230,7 @@ class PySplashWindow(pywindow.RootPyWindow):
 	def _terminate(self):
 		print("INFO", "Pyplayer closed, shutting down!")
 		if self._interp is not None and self._interp.is_alive():
-			self._interp.stop_command()
+			self._interp.stop()
 			self._interp.join()
 		self.after(2, self.destroy)
 
