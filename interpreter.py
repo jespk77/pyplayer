@@ -54,6 +54,7 @@ class Interpreter(Thread):
 			except Exception as e: print("ERROR", "Cannot load memory tracker:", e)
 		self._client.update_title("PyPlayerTk", self._checks)
 
+
 	@property
 	def arguments(self):
 		""" A list with all debug arguments the interpreter was started with """
@@ -61,6 +62,7 @@ class Interpreter(Thread):
 
 	def print_additional_debug(self):
 		if "MemoryLog" in self._checks: self.mem_tracker.print_diff()
+
 
 	def run(self):
 		print("INFO", "Interpreter thread started")
@@ -94,13 +96,15 @@ class Interpreter(Thread):
 				print("ERROR", "Error processing command '{}':".format(cmd), e)
 				self._client.add_reply(messagetypes.Error(e, "Error processing command").get_contents())
 
-		self.on_destroy()
+		self._on_destroy()
+
 
 	def put_command(self, cmd, callback=None):
 		""" Add command to be interpreted, this will be processed as soon as all previous commands have finished processing
 			[optional] takes a 'callback' keyword that accepts a function, this will be called (in the interpreter thread) before the regular processing,
 				this callback is treated with the same rules as regular command processing callbacks; if it doesn't return anything will continue processing in all modules
 		 	This operation uses a multiprocessing.queue and therefore is thread-safe and uses the 'put' operation without wait and therefore will not block """
+		if callback and not callable(callback): raise TypeError("Callback must be callable when specified!")
 		self._queue.put_nowait((cmd, callback))
 
 	def stop(self):
@@ -108,6 +112,7 @@ class Interpreter(Thread):
 			Once the interpreter has finished the 'on_destroy' method is called that cleans up all loaded modules before it is destroyed
 		 	This operation uses a multiprocessing.queue and therefore is thread-safe and uses the 'put' operation without wait and therefore will not block """
 		self._queue.put_nowait(False)
+
 
 	def _parse_cmd(self, cmd):
 		for md in self._modules:
@@ -127,6 +132,7 @@ class Interpreter(Thread):
 			if isinstance(cl, dict): cl = cl.get("")
 			if cl is not None: return cl(cmd, len(cmd))
 
+
 	def _load_module(self, md):
 		import os
 		if not md.startswith("modules."): md = "modules." + md
@@ -142,14 +148,15 @@ class Interpreter(Thread):
 
 			try: m.initialize()
 			except AttributeError as a:
-				if "initialize" not in str(a): raise a
+				if "initialize" not in str(a): raise
 			except Exception as e: return messagetypes.Error(e, "Failed to initialize module '{}'".format(md))
 
 			self._modules.append(m)
 			return messagetypes.Reply("Module successfully loaded")
 		except Exception as e: return messagetypes.Error(e, "Failed to import module '{}'".format(md))
 
-	def on_destroy(self):
+
+	def _on_destroy(self):
 		for module in self._modules:
 			try: module.on_destroy()
 			except AttributeError: pass
