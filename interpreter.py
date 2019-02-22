@@ -2,6 +2,7 @@ import importlib
 import sys
 from multiprocessing import Queue
 from threading import Thread
+from weakref import WeakSet
 
 from utilities import messagetypes
 
@@ -39,6 +40,8 @@ class Interpreter(Thread):
 					r = self._load_module(module_id)
 					if isinstance(r, messagetypes.Error): client.add_message(r.get_contents())
 				except Exception as e: print("ERROR", "While loading module '{}':".format(module_id), e)
+
+		self._events = {}
 		self.start()
 
 	def _set_sys_arg(self):
@@ -113,6 +116,43 @@ class Interpreter(Thread):
 		 	This operation uses a multiprocessing.queue and therefore is thread-safe and uses the 'put' operation without wait and therefore will not block """
 		self._queue.put_nowait(False)
 
+	def register_event(self, event_id, callback):
+		""" Register listener to specified event id, a new event id will be created if it doesn't exist
+			* If the callback was already registered, this call has no effect
+			* This object does not increase the reference counter for the callback; if the callback container is destroyed the callback is no longer called """
+		if not callable(callback): raise TypeError("Event callback for '{}' must be callable!".format(event_id))
+		if event_id not in self._events: self._events[event_id] = WeakSet()
+		self._events[event_id].add(callback)
+
+	def unregister_event(self, event_id, callback):
+		""" Remove listener from specified event id, this call has no effect if the event id doesn't exist or the callback was not registered
+		 	Returns True if the callback was found and removed, or False otherwise """
+		event_list = self._events.get(event_id)
+		if event_list:
+			try:
+				event_list.remove(callback)
+				return True
+			except KeyError: pass
+		return False
+
+	def notify_event(self, event_id, *args, **kwargs):
+		""" Call all listeners (that are still alive) on specified event id with all given extra keywords
+			Has no effect if the event id is empty or non-existent
+			Any event listeners that don't take all the extra arguments in this call are ignored
+			Returns the last error, if any errors occured during processing, otherwise None """
+		event_list = self._events.get(event_id)
+		errs = None
+		if event_list:
+			for cb in event_list:
+				try:
+					try: cb(*args, **kwargs)
+					except TypeError as t:
+						if "{.__name__}() takes".format(cb) not in t: raise
+						else: print("WARNING", "Ignored callback: Nonmatching number of variables for '{.__name__}' in event '{}'".format(cb, event_id))
+				except Exception as e:
+					print("ERROR", "Calling callback for event '{}':".format(event_id), e)
+					errs = e
+		return errs
 
 	def _parse_cmd(self, cmd):
 		for md in self._modules:
