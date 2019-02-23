@@ -69,6 +69,7 @@ class Interpreter(Thread):
 		cmd = True
 		while cmd:
 			cmd = self._queue.get()
+			if cmd is False: break
 			try:
 				try: cmd, cb = cmd
 				except ValueError: cb = None
