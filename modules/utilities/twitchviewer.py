@@ -6,7 +6,7 @@ from ui import pywindow, pyelement
 
 initial_cfg = { "account_data": {"username": "user", "client-id": "6adynlxibzw3ug8udhyzy6w3yt70pw", "oauth": "noauth"}, "autosave_delay": 5, "chat_input": {"background": "gray3", "foreground": "white", "font":{"family": "segoeui", "size": 10, "slant": "italic"}},
 				"chat_limit": 300, "message_blacklist": [], "emote_toggle": {"background": "gray3", "foreground": "white"}, "enable_timestamp": "true", "enable_triggers": "false",
-				"chat_viewer": {"background": "gray3", "foreground": "white", "font":{"family": "segoeui", "size": 10}, "notice.foreground": "gray50", "deleted.foreground": "gray75"}}
+				"chat_viewer": {"background": "gray3", "foreground": "white", "font":{"family": "segoeui", "size": 10}, "notice.foreground": "gray50", "deleted.foreground": "gray75", "subnotice.foreground": "gray15"}}
 
 channel_meta_url = "https://api.twitch.tv/kraken/channels/{channel}?client_id={client_id}"
 def get_meta(channel):

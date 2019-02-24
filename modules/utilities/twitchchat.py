@@ -431,14 +431,24 @@ class TwitchChat(pyelement.PyTextfield):
 	def on_usernotice(self, meta, data):
 		if meta is None or self._limited_mode: return
 		type = meta["msg-id"]
+
+		# regular (re)subscriptions
 		if type == "resub":
 			text = "{} resubscribed for {} months".format(meta["display-name"], meta["msg-param-cumulative-months"])
 			if meta["msg-param-should-share-streak"] == '1': text += " and is on a {} month streak".format(meta["msg-param-streak-months"])
 		elif type == "sub": text = meta["display-name"] + " subscribed"
+
+		# gifted subscriptions
 		elif type == "subgift":
 			text = "{} gifted a subscription to {}".format(meta["display-name"], meta["msg-param-recipient-display-name"])
 			amt = meta.get("msg-param-sender-count", "0")
 			if amt > "0": text += " for {} total gifts".format(meta["msg-param-sender-count"])
+		elif type == "submysterygift":
+			text = "{} is gifting {} random subscriptions".format(meta["display-name"], meta["msg-param-mass-gift-count"])
+			amt = meta.get("msg-param-sender-count", "0")
+			if amt > "0": text += " for {} total gifts".format(meta["msg-param-sender-count"])
+
+		# charity notices
 		elif type == "charity": return self.on_charity(meta, data)
 		else: return
 
@@ -446,7 +456,8 @@ class TwitchChat(pyelement.PyTextfield):
 		elif meta["msg-param-sub-plan"] == "1000": level = ""
 		elif meta["msg-param-sub-plan"] == "2000": level = " at tier 2"
 		else: level = " at tier 3"
-		self.insert("end", "\n" + text + level, ("notice",))
+
+		self.insert("end", "\n" + text + level, ("subnotice",))
 		if len(data) > 0: self.on_privmsg(meta, data)
 		else: self.adjust_scroll()
 
