@@ -47,7 +47,7 @@ class Interpreter(Thread):
 		self.start()
 
 	def _set_sys_arg(self):
-		if "console" in sys.argv: self._checks.		append("ConsoleLog")
+		if "console" in sys.argv: self._checks.append("ConsoleLog")
 
 		if "memory" in sys.argv:
 			print("INFO", "Memory logging enabled")
@@ -77,9 +77,9 @@ class Interpreter(Thread):
 			event, *args = self._queue.get()
 			print("INFO", "Processing event '{}' with data:".format(event), *args)
 			if event is False:
-				self.notify_event("destroy")
+				self._notify_event("destroy")
 				return
-			else: self.notify_event(event, *args)
+			else: self._notify_event(event, *args)
 
 
 	def put_command(self, cmd, callback=None):
@@ -89,6 +89,13 @@ class Interpreter(Thread):
 		 	This operation uses a multiprocessing.queue and therefore is thread-safe and uses the 'put' operation without wait and therefore will not block """
 		if callback and not callable(callback): raise TypeError("Callback must be callable when specified!")
 		self._queue.put_nowait(("parse_command", cmd, callback))
+
+	def put_event(self, event_id, *args):
+		""" Call all listeners (that are still alive) on specified event id with all given extra keywords
+			* Has no effect if the event id is empty or non-existent
+			* Any event listeners that can't handle given arguments are not called
+			This operation uses a multiprocessing.queue and therefore is thread-safe and uses the 'put' operation without wait and therefore will not block """
+		self._queue.put_nowait((event_id, *args))
 
 	def stop(self):
 		""" Terminate the interpreter, any commands already queued will still be handled but commands added after this call are ignored
@@ -119,11 +126,7 @@ class Interpreter(Thread):
 		return False
 
 
-	def notify_event(self, event_id, *args, **kwargs):
-		""" Call all listeners (that are still alive) on specified event id with all given extra keywords
-			Has no effect if the event id is empty or non-existent
-			Any event listeners that don't take all the extra arguments in this call are ignored
-			Returns the last error, if any errors occured during processing, otherwise None """
+	def _notify_event(self, event_id, *args, **kwargs):
 		print("INFO", "Notifying listeners for the '{}' event".format(event_id))
 		event_list = self._events.get(event_id)
 		errs = None
