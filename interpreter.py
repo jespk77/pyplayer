@@ -32,6 +32,10 @@ class Interpreter(Thread):
 		self._platform = sys.platform
 
 		self._set_sys_arg()
+		self._events = {}
+		self._ps = self.register_event("parse_command", self._parse_command)
+		self._ds = self.register_event("destroy", self._on_destroy)
+
 		self._modules = []
 		if modules:
 			mdl = sorted(modules.items(), key=lambda it: it[1]["priority"])
@@ -40,10 +44,6 @@ class Interpreter(Thread):
 					r = self._load_module(module_id)
 					if isinstance(r, messagetypes.Error): client.add_message(r.get_contents())
 				except Exception as e: print("ERROR", "While loading module '{}':".format(module_id), e)
-
-		self._events = {}
-		self._ps = self.register_event("parse_command", self._parse_command)
-		self._ds = self.register_event("destroy", self._on_destroy)
 		self.start()
 
 	def _set_sys_arg(self):
