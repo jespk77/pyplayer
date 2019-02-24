@@ -456,7 +456,8 @@ class TwitchChat(pyelement.PyTextfield):
 		elif meta["msg-param-sub-plan"] == "1000": level = ""
 		elif meta["msg-param-sub-plan"] == "2000": level = " at tier 2"
 		else: level = " at tier 3"
-		self.insert("end", "\n" + text + level, ("notice",))
+
+		self.insert("end", "\n" + text + level, ("subnotice",))
 		if len(data) > 0: self.on_privmsg(meta, data)
 		else: self.adjust_scroll()
 
