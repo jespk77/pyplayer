@@ -111,7 +111,7 @@ class TwitchChat(pyelement.PyTextfield):
 		self._message_queue = Queue()
 		self.configure(cursor="left_ptr", wrap="word", spacing1=3, padx=5)
 		self.tag_configure("wide_line", offset=5)
-		self.bind("<End>", lambda e: self.see("end-2l")).bind("<Enter>&&<Leave>", self.set_scroll)
+		self.bind("<End>", lambda e: self.see("end-1l")).bind("<Enter>&&<Leave>", self.set_scroll)
 		self.update_time()
 		if not os.path.isdir(emote_cache_folder): os.mkdir(emote_cache_folder)
 
@@ -127,7 +127,7 @@ class TwitchChat(pyelement.PyTextfield):
 		self.after(1, self.update_time)
 
 	def adjust_scroll(self):
-		if self._enable_scroll: self.see("end-2l")
+		if self._enable_scroll: self.see("end-1l")
 
 	def set_scroll(self, event):
 		self._enable_scroll = (event.x < 0 or event.x > event.widget.winfo_width()) or (event.y < 0 or event.y > event.widget.winfo_height())
