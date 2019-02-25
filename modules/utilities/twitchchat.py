@@ -332,8 +332,10 @@ class TwitchChat(pyelement.PyTextfield):
 			if self._user_meta is not None: self.on_privmsg(self._user_meta, msg.rstrip("\n"), emote=True, tags=("subnotice",))
 
 
-	def on_privmsg(self, meta, data, emote=False, tags=()):
+	def on_privmsg(self, meta, data, emote=False, tags=None):
 		if meta is None: return
+		if tags is None: tags = ()
+
 		for line in self.window["message_blacklist"]:
 			if line in data: return
 		data = "".join([c for c in data if ord(c) <= 65536])
@@ -368,7 +370,9 @@ class TwitchChat(pyelement.PyTextfield):
 		self.scroll_bottom()
 		self.insert("end", "\n")
 
-	def add_text(self, text, user="", emotes=None, bits=False, emote=False, tags=()):
+	def add_text(self, text, user="", emotes=None, bits=False, emote=False, tags=None):
+		if tags is None: tags = ()
+
 		if text.startswith("\x01ACTION"):
 			text = text.lstrip("\x01ACTION ").rstrip("\x01")
 			tags += (user.lower(),)
