@@ -145,7 +145,7 @@ class TwitchChat(pyelement.PyTextfield):
 				self._load_bttv()
 				self._load_bits(login)
 				self._load_emotemap(login)
-				self.add_text(text=" - Joined channel: {} -".format(self._channel_meta["display_name"]), tags=("notice",))
+				self.add_text(text=" - Joined channel: {} -\n".format(self._channel_meta["display_name"]), tags=("notice",))
 			else: raise TypeError("Login should be a 'dict', not '{}'".format(type(login).__name__))
 		else: print("INFO", "Tried to connect again when the IRC client was already started")
 
@@ -318,10 +318,7 @@ class TwitchChat(pyelement.PyTextfield):
 		if self._irc_client is not None:
 			self._irc_client.send("PRIVMSG #" + self._channel_meta["name"] + " :" + msg)
 			if msg.startswith("/me"): msg = "\x01ACTION" + msg[3:]
-			if self._user_meta is None:
-				self.insert("end", "\n You: ", ("notice",))
-				self.insert("end", msg.rstrip("\n"))
-			else: self.on_privmsg(self._user_meta, msg.rstrip("\n"), emote=True)
+			if self._user_meta is not None: self.on_privmsg(self._user_meta, msg.rstrip("\n"), emote=True)
 
 	def on_privmsg(self, meta, data, emote=False):
 		if meta is None: return
@@ -344,7 +341,6 @@ class TwitchChat(pyelement.PyTextfield):
 			if len(emote) == 2: emote_list[emote[0]] = emote[1]
 
 		badges = meta["badges"].split(",")
-		self.insert("end", "\n")
 		if self.window["enable_timestamp"]: self.insert("end", self._timestamp.strftime("%I:%M "), ("notice",))
 		for badge in badges:
 			is_versioned = False
@@ -358,6 +354,7 @@ class TwitchChat(pyelement.PyTextfield):
 				self.insert("end", " ")
 
 		self.add_text(user=user, text=data, emotes=emote_list, bits="bits" in meta, emote=emote)
+		self.insert("end", "\n")
 
 	def add_text(self, text, user="", emotes=None, bits=False, emote=False, tags=()):
 		if text.startswith("\x01ACTION"):
@@ -457,12 +454,12 @@ class TwitchChat(pyelement.PyTextfield):
 		elif meta["msg-param-sub-plan"] == "2000": level = " at tier 2"
 		else: level = " at tier 3"
 
-		self.insert("end", "\n" + text + level, ("subnotice",))
+		self.insert("end", text + level + '\n', ("subnotice",))
 		if len(data) > 0: self.on_privmsg(meta, data)
 		else: self.adjust_scroll()
 
 	def on_charity(self, meta, data):
-		self.insert("end", "\n${:,} raised for {} so far! {} days left".format(int(meta["msg-param-total"]), meta["msg-param-charity-name"].replace("\s", " "),
+		self.insert("end", "${:,} raised for {} so far! {} days left\n".format(int(meta["msg-param-total"]), meta["msg-param-charity-name"].replace("\s", " "),
 																			   meta["msg-param-charity-days-remaining"]), ("notice",))
 		self.adjust_scroll()
 
