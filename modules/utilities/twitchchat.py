@@ -127,7 +127,7 @@ class TwitchChat(pyelement.PyTextfield):
 		self.after(1, self.update_time)
 
 	def adjust_scroll(self):
-		if self._enable_scroll: self.see("end-1l")
+		if self._enable_scroll: self.see("end-2l")
 
 	def set_scroll(self, event):
 		self._enable_scroll = (event.x < 0 or event.x > event.widget.winfo_width()) or (event.y < 0 or event.y > event.widget.winfo_height())
@@ -354,6 +354,7 @@ class TwitchChat(pyelement.PyTextfield):
 				self.insert("end", " ")
 
 		self.add_text(user=user, text=data, emotes=emote_list, bits="bits" in meta, emote=emote)
+		self.see("end")
 		self.insert("end", "\n")
 
 	def add_text(self, text, user="", emotes=None, bits=False, emote=False, tags=()):
@@ -412,7 +413,6 @@ class TwitchChat(pyelement.PyTextfield):
 				continue
 
 			self.insert("end", word + " ", tags)
-		self.adjust_scroll()
 
 	def get_meta(self, data):
 		if not data.startswith("@"): return None
@@ -456,12 +456,12 @@ class TwitchChat(pyelement.PyTextfield):
 
 		self.insert("end", text + level + '\n', ("subnotice",))
 		if len(data) > 0: self.on_privmsg(meta, data)
-		else: self.adjust_scroll()
+		else: self.see("end")
 
 	def on_charity(self, meta, data):
 		self.insert("end", "${:,} raised for {} so far! {} days left\n".format(int(meta["msg-param-total"]), meta["msg-param-charity-name"].replace("\s", " "),
 																			   meta["msg-param-charity-days-remaining"]), ("notice",))
-		self.adjust_scroll()
+		self.see("end")
 
 	def on_notice(self, meta, data):
 		self.insert("end", "\n" + data, ("notice",))
