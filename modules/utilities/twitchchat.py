@@ -115,16 +115,18 @@ class TwitchChat(pyelement.PyTextfield):
 		self.update_time()
 		if not os.path.isdir(emote_cache_folder): os.mkdir(emote_cache_folder)
 
+
 	@property
 	def command_callback(self): return self._callback
 	@command_callback.setter
 	def command_callback(self, callback):
 		if callable(callback): self._callback = callback
-		else: print("ERROR", "Tried to set queue callback to non-callable type", callback)
+		else: print("ERROR", "Tried to set queue callback to non-callable type:", callback)
 
 	def update_time(self):
 		self._timestamp = datetime.datetime.today()
 		self.after(1, self.update_time)
+
 
 	def adjust_scroll(self):
 		if self._enable_scroll: self.see("end-2l")
@@ -132,6 +134,10 @@ class TwitchChat(pyelement.PyTextfield):
 	def set_scroll(self, event):
 		self._enable_scroll = (event.x < 0 or event.x > event.widget.winfo_width()) or (event.y < 0 or event.y > event.widget.winfo_height())
 		self.adjust_scroll()
+
+	def scroll_bottom(self):
+		if self._enable_scroll: self.see("end")
+
 
 	def connect(self, channel_meta, login):
 		if self._irc_client is None:
@@ -157,6 +163,7 @@ class TwitchChat(pyelement.PyTextfield):
 			self._irc_client.join()
 			self._irc_client = None
 
+
 	# ===== BUILT-IN HELPER METHODS =====
 	# === BTTV emote support ===
 	def _load_bttv(self):
@@ -176,6 +183,7 @@ class TwitchChat(pyelement.PyTextfield):
 				del self._bttv_emotecache[name]
 				return
 		return self._bttv_emotecache[name]
+
 
 	# === Bit support ===
 	def _load_bits(self, login):
@@ -211,6 +219,7 @@ class TwitchChat(pyelement.PyTextfield):
 				return None
 		return (emote[0], self._bitcache[name][emote[0]])
 
+
 	# === MULTI TIERED SUBSCRIPTION + DEFAULT BADGE SUPPORT ===
 	def _load_badges(self, login):
 		badges = requests.get(twitch_badge_url.format(channel=self._channel_meta["name"], client_id=login["client-id"])).json()
@@ -238,6 +247,7 @@ class TwitchChat(pyelement.PyTextfield):
 			except Exception as e:
 				print("ERROR", "Loading badge", badge_id, "->", e)
 				del self._badgecache[badge_id]
+
 
 	# === Twitch emote support ===
 	def _load_local_emote(self):
@@ -312,23 +322,24 @@ class TwitchChat(pyelement.PyTextfield):
 			else:
 				print("ERROR", "Getting emote cache:", e)
 				self._emotenamecache["error"] = "Emote list cannot be loaded"
-
 	# ===== END OF BUILT-IN HELPER METHODS =====
+
+
 	def send_message(self, msg):
 		if self._irc_client is not None:
 			self._irc_client.send("PRIVMSG #" + self._channel_meta["name"] + " :" + msg)
 			if msg.startswith("/me"): msg = "\x01ACTION" + msg[3:]
-			if self._user_meta is not None: self.on_privmsg(self._user_meta, msg.rstrip("\n"), emote=True)
+			if self._user_meta is not None: self.on_privmsg(self._user_meta, msg.rstrip("\n"), emote=True, tags=("subnotice",))
 
-	def on_privmsg(self, meta, data, emote=False):
+
+	def on_privmsg(self, meta, data, emote=False, tags=()):
 		if meta is None: return
 		for line in self.window["message_blacklist"]:
 			if line in data: return
 		data = "".join([c for c in data if ord(c) <= 65536])
 		if not data or data.startswith('/'): return
 
-		user = meta["display-name"]
-		color = meta["color"]
+		user, color = meta["display-name"], meta["color"]
 		if len(color) == 0:
 			try: color = self.tag_cget(user.lower(), "foreground")
 			except: color = "#" + "".join("{:02x}".format(n) for n in [random.randrange(75,255), random.randrange(75,255), random.randrange(75,255)])
@@ -353,8 +364,8 @@ class TwitchChat(pyelement.PyTextfield):
 				self.image_create(index="end", image=self._badgecache[badge])
 				self.insert("end", " ")
 
-		self.add_text(user=user, text=data, emotes=emote_list, bits="bits" in meta, emote=emote)
-		self.see("end")
+		self.add_text(user=user, text=data, emotes=emote_list, bits="bits" in meta, emote=emote, tags=tags)
+		self.scroll_bottom()
 		self.insert("end", "\n")
 
 	def add_text(self, text, user="", emotes=None, bits=False, emote=False, tags=()):
@@ -411,8 +422,8 @@ class TwitchChat(pyelement.PyTextfield):
 					else: self.image_create("end", image=self._get_bttv_emote(word))
 				except Exception as e: print("ERROR", "Error creating image for bttv emote '{}':".format(word), e)
 				continue
-
 			self.insert("end", word + " ", tags)
+
 
 	def get_meta(self, data):
 		if not data.startswith("@"): return None
@@ -424,6 +435,7 @@ class TwitchChat(pyelement.PyTextfield):
 			line = line.split("=")
 			if len(line) == 2: res[line[0]] = line[1]
 		return res
+
 
 	def on_usernotice(self, meta, data):
 		if meta is None or self._limited_mode: return
@@ -456,16 +468,18 @@ class TwitchChat(pyelement.PyTextfield):
 
 		self.insert("end", text + level + '\n', ("subnotice",))
 		if len(data) > 0: self.on_privmsg(meta, data)
-		else: self.see("end")
+		else: self.scroll_bottom()
+
 
 	def on_charity(self, meta, data):
 		self.insert("end", "${:,} raised for {} so far! {} days left\n".format(int(meta["msg-param-total"]), meta["msg-param-charity-name"].replace("\s", " "),
 																			   meta["msg-param-charity-days-remaining"]), ("notice",))
-		self.see("end")
+		self.scroll_bottom()
 
 	def on_notice(self, meta, data):
 		self.insert("end", "\n" + data, ("notice",))
-		self.adjust_scroll()
+		self.scroll_bottom()
+
 
 	def on_clearchat(self, user):
 		tag = user.lower() + ".last"
@@ -474,6 +488,7 @@ class TwitchChat(pyelement.PyTextfield):
 
 	def on_userstate(self, meta):
 		if meta is not None: self._user_meta = meta
+
 
 	def run(self):
 		if self._irc_client is not None:
@@ -485,6 +500,7 @@ class TwitchChat(pyelement.PyTextfield):
 				else: self.process_data(msg)
 		self.after(.1, self.run)
 
+
 	def process_data(self, data):
 		try:
 			if data[0] == "PING": self._irc_client.send("PONG " + "".join(data[1:]))
@@ -494,6 +510,8 @@ class TwitchChat(pyelement.PyTextfield):
 			elif data[2] == "CLEARCHAT": self.on_clearchat(data[4][1:])
 			elif data[2] == "USERSTATE": self.on_userstate(self.get_meta(data[0]))
 		except IndexError: pass
+
+
 
 class TwitchChatTalker(pyelement.PyTextfield):
 	def __init__(self, root, send_message_callback):
