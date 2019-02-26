@@ -471,7 +471,7 @@ class TwitchChat(pyelement.PyTextfield):
 		else: level = " at tier 3"
 
 		self.insert("end", text + level + '\n', ("subnotice",))
-		if len(data) > 0: self.on_privmsg(meta, data)
+		if len(data) > 0: self.on_privmsg(meta, data, tags=("subnotice",))
 		else: self.scroll_bottom()
 
 
