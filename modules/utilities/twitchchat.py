@@ -329,7 +329,7 @@ class TwitchChat(pyelement.PyTextfield):
 		if self._irc_client is not None:
 			self._irc_client.send("PRIVMSG #" + self._channel_meta["name"] + " :" + msg)
 			if msg.startswith("/me"): msg = "\x01ACTION" + msg[3:]
-			if self._user_meta is not None: self.on_privmsg(self._user_meta, msg.rstrip("\n"), emote=True, tags=("subnotice",))
+			if self._user_meta is not None: self.on_privmsg(self._user_meta, msg.rstrip("\n"), emote=True)
 
 
 	def on_privmsg(self, meta, data, emote=False, tags=None):
