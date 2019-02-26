@@ -197,7 +197,7 @@ def command_filter_clear(arg, argc):
 	if argc == 0:
 		dir = client["directory"]
 		if isinstance(dir, dict):
-			media_player.update_filter(path=dir[client["default_path"]]["path"], keyword="")
+			media_player.update_filter(path=dir.get(client["default_path"], {}).get("path", ""), keyword="")
 			return messagetypes.Reply("Filter cleared")
 		else: return invalid_cfg
 
