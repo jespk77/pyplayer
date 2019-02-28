@@ -354,7 +354,7 @@ class TwitchChat(pyelement.PyTextfield):
 			if len(emote) == 2: emote_list[emote[0]] = emote[1]
 
 		badges = meta["badges"].split(",")
-		if self.window["enable_timestamp"]: self.insert("end", self._timestamp.strftime("%I:%M "), ("notice",))
+		if self.window["enable_timestamp"]: self.insert("end", self._timestamp.strftime("%I:%M "), ("notice",) + tags)
 		for badge in badges:
 			is_versioned = False
 			for b in self._versioned_badges:
@@ -379,7 +379,7 @@ class TwitchChat(pyelement.PyTextfield):
 
 		if self._chat_size >= self.window["chat_limit"]: self.delete("2.0", "3.0")
 		else: self._chat_size += 1
-		if user != "": self.insert("end", user + " ", (user.lower(),))
+		if user != "": self.insert("end", user + " ", tags + (user.lower(),))
 
 		emote_map = {}
 		if emotes is not None:
