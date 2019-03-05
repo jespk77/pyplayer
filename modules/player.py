@@ -329,6 +329,11 @@ def play_rss(display, url):
 	media_player.play_url(url, display)
 	return messagetypes.Reply("Playing: {}".format(display))
 
+def get_audio_link(links):
+	for l in links:
+		if l["type"].startswith("audio/"): return l["href"]
+	return ""
+
 def command_rss(arg, argc):
 	n = 1
 	if argc == 1:
@@ -346,7 +351,7 @@ def command_rss(arg, argc):
 				try:
 					entry_list = fp.entries
 					if len(entry_list) > n: entry_list = entry_list[:n]
-					return messagetypes.Select("Which item should be played?", play_rss, [(et["title"], et["links"][0]["href"]) for et in entry_list], text="0")
+					return messagetypes.Select("Which item should be played?", play_rss, [(et["title"], get_audio_link(et["links"])) for et in entry_list], text="0")
 				except: return messagetypes.Reply("Invalid data returned")
 		else: return messagetypes.Reply("What url? Enter one using key 'rss_url'")
 
