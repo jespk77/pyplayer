@@ -112,8 +112,10 @@ def get_songmatches(path, keyword):
 
 def album_list(keyword):
 	from modules.utilities import albumwindow
-	with os.scandir(albumwindow.album_folder) as dir:
-		return [(os.path.splitext(f.name)[0], f.name) for f in dir if f.is_file() and keyword in f.name]
+	try:
+		with os.scandir(albumwindow.album_folder) as dir:
+			return [(os.path.splitext(f.name)[0], f.name) for f in dir if f.is_file() and keyword in f.name]
+	except FileNotFoundError: return []
 
 def album_process(type, songs):
 	for s in songs: interpreter.put_command("{} {} {}.".format(type, "music", s.replace(" - ", " ")))
@@ -149,7 +151,7 @@ def command_album_remove(arg, argc):
 
 def command_album_list(arg, argc):
 	albumlist = album_list(" ".join(arg))
-	if albumlist: return messagetypes.Reply("Found albums:\n  - " + "\n  - ".join(albumlist))
+	if albumlist: return messagetypes.Reply("Found albums:\n  - " + "\n  - ".join([a[1] for a in albumlist]))
 	else: return messagetypes.Reply("No albums found")
 
 # - configure autoplay
