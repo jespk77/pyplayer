@@ -481,7 +481,7 @@ class TwitchChat(pyelement.PyTextfield):
 		self.scroll_bottom()
 
 	def on_notice(self, meta, data):
-		self.insert("end", "\n" + data, ("notice",))
+		self.insert("end", data + "\n", ("notice",))
 		self.scroll_bottom()
 
 
