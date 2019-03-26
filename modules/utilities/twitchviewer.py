@@ -36,7 +36,7 @@ class TwitchViewer(pywindow.PyWindow):
 			chat.command_callback = command_callback
 			self.set_widget("chat_viewer", chat)
 
-			chatter = twitchchat.TwitchChatTalker(self.frame, self.widgets["chat_viewer"].send_message)
+			chatter = twitchchat.TwitchChatTalker(self.frame, self.widgets["chat_viewer"])
 			self.set_widget("chat_input", chatter, row=1)
 			emotelist_window = twitchemotelist.TwitchEmoteWindow(self.frame, self.on_emoteclick, chat.get_emoteimage_from_cache)
 

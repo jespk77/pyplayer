@@ -352,10 +352,10 @@ class TwitchChat(pyelement.PyTextfield):
 		if not data or data.startswith('/'): return
 
 		user, color = meta["display-name"], meta["color"]
-		if len(color) == 0:
-			try: color = self.tag_cget(user.lower(), "foreground")
+		if not color:
+			try: color = self.tag_cget(user, "foreground")
 			except: color = "#" + "".join("{:02x}".format(n) for n in [random.randrange(75,255), random.randrange(75,255), random.randrange(75,255)])
-		self.tag_configure(user.lower(), foreground=color, font=self.bold_font)
+		self.tag_configure(user, foreground=color, font=self.bold_font)
 
 		emotes = meta.get("emotes", "").split("/")
 		emote_list = {}
@@ -385,11 +385,11 @@ class TwitchChat(pyelement.PyTextfield):
 
 		if text.startswith("\x01ACTION"):
 			text = text.lstrip("\x01ACTION ").rstrip("\x01")
-			tags += (user.lower(),)
+			tags += (user,)
 
 		if self._chat_size >= self.window["chat_limit"]: self.delete("2.0", "3.0")
 		else: self._chat_size += 1
-		if user != "": self.insert("end", user + " ", tags + (user.lower(),))
+		if user != "": self.insert("end", user + " ", tags + (user,))
 
 		emote_map = {}
 		if emotes is not None:
@@ -537,15 +537,17 @@ class TwitchChat(pyelement.PyTextfield):
 
 
 class TwitchChatTalker(pyelement.PyTextfield):
-	def __init__(self, root, send_message_callback):
-		if not callable(send_message_callback): raise TypeError("Callback not callable!")
+	ignored_tags = ('sel', 'wide_line', 'deleted', 'notice', 'subnotice', 'cheer1', 'cheer100', 'cheer1000', 'cheer5000', 'cheer10000')
+
+	def __init__(self, root, viewer: TwitchChat):
 		pyelement.PyTextfield.__init__(self, root)
 		self.bind("<Escape>", self.clear_text)
 		self.bind("<Return>", self.on_send_message)
 		self.bind("<Up>", self.set_history_back)
 		self.bind("<Down>", self.set_history_ahead)
+		self.bind("<Tab>", self.try_autocomplete_user)
 		self.configure(height=5, wrap="word", spacing1=3, padx=5)
-		self.message_callback = send_message_callback
+		self._chatviewer = viewer
 		self._chathistory = history.History()
 		self._next_message = None
 
@@ -572,15 +574,18 @@ class TwitchChatTalker(pyelement.PyTextfield):
 		self.insert("insert", emote)
 
 	def on_send_message(self, event):
-		if callable(self.message_callback):
-			message = self.text
-			if len(message) > 0:
-				self.message_callback(message)
-				self._chathistory.add(message)
-			self.clear_text(event)
-		else:
-			self.message_callback = None
-			print("ERROR", "Chat message sender has invalid callback, messages will not be sent")
+		message = self.text
+		if len(message) > 0:
+			self._chatviewer.send_message(message)
+			self._chathistory.add(message)
+		self.clear_text(event)
+		return self.block_action
+
+	def try_autocomplete_user(self, event):
+		u = self.text.split(" ")[-1]
+		if u:
+			possibilities = [t for t in self._chatviewer.tag_names() if t not in self.ignored_tags and t.lower().startswith(u.lower())]
+			if len(possibilities) == 1: self.text = self.text[:-len(u)] + possibilities[0]
 		return self.block_action
 
 	def clear_text(self, event):
