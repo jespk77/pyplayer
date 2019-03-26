@@ -329,7 +329,17 @@ class TwitchChat(pyelement.PyTextfield):
 		if self._irc_client is not None:
 			self._irc_client.send("PRIVMSG #" + self._channel_meta["name"] + " :" + msg)
 			if msg.startswith("/me"): msg = "\x01ACTION" + msg[3:]
+
+			ws = msg.startswith("/w")
+			if ws:
+				ml = msg.split(" ", maxsplit=2)
+				if len(ml) > 2:
+					dst = ml[1]
+					self.insert("end", " ***** Sent whisper to {} *****\n".format(dst), ("notice",))
+					msg = ml[2]
+
 			if self._user_meta is not None: self.on_privmsg(self._user_meta, msg.rstrip("\n"), emote=True)
+			if ws: self.insert("end", "-----------------------------------------\n", ("notice",))
 
 
 	def on_privmsg(self, meta, data, emote=False, tags=None):
@@ -487,6 +497,11 @@ class TwitchChat(pyelement.PyTextfield):
 		self.insert("end", data + "\n", ("notice",))
 		self.scroll_bottom()
 
+	def on_whisper(self, meta, data):
+		self.insert("end", " ***** Received Whisper ***** \n", ("notice",))
+		self.on_privmsg(meta, data)
+		self.insert("end", "-----------------------------------------\n", ("notice",))
+
 
 	def on_clearchat(self, user):
 		tag = user.lower() + ".last"
@@ -516,6 +531,7 @@ class TwitchChat(pyelement.PyTextfield):
 			elif data[2] == "USERNOTICE": self.on_usernotice(meta=self.get_meta(data[0]), data="".join(data[4:])[1:])
 			elif data[2] == "CLEARCHAT": self.on_clearchat(data[4][1:])
 			elif data[2] == "USERSTATE": self.on_userstate(self.get_meta(data[0]))
+			elif data[2] == "WHISPER": self.on_whisper(self.get_meta(data[0]), data=data[4][1:])
 		except IndexError: pass
 
 
