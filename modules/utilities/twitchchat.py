@@ -470,9 +470,12 @@ class TwitchChat(pyelement.PyTextfield):
 		elif meta["msg-param-sub-plan"] == "2000": level = " at tier 2"
 		else: level = " at tier 3"
 
-		self.insert("end", text + level + '\n', ("subnotice",))
-		if len(data) > 0: self.on_privmsg(meta, data, tags=("subnotice",))
-		else: self.scroll_bottom()
+		start_index = self.index("end-1l")
+		self.insert("end", text + level + '\n')
+		if len(data) > 0: self.on_privmsg(meta, data)
+		self.tag_add("subnotice", start_index, "end-1c")
+		self.tag_lower("subnotice")
+		self.scroll_bottom()
 
 
 	def on_charity(self, meta, data):
