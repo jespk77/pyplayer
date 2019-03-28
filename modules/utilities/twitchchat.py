@@ -504,7 +504,7 @@ class TwitchChat(pyelement.PyTextfield):
 
 
 	def on_clearchat(self, user):
-		tag = user.lower() + ".last"
+		tag = user + ".last"
 		try: self.tag_add("deleted", tag, tag + " lineend")
 		except: pass
 
