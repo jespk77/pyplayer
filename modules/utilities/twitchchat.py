@@ -550,6 +550,7 @@ class TwitchChatTalker(pyelement.PyTextfield):
 		self._chatviewer = viewer
 		self._chathistory = history.History()
 		self._next_message = None
+		self._re_space = re.compile(" +")
 
 	def is_empty(self): return len(self.text) == 0
 
@@ -575,6 +576,7 @@ class TwitchChatTalker(pyelement.PyTextfield):
 
 	def on_send_message(self, event):
 		message = self.text
+		message = self._re_space.sub(" ", message)
 		if len(message) > 0:
 			self._chatviewer.send_message(message)
 			self._chathistory.add(message)
