@@ -111,6 +111,7 @@ class TwitchChat(pyelement.PyTextfield):
 		self._message_queue = Queue()
 		self.configure(cursor="left_ptr", wrap="word", spacing1=3, padx=5)
 		self.tag_configure("wide_line", offset=5)
+		self.bind("<Shift-Button-3>", self._delete_selection)
 		self.bind("<End>", lambda e: self.see("end-1l")).bind("<Enter>&&<Leave>", self.set_scroll)
 		self.update_time()
 		if not os.path.isdir(emote_cache_folder): os.mkdir(emote_cache_folder)
@@ -137,6 +138,16 @@ class TwitchChat(pyelement.PyTextfield):
 
 	def scroll_bottom(self):
 		if self._enable_scroll: self.see("end")
+
+	def _select_line(self, event=None):
+		pos1 = self.search("\n", "current", backwards=True)
+		pos2 = self.search("\n", "current", forwards=True)
+		if pos1 and pos2: self.tag_add("sel", pos1, pos2)
+
+	def _delete_selection(self, event=None):
+		self._select_line(event)
+		try: self.delete("sel.first", "sel.last")
+		except Exception as e: print("INFO", "Error while deleting selection:", e)
 
 
 	def connect(self, channel_meta, login):
