@@ -508,9 +508,11 @@ class PyTextfield(PyElement, tkinter.Text):
 
 	def delete(self, index1, index2=None):
 		self.configure(state="normal")
-		tkinter.Text.delete(self, index1, index2)
-		self._on_key_press()
-		if not self.accept_input: self.configure(state="disabled")
+		try: tkinter.Text.delete(self, index1, index2)
+		except: raise
+		finally: 
+			self._on_key_press()
+			if not self.accept_input: self.configure(state="disabled")
 
 	def _load_configuration(self):
 		for key, value in self.configuration.items():
