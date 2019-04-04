@@ -5,6 +5,9 @@ import weakref
 
 from ui import pyelement, pyconfiguration, pycontainer
 
+def warn_deprecation():
+	import warnings
+	warnings.warn("Deprecated!")
 
 class BaseWindow:
 	""" Framework class for PyWindow and RootPyWindow, should not be created on its own """
@@ -23,7 +26,7 @@ class BaseWindow:
 
 		self.last_position = -1
 		self.last_size = -1
-		self._configuration = pyconfiguration.Configuration(initial_value=initial_cfg, filepath=cfg_file)
+		self._configuration = pyconfiguration.ConfigurationFile(cfg_file, initial_cfg)
 		self.load_configuration()
 		self._cfg_listen = {}
 
@@ -31,10 +34,11 @@ class BaseWindow:
 	def window_id(self):
 		""" The (unique) identifier for this window, this cannot change once the window is created """
 		return self._windowid
+	@DeprecationWarning
 	@property
-	def cfg_filename(self):
+	def cfg_filenamex(self):
 		""" The filepath of the configuration file (created using window identifier)"""
-		return self._configuration._filepath
+		return #self._configuration._filepath
 	@property
 	def widgets(self):
 		""" All elements that are present inside this window """
@@ -89,10 +93,10 @@ class BaseWindow:
 				if wd.has_master_configuration: self._configuration[id] = wd.configuration
 				wd._dirty = False
 
-			print("INFO", "Window is dirty, writing configuration to '{}'".format(self.cfg_filename))
+			print("INFO", "Window is dirty, writing configuration to '{}'".format(self._configuration.filename))
 			try:
 				self._configuration["geometry"] = self.geometry
-				self._configuration.write_configuration()
+				self._configuration.save()
 				self._dirty = False
 			except Exception as e: print("ERROR", "Error writing configuration file for '{}':".format(self.window_id), e)
 
@@ -104,6 +108,7 @@ class BaseWindow:
 		self._cfg_listen[option].append(callback)
 
 	def set_widget(self, *args, **kwargs):
+		warn_deprecation()
 		#TODO: remove temporary connection to new widget container
 		return self._widgets.set_widget(*args, **kwargs)
 
@@ -137,44 +142,33 @@ class BaseWindow:
 	def get_or_create(self, item, default=None):
 		""" Get configuration option if it is currently set,
 				- when this option is not set and a 'default' is given, this will be used as value for this option """
-		i = self._configuration.get(item)
-		if i is None and default is not None: self._configuration[item] = default
-		return self._configuration.get(item)
+		return self._configuration.get_or_create(item, default)
 
 	def update_configuration(self, dt):
-		self._configuration.update_dict(dt)
+		""" Update a number of options at once using a dictionary, changes are written to file (during next autosave)
+			(Not all updated values may be applied until restart) """
+		warn_deprecation()
+		self._configuration.update(dt)
 		self.mark_dirty()
 
 	def __getitem__(self, item):
-		""" Get configuration option for this window/widget in this window or None if no such value was stored
+		""" Get configuration option for this window/widget in this window
+				*update: raises KeyError if no valid key was found, for the old behavior use 'get'
 		 	For a nested search in configuration seperate keys with '::' """
-		vl = self._configuration[item]
-		try: return vl.to_dict()
-		except AttributeError: return vl.value
+		warn_deprecation()
+		return self._configuration[item]
 
 	def __setitem__(self, key, value):
-		""" Set configuration option for this window/widget in this window, the change will be updated in the configuration file """
-		if not self._configuration.error:
-			if key in BaseWindow.invalid_cfg_keys: raise ValueError("Tried to set option '{}' which should not be changed manually".format(key))
-
-			self._configuration[key] = value
-			cbs = self._cfg_listen.get(key)
-			if cbs is not None:
-				for c in cbs:
-					try: c(value)
-					except Exception as e: print("WARNING", "Exception occured while handling:", e)
-
-			key = key.split("::", maxsplit=1)
-			if len(key) > 1 and key[0] in self.widgets:
-				try: self.widgets[key[0]][key[1]] = value
-				except Exception as e: print("ERROR", "Error configuring option '{}': ".format(key), e)
-			self.mark_dirty()
-		else: print("WARNING", "Configuration was not loaded properly therefore any configuration updates are ignored")
+		""" Set configuration option for this window/widget in this window, the change will be updated in the configuration file
+		 	An attempt is made to apply the updated value, but is not guaranteed until a restart """
+		warn_deprecation()
+		self._configuration[key] = value
 
 	def __delitem__(self, key):
 		""" Delete the configuration option for this window/widget in this window from the configuration file
 		 	(the change will only be visible next time the window is created) """
-		self.__setitem__(key, None)
+		warn_deprecation()
+		del self._configuration[key]
 
 class PyWindow(BaseWindow):
 	""" Separate window that can be created on top of another window
@@ -225,8 +219,9 @@ class PyWindow(BaseWindow):
 
 	def load_configuration(self):
 		""" (Re)load configuration from file """
+		BaseWindow.load_configuration(self)
 		self.geometry = self._configuration.get("geometry", "")
-		self.autosave_delay = int(self._configuration["autosave_delay"])
+		self.autosave_delay = int(self._configuration.get("autosave_delay", 5))
 		self.window.bind("<Configure>", self.mark_dirty)
 		self.window.bind("<Destroy>", self.try_autosave)
 		root_cfg = self._configuration.get("root")

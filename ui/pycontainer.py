@@ -31,7 +31,7 @@ class BaseWidgetContainer:
 		if initial_cfg is None: initial_cfg = {}
 
 		cfg = self._window._configuration.get(id)
-		if cfg is not None: initial_cfg.update(cfg.to_dict())
+		if cfg is not None: initial_cfg.update(cfg)
 		self._elements[id].configuration = initial_cfg
 		self._elements[id].grid(row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 		return self[id]
