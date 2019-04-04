@@ -3,7 +3,7 @@ import sys
 import tkinter
 import weakref
 
-from ui import pyelement, pyconfiguration
+from ui import pyelement, pyconfiguration, pycontainer
 
 
 class BaseWindow:
@@ -16,10 +16,10 @@ class BaseWindow:
 		if cfg_file is None: cfg_file = ".cfg/" + self._windowid.lower()
 		elif not cfg_file.startswith(".cfg/"): cfg_file = ".cfg/" + cfg_file
 
-		self._elements = {}
 		self._children = weakref.WeakValueDictionary()
 		self._dirty = False
 		self._autosave = 0
+		self._widgets = pycontainer.BaseWidgetContainer(self)
 
 		self.last_position = -1
 		self.last_size = -1
@@ -38,7 +38,7 @@ class BaseWindow:
 	@property
 	def widgets(self):
 		""" All elements that are present inside this window """
-		return self._elements
+		return self._widgets.items
 	@property
 	def children(self):
 		""" All windows that are active and have this window as parent """
@@ -103,29 +103,9 @@ class BaseWindow:
 		if ls is None: self._cfg_listen[option] = []
 		self._cfg_listen[option].append(callback)
 
-	def set_widget(self, id, widget, initial_cfg=None, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
-		""" Add given widget to this window, location for the widget on this window can be customized with the various parameters
-			If there is no widget specified, the widget bound to given id will be destroyed. Otherwise the new widget will be replace the old onw """
-		id = id.lower()
-		wd = self.widgets.get(id)
-		if wd is not None:
-			print("INFO", "Removing existing widget bound to id")
-			self.after(.1, wd.destroy)
-			del self.widgets[id]
-		if widget is None: return None
-		elif not isinstance(widget, pyelement.PyElement): raise TypeError("Can only create widgets from 'PyElement' instances, not from '{}'".format(type(widget).__name__))
-
-		if widget is None: return widget
-		self.widgets[id] = widget
-		widget.id = id
-		widget.window = self
-		if initial_cfg is None: initial_cfg = {}
-
-		cfg = self._configuration.get(id)
-		if cfg is not None: initial_cfg.update(cfg.to_dict())
-		self.widgets[id].configuration = initial_cfg
-		self.widgets[id].grid(row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
-		return self.widgets[id]
+	def set_widget(self, *args, **kwargs):
+		#TODO: remove temporary connection to new widget container
+		return self._widgets.set_widget(*args, **kwargs)
 
 	def open_window(self, id, window):
 		""" Adds new child window to this window using passed (unique) identifier
@@ -176,6 +156,7 @@ class BaseWindow:
 		""" Set configuration option for this window/widget in this window, the change will be updated in the configuration file """
 		if not self._configuration.error:
 			if key in BaseWindow.invalid_cfg_keys: raise ValueError("Tried to set option '{}' which should not be changed manually".format(key))
+
 			self._configuration[key] = value
 			cbs = self._cfg_listen.get(key)
 			if cbs is not None:
