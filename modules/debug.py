@@ -19,7 +19,16 @@ def command_window_check(arg, argc):
 			wd = client.children[arg[0]]
 			if wd: return messagetypes.Reply("DEBUG The window '{}' still exists".format(arg[0]))
 		except KeyError: pass
-		return messagetypes.Reply("The window '{}' does not exist anymore".format(arg[0]))
+		return messagetypes.Reply("DEBUG: The window '{}' does not exist".format(arg[0]))
+
+def command_window_close(arg, argc):
+	if argc == 1:
+		client.close_window(arg[0])
+		return messagetypes.Reply("DEBUG: The window '{}' is closed")
+
+def command_window_list(arg, argc):
+	if argc == 0:
+		return messagetypes.Reply("DEBUG: Current open windows are: [" + "".join([k for k in client.children.keys()]) + "]")
 
 commands = {
 	"debug":{
@@ -27,6 +36,10 @@ commands = {
 			"": command_debug_auto_collection,
 			"collect": command_debug_garbage_collection
 		},
-		"window": command_window_check
+		"window": {
+			"": command_window_check,
+			"close": command_window_close,
+			"list": command_window_list
+		}
 	}
 }
