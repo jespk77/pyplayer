@@ -11,15 +11,23 @@ class ConfigurationItem:
 	""" Stores a specific value for a configuration setting """
 	def __init__(self, value=None):
 		self._value = value
+		self._dirty = False
 
 	@property
 	def is_set(self): return self._value is not None
+	@property
+	def dirty(self): return self._dirty
 	@property
 	def value(self): return self._value
 	@value.setter
 	def value(self, val):
 		if isinstance(val, dict): raise AttributeError("Cannot set value to configuration!")
 		self._value = val
+		self._dirty = True
+
+	def _write_value(self):
+		self._dirty = False
+		return self.value
 
 class Configuration:
 	""" Object that stores a number of configuration items and/or sub-configuration objects
@@ -28,6 +36,7 @@ class Configuration:
 		self._value = {}
 		self._readonly = readonly
 		self.update(initial_cfg)
+		self._dirty = False
 
 	def update(self, dt):
 		if isinstance(dt, dict):
@@ -72,6 +81,10 @@ class Configuration:
 		if self.get(key) is None: self[key] = create_value
 		return self.get(key)
 
+	def _write_value(self):
+		self._dirty = False
+		return { k: v._write_value for k,v in self._value.items() if v.is_set }
+
 	@property
 	def item_list(self): return [ (k,v.value) for k,v in self._value.items() ]
 	@property
@@ -80,7 +93,10 @@ class Configuration:
 	def value(self): return { k: v.value for k,v in self._value.items() if v.is_set }
 	@property
 	def read_only(self): return self._readonly
+	@property
+	def dirty(self): return self._dirty
 
+cfg_file_version = "1b"
 class ConfigurationFile(Configuration):
 	""" Same as a Configuration, but adds the ability read from/write to file """
 	def __init__(self, filepath, initial_cfg=None, readonly=False):
@@ -91,9 +107,8 @@ class ConfigurationFile(Configuration):
 	def load(self):
 		""" (Re)load configuration from disk """
 		self.update(self._read_file())
+		self._dirty = False
 
-	@property
-	def error(self): return self._error
 	@property
 	def filename(self): return self._file
 
@@ -105,12 +120,17 @@ class ConfigurationFile(Configuration):
 				try: return json.load(file)
 				except json.JSONDecodeError as e:
 					print("ERROR", "Parsing configuration file '{}':".format(self._file), e)
-					self._error = e.msg
-				raise ValueError(self._error)
+				raise ValueError(e)
 		except FileNotFoundError: print("WARNING", "Configuration file '{}' not found!".format(self._file))
 
 	def save(self):
 		if self.read_only: raise PermissionError("Cannot write configuration file when it is set to read only")
-		with open(self._file, "w") as file:
-			import json
-			json.dump(self.value, file, indent=5)
+
+		print("INFO", "Writing configuration to file '{}' (if dirty)".format(self._file))
+		if not self._dirty:
+			with open(self._file, "w") as file:
+				import json
+				wd = self._write_value()
+				wd["_version"] = cfg_file_version
+				json.dump(wd, file, indent=5)
+			self._dirty = False
