@@ -9,353 +9,203 @@ def warn_deprecation():
 	import warnings
 	warnings.warn("Deprecated!")
 
-class BaseWindow:
-	""" Framework class for PyWindow and RootPyWindow, should not be created on its own """
-	default_title = "PyWindow"
-	invalid_cfg_keys = ["geometry", "height", "width"]
+class PyWindow(tkinter.Toplevel):
+	""" Framework class for windows, they have to be created with a valid root """
+	block_action = "break"
 
-	def __init__(self, id, initial_cfg=None, cfg_file=None):
+	def __init__(self, parent, id, initial_cfg=None, cfg_file=None):
+		tkinter.Toplevel.__init__(self, parent)
 		self._windowid = id
-		if cfg_file is None: cfg_file = ".cfg/" + self._windowid.lower()
-		elif not cfg_file.startswith(".cfg/"): cfg_file = ".cfg/" + cfg_file
+		self.title = "PyWindow: " + self._windowid
+		self.icon = ""
 
 		self._children = weakref.WeakValueDictionary()
-		self._dirty = False
-		self._autosave = 0
-		self._widgets = pycontainer.BaseWidgetContainer(self)
+		self._tick_operations = {}
+		self._autosave, self._autosave_delay = None, 0
 
-		self.last_position = -1
-		self.last_size = -1
+		if cfg_file is None: cfg_file = ".cfg/" + self._windowid.lower()
+		elif not cfg_file.startswith(".cfg/"): cfg_file = ".cfg/" + cfg_file
 		self._configuration = pyconfiguration.ConfigurationFile(cfg_file, initial_cfg)
 		self.load_configuration()
-		self._cfg_listen = {}
 
+	# ===== Window Properties =====
 	@property
 	def window_id(self):
 		""" The (unique) identifier for this window, this cannot change once the window is created """
 		return self._windowid
-	@DeprecationWarning
-	@property
-	def cfg_filenamex(self):
-		""" The filepath of the configuration file (created using window identifier)"""
-		return #self._configuration._filepath
-	@property
-	def widgets(self):
-		""" All elements that are present inside this window """
-		return self._widgets.items
-	@property
-	def children(self):
-		""" All windows that are active and have this window as parent """
-		return self._children
-	def load_configuration(self): pass
-
-	@property
-	def dirty(self):
-		""" Returns true if configuration has changed since last save """
-		if self._dirty: return True
-
-		for id, wd in self.widgets.items():
-			if wd.dirty: return True
-		return False
-
-	@property
-	def geometry(self): return None
-	@property
-	def title(self): return None
-	@property
-	def icon(self): return None
-	@property
-	def always_on_top(self): return False
-
-	@property
-	def resizable_height(self): return self.window.resizable()[0]
-	@resizable_height.setter
-	def resizable_height(self, value): self.window.resizable(value, self.resizable_width)
-	@property
-	def resizable_width(self): return self.window.resizable()[1]
-	@resizable_width.setter
-	def resizable_width(self, value): self.window.resizable(self.resizable_height, value)
-
-	def mark_dirty(self, event=None):
-		""" Mark this window as dirty, event parameter only used for tkinter event handling """
-		if event is not None:
-			if event.widget is self.window:
-				if self.last_position != -1 and self.last_size != -1: self._dirty = self._dirty or self.last_position != (event.x * event.y) or self.last_size != (event.height * event.width)
-				self.last_position = event.x * event.y
-				self.last_size = event.height * event.width
-		else: self._dirty = True
-
-	def write_configuration(self):
-		""" Write window configuration to file (if dirty) """
-		if self._configuration.error: print("INFO", "Skipping configuration writing since there was an error loading it")
-		elif self.dirty:
-			for id, wd in self.widgets.items():
-				if wd.has_master_configuration: self._configuration[id] = wd.configuration
-				wd._dirty = False
-
-			print("INFO", "Window is dirty, writing configuration to '{}'".format(self._configuration.filename))
-			try:
-				self._configuration["geometry"] = self.geometry
-				self._configuration.save()
-				self._dirty = False
-			except Exception as e: print("ERROR", "Error writing configuration file for '{}':".format(self.window_id), e)
-
-	def cfg_register_listener(self, option, callback):
-		""" Register callback to be called whenever the given configuration option is updated
-		 	The callback must be callable and take one parameter which is the new value """
-		ls = self._cfg_listen.get(option)
-		if ls is None: self._cfg_listen[option] = []
-		self._cfg_listen[option].append(callback)
-
-	def set_widget(self, *args, **kwargs):
-		warn_deprecation()
-		#TODO: remove temporary connection to new widget container
-		return self._widgets.set_widget(*args, **kwargs)
-
-	def open_window(self, id, window):
-		""" Adds new child window to this window using passed (unique) identifier
-		 	(any window already assigned to this identifier will be destroyed)
-		 	Returns the bound window if successful, False otherwise """
-		id = id.lower()
-		if not isinstance(window, BaseWindow):
-			print("ERROR", "Tried to create window with id '{}' but it is not a valid widget: {}".format(id, window))
-			return False
-
-		success = self.close_window(id)
-		if not success: raise RuntimeError("Cannot close previously bound window with id '{}'".format(id))
-
-		window.id = id
-		self._children[id] = window
-		return self.children[id]
-
-	def close_window(self, id):
-		""" Destroy and remove window assigned to passed identifier (has no effect if identifier was not bound) """
-		id = id.lower()
-		wd = self.children.get(id)
-		if self._children is not None and wd is not None:
-			try:
-				wd.destroy()
-				del self._children[id]
-			except Exception as e: print("ERROR", "Couldn't destroy window '{}' properly: ".format(id), e); return False
-		return True
-
-	def get_or_create(self, item, default=None):
-		""" Get configuration option if it is currently set,
-				- when this option is not set and a 'default' is given, this will be used as value for this option """
-		return self._configuration.get_or_create(item, default)
-
-	def update_configuration(self, dt):
-		""" Update a number of options at once using a dictionary, changes are written to file (during next autosave)
-			(Not all updated values may be applied until restart) """
-		warn_deprecation()
-		self._configuration.update(dt)
-		self.mark_dirty()
-
-	def __getitem__(self, item):
-		""" Get configuration option for this window/widget in this window
-				*update: raises KeyError if no valid key was found, for the old behavior use 'get'
-		 	For a nested search in configuration seperate keys with '::' """
-		warn_deprecation()
-		return self._configuration[item]
-
-	def __setitem__(self, key, value):
-		""" Set configuration option for this window/widget in this window, the change will be updated in the configuration file
-		 	An attempt is made to apply the updated value, but is not guaranteed until a restart """
-		warn_deprecation()
-		self._configuration[key] = value
-
-	def __delitem__(self, key):
-		""" Delete the configuration option for this window/widget in this window from the configuration file
-		 	(the change will only be visible next time the window is created) """
-		warn_deprecation()
-		del self._configuration[key]
-
-class PyWindow(BaseWindow):
-	""" Separate window that can be created on top of another window
-		(it has its own configuration file separate from root configuration) """
-	def __init__(self, master, id, initial_cfg=None, cfg_file=None):
-		self.window = tkinter.Toplevel(master)
-		BaseWindow.__init__(self, id, initial_cfg, cfg_file)
-		self.title = id
-		self._tick_operations = {}
-
-	@property
-	def block_action(self):
-		""" Return this in event handlers to stop an event from getting processed further """
-		return "break"
-	@property
-	def frame(self):
-		""" The base frame of this window, this is where all root elements should be added to """
-		return self.window
 	@property
 	def is_alive(self):
 		""" Returns true when this window has not been closed """
-		return self.window.winfo_exists()
-
+		return self.winfo_exists()
 	@property
-	def transient(self): return None
-	@transient.setter
-	def transient(self, value):
+	def floating(self): return None
+	@floating.setter
+	def floating(self, value):
 		""" Sets this window to be transient, connected to its parent and is minimized when the parent is minimized
-		 	(Cannot be set on root window, also cannot be disabled once set) """
+		 	* update: this is equal to the 'transient' parameter in the previous version """
 		if value:
-			if not isinstance(self.window, tkinter.Toplevel): raise TypeError("Can only set transient on regular window")
-			try: self.window.transient(self.window.master)
-			except Exception as e: print("ERROR", "Cannot set window to transient:", e)
+			try: self.wm_transient(self.master)
+			except Exception as e: print("ERROR", "Failed to set window as transient, caused by:", e)
 
 	@property
-	def hidden(self): return self.window.state() == "withdrawn"
+	def decorator(self):
+		""" Set true to prevent the window from being decorated; only the content will be visible
+		 	Useful for making custom window decorators """
+		return self.wm_overrideredirect()
+	@decorator.setter
+	def decorator(self, vl):
+		self.wm_overrideredirect(not vl)
+
+	@property
+	def hidden(self):
+		""" Returns True if the window is currently hidden """
+		return self.wm_state() == "withdrawn"
 	@hidden.setter
 	def hidden(self, value):
-		if value: self.window.withdraw()
-		else: self.window.deiconify()
+		""" Hide/unhide the window, if the window is hidden all traces are removed. Can only be unhidden by updating this property """
+		if value: self.wm_withdraw()
+		else: self.wm_deiconify()
 	def toggle_hidden(self): self.hidden = not self.hidden
-
-	def _check_valid(self):
-		if not hasattr(self, "id"):
-			print("INFO", "Window '{}' might not be assigned to a parent window".format(self.window_id))
-			return False
-		else: return True
-
-	def load_configuration(self):
-		""" (Re)load configuration from file """
-		BaseWindow.load_configuration(self)
-		self.geometry = self._configuration.get("geometry", "")
-		self.autosave_delay = int(self._configuration.get("autosave_delay", 5))
-		self.window.bind("<Configure>", self.mark_dirty)
-		self.window.bind("<Destroy>", self.try_autosave)
-		root_cfg = self._configuration.get("root")
-		if root_cfg is not None: self.window.configure(**root_cfg.to_dict())
-
-	def bind(self, sequence, callback=None, add=True):
-		self._check_valid()
-		sequence = sequence.split("&&")
-		for s in sequence: self.window.bind(s, callback, add)
-		return self
-
-	def unbind(self, sequence, funcid=None):
-		sequence = sequence.split("&&")
-		for s in sequence: self.window.unbind(s, funcid)
-		return self
 
 	@property
 	def autosave_delay(self):
 		""" Time interval (in minutes) between automatic save of window configuration to file, returns 0 if disabled """
-		try: return int(self._autosave_delay / 60000)
-		except AttributeError: return 0
+		return self._autosave_delay
 	@autosave_delay.setter
 	def autosave_delay(self, value):
 		""" Set time interval (in minutes) between autosaves (if dirty), set to 0 to disable """
-		if self.autosave_delay != value:
-			self._autosave_delay = max(0, value * 60000)
-			try: self.window.after_cancel(self._autosave)
-			except ValueError: pass
-			except Exception as e: print("WARNING", "Error canceling autosave task:", e)
-
-			if value > 0: self._autosave = self.window.after(self._autosave_delay, self.try_autosave)
-			else: self._autosave = None
+		#todo: unfinished
+		pass
 
 	@property
-	def geometry(self):
-		""" Get window geometry string, returned as '{width}x{height}+{x_pos}+{y_pos}' where {width} and {height} are positive and {x_pos} and {y_pos} may be negative """
-		return self.window.geometry()
-	@geometry.setter
-	def geometry(self, value):
-		""" Update geometry for this window (use geometry format defined for this property) """
-		self.window.geometry(value)
+	def screen_height(self):
+		""" Get the height in pixels for the display the window is on """
+		return self.winfo_screenheight()
+	@property
+	def screen_width(self):
+		""" Get the width in pixels for the display the window is on """
+		return self.winfo_screenwidth()
 
 	@property
-	def screen_height(self): return self.window.winfo_screenheight()
-	@property
-	def screen_width(self): return self.window.winfo_screenwidth()
-	@property
-	def width(self): return self.window.winfo_width()
+	def width(self):
+		""" Get the width of this window in pixels """
+		return self.winfo_width()
 	@width.setter
-	def width(self, vl): self.window.configure(width=vl)
+	def width(self, vl):
+		""" Customize the width of this window, in most cases this value does not need to be set:
+				it automatically updates to fit all widgets and the previously set value (when resized)
+			* update: width clamped between 0 and screen_width """
+		self.configure(width=max(0, min(vl, self.screen_width)))
+
 	@property
-	def height(self): return self.window.winfo_height()
+	def height(self):
+		""" Get the height of this window in pixels """
+		return self.winfo_height()
 	@height.setter
-	def height(self, vl): self.window.configure(height=vl)
+	def height(self, vl):
+		""" Customize the height of this window, in most cases this value does not need to be set:
+				it automatically updates to fit all widgets and the previously set value (when resized)
+		 	* update: height clamped between 0 and screen_height """
+		self.configure(height=max(0, min(vl, self.screen_height)))
 
 	@property
-	def decorator(self):
-		""" Set true to prevent the window from being decorated; it won't have an icon or title """
-		return self.window.overrideredirect()
-	@decorator.setter
-	def decorator(self, vl): self.window.overrideredirect(not vl)
-
-	def column_options(self, index, **kwargs):
-		""" Set whether the column at the given index is allowed to change size when the window gets wider/smaller
-		 	By default this is not allowed """
-		return self.window.grid_columnconfigure(index, **kwargs)
-	def row_options(self, index, **kwargs):
-		""" Set whether the row at the given index is allowed to change size when the windows gets taller/shorter
-		 	By default this is not allowed """
-		return self.window.grid_rowconfigure(index, **kwargs)
-
-	@property
-	def title(self):
+	def window_title(self):
 		""" Get current window title """
-		return self.window.title()
-	@title.setter
-	def title(self, value):
+		return self.wm_title()
+	@window_title.setter
+	def window_title(self, value):
 		""" Update current window title """
-		self.window.title(value)
+		self.wm_title(value)
 
 	@property
 	def icon(self):
 		""" Get current window icon """
-		return self.window.iconbitmap()
+		return self.wm_iconbitmap()
+
 	@icon.setter
 	def icon(self, value):
-		""" Set window icon """
+		""" Set window icon, this must be a valid path to an image
+			(file extension may be omitted, it is automatically selected based on platform: .iso (Windows), .png (Linux))
+		 	* update: errors are no longer raised, instead they are only written to log (aside from also not being updated) """
 		if not value: value = "assets/blank"
 
 		try:
 			if "linux" in sys.platform:
 				path = os.path.dirname(os.path.realpath(__file__))
-				self.window.tk.call("wm", "iconphoto", self.window._w, pyelement.PyImage(file=os.path.join(path, os.pardir, value + ".png")))
-			elif "win" in sys.platform: self.window.iconbitmap(value + ".ico")
+				self.tk.call("wm", "iconphoto", self._w,
+									pyelement.PyImage(file=os.path.join(path, os.pardir, value + ".png")))
+			elif "win" in sys.platform: self.iconbitmap(value + ".ico")
 		except Exception as e: print("ERROR", "Setting icon bitmap {}".format(e)); raise
+
+	# ===== Base Operations =====
+	def load_configuration(self):
+		""" (Re)load configuration from file """
+		self._configuration.load()
+		self.wm_geometry(self._configuration.get("geometry"))
+		self.autosave_delay = self._configuration.get_or_create("autosave_delay", 5)
+
+	def write_configuration(self):
+		""" Write window configuration to file (if dirty) """
+		self._configuration["geometry"] = self.wm_geometry()
+		self._configuration["autosave_delay"] = self._autosave_delay
+		self._configuration.save()
+
+	def open_window(self, id, window):
+		""" Adds new child window to this window using passed (unique) identifier
+		 	(any window already assigned to this identifier will be destroyed)
+		 	Returns the bound window if successful, None otherwise
+		 	* update: it is no longer an error if a previously open window cannot be closed
+		 	* update: now returns None instead of False """
+		id = id.lower()
+		self.close_window(id)
+		window.id = id
+		self._children[id] = window
+		return self.children.get(id)
+
+	def close_window(self, id):
+		""" Destroy and remove window assigned to passed identifier (has no effect if identifier was not bound)
+		 	Returns True if call was successful, False otherwise """
+		id = id.lower()
+		wd = self.children.get(id)
+		if self._children is not None and wd is not None:
+			try: wd.destroy()
+			except Exception as e: print("ERROR", "Couldn't destroy window '{}' properly: ".format(id), e); return False
+		return True
 
 	@property
 	def always_on_top(self):
 		""" If true this window will always display be displayed above others """
-		return bool(self.window.wm_attributes("-topmost"))
+		return bool(self.wm_attributes("-topmost"))
 	@always_on_top.setter
 	def always_on_top(self, value):
 		""" Set this window to be always above others """
-		self.window.wm_attributes("-topmost", "1" if value else "0")
+		self.wm_attributes("-topmost", "1" if value else "0")
 
 	def focus_followsmouse(self):
-		""" The widget under mouse will get focus, cannot be disabled! """
-		self.window.tk_focusFollowsMouse()
+		""" The widget under mouse will get focus, cannot be disabled once set """
+		self.tk_focusFollowsMouse()
 
 	def center_window(self, width, height):
-		self.geometry = "{}x{}+{}+{}".format(width, height, (self.screen_width // 2) - (width // 2), (self.screen_height // 2) - (height // 2))
+		self.wm_geometry("{}x{}+{}+{}".format(width, height, (self.screen_width // 2) - (width // 2), (self.screen_height // 2) - (height // 2)))
 
-	def destroy(self):
-		""" Close window """
-		self.window.destroy()
-
-	def after(self, s, *args):
-		self._check_valid()
-		self.window.after(int(s * 1000) if s < 1000 else s, *args)
+	def after(self, *args, **kwargs):
+		raise DeprecationWarning("No longer directly usable, call 'schedule' instead!")
 
 	def schedule(self, min=0, sec=0, ms=0, func=None, loop=False, **kwargs):
 		""" Schedule an operation to be executed at least after the given time, all registered callbacks will stop when the window is closed
 		 	 -	Amount of time to wait can be specified with minutes (keyword 'min'), seconds (keyword 'sec') and/or milliseconds (keyword 'ms')
 		 	 -	The argument passed to func must be callable and accept the extra arguments passed to this function
 		 	 -	The function can be called repeatedly by setting 'loop' to true;
-		 	 		in this case it will be called repeatedly after the given time until an error occurs or the callback returns False """
+		 	 		in this case it will be called repeatedly after the given time until an error occurs or the callback returns False
+			* update: delay is allowed to be 0, in this case the callback is executed as soon as possible """
 		if not callable(func): raise ValueError("'func' argument must be callable!")
 		delay = (min * 60000) + (sec * 1000) + ms
-		if delay <= 0: raise ValueError("Must specify a positive delay using either 's' or 'ms' keywords!")
-		self._check_valid()
+		if delay < 0: raise ValueError("Delay cannot be smaller than 0")
+
 		if loop:
 			self._tick_operations[func.__name__] = delay, func
-			self.window.after(delay, self._run_tickoperation, func.__name__, kwargs)
-		else: self.window.after(delay, func, *kwargs.values())
+			tkinter.Toplevel.after(self, delay, self._run_tickoperation, func.__name__, kwargs)
+		else: tkinter.Toplevel.after(self, delay, func, *kwargs.values())
 
 	def _run_tickoperation(self, name, kwargs):
 		operation = self._tick_operations.get(name)
@@ -364,35 +214,24 @@ class PyWindow(BaseWindow):
 			try:
 				res = func(**kwargs)
 				if res is not False: self.after(delay, self._run_tickoperation, name, kwargs)
-				else: print("INFO", "Callback '{}' returned False, it will not be rescheduled")
+				else: print("INFO", "Callback '{}' returned False, it will not be rescheduled".format(name))
 			except Exception as e:
 				print("ERROR", "Calling scheduled operation '{}', it will not be rescheduled\n".format(name), e)
 				del self._tick_operations[name]
 		else: print("WARNING", "Got operation callback for '{}', but no callback was found!".format(name))
 
-	def try_autosave(self, event=None):
-		""" Autosave configuration to file (if dirty) """
-		try: self.write_configuration()
-		except Exception as e: print("ERROR", "writing configuration during autosave:", e)
-
-		if event is None:
-			self.autosave_delay = int(self._configuration["autosave_delay"])
-
-			if self.autosave_delay > 0: self._autosave = self.window.after(self._autosave_delay, self.try_autosave)
-			else: self._autosave = None
-
-class RootPyWindow(PyWindow):
+class PyTkRoot(tkinter.Tk):
 	""" Root window for this application (should be the first created window and should only be created once, for additional windows use 'PyWindow' instead) """
-	def __init__(self, id="root", initial_cfg=None):
-		self.window = tkinter.Tk()
-		BaseWindow.__init__(self, id, initial_cfg)
-		self.title = BaseWindow.default_title
+	def __init__(self, name="pyroot"):
+		tkinter.Tk.__init__(self, name)
+		self.wm_overrideredirect(True)
 
-	def _check_valid(self): return True
+	def center_window(self, width, height):
+		self.wm_geometry("{}x{}+{}+{}".format(width, height, (self.winfo_screenwidth() // 2) - (width // 2), (self.winfo_screenmmheight() // 2) - (height // 2)))
 
 	def start(self):
 		""" Initialize and start GUI """
-		try: self.window.mainloop()
+		try: self.mainloop()
 		except KeyboardInterrupt:
 			print("INFO", "Received keyboard interrupt, closing program...")
 			self.destroy()
