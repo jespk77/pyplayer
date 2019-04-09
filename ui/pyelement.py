@@ -1,12 +1,6 @@
 from tkinter import ttk, font
 import tkinter
 
-from ui import pyconfiguration
-
-def check_master(master):
-	if not isinstance(master, tkinter.Wm) and isinstance(master, PyElement) and not master._supports_children:
-		raise TypeError("'{.__name__}' cannot contain additional widgets".format(type(master)))
-
 def scroll_event():
 	import sys
 	return "<MouseWheel>" if "win" in sys.platform else "<Button-4>&&<Button-5>"
@@ -19,265 +13,73 @@ highlight_color = "cyan"
 sel_background_color = "gray"
 sel_foreground_color = "white"
 
-class PyElement:
-	""" Framework for elements that can be parented from other pyelements, should not be created on its own """
-	block_action = "break"
-
-	def __init__(self, id="<???>", initial_cfg=None):
-		if not initial_cfg: initial_cfg = {}
-		self._configuration = initial_cfg
-		self._dirty = False
-		self._boundids = {}
-		self.id = id
-		self.window = None
-		self._master_cfg = True
-
-	@property
-	def configuration(self):
-		""" Get current configuration options (as dictionary) that have been set for this element """
-		return self._configuration
-	@configuration.setter
-	def configuration(self, value):
-		""" Takes a dictionary and updates all configuration options for this element, should only be used when loading configuration from file """
-		if isinstance(value, dict):
-			self._configuration = value
-			self._load_configuration()
-			self.mark_dirty()
-		else: raise TypeError("Can only update configuration with a dictionary, not '{}'".format(type(value).__name__))
-
-	@property
-	def has_master_configuration(self):
-		""" Returns true if the configuration for this element should be written to file """
-		return self._master_cfg
-	@has_master_configuration.setter
-	def has_master_configuration(self, value):
-		""" Set whether or not the configuration should be added to configuration file (when false, element will never be marked as dirty)
-		 	This is useful when creating many widgets that have the same configuration options """
-		self._master_cfg = value
-		self._dirty = False
-
-	@property
-	def dirty(self): return self._dirty
-	@property
-	def _supports_children(self):
-		""" Signals whether new elements can be made a parent from this element,
-		 	by default they cannot (exceptions being "window manager" like elements) """
-		return False
-
-	def mark_dirty(self, event=None):
-		""" Mark this element as dirty (configuration options will be written to file next save)
-			Has no effect if the configuration is not set to be added to configuration file"""
-		if self._master_cfg: self._dirty = True
-
-	def _load_configuration(self): self.configure(**self._configuration)
-	# dirty workaround; TODO create a way to add widgets to other widgets (if supported), similar to windows
-	set_configuration = _load_configuration
-
-	def __setitem__(self, key, value):
-		""" Update configuration item for this element """
-		self._configuration[key] = value
-		self.mark_dirty()
-		try: super().__setitem__(key, value)
-		except AttributeError: print("ERROR", "Cannot find super class 'setitem' method in:", super())
-		return self
-
-	def __getitem__(self, key):
-		if key in self._configuration: return self._configuration[key]
-		try: return self.cget(key)
-		except (AttributeError, tkinter.TclError) as e: print("ERROR", "Cannot find key '{}' for element '{}': ".format(key, self.id), e)
-		return pyconfiguration.ConfigurationEntry()
-
-	def after(self, s, *args):
-		""" Schedule function to be executed (with given parameters) after at least given seconds has passed """
-		try: super().after(int(s * 1000), *args)
-		except AttributeError: print("ERROR", "Cannot find super class 'after' method in:", super())
-		return self
-
-	def bind(self, sequence=None, func=None, add=None):
-		""" Bind passed function to specified event, returns binding identifier (used for unbinding)
-			Multiple events can be specified by separating events with '&&' """
-		sequence = sequence.split("&&")
-		for s in sequence: self._try_bind(s, func, add)
-		return self
-	def _try_bind(self, sequence=None, func=None, add=None):
-		try: super().bind(sequence, func, add)
-		except AttributeError: print("ERROR", "Cannot find super class 'bind' method in:", super().__name__)
-
-	def unbind(self, sequence, funcid=None):
-		""" Remove passed function bound from identifier
-		 	Multiple events can be specified by separating events with '&&' """
-		sequence = sequence.split("&&")
-		for s in sequence: self._try_unbind(s, funcid)
-		return self
-	def _try_unbind(self, sequence, funcid):
-		try: super().unbind(sequence, funcid)
-		except AttributeError: print("ERROR", "Cannot find super class 'unbind' method in:", super().__name__)
-
-	def configure(self, cnf=None, **kw):
-		""" Update configuration options (are NOT saved to file, set options directly if it should be)
-		 	(also note that using direct updating + calling in conbination can cause unwanted effects, only do this if you know what you're doing) """
-		try: super()._configure("configure", cnf, kw)
-		except AttributeError: print("ERROR", "Cannot find super class 'configure' method in:", super())
-		except tkinter.TclError as e: print("ERROR", "Cannot set configuration for item '{}':".format(self.id), e)
-		return self
-
-	def destroy(self):
-		try:
-			super().destroy()
-			self.window = None
-		except AttributeError: pass
-		except Exception as e: print("ERROR", "Destroying element '{}':".format(self.id), e)
-
-	@staticmethod
-	def focus_next(event):
-		event.widget.tk_focusNext().focus()
-		return "break"
-
-	@staticmethod
-	def focus_prev(event):
-		event.widget.tk_focusPrev().focus()
-		return "break"
-
-""" Initializer of each 'PyElement' instance must contain a reference to its parent, which must also be a 'PyElement' instance
-	For widgets that don't have a parent, use the frame of the window (using the 'frame' attribute on window)
-	The window the frame is currently in can be accessed with the 'window' attribute (is None if not placed on a window)
-"""
 # === ELEMENT CONTAINERS ===
-frame_cfg = { "background": background_color }
-class PyFrame(PyElement, tkinter.Frame):
-	""" Use as container for a collection of elements, parameter 'master' must be another pyelement """
-	def __init__(self, master):
-		check_master(master)
-		PyElement.__init__(self, initial_cfg=frame_cfg)
-		tkinter.Frame.__init__(self, master, **frame_cfg)
-
-	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
-		tkinter.Frame.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
+class PyElement:
+	def __init__(self, parent, id):
+		self._id = id
+		self.parent = parent
+		self._cfg = None
+		self.load_configuration()
 
 	@property
-	def _supports_children(self): return True
-
-class PyScrollableFrame(PyFrame):
-	""" Same as PyFrame but supports scrolling, horizontal and vertical scrollbars can optionally be added """
-	def __init__(self, master):
-		check_master(master)
-		PyFrame.__init__(self, master)
-		self._canvas = PyCanvas(self)
-		self._content = PyFrame(self._canvas)
-		self.grid_rowconfigure(0, weight=1)
-		self.grid_columnconfigure(0, weight=1)
-
-		self._content.bind_all(scroll_event(), lambda e: self._canvas.yview_scroll(-(e.delta//100), "units"))
-		self._content.bind("<Configure>", self._update_scrollregion, add=True)
-		self._canvas.bind("<Configure>", self._update_width, add=True)
-		self._canvas.grid(row=0, column=0, sticky="news")
-		self._canvas.create_window((0,0), window=self._content, anchor="nw", tags="content_frame")
-		self._scrollx = self._scrolly = None
-
+	def widget_id(self): return self._id
 	@property
-	def frame(self): return self._content
-	def _update_width(self, event): self._canvas.itemconfigure("content_frame", width=event.width-1)
-	def _update_scrollregion(self, event=None): self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+	def configuration(self): return self._cfg
 
-	@property
-	def horizontal_scrollbar(self): return self._scrollx is not None
-	@property
-	def vertical_scrollbar(self): return self._scrolly is not None
+	def load_configuration(self):
+		self._cfg = self.parent.configuration.get_or_create(self.widget_id, {})
+		self.configure(**self._cfg)
 
-	@horizontal_scrollbar.setter
-	def horizontal_scrollbar(self, vl):
-		if vl and not self.horizontal_scrollbar:
-			self._scrollx = PyScrollbar(self)
-			self._scrollx.configure(orient="horizontal", command=self._canvas.xview)
-			self._canvas.configure(xscrollcommand=self._scrollx.set)
-			self._scrollx.grid(row=1, column=0, sticky="ew")
+	# --- Forward declarations for tkinter operations, should not get called in a proper setup ---
+	def grid(self, *args, **kwargs): raise RuntimeError("This element is invalid")
+	def configure(self, *args, **kwargs): self.grid(*args, **kwargs)
 
-	@vertical_scrollbar.setter
-	def vertical_scrollbar(self, vl):
-		if vl and not self.vertical_scrollbar:
-			self._scrolly = PyScrollbar(self)
-			self._scrolly.configure(orient="vertical", command=self._canvas.yview)
-			self._canvas.configure(yscrollcommand=self._scrolly.set)
-			self._scrolly.grid(row=0, column=1, sticky="ns")
 
-element_cfg = { "foreground": foreground_color }
-element_cfg.update(frame_cfg)
-class PyLabelframe(PyElement, tkinter.LabelFrame):
-	""" Same as PyFrame but has an outline around it and can add label at the top of the frame """
-	def __init__(self, master):
-		check_master(master)
-		PyElement.__init__(self, initial_cfg=element_cfg)
-		tkinter.LabelFrame.__init__(self, master, **element_cfg)
-
-	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
-		tkinter.LabelFrame.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
-	@property
-	def _supports_children(self): return True
-
-	@property
-	def label(self): return self.cget("text")
-	@label.setter
-	def label(self, vl): self.configure(text=vl)
-
-canvas_cfg = { "highlightthickness": 0 }
-canvas_cfg.update(frame_cfg)
-class PyCanvas(PyElement, tkinter.Canvas):
-	""" Similar to PyFrame, but allows for drawing of geometric shapes, other widgets and images """
-	def __init__(self, master):
-		check_master(master)
-		PyElement.__init__(self, initial_cfg=canvas_cfg)
-		tkinter.Canvas.__init__(self, master, **canvas_cfg)
-
-	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
-		tkinter.Canvas.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
-	@property
-	def _supports_children(self): return True
-
+element_cfg = { "background": background_color, "foreground": foreground_color }
 # === ELEMENT ITEMS ===
-class PyTextlabel(PyElement, tkinter.Label):
+class PyTextlabel(tkinter.Label, PyElement):
 	""" Element for displaying a line of text """
-	def __init__(self, master):
-		check_master(master)
-		PyElement.__init__(self, initial_cfg=element_cfg)
+	def __init__(self, master, id):
 		tkinter.Label.__init__(self, master, **element_cfg)
+		PyElement.__init__(self, master, id)
 		self._string_var = self._img = None
 
-	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
-		tkinter.Label.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
-
 	@property
-	def display_text(self):
-		return self._string_var.get() if not self._string_var is None else self.cget("text")
-	@display_text.setter
-	def display_text(self, value):
+	def text(self):
+		""" Get the text that is currently displayed on this label (or empty string if no text set)
+		 	* update: renamed from 'display_text' in previous versions """
+		return self._string_var.get() if not self._string_var is None else ""
+	@text.setter
+	def text(self, value):
+		""" Configure the text displayed on this label """
 		if self._string_var is None:
 			self._string_var = tkinter.StringVar()
 			self.configure(textvariable=self._string_var)
 		self._string_var.set(value)
 
 	@property
-	def image(self): return self._img
+	def image(self):
+		""" Get the image currently displayed on this label (or None if not set) """
+		return self._img
 	@image.setter
 	def image(self, img):
+		""" Set the image that should be displayed, it should either be set to an instance of 'PyImage' or None to remove it """
+		if img is not None and not isinstance(img, PyImage): raise ValueError("Image can only be set to 'PyImage' or None, not '{.__name__}'".format(type(img)))
 		self._img = img
 		self.configure(image=img)
 
 input_cfg = { "insertbackground": foreground_color, "selectforeground": sel_foreground_color, "selectbackground": sel_background_color }
 input_cfg.update(element_cfg)
-class PyTextInput(PyElement, tkinter.Entry):
-	def __init__(self, master):
-		check_master(master)
-		PyElement.__init__(self)
+class PyTextInput(tkinter.Entry, PyElement):
+	def __init__(self, master, id):
 		tkinter.Entry.__init__(self, master, disabledbackground=background_color, **input_cfg)
+		PyElement.__init__(self, master, id)
 		self._format_str = self._cmd = None
 		self._input_length = 0
 		self._strvar = tkinter.StringVar()
 		self._input_cmd = self.register(self._on_input_key)
 		self.bind("<Escape>", self._clear_input)
 		self.configure(textvariable=self._strvar, validate="key", validatecommand=(self._input_cmd, "%P"))
-
-	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
-		tkinter.Entry.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 
 	@property
 	def accept_input(self): return self.cget("state") == "disabled"
@@ -330,17 +132,13 @@ class PyTextInput(PyElement, tkinter.Entry):
 
 checkbox_cfg = { "activebackground": background_color, "activeforeground": foreground_color, "selectcolor": background_color }
 checkbox_cfg.update(element_cfg)
-class PyCheckbox(PyElement, tkinter.Checkbutton):
-	def __init__(self, master):
-		check_master(master)
-		PyElement.__init__(self, initial_cfg=checkbox_cfg)
+class PyCheckbox(tkinter.Checkbutton, PyElement):
+	def __init__(self, master, id):
 		tkinter.Checkbutton.__init__(self, master, **checkbox_cfg)
+		PyElement.__init__(self, master, id)
 		self._value = tkinter.IntVar()
 		self._desc = tkinter.StringVar()
 		self.configure(variable=self._value, textvariable=self._desc)
-
-	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
-		tkinter.Checkbutton.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 
 	@property
 	def description(self): return self._desc.get()
@@ -373,16 +171,12 @@ class PyCheckbox(PyElement, tkinter.Checkbutton):
 
 button_cfg = { "activebackground": background_color, "activeforeground": foreground_color }
 button_cfg.update(element_cfg)
-class PyButton(PyElement, tkinter.Button):
+class PyButton(tkinter.Button, PyElement):
 	""" Element to create a clickable button  """
-	def __init__(self, master):
-		check_master(master)
-		PyElement.__init__(self, initial_cfg=button_cfg)
+	def __init__(self, master, id):
 		tkinter.Button.__init__(self, master, **button_cfg)
+		PyElement.__init__(self, master, id)
 		self._string_var = self._callback = self._image = None
-
-	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
-		tkinter.Button.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 
 	@property
 	def accept_input(self): return self.cget("state") == "normal"
@@ -423,24 +217,19 @@ class PyButton(PyElement, tkinter.Button):
 		self.configure(command=value)
 	callback = command
 
-class PyTextfield(PyElement, tkinter.Text):
+class PyTextfield(tkinter.Text, PyElement):
 	""" Element to display multiple lines of text, includes support for user input, images and markers/tags
 	 	*Tags are configurable in the options with format 'tag'.'option': 'value' """
 	front = "0.0"
 	back = "end"
-
-	def __init__(self, master):
-		check_master(master)
-		PyElement.__init__(self, initial_cfg=input_cfg)
+	def __init__(self, master, id):
+		PyElement.__init__(self, master, id)
 		tkinter.Text.__init__(self, master, **input_cfg)
 
 		self._font = font.Font(family="segoeui", size="11")
 		self.configure(font=self._font)
 		self._accept_input = True
 		self._boldfont = self._cmd = self._bd = None
-
-	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
-		tkinter.Text.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 
 	@property
 	def accept_input(self): return self._accept_input
@@ -514,48 +303,18 @@ class PyTextfield(PyElement, tkinter.Text):
 			self._on_key_press()
 			if not self.accept_input: self.configure(state="disabled")
 
-	def _load_configuration(self):
-		for key, value in self.configuration.items():
-			item = key.split(".", maxsplit=1)
-			if len(item) == 2: self.tag_configure(item[0], {item[1]: value})
-			elif item[0] == "font":
-				self._font = font.Font(**value)
-				if self._boldfont is not None:
-					self._boldfont.configure(**value)
-					self._boldfont.configure(weight="bold")
-				self.configure(font=self._font)
-			else: self.configure({key: value})
-
-	def __setitem__(self, key, value, dirty=True):
-		item = key.split(".", maxsplit=1)
-		if len(item) == 2:
-			self.tag_configure(item[0], {item[1]: value})
-			self._configuration[key] = value
-		elif item[0].startswith("font"):
-			item = key.split("::", maxsplit=1)
-			if len(item) == 2:
-				if self._font is None: self._font = font.Font()
-				self._font.configure(**{item[1]: value})
-				self.configure(font=self._font)
-			else: print("ERROR", "Missing subkey in key argument '{}'".format(key))
-		else: PyElement.__setitem__(self, key, value)
-		if dirty: self.mark_dirty()
+	#todo: add custom configuration loader/setter (tag style + font customization)
 
 progress_cfg = { "background": "green", "troughcolor": background_color }
-class PyProgressbar(PyElement, ttk.Progressbar):
+class PyProgressbar(ttk.Progressbar, PyElement):
 	""" Widget that displays a bar indicating progress made by the application """
-	def __init__(self, master):
-		check_master(master)
+	def __init__(self, master, id):
+		ttk.Progressbar.__init__(self, master)
 		self._progress_var = tkinter.IntVar()
 		self._style = ttk.Style()
 		self._horizontal = True
-		PyElement.__init__(self, initial_cfg=progress_cfg)
-		ttk.Progressbar.__init__(self, master)
+		PyElement.__init__(self, master, id)
 		self.configure(mode="determinate", variable=self._progress_var)
-		self._load_configuration()
-
-	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
-		ttk.Progressbar.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 
 	@property
 	def progress(self, actual=True):
@@ -578,18 +337,6 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 		return self.cget("mode") == "determinate"
 	@determinate.setter
 	def determinate(self, value): self.configure(mode="determinate" if value else "indeterminate")
-
-	def _load_configuration(self):
-		self._style.theme_use(self._configuration.get("theme", "default"))
-		style = "Horizontal.TProgressbar" if self._horizontal else "Vertical.TProgressbar"
-		try: self._style.configure(style, **self.configuration)
-		except: pass
-		self.configure(style=style)
-
-	def configure(self, cnf=None, **kw):
-		try: ttk.Progressbar.configure(self, cnf, **kw)
-		except tkinter.TclError: self._style.configure(self.cget("style"), **kw)
-
 	@property
 	def maximum(self):
 		""" Returns the total size of the bar, if the progress is set to this value the bar is full (default is 100) """
@@ -597,14 +344,12 @@ class PyProgressbar(PyElement, ttk.Progressbar):
 	@maximum.setter
 	def maximum(self, value): self.configure(maximum=value)
 
-class PyScrollbar(PyElement, tkinter.Scrollbar):
-	def __init__(self, master):
-		check_master(master)
-		PyElement.__init__(self)
-		tkinter.Scrollbar.__init__(self, master)
+	#todo: add custom configuration loader/setter (style customization)
 
-	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
-		tkinter.Scrollbar.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
+class PyScrollbar(tkinter.Scrollbar, PyElement):
+	def __init__(self, master, id):
+		tkinter.Scrollbar.__init__(self, master)
+		PyElement.__init__(self, master, id)
 
 	@property
 	def scrollcommand(self): return
@@ -613,33 +358,12 @@ class PyScrollbar(PyElement, tkinter.Scrollbar):
 
 list_cfg = { "selectbackground": background_color, "selectforeground": highlight_color }
 list_cfg.update(element_cfg)
-class PyItemlist(PyElement, tkinter.Listbox):
+class PyItemlist(tkinter.Listbox, PyElement):
 	""" A list of options where the user can select one or more lines """
-	def __init__(self, master):
-		check_master(master)
-		PyElement.__init__(self, initial_cfg=list_cfg)
+	def __init__(self, master, id):
 		tkinter.Listbox.__init__(self, master, selectmode="single", **list_cfg)
+		PyElement.__init__(self, master, id)
 		self.list_var = self._items = self._font = None
-
-	def grid(self, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
-		tkinter.Listbox.grid(self, row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
-
-	def _load_configuration(self):
-		PyElement._load_configuration(self)
-		if "font" in self.configuration:
-			if self._font is None: self._font = font.Font()
-			self._font.configure(**self.configuration["font"])
-			self.configure(font=self._font)
-
-	def __setitem__(self, key, value):
-		k = key.split("::", maxsplit=1)
-		if len(k) > 1 and k[0] == "font":
-			if self._font is None: self._font = font.Font()
-			if k[1] == "family": self._font.configure(family=value)
-			elif k[1] == "size": self._font.configure(size=value)
-			self.configure(font=self._font)
-			self.event_generate("<Configure>")
-		else: PyElement.__setitem__(self, key, value)
 
 	@property
 	def itemlist(self):
@@ -659,58 +383,10 @@ class PyItemlist(PyElement, tkinter.Listbox):
 		""" Get the element at the mouse pointer when processing event from bound callback """
 		return self._items[self.nearest(event.y)]
 
-try:
-	from PIL import Image, ImageTk
-	class PyImage(ImageTk.PhotoImage):
-		""" Load an image that can be used for display on widgets; can be cached on disk for efficiency, written to a bin file
-		 	Accepts url from where the image is downloaded or a path to a local file or a path to a previously created bin file """
-		def __init__(self, file=None, url=None, bin_file=None, **kwargs):
-			self._bytes = self._img = None
+	#todo: add custom customization loader/setter (style + font customization)
 
-			if url:
-				self._ensure_empty()
-				from urllib.request import urlopen
-				import io
-				u = urlopen(url)
-				self._bytes = io.BytesIO(u.read())
-				u.close()
-				self._img = Image.open(self._bytes)
-				ImageTk.PhotoImage.__init__(self, self._img, **kwargs)
-
-			if bin_file:
-				self._ensure_empty()
-				import io
-				self._bytes = io.BytesIO()
-				with open(bin_file, "rb") as bfile:
-					self._img = Image.open(bfile, self._bytes)
-				ImageTk.PhotoImage.__init__(self, self._img, **kwargs)
-
-			if file:
-				self._ensure_empty()
-				import os
-				img, ext = os.path.splitext(file)
-				if not ext: file = "{}.png".format(file)
-
-				self._img = file
-				try: ImageTk.PhotoImage.__init__(self, file=file, **kwargs)
-				except FileNotFoundError as e:
-					print("ERROR", "Loading image:", e)
-					self._img = "assets/blank.png"
-					ImageTk.PhotoImage.__init__(self, file=self._img)
-
-			if not self._img: raise ValueError("Must specify either 'url', 'bin_file' or 'file'")
-
-		def _ensure_empty(self):
-			if self._bytes: raise ValueError("Cannot create multiple images!")
-
-		def write(self, filename, format=None, from_coords=None):
-			if self._bytes is not None:
-				with open(filename, "wb") as file:
-					file.write(self._bytes.getvalue())
-
-except ImportError:
-	print("ERROR", "'Pillow' module not found, images will not be visible!")
-	class PyImage:
-		""" Placeholder to avoid type errors in the rest of the program """
-		def __init__(self, file=None, url=None, bin_file=None): pass
-		def write(self, filename, format=None, from_coords=None): pass
+class PyImage:
+	""" Placeholder to avoid type errors in the rest of the program """
+	#todo: add improved version in separate module
+	def __init__(self, file=None, url=None, bin_file=None): pass
+	def write(self, filename, format=None, from_coords=None): pass
