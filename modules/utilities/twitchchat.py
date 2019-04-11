@@ -491,6 +491,7 @@ class TwitchChat(pyelement.PyTextfield):
 		elif meta["msg-param-sub-plan"] == "2000": level = " at tier 2"
 		else: level = " at tier 3"
 
+		self.update_idletasks()
 		start_index = self.index("end-1l")
 		self.insert("end", text + level + '\n')
 		if len(data) > 0: self.on_privmsg(meta, data)
