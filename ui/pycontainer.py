@@ -1,4 +1,4 @@
-from ui import pyelement
+from ui import pyelement, pyconfiguration
 import tkinter
 
 class WidgetLayer:
@@ -37,12 +37,15 @@ class WidgetLayer:
 		return l
 
 class BaseWidgetContainer:
-	def __init__(self):
+	def __init__(self, configuration):
 		self._elements = {}
 		self._layer = WidgetLayer(self)
+		self._cfg = configuration
 
 	@property
 	def layer(self): return self._layer
+	@property
+	def configuration(self): return self._cfg
 
 	def place_widget(self, widget, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
 		if not isinstance(widget, pyelement.PyElement): raise ValueError("Passed widget must be a 'PyElement', not '{.__name__}'".format(type(widget)))
@@ -61,17 +64,20 @@ class BaseWidgetContainer:
 				del self._elements[id]
 			except Exception as e: print("ERROR", "Destroying previously bound widget for '{}':".format(id), e)
 
+	def __getitem__(self, item):
+		""" Get the element that was assigned to given name, returns this element or None if nothing bound """
+		return self._elements.get(item)
+
+	def __setitem__(self, key, value): raise AttributeError("Cannot set or replace elements directly, use 'place_widget' instead!")
+	def __delitem__(self, key): raise AttributeError("Cannot delete elements directly, use 'remove_widget' instead!")
+
 class PyFrame(tkinter.Frame, BaseWidgetContainer):
 	def __init__(self, root, configuration):
+		if configuration and not isinstance(configuration, pyconfiguration.Configuration): raise ValueError("Configuration, when not empty, must be a configuration object, not '{.__name__}'! Check your setup!".format(type(configuration)))
 		tkinter.Frame.__init__(self, root)
-		BaseWidgetContainer.__init__(self)
-		self._cfg = configuration
-
-	@property
-	def configuration(self): return self._cfg
+		BaseWidgetContainer.__init__(self, configuration)
 
 class PyLabelFrame(tkinter.LabelFrame, BaseWidgetContainer):
 	def __init__(self, root, configuration):
 		tkinter.LabelFrame.__init__(self, root)
-		BaseWidgetContainer.__init__(self)
-		self._cfg = configuration
+		BaseWidgetContainer.__init__(self, configuration)
