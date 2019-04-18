@@ -1,112 +1,108 @@
-
 separator = "::"
-def set_entry(entry, value, readonly):
-	if entry is not None:
-		entry.value = value
-		return entry
-	elif isinstance(value, dict): return Configuration(value, readonly)
-	else: return ConfigurationItem(value)
+def create_entry(value, read_only=False):
+	if isinstance(value, dict): return Configuration(read_only, **value)
+	else: return ConfigurationItem(read_only, value)
+
 
 class ConfigurationItem:
 	""" Stores a specific value for a configuration setting """
-	def __init__(self, value=None):
+	def __init__(self, read_only=False, value=None):
 		self._value = value
-		self._dirty = False
-
+		self._readonly = read_only
 	@property
 	def is_set(self): return self._value is not None
 	@property
-	def dirty(self): return self._dirty
+	def read_only(self): return self._readonly
 	@property
 	def value(self): return self._value
 	@value.setter
 	def value(self, val):
-		if isinstance(val, dict): raise AttributeError("Cannot set value to configuration!")
+		if self.read_only: raise RuntimeError("This attribute was marked as read only and cannot be updated!")
 		self._value = val
-		self._dirty = True
 
-	def _write_value(self):
-		self._dirty = False
-		return self.value
+	def __len__(self): return len(self.value)
+	def __getitem__(self, item): raise KeyError(item)
+	def __setitem__(self, key, value): raise KeyError(key)
+	def __delitem__(self, key): raise KeyError(key)
+	def __str__(self): return "ConfigurationItem({!s})".format(self.value)
 
-class Configuration:
+
+class Configuration(ConfigurationItem):
 	""" Object that stores a number of configuration items and/or sub-configuration objects
 	 	Each item is bound to a keyword, similar to a dictionary, and getting/setting values is done through higher levels recursively """
-	def __init__(self, initial_cfg=None, readonly=False):
-		self._value = {}
-		self._readonly = readonly
-		self.update(initial_cfg)
+	def __init__(self, read_only=False, **cfg_values):
+		ConfigurationItem.__init__(self, read_only, value={ key: create_entry(value, read_only) for key, value in cfg_values.items() })
 		self._dirty = False
-
-	def update(self, dt):
-		if isinstance(dt, dict):
-			for key, value in dt.items():
-				if separator in key: raise ValueError("Configuration keys cannot contain the separator '{}'".format(separator))
-				self._value[key] = set_entry(None, value, self._readonly)
 
 	def __getitem__(self, key):
 		key = key.split(separator, maxsplit=1)
-		if len(key) > 1:
-			try: return self._value[key[0]][key[1]]
-			except TypeError: pass
-			raise KeyError(key[1])
-		else: return self._value[key[0]].value
+		if len(key) > 1: return self._value[key[0]][key[1]]
+		else: return self._value[key[0]]
 
 	def __setitem__(self, key, value):
-		if self._readonly: raise PermissionError("Cannot update this configuration since it was set to read-only!")
+		if self.read_only: raise RuntimeError("Cannot update this configuration since it was set to read-only!")
+
 		key = key.split(separator, maxsplit=1)
-		if len(key) > 1:
-			try: self._value[key[0]][key[1]] = value; return
-			except TypeError as e: print(e)
-			raise KeyError(key[1])
-		else: self._value[key[0]] = set_entry(self._value.get(key[0]), value, self._readonly)
+		if len(key) == 1:
+			cval = self.get(key[0])
+			nval = create_entry(value, self.read_only)
+			if cval and type(cval) is not type(nval): raise TypeError("Incompatible types!")
+			self._value[key[0]] = nval
+		else: self._value[key[0]][key[1]] = value
+		self._dirty = True
 
 	def __delitem__(self, key):
-		if self._readonly: raise PermissionError("Cannot delete elements from a read-only configuration!")
+		if self.read_only: raise RuntimeError("Cannot delete elements from a read-only configuration!")
+
 		key = key.split(separator, maxsplit=1)
-		if len(key) > 1:
-			try: self._value[key[0]][key[1]] = None
-			except TypeError as e: print(e)
-			raise KeyError(key[1])
-		else: self._value[key[0]] = None
+		if len(key) > 1: del self._value[key[0]][key[1]]
+		else: del self._value[key[0]]
+		self._dirty = True
+
+	def __len__(self): return len(self.value)
+	def __str__(self): return "Configuration({!s})".format(self._value)
 
 	def get(self, key, default=None):
-		try:
-			rs = self[key]
-			if rs is not None: return rs
-		except KeyError: pass
-		return default
+		""" Get the value bound to given key, returns 'default' argument if nothing bound """
+		try: return self[key]
+		except KeyError: return default
 
 	def get_or_create(self, key, create_value=None):
-		if self.get(key) is None: self[key] = create_value
+		""" Same as get, but when a key wasn't found the second argument (if not None) is bound to that key """
+		if self.get(key) is None and create_value is not None: self[key] = create_value
 		return self.get(key)
 
-	def _write_value(self):
-		self._dirty = False
-		return { k: v._write_value for k,v in self._value.items() if v.is_set }
+	def configuration_get(self, key):
+		""" Get the configuration object bound to given key or None if nothing bound """
+		key = key.split(separator, maxsplit=1)
+		if len(key) > 1:
+			cfg = self._value.get(key[0])
+			if cfg and cfg.is_set: return cfg.configuration_get(key[1])
+			else: return None
+		else: return self._value.get(key[0])
 
-	@property
-	def item_list(self): return [ (k,v.value) for k,v in self._value.items() ]
 	@property
 	def is_set(self): return len(self._value) > 0
 	@property
 	def value(self): return { k: v.value for k,v in self._value.items() if v.is_set }
 	@property
-	def read_only(self): return self._readonly
-	@property
 	def dirty(self): return self._dirty
+
 
 cfg_file_version = "1b"
 class ConfigurationFile(Configuration):
 	""" Same as a Configuration, but adds the ability read from/write to file """
-	def __init__(self, filepath, initial_cfg=None, readonly=False):
+	def __init__(self, filepath, readonly=False, **cfg_values):
 		self._file = filepath
-		Configuration.__init__(self, initial_cfg, readonly)
+		Configuration.__init__(self, readonly, **cfg_values)
+		self._initialvalues = cfg_values
 		self.load()
 
 	def load(self):
 		""" (Re)load configuration from disk """
-		self.update(self._read_file())
+		self._value = self._initialvalues
+		fl = self._read_file()
+		if fl: self._value.update(fl)
 		self._dirty = False
 
 	@property
@@ -127,10 +123,9 @@ class ConfigurationFile(Configuration):
 		if self.read_only: raise PermissionError("Cannot write configuration file when it is set to read only")
 
 		print("INFO", "Writing configuration to file '{}' (if dirty)".format(self._file))
-		if not self._dirty:
+		if not self.dirty:
 			with open(self._file, "w") as file:
+				self["_version"] = cfg_file_version
 				import json
-				wd = self._write_value()
-				wd["_version"] = cfg_file_version
-				json.dump(wd, file, indent=5)
-			self._dirty = False
+				json.dump(self.value, file, indent=5)
+				self._dirty = False
