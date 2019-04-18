@@ -28,7 +28,7 @@ class PyElement:
 
 	def load_configuration(self):
 		self._cfg = self.parent.configuration.get_or_create(self.widget_id, {})
-		self.configure(**self._cfg)
+		self.configure(**self._cfg.value)
 
 	# --- Forward declarations for tkinter operations, should not get called in a proper setup ---
 	def grid(self, *args, **kwargs): raise RuntimeError("This element is invalid")
@@ -223,8 +223,8 @@ class PyTextfield(tkinter.Text, PyElement):
 	front = "0.0"
 	back = "end"
 	def __init__(self, master, id):
-		PyElement.__init__(self, master, id)
 		tkinter.Text.__init__(self, master, **input_cfg)
+		PyElement.__init__(self, master, id)
 
 		self._font = font.Font(family="segoeui", size="11")
 		self.configure(font=self._font)
