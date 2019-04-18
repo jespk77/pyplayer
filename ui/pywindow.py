@@ -13,6 +13,7 @@ class PyWindow:
 	""" Framework class for windows, they have to be created with a valid root """
 	def __init__(self, parent, id, initial_cfg=None, cfg_file=None):
 		self._window = tkinter.Toplevel(parent)
+		self.hidden = True
 		self._windowid = id
 		self.title = "PyWindow: " + self._windowid
 		self.icon = ""
@@ -26,12 +27,23 @@ class PyWindow:
 		self._configuration = pyconfiguration.ConfigurationFile(cfg_file, initial_cfg)
 		self.load_configuration()
 		self._content = pycontainer.PyFrame(self._window, self._configuration.get_or_create("content", {}))
+		self.create_widgets()
+
+	def create_widgets(self):
+		""" Can be used in subclasses to separate widget creation and placement from the rest of the program,
+			this method is called after the main window is created and configuration files have been loaded """
+		pass
 
 	# ===== Window Properties =====
 	@property
 	def window_id(self):
 		""" The (unique) identifier for this window, this cannot change once the window is created """
 		return self._windowid
+	@property
+	def content(self):
+		""" Get the container for this window that all elements are placed in """
+		return self._content
+
 	@property
 	def is_alive(self):
 		""" Returns true when this window has not been closed """
@@ -159,6 +171,7 @@ class PyWindow:
 		self.close_window(id)
 		window.id = id
 		self._children[id] = window
+		window.hidden = False
 		return self._children.get(id)
 
 	def close_window(self, id):
@@ -228,6 +241,12 @@ class PyTkRoot(tkinter.Tk):
 
 	def center_window(self, width, height):
 		self.wm_geometry("{}x{}+{}+{}".format(width, height, (self.winfo_screenwidth() // 2) - (width // 2), (self.winfo_screenmmheight() // 2) - (height // 2)))
+
+	def open_window(self, window: PyWindow):
+		""" Open connected window, after this is called the root window will automatically be set to hidden """
+		window.content.pack(fill="both", expand=True)
+		self.wm_withdraw()
+		window.schedule(sec=1, func=(lambda: window._window.deiconify()))
 
 	def start(self):
 		""" Initialize and start GUI """
