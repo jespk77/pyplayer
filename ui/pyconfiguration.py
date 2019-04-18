@@ -102,7 +102,8 @@ class ConfigurationFile(Configuration):
 		""" (Re)load configuration from disk """
 		self._value = self._initialvalues
 		fl = self._read_file()
-		if fl: self._value.update(fl)
+		if fl:
+			for key, option in fl.items(): self[key] = option
 		self._dirty = False
 
 	@property
