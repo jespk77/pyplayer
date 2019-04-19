@@ -3,7 +3,7 @@ import sys
 import tkinter
 import weakref
 
-from ui import pyelement, pyconfiguration, pycontainer
+from ui import pyelement, pyconfiguration, pycontainer, pyevents
 
 def warn_deprecation():
 	import warnings
@@ -13,6 +13,7 @@ class PyWindow:
 	""" Framework class for windows, they have to be created with a valid root """
 	def __init__(self, parent, id, initial_cfg=None, cfg_file=None):
 		self._window = tkinter.Toplevel(parent)
+		self._event_handler = pyevents.PyWindowEvents(self)
 		self.hidden = True
 		self._windowid = id
 		self.title = "PyWindow: " + self._windowid
@@ -40,9 +41,17 @@ class PyWindow:
 		""" The (unique) identifier for this window, this cannot change once the window is created """
 		return self._windowid
 	@property
+	def window_handle(self):
+		import warnings; warnings.warn("'window_handle' property will not be available in the release version! use at your own discretion", stacklevel=0)
+		return self._window
+	@property
 	def content(self):
 		""" Get the container for this window that all elements are placed in """
 		return self._content
+	@property
+	def event_handler(self):
+		""" Get the event handler for this window, this can be used to bind callbacks to various events """
+		return self._event_handler
 
 	@property
 	def is_alive(self):
