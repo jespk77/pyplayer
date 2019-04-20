@@ -1,6 +1,8 @@
 from tkinter import ttk, font
 import tkinter
 
+from ui import pyevents
+
 def scroll_event():
 	import sys
 	return "<MouseWheel>" if "win" in sys.platform else "<Button-4>&&<Button-5>"
@@ -20,11 +22,14 @@ class PyElement:
 		self.parent = parent
 		self._cfg = None
 		self.load_configuration()
+		self._event_handler = pyevents.PyElementEvents(self)
 
 	@property
 	def widget_id(self): return self._id
 	@property
 	def configuration(self): return self._cfg
+	@property
+	def event_handler(self): return self._event_handler
 
 	def load_configuration(self):
 		self._cfg = self.parent.configuration.get_or_create(self.widget_id, {})

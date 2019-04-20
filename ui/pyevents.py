@@ -52,3 +52,75 @@ class PyWindowEvents:
 				self._w, self._h = event.width, event.height
 		self._wd.window_handle.bind(event_name, wrapper, add=True)
 		return wrapper
+
+class PyElementEvents:
+	def __init__(self, el):
+		self._element = el
+
+	def MouseEnter(self, cb):
+		""" Fired when the mouse pointer enters the element
+		 	- no callback keywords """
+		event_name = "<Enter>"
+		@wraps(cb)
+		def wrapper(event): try_call_handler(event_name, cb)
+		self._element.bind(event_name, wrapper, add=True)
+		return wrapper
+
+	def MouseLeave(self, cb):
+		""" Fired when the mouse pointer leaves the element
+		 	- no callback keywords """
+		event_name = "<Leave>"
+		@wraps(cb)
+		def wrapper(event): try_call_handler(event_name, cb)
+		self._element.bind(event_name, wrapper, add=True)
+		return wrapper
+
+	def FocusGain(self, cb):
+		""" Fired when this element gains input focus
+		 	- no callback keywords """
+		event_name = "<FocusIn>"
+		@wraps(cb)
+		def wrapper(event): try_call_handler(event_name, cb)
+		self._element.bind(event_name, wrapper, add=True)
+		return wrapper
+
+	def FocusLoss(self, cb):
+		""" Fired when this element loses input focus
+		 	- no callback keywords """
+		event_name = "<FocusOut>"
+		@wraps(cb)
+		def wrapper(event): try_call_handler(event_name, cb)
+		self._element.bind(event_name, wrapper, add=True)
+		return wrapper
+
+	_mouse_translations = {"left": "Button-1", "middle": "Button-2", "right": "Button-3"}
+	def MouseClickEvent(self, button, doubleclick=False):
+		""" Fired if the specified mouse button was clicked inside this widget, for double clicks add 'doubleclick=True'
+			If both single and double click are bound, both are called on double click
+		 \	- supported callback keywords:
+		 		* x: the x position of where the mouse was clicked (relative to the top left of this element)
+		 		* y: the y position of where the mouse was clicked (relative to the top left of this element) """
+		bt = self._mouse_translations.get(button.lower())
+		if bt: button = bt
+
+		code = "<{}>".format(button)
+		def wrapped(cb):
+			def wrapper(event): try_call_handler(code, cb, x=event.x, y=event.y)
+			self._element.bind(code, wrapper, add=True)
+			return wrapper
+		return wrapped
+
+	_key_translations = {"enter": "Return", "break": "Cancel", "shift": "Shift_L", "ctrl": "Control_L", "alt": "Alt_L", "pageup": "Prior", "pagedown": "Next", "capslock": "Caps_Lock", "numlock": "Num_Lock", "scrolllock": "Scroll_Lock"}
+	def KeyEvent(self, key):
+		""" Fired if the specified key was pressed (only if this element currently has input focus)
+		 	- supported callback keywords:
+		 		* char: the key that was pressed (as character)
+		 		* code: the keycode of the pressed key """
+		ky = self._key_translations.get(key.lower())
+		if ky: key = ky
+
+		def wrapped(cb):
+			def wrapper(event): try_call_handler(key, cb, char=event.char, code=event.code)
+			self._element.bind(key, wrapper, add=True)
+			return wrapper
+		return wrapped
