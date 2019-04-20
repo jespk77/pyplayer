@@ -71,18 +71,19 @@ class BaseWidgetContainer:
 	def __setitem__(self, key, value): raise AttributeError("Cannot set or replace elements directly, use 'place_widget' instead!")
 	def __delitem__(self, key): raise AttributeError("Cannot delete elements directly, use 'remove_widget' instead!")
 
-class PyFrame(tkinter.Frame, BaseWidgetContainer):
-	def __init__(self, root, configuration):
+#todo: restructure this (similar to windows) where these classes no longer inherit tk objects directly
+class PyFrame(BaseWidgetContainer, tkinter.Frame):
+	def __init__(self, root, configuration=None):
 		if configuration and not isinstance(configuration, pyconfiguration.Configuration): raise ValueError("Configuration, when not empty, must be a configuration object, not '{.__name__}'! Check your setup!".format(type(configuration)))
 		tkinter.Frame.__init__(self, root)
 		BaseWidgetContainer.__init__(self, configuration)
 
-class PyLabelFrame(tkinter.LabelFrame, BaseWidgetContainer):
-	def __init__(self, root, configuration):
+class PyLabelFrame(BaseWidgetContainer, tkinter.LabelFrame):
+	def __init__(self, root, configuration=None):
 		tkinter.LabelFrame.__init__(self, root)
 		BaseWidgetContainer.__init__(self, configuration)
 
-class PyCanvas(tkinter.Canvas, BaseWidgetContainer):
-	def __init__(self, root, configuration):
+class PyCanvas(BaseWidgetContainer, tkinter.Canvas):
+	def __init__(self, root, configuration=None):
 		tkinter.Canvas.__init__(self, root)
 		BaseWidgetContainer.__init__(self, configuration)
