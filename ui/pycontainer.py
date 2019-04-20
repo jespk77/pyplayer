@@ -81,3 +81,8 @@ class PyLabelFrame(tkinter.LabelFrame, BaseWidgetContainer):
 	def __init__(self, root, configuration):
 		tkinter.LabelFrame.__init__(self, root)
 		BaseWidgetContainer.__init__(self, configuration)
+
+class PyCanvas(tkinter.Canvas, BaseWidgetContainer):
+	def __init__(self, root, configuration):
+		tkinter.Canvas.__init__(self, root)
+		BaseWidgetContainer.__init__(self, configuration)
