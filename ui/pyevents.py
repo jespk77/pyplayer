@@ -102,6 +102,7 @@ class PyElementEvents:
 		 		* y: the y position of where the mouse was clicked (relative to the top left of this element) """
 		bt = self._mouse_translations.get(button.lower())
 		if bt: button = bt
+		if doubleclick: button = "Double-" + button
 
 		code = "<{}>".format(button)
 		def wrapped(cb):
