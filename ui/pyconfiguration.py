@@ -20,7 +20,9 @@ class ConfigurationItem:
 		if self.read_only: raise RuntimeError("This attribute was marked as read only and cannot be updated!")
 		self._value = val
 
-	def __len__(self): return len(self.value)
+	def __len__(self):
+		try: return len(self.value)
+		except TypeError: return 1 if self.value is not None else 0
 	def __getitem__(self, item): raise KeyError(item)
 	def __setitem__(self, key, value): raise KeyError(key)
 	def __delitem__(self, key): raise KeyError(key)
