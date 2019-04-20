@@ -12,7 +12,9 @@ def warn_deprecation():
 class PyWindow:
 	""" Framework class for windows, they have to be created with a valid root """
 	def __init__(self, parent, id, initial_cfg=None, cfg_file=None):
-		self._window = tkinter.Toplevel(parent)
+		if parent is not None: self._window = tkinter.Toplevel(parent._window)
+		else: self._window = tkinter.Tk()
+
 		self._event_handler = pyevents.PyWindowEvents(self)
 		self.hidden = True
 		self._windowid = id
@@ -180,6 +182,7 @@ class PyWindow:
 		self.close_window(id)
 		window.id = id
 		self._children[id] = window
+		window.content.pack(fill="both", expand=True)
 		window.hidden = False
 		return self._children.get(id)
 
@@ -242,24 +245,21 @@ class PyWindow:
 				del self._tick_operations[name]
 		else: print("WARNING", "Got operation callback for '{}', but no callback was found!".format(name))
 
-class PyTkRoot(tkinter.Tk):
+class PyTkRoot(PyWindow):
 	""" Root window for this application (should be the first created window and should only be created once, for additional windows use 'PyWindow' instead) """
 	def __init__(self, name="pyroot"):
-		tkinter.Tk.__init__(self, name)
-		self.wm_overrideredirect(True)
+		PyWindow.__init__(self, None, name)
+		self.decorator = False
+		self.hidden = False
 
-	def center_window(self, width, height):
-		self.wm_geometry("{}x{}+{}+{}".format(width, height, (self.winfo_screenwidth() // 2) - (width // 2), (self.winfo_screenmmheight() // 2) - (height // 2)))
-
-	def open_window(self, window: PyWindow):
+	def open_window(self, id, window):
 		""" Open connected window, after this is called the root window will automatically be set to hidden """
-		window.content.pack(fill="both", expand=True)
-		self.wm_withdraw()
-		window.schedule(sec=1, func=(lambda: window._window.deiconify()))
+		PyWindow.open_window(self, id, window)
+		self.hidden = True
 
 	def start(self):
 		""" Initialize and start GUI """
-		try: self.mainloop()
+		try: self._window.mainloop()
 		except KeyboardInterrupt:
 			print("INFO", "Received keyboard interrupt, closing program...")
-			self.destroy()
+			self._window.destroy()
