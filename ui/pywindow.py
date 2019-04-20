@@ -3,11 +3,7 @@ import sys
 import tkinter
 import weakref
 
-from ui import pyelement, pyconfiguration, pycontainer, pyevents
-
-def warn_deprecation():
-	import warnings
-	warnings.warn("Deprecated!")
+from ui import pyimage, pyconfiguration, pycontainer, pyevents
 
 class PyWindow:
 	""" Framework class for windows, they have to be created with a valid root """
@@ -31,6 +27,7 @@ class PyWindow:
 		self.load_configuration()
 		self._content = pycontainer.PyFrame(self._window, self._configuration.get_or_create("content", {}))
 		self.create_widgets()
+		self._content.pack(fill="both", expand=True)
 
 	def create_widgets(self):
 		""" Can be used in subclasses to separate widget creation and placement from the rest of the program,
@@ -54,6 +51,10 @@ class PyWindow:
 	def event_handler(self):
 		""" Get the event handler for this window, this can be used to bind callbacks to various events """
 		return self._event_handler
+	@property
+	def configuration(self):
+		""" Get the configuration object for this window (this also has access to all configuration objects in this window's child elements """
+		return self._configuration
 
 	@property
 	def is_alive(self):
@@ -155,7 +156,7 @@ class PyWindow:
 			if "linux" in sys.platform:
 				path = os.path.dirname(os.path.realpath(__file__))
 				self._window.tk.call("wm", "iconphoto", self._window._w,
-									pyelement.PyImage(file=os.path.join(path, os.pardir, value + ".png")))
+									pyimage.PyImage(file=os.path.join(path, os.pardir, value + ".png")))
 			elif "win" in sys.platform: self._window.iconbitmap(value + ".ico")
 		except Exception as e: print("ERROR", "Setting icon bitmap {}".format(e)); raise
 
@@ -163,7 +164,7 @@ class PyWindow:
 	def load_configuration(self):
 		""" (Re)load configuration from file """
 		self._configuration.load()
-		self._window.wm_geometry(self._configuration.get("geometry"))
+		self._window.wm_geometry(self._configuration.get("geometry").value)
 		self.autosave_delay = self._configuration.get_or_create("autosave_delay", 5)
 
 	def write_configuration(self):
@@ -244,6 +245,17 @@ class PyWindow:
 				print("ERROR", "Calling scheduled operation '{}', it will not be rescheduled\n".format(name), e)
 				del self._tick_operations[name]
 		else: print("WARNING", "Got operation callback for '{}', but no callback was found!".format(name))
+
+	def destroy(self):
+		""" Close (destroy) this window and all its children """
+		for cd in self._children.values():
+			cw = cd()
+			if cw: cw.destroy()
+		self._window.destroy()
+
+	def force_update(self):
+		""" Forces background updates that would normally only happen when the program is idle """
+		self._window.update_idletasks()
 
 class PyTkRoot(PyWindow):
 	""" Root window for this application (should be the first created window and should only be created once, for additional windows use 'PyWindow' instead) """
