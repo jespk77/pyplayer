@@ -251,8 +251,7 @@ class PyWindow:
 	def destroy(self):
 		""" Close (destroy) this window and all its children """
 		for cd in self._children.values():
-			cw = cd()
-			if cw: cw.destroy()
+			if cd.is_alive: cd.destroy()
 		self._window.destroy()
 
 	def force_update(self):
