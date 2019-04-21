@@ -31,13 +31,20 @@ class PyElement:
 	@property
 	def event_handler(self): return self._event_handler
 
+	@property
+	def width(self): return self.winfo_width()
+	@property
+	def height(self): return self.winfo_height()
+
 	def load_configuration(self):
 		self._cfg = self.parent.configuration.get_or_create(self.widget_id, {})
 		self.configure(**self._cfg.value)
 
 	# --- Forward declarations for tkinter operations, should not get called in a proper setup ---
-	def grid(self, *args, **kwargs): raise RuntimeError("This element is invalid")
-	def configure(self, *args, **kwargs): self.grid(*args, **kwargs)
+	def grid(self, *args, **kwargs): pass
+	def configure(self, *args, **kwargs): pass
+	def winfo_width(self): return 0
+	winfo_height = winfo_width
 
 
 element_cfg = { "background": background_color, "foreground": foreground_color }
@@ -324,8 +331,8 @@ class PyProgressbar(ttk.Progressbar, PyElement):
 		ttk.Progressbar.__init__(self, master)
 		self._progress_var = tkinter.IntVar()
 		self._style = ttk.Style()
-		self._style.configure(**progress_cfg)
-		if initial_cfg: self._style.configure(**initial_cfg)
+		self._style.configure(style="default", **progress_cfg)
+		if initial_cfg: self._style.configure(style="default", **initial_cfg)
 		self._horizontal = True
 		PyElement.__init__(self, master, id)
 		self.configure(mode="determinate", variable=self._progress_var)
