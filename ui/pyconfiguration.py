@@ -1,12 +1,12 @@
 separator = "::"
 def create_entry(value, read_only=False):
-	if isinstance(value, dict): return Configuration(read_only, **value)
-	else: return ConfigurationItem(read_only, value)
+	if isinstance(value, dict): return Configuration(value, read_only)
+	else: return ConfigurationItem(value, read_only)
 
 
 class ConfigurationItem:
 	""" Stores a specific value for a configuration setting """
-	def __init__(self, read_only=False, value=None):
+	def __init__(self, value=None, read_only=False):
 		self._value = value
 		self._readonly = read_only
 	@property
@@ -32,8 +32,9 @@ class ConfigurationItem:
 class Configuration(ConfigurationItem):
 	""" Object that stores a number of configuration items and/or sub-configuration objects
 	 	Each item is bound to a keyword, similar to a dictionary, and getting/setting values is done through higher levels recursively """
-	def __init__(self, read_only=False, **cfg_values):
-		ConfigurationItem.__init__(self, read_only, value={ key: create_entry(value, read_only) for key, value in cfg_values.items() })
+	def __init__(self, cfg_values, read_only=False):
+		if cfg_values: ConfigurationItem.__init__(self, value={ key: create_entry(value, read_only) for key, value in cfg_values.items() })
+		else: ConfigurationItem.__init__(self, value={})
 		self._dirty = False
 
 	def __getitem__(self, key):
@@ -94,15 +95,15 @@ class Configuration(ConfigurationItem):
 cfg_file_version = "1b"
 class ConfigurationFile(Configuration):
 	""" Same as a Configuration, but adds the ability read from/write to file """
-	def __init__(self, filepath, readonly=False, **cfg_values):
+	def __init__(self, filepath, cfg_values, readonly=False):
 		self._file = filepath
-		Configuration.__init__(self, readonly, **cfg_values)
+		Configuration.__init__(self, cfg_values=cfg_values, read_only=readonly)
 		self._initialvalues = cfg_values
 		self.load()
 
 	def load(self):
 		""" (Re)load configuration from disk """
-		self._value = self._initialvalues
+		if self._initialvalues: self._value = self._initialvalues
 		fl = self._read_file()
 		if fl:
 			for key, option in fl.items(): self[key] = option
