@@ -1,7 +1,9 @@
 def try_call_handler(event_name, cb, **kwargs):
 	args = cb.__code__.co_varnames
-	try: cb(**{key: value for key, value in kwargs.items() if key in args})
+	try: return cb(**{key: value for key, value in kwargs.items() if key in args})
 	except Exception as e: print("ERROR", "While processing event '{}':".format(event_name), e)
+
+def block_action(): return "break"
 
 from functools import wraps
 class PyWindowEvents:
@@ -9,6 +11,11 @@ class PyWindowEvents:
 	def __init__(self, window):
 		self._wd = window
 		self._w = self._h = -1
+
+	@property
+	def block(self):
+		""" Return this property in an event handler method to prevent this event from being processed further """
+		return block_action()
 
 	def WindowOpen(self, cb):
 		""" Fired whenever the window is shown on screen for the first time
@@ -56,6 +63,11 @@ class PyWindowEvents:
 class PyElementEvents:
 	def __init__(self, el):
 		self._element = el
+
+	@property
+	def block(self):
+		""" Return this property in an event handler method to prevent this event from being processed further """
+		return block_action()
 
 	def MouseEnter(self, cb):
 		""" Fired when the mouse pointer enters the element
