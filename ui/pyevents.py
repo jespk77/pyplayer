@@ -32,7 +32,7 @@ class PyWindowEvents:
 		@wraps(cb)
 		def wrapper(event):
 			if event.widget is self._wd.window_handle: try_call_handler(event_name, cb)
-		self._wd.window_handle.bind(event_name, wrapper, add=True)
+		self._wd._tk.bind(event_name, wrapper, add=True)
 		return wrapper
 
 	def WindowClose(self, cb):
@@ -42,7 +42,7 @@ class PyWindowEvents:
 		event_name = "WM_DELETE_WINDOW"
 		@wraps(cb)
 		def wrapper(): try_call_handler(event_name, cb)
-		self._wd.window_handle.protocol(event_name, wrapper)
+		self._wd._tk.protocol(event_name, wrapper)
 		return wrapper
 
 	def WindowResize(self, cb):
@@ -57,7 +57,7 @@ class PyWindowEvents:
 			if event.widget is self._wd.window_handle and (self._w != event.width or self._h != event.height):
 				try_call_handler(event_name, cb, width=event.width, height=event.height)
 				self._w, self._h = event.width, event.height
-		self._wd.window_handle.bind(event_name, wrapper, add=True)
+		self._wd._tk.bind(event_name, wrapper, add=True)
 		return wrapper
 
 class PyElementEvents:
@@ -75,7 +75,7 @@ class PyElementEvents:
 		event_name = "<Enter>"
 		@wraps(cb)
 		def wrapper(event): try_call_handler(event_name, cb)
-		self._element.bind(event_name, wrapper, add=True)
+		self._element._tk.bind(event_name, wrapper, add=True)
 		return wrapper
 
 	def MouseLeave(self, cb):
@@ -84,7 +84,7 @@ class PyElementEvents:
 		event_name = "<Leave>"
 		@wraps(cb)
 		def wrapper(event): try_call_handler(event_name, cb)
-		self._element.bind(event_name, wrapper, add=True)
+		self._element._tk.bind(event_name, wrapper, add=True)
 		return wrapper
 
 	def FocusGain(self, cb):
@@ -93,7 +93,7 @@ class PyElementEvents:
 		event_name = "<FocusIn>"
 		@wraps(cb)
 		def wrapper(event): try_call_handler(event_name, cb)
-		self._element.bind(event_name, wrapper, add=True)
+		self._element._tk.bind(event_name, wrapper, add=True)
 		return wrapper
 
 	def FocusLoss(self, cb):
@@ -102,7 +102,7 @@ class PyElementEvents:
 		event_name = "<FocusOut>"
 		@wraps(cb)
 		def wrapper(event): try_call_handler(event_name, cb)
-		self._element.bind(event_name, wrapper, add=True)
+		self._element._tk.bind(event_name, wrapper, add=True)
 		return wrapper
 
 	_mouse_translations = {"left": "Button-1", "middle": "Button-2", "right": "Button-3"}
@@ -119,7 +119,7 @@ class PyElementEvents:
 		code = "<{}>".format(button)
 		def wrapped(cb):
 			def wrapper(event): try_call_handler(code, cb, x=event.x, y=event.y)
-			self._element.bind(code, wrapper, add=True)
+			self._element._tk.bind(code, wrapper, add=True)
 			return wrapper
 		return wrapped
 
@@ -134,6 +134,6 @@ class PyElementEvents:
 
 		def wrapped(cb):
 			def wrapper(event): try_call_handler(key, cb, char=event.char, code=event.keycode)
-			self._element.bind(key, wrapper, add=True)
+			self._element._tk.bind(key, wrapper, add=True)
 			return wrapper
 		return wrapped

@@ -37,9 +37,11 @@ class WidgetLayer:
 		return l
 
 class BaseWidgetContainer:
-	def __init__(self, configuration):
+	def __init__(self, container, tk, configuration):
+		self._container = container
+		self._tk = tk
 		self._elements = {}
-		self._layer = WidgetLayer(self)
+		self._layer = WidgetLayer(self._tk)
 		self._cfg = configuration
 
 	@property
@@ -51,7 +53,7 @@ class BaseWidgetContainer:
 		if not isinstance(widget, pyelement.PyElement): raise ValueError("Passed widget must be a 'PyElement', not '{.__name__}'".format(type(widget)))
 
 		self._elements[widget.widget_id] = widget
-		widget.grid(row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
+		widget._tk.grid(row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
 		return self._elements[widget.widget_id]
 
 	def remove_widget(self, id):
@@ -64,6 +66,10 @@ class BaseWidgetContainer:
 				del self._elements[id]
 			except Exception as e: print("ERROR", "Destroying previously bound widget for '{}':".format(id), e)
 
+	def show(self):
+		""" Make this container (and all of its contained widgets) visible on screen """
+		self._tk.pack(fill="both", expand=True)
+
 	def __getitem__(self, item):
 		""" Get the element that was assigned to given name, returns this element or None if nothing bound """
 		return self._elements.get(item)
@@ -71,19 +77,15 @@ class BaseWidgetContainer:
 	def __setitem__(self, key, value): raise AttributeError("Cannot set or replace elements directly, use 'place_widget' instead!")
 	def __delitem__(self, key): raise AttributeError("Cannot delete elements directly, use 'remove_widget' instead!")
 
-#todo: restructure this (similar to windows) where these classes no longer inherit tk objects directly
-class PyFrame(BaseWidgetContainer, tkinter.Frame):
-	def __init__(self, root, configuration=None):
+class PyFrame(BaseWidgetContainer):
+	def __init__(self, parent, configuration=None):
 		if configuration and not isinstance(configuration, pyconfiguration.Configuration): raise ValueError("Configuration, when not empty, must be a configuration object, not '{.__name__}'! Check your setup!".format(type(configuration)))
-		tkinter.Frame.__init__(self, root)
-		BaseWidgetContainer.__init__(self, configuration)
+		BaseWidgetContainer.__init__(self, parent, tkinter.Frame(parent._tk), configuration)
 
-class PyLabelFrame(BaseWidgetContainer, tkinter.LabelFrame):
-	def __init__(self, root, configuration=None):
-		tkinter.LabelFrame.__init__(self, root)
-		BaseWidgetContainer.__init__(self, configuration)
+class PyLabelFrame(BaseWidgetContainer):
+	def __init__(self, parent, configuration=None):
+		BaseWidgetContainer.__init__(self, parent, tkinter.LabelFrame(parent._tk), configuration)
 
-class PyCanvas(BaseWidgetContainer, tkinter.Canvas):
-	def __init__(self, root, configuration=None):
-		tkinter.Canvas.__init__(self, root)
-		BaseWidgetContainer.__init__(self, configuration)
+class PyCanvas(BaseWidgetContainer):
+	def __init__(self, parent, configuration=None):
+		BaseWidgetContainer.__init__(self, parent, tkinter.Canvas(parent._tk), configuration)

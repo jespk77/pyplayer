@@ -1,7 +1,7 @@
 from tkinter import ttk, font
 import tkinter
 
-from ui import pyevents, pyimage
+from ui import pycontainer, pyevents, pyimage
 
 def scroll_event():
 	import sys
@@ -17,10 +17,16 @@ sel_foreground_color = "white"
 
 # === ELEMENT CONTAINERS ===
 class PyElement:
-	def __init__(self, parent, id):
+	def __init__(self, id, container, tk, initial_cfg=None):
+		if not isinstance(container, pycontainer.BaseWidgetContainer): raise ValueError("'{.__name__}' is not a valid widget container!")
 		self._id = id
-		self.parent = parent
+		self._container = container
+		self._tk = tk
 		self._cfg = None
+		if initial_cfg:
+			try: self._tk.configure(**initial_cfg)
+			except Exception as e: print("ERROR", "Setting initial configuration for element '{}':".format(self._id), e)
+
 		self.load_configuration()
 		self._event_handler = pyevents.PyElementEvents(self)
 
@@ -32,45 +38,35 @@ class PyElement:
 	def event_handler(self): return self._event_handler
 
 	@property
-	def width(self): return self.winfo_width()
+	def width(self): return self._tk.winfo_width()
 	@property
-	def height(self): return self.winfo_height()
+	def height(self): return self._tk.winfo_height()
 
 	def load_configuration(self):
-		self._cfg = self.parent.configuration.get_or_create(self.widget_id, {})
-		self.configure(**self._cfg.value)
-
-	# --- Forward declarations for tkinter operations, should not get called in a proper setup ---
-	def grid(self, *args, **kwargs): pass
-	def configure(self, *args, **kwargs): pass
-	def winfo_width(self): return 0
-	winfo_height = winfo_width
+		self._cfg = self._container.configuration.get_or_create(self.widget_id.lower(), {})
+		self._tk.configure(**self._cfg.value)
 
 
 element_cfg = { "background": background_color, "foreground": foreground_color }
 # === ELEMENT ITEMS ===
-class PyTextlabel(tkinter.Label, PyElement):
+class PyTextlabel(PyElement):
 	""" Element for displaying a line of text """
-	def __init__(self, master, id, initial_cfg=None):
-		tkinter.Label.__init__(self, master, **element_cfg)
-		if initial_cfg:
-			try: self.configure(self, **initial_cfg)
-			except Exception as e: print("ERROR", "Setting initial configuration for textlabel element:", e)
-		PyElement.__init__(self, master, id)
-		self._string_var = self._img = None
+	def __init__(self, container, id, initial_cfg=None):
+		PyElement.__init__(self, id, container, tkinter.Label(container._tk, **element_cfg), initial_cfg)
+		self._string_var = tkinter.StringVar()
+		self._tk.configure(textvariable=self._string_var)
+		self._img = None
 
 	@property
 	def text(self):
 		""" Get the text that is currently displayed on this label (or empty string if no text set)
-		 	* update: renamed from 'display_text' in previous versions """
-		return self._string_var.get() if not self._string_var is None else ""
+		 	* update: renamed from 'display_text' """
+		return self._string_var.get()
 	@text.setter
 	def text(self, value):
 		""" Configure the text displayed on this label """
-		if self._string_var is None:
-			self._string_var = tkinter.StringVar()
-			self.configure(textvariable=self._string_var)
 		self._string_var.set(value)
+	display_text = text
 
 	@property
 	def image(self):
@@ -79,33 +75,30 @@ class PyTextlabel(tkinter.Label, PyElement):
 	@image.setter
 	def image(self, img):
 		""" Set the image that should be displayed, it should either be set to an instance of 'PyImage' or None to remove it """
-		if img is not None and not isinstance(img, pyimage.PyImage): raise ValueError("Image can only be set to 'PyImage' or None, not '{.__name__}'".format(type(img)))
+		if img and not isinstance(img, pyimage.PyImage): raise ValueError("Image can only be set to 'PyImage' or None, not '{.__name__}'".format(type(img)))
 		self._img = img
-		self.configure(image=img)
+		self._tk.configure(image=img)
+
 
 input_cfg = { "insertbackground": foreground_color, "selectforeground": sel_foreground_color, "selectbackground": sel_background_color }
 input_cfg.update(element_cfg)
-class PyTextInput(tkinter.Entry, PyElement):
-	def __init__(self, master, id, initial_cfg=None):
-		tkinter.Entry.__init__(self, master, disabledbackground=background_color, **input_cfg)
-		if initial_cfg:
-			try: self.configure(self, **initial_cfg)
-			except tkinter.TclError as e: print("ERROR", "Setting initial configuration for text input element:", e)
-		PyElement.__init__(self, master, id)
-
+class PyTextInput(PyElement):
+	def __init__(self, container, id, initial_cfg=None):
+		PyElement.__init__(self, id, container, tkinter.Entry(container._tk, disabledbackground=background_color, **input_cfg), initial_cfg)
 		self._format_str = self._cmd = None
 		self._input_length = 0
 		self._strvar = tkinter.StringVar()
-		self._input_cmd = self.register(self._on_input_key)
-		self.bind("<Escape>", self._clear_input)
-		self.configure(textvariable=self._strvar, validate="key", validatecommand=(self._input_cmd, "%P"))
+		self._input_cmd = self._tk.register(self._on_input_key)
+		self._tk.configure(textvariable=self._strvar, validate="key", validatecommand=(self._input_cmd, "%P"))
+		@self.event_handler.KeyEvent("escape")
+		def _clear_input(): self.value = ""
 
 	@property
-	def accept_input(self): return self.cget("state") == "disabled"
+	def accept_input(self): return self._tk.cget("state") == "disabled"
 	@accept_input.setter
 	def accept_input(self, vl):
 		""" Control whether the current input value can be adjusted """
-		self.configure(state="normal" if vl else "disabled")
+		self._tk.configure(state="normal" if vl else "disabled")
 
 	@property
 	def format_str(self): return self._format_str if self._format_str else ""
@@ -146,131 +139,128 @@ class PyTextInput(tkinter.Entry, PyElement):
 		""" Character limit for this input field, when this limit is reached, no more characters can be entered; set to 0 to disable limit """
 		self._input_length = ln
 
-	def _clear_input(self, event=None): self.value = ""
 	def _on_input_key(self, entry): return self._input_length == 0 or (len(entry) <= self._input_length and (not self._format_str or not self._format_str.search(entry)))
+
 
 checkbox_cfg = { "activebackground": background_color, "activeforeground": foreground_color, "selectcolor": background_color }
 checkbox_cfg.update(element_cfg)
-class PyCheckbox(tkinter.Checkbutton, PyElement):
-	def __init__(self, master, id, initial_cfg=None):
-		tkinter.Checkbutton.__init__(self, master, **checkbox_cfg)
-		if initial_cfg:
-			try: self.configure(self, **initial_cfg)
-			except Exception as e: print("ERROR", "Setting initial configuration for checkbox element:", e)
-		PyElement.__init__(self, master, id)
-
+class PyCheckbox(PyElement):
+	def __init__(self, container, id, initial_cfg=None):
+		PyElement.__init__(self, id, container, tkinter.Checkbutton(container._tk, **checkbox_cfg), initial_cfg)
 		self._value = tkinter.IntVar()
 		self._desc = tkinter.StringVar()
-		self.configure(variable=self._value, textvariable=self._desc)
+		self._img = None
+		self._tk.configure(variable=self._value, textvariable=self._desc)
 
 	@property
-	def description(self): return self._desc.get()
-	@description.setter
-	def description(self, vl): self._desc.set(vl)
+	def text(self):
+		""" The text that is displayed to the side of this checkbox, returns empty string if nothing set
+		 	* update: renamed from 'description' property """
+		return self._desc.get()
+	@text.setter
+	def text(self, vl): self._desc.set(vl)
+	description = text
 
 	@property
-	def image(self): return self.cget("image")
+	def image(self):
+		""" The image that is displayed to the side of this checkbox, returns None if not set """
+		return self._img
 	@image.setter
 	def image(self, ig):
-		if not isinstance(ig, pyimage.PyImage): raise TypeError("Image must be a PyImage, not {.__name__}".format(type(ig)))
-		self.configure(image=ig)
+		if ig and not isinstance(ig, pyimage.PyImage): raise TypeError("Image must be a PyImage, not {.__name__}".format(type(ig)))
+		self._tk.configure(image=ig)
+		self._img = ig
 
 	@property
-	def checked(self): return self._value.get()
+	def checked(self):
+		""" Whether the checkbox is currently set or not """
+		return self._value.get()
 	@checked.setter
 	def checked(self, check): self._value.set(check)
 
 	@property
-	def accept_input(self): return self.cget("state") != "disabled"
+	def accept_input(self):
+		""" Whether the user can interact with the checkbox """
+		return self._tk.cget("state") != "disabled"
 	@accept_input.setter
-	def accept_input(self, vl): self.configure(state="normal" if vl else "disabled")
+	def accept_input(self, vl): self._tk.configure(state="normal" if vl else "disabled")
 
 	@property
-	def command(self): return self.cget("command")
+	def command(self):
+		""" The handler that gets called whenever the checkbox gets toggled """
+		return self._tk.cget("command")
 	@command.setter
 	def command(self, cb):
 		if not callable(cb): raise TypeError("Callback must be callable!")
-		self.configure(command=cb)
+		self._tk.configure(command=cb)
+
 
 button_cfg = { "activebackground": background_color, "activeforeground": foreground_color }
 button_cfg.update(element_cfg)
-class PyButton(tkinter.Button, PyElement):
-	""" Element to create a clickable button  """
-	def __init__(self, master, id, initial_cfg=None):
-		tkinter.Button.__init__(self, master, **button_cfg)
-		if initial_cfg:
-			try: self.configure(self, **initial_cfg)
-			except Exception as e: print("ERROR", "Setting initial configuration for button element:", e)
-		PyElement.__init__(self, master, id)
-		self._string_var = self._callback = self._image = None
+class PyButton(PyElement):
+	def __init__(self, container, id, initial_cfg=None):
+		PyElement.__init__(self, id, container, tkinter.Button(container._tk, **button_cfg), initial_cfg)
+		self._string_var = tkinter.StringVar()
+		self._tk.configure(textvariable=self._string_var)
+		self._callback = self._image = None
 
 	@property
-	def accept_input(self): return self.cget("state") == "normal"
+	def accept_input(self): return self._tk.cget("state") == "normal"
 	@accept_input.setter
-	def accept_input(self, vl): self.configure(state="normal" if vl else "disabled")
+	def accept_input(self, vl): self._tk.configure(state="normal" if vl else "disabled")
 
 	@property
 	def text(self):
-		""" Returns the string that is currently displayed on the element """
-		return self._string_var.get() if self._string_var is not None else self.cget("text")
+		""" Returns the string that is currently displayed on the button """
+		return self._string_var.get()
 	@text.setter
 	def text(self, value):
 		""" Set the display string of this element (once this is set, using configure 'text' no longer has effect) """
-		if self._string_var is None:
-			self._string_var = tkinter.StringVar()
-			self.configure(textvariable=self._string_var)
 		self._string_var.set(value)
 
 	@property
 	def image(self):
 		""" Return the image that is displayed on the button """
-		return self.cget("image")
+		return self._tk.cget("image")
 	@image.setter
 	def image(self, vl):
 		""" Set the image displayed on this button """
-		self.configure(image=vl)
+		self._tk.configure(image=vl)
 		self._image = vl
 
 	@property
 	def command(self):
-		""" Returns the callback that is currently assigned to when the button is pressed or None if nothing bound (or if it cannot be called) """
+		""" Returns the callback that is currently assigned to when the button is pressed or None if nothing bound """
 		if not callable(self._callback): self._callback = None
 		return self._callback
 	@command.setter
 	def command(self, value):
 		""" Set the callback that gets called when the button is pressed """
 		self._callback = value
-		self.configure(command=value)
-	callback = command
+		self._tk.configure(command=value)
 
-class PyTextfield(tkinter.Text, PyElement):
-	""" Element to display multiple lines of text, includes support for user input, images and markers/tags
-	 	*Tags are configurable in the options with format 'tag'.'option': 'value' """
+
+class PyTextfield(PyElement):
 	front = "0.0"
 	back = "end"
-	def __init__(self, master, id, initial_cfg=None):
-		tkinter.Text.__init__(self, master, **input_cfg)
-		if initial_cfg:
-			try: self.configure(self, **initial_cfg)
-			except Exception as e: print("ERROR", "Setting initial configuration for textfield element:", e)
-		PyElement.__init__(self, master, id)
-
+	def __init__(self, container, id, initial_cfg=None):
+		PyElement.__init__(self, id, container, tkinter.Text(container._tk, **input_cfg), initial_cfg)
 		self._font = font.Font(family="segoeui", size="11")
-		self.configure(font=self._font)
+		self._tk.configure(font=self._font)
 		self._accept_input = True
-		self._boldfont = self._cmd = self._bd = None
+		self._boldfont = self._cmd = None
 
 	@property
 	def accept_input(self): return self._accept_input
 	@accept_input.setter
 	def accept_input(self, value):
-		self.configure(state="normal" if value else "disabled")
+		self._tk.configure(state="normal" if value else "disabled")
 		self._accept_input = value is True
 
 	@property
 	def current_pos(self): return "current"
 	@current_pos.setter
-	def current_pos(self, value): self.mark_set("current", value)
+	def current_pos(self, value): self._tk.mark_set("current", value)
 
 	@property
 	def font(self): return self._font
@@ -282,7 +272,7 @@ class PyTextfield(tkinter.Text, PyElement):
 		return self._boldfont
 
 	@property
-	def text(self): return self.get(self.front, self.back).rstrip("\n")
+	def text(self): return self._tk.get(self.front, self.back).rstrip("\n")
 	@text.setter
 	def text(self, value):
 		self.delete(self.front, self.back)
@@ -294,60 +284,37 @@ class PyTextfield(tkinter.Text, PyElement):
 		return self._cmd
 	@command.setter
 	def command(self, vl):
-		if vl:
-			if not callable(vl): raise ValueError("Callback must be callable!")
-			self._bd = self.bind("<Key>", self._on_key_press)
-		elif self._bd:
-			self.unbind("<Key>", self._bd)
-			self._bd = None
+		if vl and not callable(vl): raise ValueError("Callback must be callable!")
 		self._cmd = vl
+		if vl:
+			@self.event_handler.KeyEvent("all")
+			def _on_key_press(char):
+				if self._cmd:
+					try: self._cmd(char)
+					except Exception as e: print("ERROR", "Processing callback for textfield:", e)
 
-	def _on_key_press(self, event=None):
-		if self._cmd:
-			try: self._cmd()
-			except Exception as e: print("ERROR", "Processing callback for textfield:", e)
-
-	has_focus = tkinter.Text.focus_get
-	current_focus = tkinter.Text.focus_displayof
-	previous_focus = tkinter.Text.focus_lastfor
-	def focus(self, force=False):
-		""" Request widget focus if the window has focus
-		pass true to force focus (don't really do this), otherwise this widget will get focus next time the window has focus """
-		if force: return self.focus_force()
-		else: return self.focus_set()
-
-	def can_user_interact(self): return self.cget("state") == "normal"
-
+	def can_interact(self): return self._tk.cget("state") == "normal"
 	def insert(self, index, chars, *args):
-		self.configure(state="normal")
-		tkinter.Text.insert(self, index, chars, *args)
-		self._on_key_press()
-		if not self.accept_input: self.configure(state="disabled")
+		if not self.accept_input: self._tk.configure(state="normal")
+		self._tk.insert(index, chars, *args)
+		if not self.accept_input: self._tk.configure(state="disabled")
 
 	def delete(self, index1, index2=None):
-		self.configure(state="normal")
-		try: tkinter.Text.delete(self, index1, index2)
-		except: raise
-		finally: 
-			self._on_key_press()
-			if not self.accept_input: self.configure(state="disabled")
+		self._tk.configure(state="normal")
+		self._tk.delete(index1, index2)
+		if not self.accept_input: self._tk.configure(state="disabled")
 
 	#todo: add custom configuration loader/setter (tag style + font customization)
 
 progress_cfg = { "background": "green", "troughcolor": background_color }
-class PyProgressbar(ttk.Progressbar, PyElement):
-	""" Widget that displays a bar indicating progress made by the application """
-	def __init__(self, master, id, initial_cfg=None):
-		ttk.Progressbar.__init__(self, master)
-		self._progress_var = tkinter.IntVar()
+class PyProgressbar(PyElement):
+	def __init__(self, container, id, initial_cfg=None):
 		self._style = ttk.Style()
 		self._style.configure(style="default", **progress_cfg)
-		if initial_cfg:
-			try: self._style.configure(style="default", **initial_cfg)
-			except Exception as e: print("ERROR", "Setting initial configuration for progressbar element:", e)
+		PyElement.__init__(self, id, container, ttk.Progressbar(container._tk), initial_cfg)
+		self._progress_var = tkinter.IntVar()
 		self._horizontal = True
-		PyElement.__init__(self, master, id)
-		self.configure(mode="determinate", variable=self._progress_var)
+		self._tk.configure(mode="determinate", variable=self._progress_var)
 
 	@property
 	def progress(self, actual=True):
@@ -367,59 +334,49 @@ class PyProgressbar(ttk.Progressbar, PyElement):
 	def determinate(self):
 		""" If determinate is true, the bar is set to the current value
 		 	If determinate is false, the bar is moving back and forth """
-		return self.cget("mode") == "determinate"
+		return self._tk.cget("mode") == "determinate"
 	@determinate.setter
-	def determinate(self, value): self.configure(mode="determinate" if value else "indeterminate")
+	def determinate(self, value): self._tk.configure(mode="determinate" if value else "indeterminate")
 	@property
 	def maximum(self):
 		""" Returns the total size of the bar, if the progress is set to this value the bar is full (default is 100) """
-		return self.cget("maximum")
+		return self._tk.cget("maximum")
 	@maximum.setter
-	def maximum(self, value): self.configure(maximum=value)
+	def maximum(self, value): self._tk.configure(maximum=value)
 
 	#todo: add custom configuration loader/setter (style customization)
 
-class PyScrollbar(tkinter.Scrollbar, PyElement):
-	def __init__(self, master, id, initial_cfg=None):
-		tkinter.Scrollbar.__init__(self, master)
-		if initial_cfg:
-			try: self.configure(self, **initial_cfg)
-			except Exception as e: print("ERROR", "Setting initial configuration for scrollbar element:", e)
-		PyElement.__init__(self, master, id)
+class PyScrollbar(PyElement):
+	def __init__(self, container, id, initial_cfg=None):
+		PyElement.__init__(self, id, container, tkinter.Scrollbar(container._tk, **element_cfg), initial_cfg)
 
 	@property
-	def scrollcommand(self): return
+	def scrollcommand(self): return self._tk.cget("command")
 	@scrollcommand.setter
-	def scrollcommand(self, value): self.configure(command=value)
+	def scrollcommand(self, value): self._tk.configure(command=value)
 
 list_cfg = { "selectbackground": background_color, "selectforeground": highlight_color }
 list_cfg.update(element_cfg)
-class PyItemlist(tkinter.Listbox, PyElement):
+class PyItemlist(PyElement):
 	""" A list of options where the user can select one or more lines """
-	def __init__(self, master, id, initial_cfg=None):
-		tkinter.Listbox.__init__(self, master, selectmode="single", **list_cfg)
-		if initial_cfg:
-			try: self.configure(self, **initial_cfg)
-			except Exception as e: print("ERROR", "Setting initial configuration for itemlist element:", e)
-		PyElement.__init__(self, master, id)
-		self.list_var = self._items = self._font = None
+	def __init__(self, container, id, initial_cfg=None):
+		PyElement.__init__(self, id, container, tkinter.Listbox(container._tk, selectmode="single", **list_cfg), initial_cfg)
+		self._list_var = tkinter.StringVar()
+		self._tk.configure(listvariable=self._list_var)
+		self._items = self._font = None
 
 	@property
 	def itemlist(self):
 		""" Returns the items displayed in the list """
-		return self._items if self.list_var is not None else self.get(0, "end")
+		return self._items if self._list_var is not None else self._tk.get(0, "end")
 	@itemlist.setter
 	def itemlist(self, value):
 		""" Set the items displayed in this list (after the first call using 'insert' or 'delete' no longer has effect) """
-		if self.list_var is None:
-			self.list_var = tkinter.StringVar()
-			self.configure(listvariable=self.list_var)
-
 		self._items = value
-		self.list_var.set(self._items)
+		self._list_var.set(self._items)
 
 	def get_item_from_event(self, event):
 		""" Get the element at the mouse pointer when processing event from bound callback """
-		return self._items[self.nearest(event.y)]
+		return self._items[self._tk.nearest(event.y)]
 
 	#todo: add custom customization loader/setter (style + font customization)

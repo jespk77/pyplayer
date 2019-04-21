@@ -8,8 +8,10 @@ from ui import pyimage, pyconfiguration, pycontainer, pyevents
 class PyWindow:
 	""" Framework class for windows, they have to be created with a valid root """
 	def __init__(self, parent, id, initial_cfg=None, cfg_file=None):
-		if parent is not None: self._window = tkinter.Toplevel(parent._window)
-		else: self._window = tkinter.Tk()
+		if parent is not None:
+			if not isinstance(parent, PyWindow): raise ValueError("Parent window must be a PyWindow, not '{.__name__}'".format(type(parent)))
+			self._tk = tkinter.Toplevel(parent._tk)
+		else: self._tk = tkinter.Tk()
 
 		self._event_handler = pyevents.PyWindowEvents(self)
 		self.hidden = True
@@ -24,9 +26,9 @@ class PyWindow:
 		if cfg_file is None: cfg_file = ".cfg/" + self._windowid.lower()
 		elif not cfg_file.startswith(".cfg/"): cfg_file = ".cfg/" + cfg_file
 		self._configuration = pyconfiguration.ConfigurationFile(filepath=cfg_file, cfg_values=initial_cfg)
-		self._content = pycontainer.PyFrame(self._window, self._configuration.get_or_create("content", {}))
+		self._content = pycontainer.PyFrame(self, self._configuration.get_or_create("content", {}))
 		self.create_widgets()
-		self._content.pack(fill="both", expand=True)
+		self._content.show()
 
 	def create_widgets(self):
 		""" Can be used in subclasses to separate widget creation and placement from the rest of the program,
@@ -38,10 +40,6 @@ class PyWindow:
 	def window_id(self):
 		""" The (unique) identifier for this window, this cannot change once the window is created """
 		return self._windowid
-	@property
-	def window_handle(self):
-		import warnings; warnings.warn("'window_handle' property will not be available in the release version! use at your own discretion", stacklevel=0)
-		return self._window
 	@property
 	def content(self):
 		""" Get the container for this window that all elements are placed in """
@@ -58,7 +56,7 @@ class PyWindow:
 	@property
 	def is_alive(self):
 		""" Returns true when this window has not been closed """
-		return self._window.winfo_exists()
+		return self._tk.winfo_exists()
 	@property
 	def floating(self): return None
 	@floating.setter
@@ -66,83 +64,72 @@ class PyWindow:
 		""" Sets this window to be floating: it's connected to its parent and its behavior is mirrored from the parent
 		 	* update: this was renamed from the 'transient' parameter in the previous version """
 		if value:
-			try: self._window.wm_transient(self._window.master)
+			try: self._tk.wm_transient(self._tk.master)
 			except Exception as e: print("ERROR", "Failed to set window as transient, caused by:", e)
 
 	@property
 	def decorator(self):
 		""" Set true to prevent the window from being decorated; only the content will be visible
 		 	Useful for making custom window decorators """
-		return self._window.wm_overrideredirect()
+		return self._tk.wm_overrideredirect()
 	@decorator.setter
 	def decorator(self, vl):
-		self._window.wm_overrideredirect(not vl)
+		self._tk.wm_overrideredirect(not vl)
 
 	@property
 	def hidden(self):
 		""" Returns True if the window is currently hidden """
-		return self._window.wm_state() == "withdrawn"
+		return self._tk.wm_state() == "withdrawn"
 	@hidden.setter
 	def hidden(self, value):
 		""" Hide/unhide the window, if the window is hidden all traces are removed. Can only be unhidden by updating this property """
-		if value: self._window.wm_withdraw()
-		else: self._window.wm_deiconify()
+		if value: self._tk.wm_withdraw()
+		else: self._tk.wm_deiconify()
 	def toggle_hidden(self): self.hidden = not self.hidden
-
-	@property
-	def autosave_delay(self):
-		""" Time interval (in minutes) between automatic save of window configuration to file, returns 0 if disabled """
-		return self._autosave_delay
-	@autosave_delay.setter
-	def autosave_delay(self, value):
-		""" Set time interval (in minutes) between autosaves (if dirty), set to 0 to disable """
-		#todo: unfinished; needs event bus implementation
-		pass
 
 	@property
 	def screen_height(self):
 		""" Get the height in pixels for the display the window is on """
-		return self._window.winfo_screenheight()
+		return self._tk.winfo_screenheight()
 	@property
 	def screen_width(self):
 		""" Get the width in pixels for the display the window is on """
-		return self._window.winfo_screenwidth()
-
+		return self._tk.winfo_screenwidth()
 	@property
 	def width(self):
 		""" Get the width of this window in pixels """
-		return self._window.winfo_width()
+		return self._tk.winfo_width()
 	@width.setter
 	def width(self, vl):
 		""" Customize the width of this window, in most cases this value does not need to be set:
 				it automatically updates to fit all widgets and the previously set value (when resized)
 			* update: width clamped between 0 and screen_width """
-		self._window.configure(width=max(0, min(vl, self.screen_width)))
+		self._tk.configure(width=max(0, min(vl, self.screen_width)))
 
 	@property
 	def height(self):
 		""" Get the height of this window in pixels """
-		return self._window.winfo_height()
+		return self._tk.winfo_height()
 	@height.setter
 	def height(self, vl):
 		""" Customize the height of this window, in most cases this value does not need to be set:
 				it automatically updates to fit all widgets and the previously set value (when resized)
 		 	* update: height clamped between 0 and screen_height """
-		self._window.configure(height=max(0, min(vl, self.screen_height)))
+		self._tk.configure(height=max(0, min(vl, self.screen_height)))
 
 	@property
 	def title(self):
 		""" Get current window title """
-		return self._window.wm_title()
+		return self._tk.wm_title()
 	@title.setter
 	def title(self, value):
 		""" Update current window title """
-		self._window.wm_title(value)
+		self._tk.wm_title(value)
 
 	@property
 	def icon(self):
 		""" Get current window icon """
-		return self._window.wm_iconbitmap()
+		return self._tk.wm_iconbitmap()
 
 	@icon.setter
 	def icon(self, value):
@@ -154,21 +141,21 @@ class PyWindow:
 		try:
 			if "linux" in sys.platform:
 				path = os.path.dirname(os.path.realpath(__file__))
-				self._window.tk.call("wm", "iconphoto", self._window._w,
+				self._tk.tk.call("wm", "iconphoto", self._tk._w,
 									pyimage.PyImage(file=os.path.join(path, os.pardir, value + ".png")))
-			elif "win" in sys.platform: self._window.iconbitmap(value + ".ico")
+			elif "win" in sys.platform: self._tk.iconbitmap(value + ".ico")
 		except Exception as e: print("ERROR", "Setting icon bitmap {}".format(e)); raise
 
 	# ===== Base Operations =====
 	def load_configuration(self):
 		""" (Re)load configuration from file """
 		self._configuration.load()
-		self._window.wm_geometry(self._configuration.get("geometry").value)
+		self._tk.wm_geometry(self._configuration.get("geometry").value)
 		self.autosave_delay = self._configuration.get_or_create("autosave_delay", 5)
 
 	def write_configuration(self):
 		""" Write window configuration to file (if dirty) """
-		self._configuration["geometry"] = self._window.wm_geometry()
+		self._configuration["geometry"] = self._tk.wm_geometry()
 		self._configuration["autosave_delay"] = self._autosave_delay
 		self._configuration.save()
 
@@ -205,19 +192,19 @@ class PyWindow:
 	@property
 	def always_on_top(self):
 		""" If true this window will always display be displayed above others """
-		return bool(self._window.wm_attributes("-topmost"))
+		return bool(self._tk.wm_attributes("-topmost"))
 	@always_on_top.setter
 	def always_on_top(self, value):
 		""" Set this window to be always above others """
-		self._window.wm_attributes("-topmost", "1" if value else "0")
+		self._tk.wm_attributes("-topmost", "1" if value else "0")
 
 	def focus_followsmouse(self):
 		""" The widget under mouse will get focus, cannot be disabled once set """
-		self._window.tk_focusFollowsMouse()
+		self._tk.tk_focusFollowsMouse()
 
 	def center_window(self, width, height):
 		""" Center this widget on screen, any previously set geometry is overwritten """
-		self._window.wm_geometry("{}x{}+{}+{}".format(width, height, (self.screen_width // 2) - (width // 2), (self.screen_height // 2) - (height // 2)))
+		self._tk.wm_geometry("{}x{}+{}+{}".format(width, height, (self.screen_width // 2) - (width // 2), (self.screen_height // 2) - (height // 2)))
 
 	def schedule(self, min=0, sec=0, ms=0, func=None, loop=False, **kwargs):
 		""" Schedule an operation to be executed at least after the given time, all registered callbacks will stop when the window is closed
@@ -232,8 +219,8 @@ class PyWindow:
 
 		if loop:
 			self._tick_operations[func.__name__] = delay, func
-			self._window.after(delay, self._run_tickoperation, func.__name__, kwargs)
-		else: self._window.after(delay, func, *kwargs.values())
+			self._tk.after(delay, self._run_tickoperation, func.__name__, kwargs)
+		else: self._tk.after(delay, func, *kwargs.values())
 
 	def _run_tickoperation(self, name, kwargs):
 		operation = self._tick_operations.get(name)
@@ -241,7 +228,7 @@ class PyWindow:
 			delay, func = operation
 			try:
 				res = func(**kwargs)
-				if res is not False: self._window.after(delay, self._run_tickoperation, name, kwargs)
+				if res is not False: self._tk.after(delay, self._run_tickoperation, name, kwargs)
 				else: print("INFO", "Callback '{}' returned False, it will not be rescheduled".format(name))
 			except Exception as e:
 				print("ERROR", "Calling scheduled operation '{}', it will not be rescheduled\n".format(name), e)
@@ -252,11 +239,11 @@ class PyWindow:
 		""" Close (destroy) this window and all its children """
 		for cd in self._children.values():
 			if cd.is_alive: cd.destroy()
-		self._window.destroy()
+		self._tk.destroy()
 
 	def force_update(self):
 		""" Forces background updates that would normally only happen when the program is idle """
-		self._window.update_idletasks()
+		self._tk.update_idletasks()
 
 class PyTkRoot(PyWindow):
 	""" Root window for this application (should be the first created window and should only be created once, for additional windows use 'PyWindow' instead) """
@@ -272,7 +259,7 @@ class PyTkRoot(PyWindow):
 
 	def start(self):
 		""" Initialize and start GUI """
-		try: self._window.mainloop()
+		try: self._tk.mainloop()
 		except KeyboardInterrupt:
 			print("INFO", "Received keyboard interrupt, closing program...")
-			self._window.destroy()
+			self._tk.destroy()
