@@ -111,9 +111,9 @@ class PyElementEvents:
 			return wrapper
 		return wrapped
 
-	_key_translations = {"enter": "Return", "break": "Cancel", "shift": "Shift_L", "ctrl": "Control_L", "alt": "Alt_L", "pageup": "Prior", "pagedown": "Next", "capslock": "Caps_Lock", "numlock": "Num_Lock", "scrolllock": "Scroll_Lock"}
+	_key_translations = {"all": "<Key>", "enter": "Return", "break": "Cancel", "shift": "Shift_L", "ctrl": "Control_L", "alt": "Alt_L", "pageup": "Prior", "pagedown": "Next", "capslock": "Caps_Lock", "numlock": "Num_Lock", "scrolllock": "Scroll_Lock"}
 	def KeyEvent(self, key):
-		""" Fired if the specified key was pressed (only if this element currently has input focus)
+		""" Fired if the specified key was pressed or 'all' for all keypresses (only if this element currently has input focus)
 		 	- supported callback keywords:
 		 		* char: the key that was pressed (as character)
 		 		* code: the keycode of the pressed key """
