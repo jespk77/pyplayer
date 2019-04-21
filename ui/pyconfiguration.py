@@ -26,7 +26,7 @@ class ConfigurationItem:
 	def __getitem__(self, item): raise KeyError(item)
 	def __setitem__(self, key, value): raise KeyError(key)
 	def __delitem__(self, key): raise KeyError(key)
-	def __str__(self): return "ConfigurationItem({!s})".format(self.value)
+	def __str__(self): return "ConfigurationItem({!s})".format(self._value)
 
 
 class Configuration(ConfigurationItem):
@@ -49,7 +49,9 @@ class Configuration(ConfigurationItem):
 		if len(key) == 1:
 			cval = self.get(key[0])
 			nval = create_entry(value, self.read_only)
-			if cval and type(cval) is not type(nval): raise TypeError("Incompatible types!")
+			tc, tn = type(cval), type(nval)
+			if cval and tc is not tn:
+				raise TypeError("Incompatible types: '{.__name__}' and '{.__name__}'!".format(tc, tn))
 			self._value[key[0]] = nval
 		else: self._value[key[0]][key[1]] = value
 		self._dirty = True
@@ -98,7 +100,7 @@ class ConfigurationFile(Configuration):
 	def __init__(self, filepath, cfg_values, readonly=False):
 		self._file = filepath
 		Configuration.__init__(self, cfg_values=cfg_values, read_only=readonly)
-		self._initialvalues = cfg_values
+		self._initialvalues = self._value
 		self.load()
 
 	def load(self):
