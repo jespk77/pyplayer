@@ -214,9 +214,6 @@ class PyWindow:
 		""" Center this widget on screen, any previously set geometry is overwritten """
 		self._window.wm_geometry("{}x{}+{}+{}".format(width, height, (self.screen_width // 2) - (width // 2), (self.screen_height // 2) - (height // 2)))
 
-	def after(self, *args, **kwargs):
-		raise DeprecationWarning("No longer directly usable, call 'schedule' instead!")
-
 	def schedule(self, min=0, sec=0, ms=0, func=None, loop=False, **kwargs):
 		""" Schedule an operation to be executed at least after the given time, all registered callbacks will stop when the window is closed
 		 	 -	Amount of time to wait can be specified with minutes (keyword 'min'), seconds (keyword 'sec') and/or milliseconds (keyword 'ms')
@@ -239,7 +236,7 @@ class PyWindow:
 			delay, func = operation
 			try:
 				res = func(**kwargs)
-				if res is not False: self.after(delay, self._run_tickoperation, name, kwargs)
+				if res is not False: self._window.after(delay, self._run_tickoperation, name, kwargs)
 				else: print("INFO", "Callback '{}' returned False, it will not be rescheduled".format(name))
 			except Exception as e:
 				print("ERROR", "Calling scheduled operation '{}', it will not be rescheduled\n".format(name), e)
