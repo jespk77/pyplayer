@@ -54,8 +54,8 @@ class PyTextlabel(tkinter.Label, PyElement):
 	def __init__(self, master, id, initial_cfg=None):
 		tkinter.Label.__init__(self, master, **element_cfg)
 		if initial_cfg:
-			try: tkinter.Label.configure(self, **initial_cfg)
-			except tkinter.TclError as e: print("ERROR", "Setting initial configuration for textlabel element:", e)
+			try: self.configure(self, **initial_cfg)
+			except Exception as e: print("ERROR", "Setting initial configuration for textlabel element:", e)
 		PyElement.__init__(self, master, id)
 		self._string_var = self._img = None
 
@@ -89,7 +89,7 @@ class PyTextInput(tkinter.Entry, PyElement):
 	def __init__(self, master, id, initial_cfg=None):
 		tkinter.Entry.__init__(self, master, disabledbackground=background_color, **input_cfg)
 		if initial_cfg:
-			try: tkinter.Entry.configure(self, **initial_cfg)
+			try: self.configure(self, **initial_cfg)
 			except tkinter.TclError as e: print("ERROR", "Setting initial configuration for text input element:", e)
 		PyElement.__init__(self, master, id)
 
@@ -155,8 +155,8 @@ class PyCheckbox(tkinter.Checkbutton, PyElement):
 	def __init__(self, master, id, initial_cfg=None):
 		tkinter.Checkbutton.__init__(self, master, **checkbox_cfg)
 		if initial_cfg:
-			try: tkinter.Checkbutton.configure(self, **initial_cfg)
-			except tkinter.TclError as e: print("ERROR", "Setting initial configuration for checkbox element:", e)
+			try: self.configure(self, **initial_cfg)
+			except Exception as e: print("ERROR", "Setting initial configuration for checkbox element:", e)
 		PyElement.__init__(self, master, id)
 
 		self._value = tkinter.IntVar()
@@ -199,8 +199,8 @@ class PyButton(tkinter.Button, PyElement):
 	def __init__(self, master, id, initial_cfg=None):
 		tkinter.Button.__init__(self, master, **button_cfg)
 		if initial_cfg:
-			try: tkinter.Button.configure(self, **initial_cfg)
-			except tkinter.TclError as e: print("ERROR", "Setting initial configuration for button element:", e)
+			try: self.configure(self, **initial_cfg)
+			except Exception as e: print("ERROR", "Setting initial configuration for button element:", e)
 		PyElement.__init__(self, master, id)
 		self._string_var = self._callback = self._image = None
 
@@ -251,8 +251,8 @@ class PyTextfield(tkinter.Text, PyElement):
 	def __init__(self, master, id, initial_cfg=None):
 		tkinter.Text.__init__(self, master, **input_cfg)
 		if initial_cfg:
-			try: tkinter.Text.configure(self, **initial_cfg)
-			except tkinter.TclError as e: print("ERROR", "Setting initial configuration for textfield element:", e)
+			try: self.configure(self, **initial_cfg)
+			except Exception as e: print("ERROR", "Setting initial configuration for textfield element:", e)
 		PyElement.__init__(self, master, id)
 
 		self._font = font.Font(family="segoeui", size="11")
@@ -344,7 +344,7 @@ class PyProgressbar(ttk.Progressbar, PyElement):
 		self._style.configure(style="default", **progress_cfg)
 		if initial_cfg:
 			try: self._style.configure(style="default", **initial_cfg)
-			except tkinter.TclError as e: print("ERROR", "Setting initial configuration for progressbar element:", e)
+			except Exception as e: print("ERROR", "Setting initial configuration for progressbar element:", e)
 		self._horizontal = True
 		PyElement.__init__(self, master, id)
 		self.configure(mode="determinate", variable=self._progress_var)
@@ -383,8 +383,8 @@ class PyScrollbar(tkinter.Scrollbar, PyElement):
 	def __init__(self, master, id, initial_cfg=None):
 		tkinter.Scrollbar.__init__(self, master)
 		if initial_cfg:
-			try: tkinter.Scrollbar.configure(self, **initial_cfg)
-			except tkinter.TclError as e: print("ERROR", "Setting initial configuration for scrollbar element:", e)
+			try: self.configure(self, **initial_cfg)
+			except Exception as e: print("ERROR", "Setting initial configuration for scrollbar element:", e)
 		PyElement.__init__(self, master, id)
 
 	@property
@@ -399,8 +399,8 @@ class PyItemlist(tkinter.Listbox, PyElement):
 	def __init__(self, master, id, initial_cfg=None):
 		tkinter.Listbox.__init__(self, master, selectmode="single", **list_cfg)
 		if initial_cfg:
-			try: tkinter.Listbox.configure(self, **initial_cfg)
-			except tkinter.TclError as e: print("ERROR", "Setting initial configuration for itemlist element:", e)
+			try: self.configure(self, **initial_cfg)
+			except Exception as e: print("ERROR", "Setting initial configuration for itemlist element:", e)
 		PyElement.__init__(self, master, id)
 		self.list_var = self._items = self._font = None
 
