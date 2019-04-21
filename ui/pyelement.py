@@ -1,7 +1,7 @@
 from tkinter import ttk, font
 import tkinter
 
-from ui import pyevents
+from ui import pyevents, pyimage
 
 def scroll_event():
 	import sys
@@ -44,8 +44,9 @@ element_cfg = { "background": background_color, "foreground": foreground_color }
 # === ELEMENT ITEMS ===
 class PyTextlabel(tkinter.Label, PyElement):
 	""" Element for displaying a line of text """
-	def __init__(self, master, id):
+	def __init__(self, master, id, initial_cfg=None):
 		tkinter.Label.__init__(self, master, **element_cfg)
+		if initial_cfg: tkinter.Label.configure(self, **initial_cfg)
 		PyElement.__init__(self, master, id)
 		self._string_var = self._img = None
 
@@ -69,16 +70,18 @@ class PyTextlabel(tkinter.Label, PyElement):
 	@image.setter
 	def image(self, img):
 		""" Set the image that should be displayed, it should either be set to an instance of 'PyImage' or None to remove it """
-		if img is not None and not isinstance(img, PyImage): raise ValueError("Image can only be set to 'PyImage' or None, not '{.__name__}'".format(type(img)))
+		if img is not None and not isinstance(img, pyimage.PyImage): raise ValueError("Image can only be set to 'PyImage' or None, not '{.__name__}'".format(type(img)))
 		self._img = img
 		self.configure(image=img)
 
 input_cfg = { "insertbackground": foreground_color, "selectforeground": sel_foreground_color, "selectbackground": sel_background_color }
 input_cfg.update(element_cfg)
 class PyTextInput(tkinter.Entry, PyElement):
-	def __init__(self, master, id):
+	def __init__(self, master, id, initial_cfg=None):
 		tkinter.Entry.__init__(self, master, disabledbackground=background_color, **input_cfg)
+		if initial_cfg: tkinter.Entry.configure(self, **initial_cfg)
 		PyElement.__init__(self, master, id)
+
 		self._format_str = self._cmd = None
 		self._input_length = 0
 		self._strvar = tkinter.StringVar()
@@ -138,9 +141,11 @@ class PyTextInput(tkinter.Entry, PyElement):
 checkbox_cfg = { "activebackground": background_color, "activeforeground": foreground_color, "selectcolor": background_color }
 checkbox_cfg.update(element_cfg)
 class PyCheckbox(tkinter.Checkbutton, PyElement):
-	def __init__(self, master, id):
+	def __init__(self, master, id, initial_cfg=None):
 		tkinter.Checkbutton.__init__(self, master, **checkbox_cfg)
+		if initial_cfg: tkinter.Checkbutton.configure(self, **initial_cfg)
 		PyElement.__init__(self, master, id)
+
 		self._value = tkinter.IntVar()
 		self._desc = tkinter.StringVar()
 		self.configure(variable=self._value, textvariable=self._desc)
@@ -154,7 +159,7 @@ class PyCheckbox(tkinter.Checkbutton, PyElement):
 	def image(self): return self.cget("image")
 	@image.setter
 	def image(self, ig):
-		if not isinstance(ig, PyImage): raise TypeError("Image must be a PyImage, not {.__name__}".format(type(ig)))
+		if not isinstance(ig, pyimage.PyImage): raise TypeError("Image must be a PyImage, not {.__name__}".format(type(ig)))
 		self.configure(image=ig)
 
 	@property
@@ -178,8 +183,9 @@ button_cfg = { "activebackground": background_color, "activeforeground": foregro
 button_cfg.update(element_cfg)
 class PyButton(tkinter.Button, PyElement):
 	""" Element to create a clickable button  """
-	def __init__(self, master, id):
+	def __init__(self, master, id, initial_cfg=None):
 		tkinter.Button.__init__(self, master, **button_cfg)
+		if initial_cfg: tkinter.Button.configure(self, **initial_cfg)
 		PyElement.__init__(self, master, id)
 		self._string_var = self._callback = self._image = None
 
@@ -227,8 +233,9 @@ class PyTextfield(tkinter.Text, PyElement):
 	 	*Tags are configurable in the options with format 'tag'.'option': 'value' """
 	front = "0.0"
 	back = "end"
-	def __init__(self, master, id):
+	def __init__(self, master, id, initial_cfg=None):
 		tkinter.Text.__init__(self, master, **input_cfg)
+		if initial_cfg: tkinter.Text.configure(self, **initial_cfg)
 		PyElement.__init__(self, master, id)
 
 		self._font = font.Font(family="segoeui", size="11")
@@ -313,10 +320,12 @@ class PyTextfield(tkinter.Text, PyElement):
 progress_cfg = { "background": "green", "troughcolor": background_color }
 class PyProgressbar(ttk.Progressbar, PyElement):
 	""" Widget that displays a bar indicating progress made by the application """
-	def __init__(self, master, id):
+	def __init__(self, master, id, initial_cfg=None):
 		ttk.Progressbar.__init__(self, master)
 		self._progress_var = tkinter.IntVar()
 		self._style = ttk.Style()
+		self._style.configure(**progress_cfg)
+		if initial_cfg: self._style.configure(**initial_cfg)
 		self._horizontal = True
 		PyElement.__init__(self, master, id)
 		self.configure(mode="determinate", variable=self._progress_var)
@@ -352,8 +361,9 @@ class PyProgressbar(ttk.Progressbar, PyElement):
 	#todo: add custom configuration loader/setter (style customization)
 
 class PyScrollbar(tkinter.Scrollbar, PyElement):
-	def __init__(self, master, id):
+	def __init__(self, master, id, initial_cfg=None):
 		tkinter.Scrollbar.__init__(self, master)
+		if initial_cfg: tkinter.Scrollbar.configure(self, **initial_cfg)
 		PyElement.__init__(self, master, id)
 
 	@property
@@ -365,8 +375,9 @@ list_cfg = { "selectbackground": background_color, "selectforeground": highlight
 list_cfg.update(element_cfg)
 class PyItemlist(tkinter.Listbox, PyElement):
 	""" A list of options where the user can select one or more lines """
-	def __init__(self, master, id):
+	def __init__(self, master, id, initial_cfg=None):
 		tkinter.Listbox.__init__(self, master, selectmode="single", **list_cfg)
+		if initial_cfg: tkinter.Listbox.configure(self, **initial_cfg)
 		PyElement.__init__(self, master, id)
 		self.list_var = self._items = self._font = None
 
@@ -389,9 +400,3 @@ class PyItemlist(tkinter.Listbox, PyElement):
 		return self._items[self.nearest(event.y)]
 
 	#todo: add custom customization loader/setter (style + font customization)
-
-class PyImage:
-	""" Placeholder to avoid type errors in the rest of the program """
-	#todo: add improved version in separate module
-	def __init__(self, file=None, url=None, bin_file=None): pass
-	def write(self, filename, format=None, from_coords=None): pass
