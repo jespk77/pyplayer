@@ -133,7 +133,7 @@ class PyElementEvents:
 		if ky: key = ky
 
 		def wrapped(cb):
-			def wrapper(event): try_call_handler(key, cb, char=event.char, code=event.code)
+			def wrapper(event): try_call_handler(key, cb, char=event.char, code=event.keycode)
 			self._element.bind(key, wrapper, add=True)
 			return wrapper
 		return wrapped
