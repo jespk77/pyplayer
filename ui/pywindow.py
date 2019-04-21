@@ -23,8 +23,7 @@ class PyWindow:
 
 		if cfg_file is None: cfg_file = ".cfg/" + self._windowid.lower()
 		elif not cfg_file.startswith(".cfg/"): cfg_file = ".cfg/" + cfg_file
-		self._configuration = pyconfiguration.ConfigurationFile(cfg_file, initial_cfg)
-		self.load_configuration()
+		self._configuration = pyconfiguration.ConfigurationFile(filepath=cfg_file, cfg_values=initial_cfg)
 		self._content = pycontainer.PyFrame(self._window, self._configuration.get_or_create("content", {}))
 		self.create_widgets()
 		self._content.pack(fill="both", expand=True)
@@ -197,6 +196,12 @@ class PyWindow:
 			except Exception as e: print("ERROR", "Couldn't destroy window '{}' properly: ".format(id), e); return False
 		return True
 
+	def get_window(self, id):
+		""" Get the child window that was bound to given id, returns None if the id wasn't bound """
+		id = id.lower()
+		wd = self._children.get(id)
+		return wd if wd.is_alive else None
+
 	@property
 	def always_on_top(self):
 		""" If true this window will always display be displayed above others """
@@ -257,7 +262,7 @@ class PyWindow:
 class PyTkRoot(PyWindow):
 	""" Root window for this application (should be the first created window and should only be created once, for additional windows use 'PyWindow' instead) """
 	def __init__(self, name="pyroot"):
-		PyWindow.__init__(self, None, name)
+		PyWindow.__init__(self, parent=None, id=name)
 		self.decorator = False
 		self.hidden = False
 
