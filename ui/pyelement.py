@@ -18,15 +18,13 @@ sel_foreground_color = "white"
 # === ELEMENT CONTAINERS ===
 class PyElement:
 	def __init__(self, id, container, tk, initial_cfg=None):
-		if not isinstance(container, pycontainer.BaseWidgetContainer): raise ValueError("'{.__name__}' is not a valid widget container!")
+		if not isinstance(container, pycontainer.BaseWidgetContainer): raise ValueError("'{.__name__}' is not a valid widget container!".format(type(container)))
+		if not initial_cfg: initial_cfg = {}
+
 		self._id = id
 		self._container = container
 		self._tk = tk
-		self._cfg = self._container.configuration.get_or_create(self.widget_id.lower(), {})
-		if initial_cfg:
-			try: self._tk.configure(**initial_cfg)
-			except Exception as e: print("ERROR", "Setting initial configuration for element '{}':".format(self._id), e)
-
+		self._cfg = self._container.configuration.get_or_create(self.widget_id.lower(), initial_cfg)
 		self.load_configuration()
 		self._event_handler = pyevents.PyElementEvents(self)
 
@@ -52,7 +50,8 @@ class PyElement:
 
 	def load_configuration(self):
 		""" Set configuration options stored in configuration file """
-		self._tk.configure(**self._cfg.value)
+		try: self._tk.configure(**self._cfg.value)
+		except Exception as e: print("ERROR", "Loading configuration for widget '{}':".format(self.widget_id), e)
 
 
 element_cfg = { "background": background_color, "foreground": foreground_color }
@@ -252,11 +251,11 @@ class PyTextfield(PyElement):
 	front = "0.0"
 	back = "end"
 	def __init__(self, container, id, initial_cfg=None):
-		PyElement.__init__(self, id, container, tkinter.Text(container._tk, **input_cfg), initial_cfg)
 		self._font = font.Font(family="segoeui", size="11")
+		PyElement.__init__(self, id, container, tkinter.Text(container._tk, **input_cfg), initial_cfg)
+		self.accept_input = True
 		self._tk.configure(font=self._font)
-		self._accept_input = True
-		self._boldfont = self._cmd = None
+		self._cmd = None
 
 	@property
 	def accept_input(self): return self._accept_input
@@ -269,15 +268,6 @@ class PyTextfield(PyElement):
 	def current_pos(self): return "current"
 	@current_pos.setter
 	def current_pos(self, value): self._tk.mark_set("current", value)
-
-	@property
-	def font(self): return self._font
-	@property
-	def bold_font(self):
-		if self._boldfont is None:
-			self._boldfont = self._font.copy()
-			self._boldfont.configure(weight="bold")
-		return self._boldfont
 
 	@property
 	def text(self): return self._tk.get(self.front, self.back).rstrip("\n")
@@ -345,16 +335,35 @@ class PyTextfield(PyElement):
 		try: self._tk.tag_remove("sel", self.front, self.back)
 		except: pass
 
-	#todo: add custom configuration loader/setter (tag style + font customization)
+	def load_configuration(self):
+		dt = self._cfg.value
+		ft = dt.get("font")
+		if ft:
+			del dt["font"]
+			try:
+				self._font.configure(**ft)
+				self._tk.configure(font=self._font)
+			except tkinter.TclError as e: print("ERROR", "While setting font properties for text field '{}':".format(self.widget_id), e)
+
+		for key, value in dt.items():
+			key = key.split(".", maxsplit=1)
+			if len(key) == 2:
+				try: self._tk.tag_configure(key[0], **{key[1]: value})
+				except Exception as e: print("ERROR", "Setting tag configuration for element '{}':".format(self.widget_id), e)
+			else:
+				try: self._tk.configure(**{key[0]:value})
+				except Exception as e: print("ERROR", "Setting configuration value for element '{}':".format(self.widget_id), e)
+
 
 progress_cfg = { "background": "green", "troughcolor": background_color }
 class PyProgressbar(PyElement):
 	def __init__(self, container, id, initial_cfg=None):
 		self._style = ttk.Style()
+		self._style.theme_use("default")
 		self._style.configure(style="default", **progress_cfg)
+		self.horizontal = True
 		PyElement.__init__(self, id, container, ttk.Progressbar(container._tk), initial_cfg)
 		self._progress_var = tkinter.IntVar()
-		self._horizontal = True
 		self._tk.configure(mode="determinate", variable=self._progress_var)
 
 	@property
@@ -385,7 +394,8 @@ class PyProgressbar(PyElement):
 	@maximum.setter
 	def maximum(self, value): self._tk.configure(maximum=value)
 
-	#todo: add custom configuration loader/setter (style customization)
+	def load_configuration(self):
+		self._style.configure(style="Horizontal.TProgressbar" if self.horizontal else "Vertical.TProgressbar", **self._cfg.value)
 
 class PyScrollbar(PyElement):
 	def __init__(self, container, id, initial_cfg=None):
