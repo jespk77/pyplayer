@@ -279,6 +279,15 @@ class PyTextfield(PyElement):
 		self.insert(self.back, value)
 
 	@property
+	def cursor(self):
+		""" Get the textfield coordinate currently set to the insert cursor """
+		return self.position("insert")
+	@cursor.setter
+	def cursor(self, value):
+		try: self._tk.mark_set("insert", value)
+		except tkinter.TclError as e: print("ERROR", "While setting insert mark:", e)
+
+	@property
 	def command(self):
 		""" Get the callback that is registered when any character is entered, returns None if not set """
 		return self._cmd
@@ -295,14 +304,38 @@ class PyTextfield(PyElement):
 
 	def can_interact(self): return self._tk.cget("state") == "normal"
 	def insert(self, index, chars, *args):
+		""" Insert text into the given position (ignores 'accept_input' property) """
 		if not self.accept_input: self._tk.configure(state="normal")
 		self._tk.insert(index, chars, *args)
 		if not self.accept_input: self._tk.configure(state="disabled")
 
 	def delete(self, index1, index2=None):
+		""" Delete text between the given positions (ignores 'accept_input' property) """
 		self._tk.configure(state="normal")
 		self._tk.delete(index1, index2)
 		if not self.accept_input: self._tk.configure(state="disabled")
+
+	def position(self, tag):
+		""" Get the exact coordinates in this text field, or emtpy string if nothing found """
+		pos = self._tk.index(tag)
+		return pos if pos else ""
+
+	def show(self, position):
+		""" Make sure that the given line is visible on screen """
+		self._tk.see(position)
+
+	def get_text(self, from_pos, to_pos=None):
+		""" Get the text that was set between given positions """
+		return self._tk.get(from_pos, to_pos)
+
+	def place_mark(self, mark, position, gravity="right"):
+		self._tk.mark_set(mark, position)
+		self._tk.mark_gravity(mark, gravity=gravity)
+
+	def clear_selection(self):
+		""" Remove selection in this text field (has no effect if nothing was selected) """
+		try: self._tk.tag_remove("sel", self.front, self.back)
+		except: pass
 
 	#todo: add custom configuration loader/setter (tag style + font customization)
 
