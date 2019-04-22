@@ -169,7 +169,7 @@ class PyWindow:
 		self.close_window(id)
 		window.id = id
 		self._children[id] = window
-		window.content.pack(fill="both", expand=True)
+		window.content.show()
 		window.hidden = False
 		return self._children.get(id)
 

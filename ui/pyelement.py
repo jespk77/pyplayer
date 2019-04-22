@@ -22,7 +22,7 @@ class PyElement:
 		self._id = id
 		self._container = container
 		self._tk = tk
-		self._cfg = None
+		self._cfg = self._container.configuration.get_or_create(self.widget_id.lower(), {})
 		if initial_cfg:
 			try: self._tk.configure(**initial_cfg)
 			except Exception as e: print("ERROR", "Setting initial configuration for element '{}':".format(self._id), e)
@@ -39,11 +39,19 @@ class PyElement:
 
 	@property
 	def width(self): return self._tk.winfo_width()
+	@width.setter
+	def width(self, value): self._tk.configure(width=value)
+
 	@property
 	def height(self): return self._tk.winfo_height()
+	@height.setter
+	def height(self, value): self._tk.configure(height=value)
+
+	def set_focus(self):
+		self._tk.focus_set()
 
 	def load_configuration(self):
-		self._cfg = self._container.configuration.get_or_create(self.widget_id.lower(), {})
+		""" Set configuration options stored in configuration file """
 		self._tk.configure(**self._cfg.value)
 
 
@@ -330,7 +338,7 @@ class PyTextfield(PyElement):
 
 	def place_mark(self, mark, position, gravity="right"):
 		self._tk.mark_set(mark, position)
-		self._tk.mark_gravity(mark, gravity=gravity)
+		self._tk.mark_gravity(mark, gravity)
 
 	def clear_selection(self):
 		""" Remove selection in this text field (has no effect if nothing was selected) """

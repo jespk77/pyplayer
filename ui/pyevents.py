@@ -31,7 +31,7 @@ class PyWindowEvents:
 		event_name = "<Destroy>"
 		@wraps(cb)
 		def wrapper(event):
-			if event.widget is self._wd.window_handle: try_call_handler(event_name, cb)
+			if event.widget is self._wd._tk: try_call_handler(event_name, cb)
 		self._wd._tk.bind(event_name, wrapper, add=True)
 		return wrapper
 
