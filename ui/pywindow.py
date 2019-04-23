@@ -235,6 +235,11 @@ class PyWindow:
 				del self._tick_operations[name]
 		else: print("WARNING", "Got operation callback for '{}', but no callback was found!".format(name))
 
+	def window_tick(self, date=None):
+		if date:
+			print("tick!", date)
+			for c in self._children.values(): c.window_tick(date)
+
 	def destroy(self):
 		""" Close (destroy) this window and all its children """
 		for cd in self._children.values():
@@ -245,17 +250,24 @@ class PyWindow:
 		""" Forces background updates that would normally only happen when the program is idle """
 		self._tk.update_idletasks()
 
+import datetime
 class PyTkRoot(PyWindow):
 	""" Root window for this application (should be the first created window and should only be created once, for additional windows use 'PyWindow' instead) """
 	def __init__(self, name="pyroot"):
 		PyWindow.__init__(self, parent=None, id=name)
 		self.decorator = False
 		self.hidden = False
+		self.window_tick()
 
 	def open_window(self, id, window):
 		""" Open connected window, after this is called the root window will automatically be set to hidden """
 		PyWindow.open_window(self, id, window)
 		self.hidden = True
+
+	def window_tick(self, date=None):
+		PyWindow.window_tick(self, date)
+		self._tk.after(1000, self.window_tick, datetime.datetime.today())
+
 
 	def start(self):
 		""" Initialize and start GUI """
