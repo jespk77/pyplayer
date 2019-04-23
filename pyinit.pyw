@@ -1,7 +1,7 @@
 import datetime
 import sys
 
-from ui import pywindow, pyelement
+from ui import pywindow, pyelement, pyimage
 
 resolution = 350, 200
 program_info_file = "pyplayer.json"
@@ -32,31 +32,27 @@ def process_command(cmd, stdin=None, stdout=None, stderr=None, timeout=None):
 	pc.wait(timeout)
 	return pc
 
-class PySplashWindow(pywindow.RootPyWindow):
+class PySplashWindow(pywindow.PyTkRoot):
 	def __init__(self):
-		pywindow.RootPyWindow.__init__(self, "splash")
-		self.decorator = False
+		pywindow.PyTkRoot.__init__(self, "splash")
 		self.center_window(*resolution)
-		self.column_options(0, weight=1, minsize=260)
-		self.row_options(1, weight=1)
+		self.content.layer.column(0, weight=1, minsize=260).row(1, weight=1)
+		head = pyelement.PyTextlabel(self.content, "header")
+		self.content.place_widget(head)
 
-		img = pyelement.PyCanvas(self.window)
-		self._logo = pyelement.PyImage(file="assets/logo")
-		try: img.create_image(resolution[0]//2, resolution[1]//2, image=self._logo)
-		except: pass
-
-		head = pyelement.PyTextlabel(self.window)
-		self.set_widget("header", head)
-
-		btn = pyelement.PyButton(self.window)
+		btn = pyelement.PyButton(self.content, "close_window", initial_cfg={"highlightthickness": 0, "borderwidth": 0})
 		btn.text = "X"
 		btn.command = self.destroy
-		self.set_widget("close_window", btn, row=0, column=1, initial_cfg={"highlightthickness": 0, "borderwidth": 0})
-		self.set_widget("splash_logo", img, row=1, columnspan=2, initial_cfg={"highlightthickness": 0, "cursor": "watch"})
+		self.content.place_widget(btn, column=1)
 
-		label_status = pyelement.PyTextlabel(self.window)
-		label_status.display_text = "Initializing..."
-		self.set_widget("label_status", label_status, row=2, columnspan=2, initial_cfg={"foreground": "white", "cursor": "watch"})
+		logo = pyimage.PyImage(file="assets/logo")
+		logo_label = pyelement.PyTextlabel(self.content, "logo_image")
+		logo_label.image = logo
+		self.content.place_widget(logo_label, row=1, columnspan=2)
+
+		label_status = pyelement.PyTextlabel(self.content, "label_status", initial_cfg={"cursor": "watch"})
+		label_status.text = "Initializing..."
+		self.content.place_widget(label_status, row=2, columnspan=2)
 
 		self._cfg = self._interp = None
 		self._platform = sys.platform
@@ -66,7 +62,7 @@ class PySplashWindow(pywindow.RootPyWindow):
 			"restart": self._restart
 		}
 
-		self.after(1, self._update_program)
+		self.schedule(sec=1, func=self._update_program)
 
 	def _update_program(self):
 		if "no_update" not in sys.argv:
@@ -76,11 +72,11 @@ class PySplashWindow(pywindow.RootPyWindow):
 
 			if pc.returncode:
 				self.status_text = "Failed to update PyPlayer, continuing in 5 seconds..."
-				return self.after(5, self._load_modules)
+				return self.schedule(sec=5, func=self._load_modules)
 			process_command("git rev-parse HEAD", stdout=self.git_hash)
 		else:
 			self.status_text = "Updating skipped."
-			self.after(1, self._load_modules, False)
+			self.schedule(sec=1, func=self._load_modules, dependency_check=False)
 
 	def _git_status(self, out):
 		out = out.split("\n")
@@ -88,18 +84,18 @@ class PySplashWindow(pywindow.RootPyWindow):
 			for o in out:
 				if o.startswith("Updating"): self.status_text = o; break
 		elif len(out) == 1: self.status_text = out[0]
-		self.window.update_idletasks()
+		self.force_update()
 
 	def git_hash(self, out):
-		hash = self.get_or_create("hash", "none")
+		hash = self.configuration.get_or_create("hash", "none")
 		out = out.rstrip("\n")
 		if hash != out:
 			print("INFO", "Git hash updated from '{}' to '{}', checking dependencies".format(hash, out))
-			self["hash"] = out
-			self.after(1, self._load_modules)
+			self.configuration["hash"] = out
+			self.schedule(sec=1, func=self._load_modules)
 		else:
 			print("INFO", "Git hash equal to last time, skip dependency checking")
-			self.after(1, self._load_modules, False)
+			self.schedule(sec=1, func=self._load_modules, dependency_check=False)
 
 	def _git_update(self, out):
 		out = out.split('\n')
@@ -112,7 +108,7 @@ class PySplashWindow(pywindow.RootPyWindow):
 			try: self._cfg = json.load(file)
 			except json.JSONDecodeError as e:
 				self.status_text = "Cannot load 'pyplayer.json': {}, exiting in 5 seconds...".format(e)
-				self.after(5, self.destroy)
+				self.schedule(sec=5, func=self.destroy)
 				return
 
 		vs = get_version_string()
@@ -125,9 +121,9 @@ class PySplashWindow(pywindow.RootPyWindow):
 				self._cfg["modules"] = json.load(file)
 		except (FileNotFoundError, json.JSONDecodeError):
 			print("INFO", "Invalid module configuration, launching module options window...")
-			return self.after(1, self._module_configure)
+			return self.schedule(sec=1, func=self._module_configure)
 
-		self._loaded_modules = {mid: mot for mid, mot in self._cfg["modules"].items() if mot.get("enabled")}
+		self._loaded_modules = { mid: mot for mid, mot in self._cfg["modules"].items() if mot.get("enabled") }
 		if dependency_check:
 			self.status_text = "Checking dependencies..."
 			dependencies = set(self._cfg.get("dependencies", []))
@@ -143,12 +139,12 @@ class PySplashWindow(pywindow.RootPyWindow):
 				for dp in dependencies: process_command(pip_install.format(sys.executable, dp), stdout=self._pip_status)
 			else: print("INFO", "No dependencies found, continuing...")
 		self.status_text = "Loading PyPlayer..."
-		self.after(1, self._load_program)
+		self.schedule(sec=1, func=self._load_program)
 
 	def _pip_status(self, out):
 		try:
 			self.status_text = out.split(" in ")[0]
-			self.window.update_idletasks()
+			self.force_update()
 		except: pass
 
 	def _load_program(self):
@@ -158,13 +154,14 @@ class PySplashWindow(pywindow.RootPyWindow):
 		import pylogging
 		pylogging.get_logger()
 
-		print("initializing client...")
 		client = PyPlayer(self)
 		self._interp = Interpreter(client, modules=self._loaded_modules)
-		client.interp = self._interp
-		client.bind("<Destroy>", lambda e: self.on_close(e, client), add=True)
+		client._interp = self._interp
+		@client.event_handler.WindowDestroy
+		def on_close():
+			self.on_close(client)
+
 		self.open_window("client", client)
-		client.hidden = False
 		self.hidden = True
 
 	@property
@@ -177,16 +174,14 @@ class PySplashWindow(pywindow.RootPyWindow):
 		else: return self._update_data[1].strftime("%a %b %d, %Y - %I:%M %p")
 
 	@property
-	def status_text(self): return self.widgets["label_status"].display_text
+	def status_text(self): return self.content["label_status"].text
 	@status_text.setter
 	def status_text(self, vl):
-		self.widgets["label_status"].display_text = vl.split("\n")[0]
+		self.content["label_status"].text = vl.split("\n")[0]
 
-	def on_close(self, event, client):
-		wn = str(event.widget)
-		if len(wn.split(".")) <= 2:
-			cd = self._actions.get(client.flags, self._terminate)
-			if cd: cd()
+	def on_close(self, client):
+		cd = self._actions.get(client.flags, self._terminate)
+		if cd: cd()
 
 	def _module_configure(self):
 		import os, json
@@ -206,21 +201,21 @@ class PySplashWindow(pywindow.RootPyWindow):
 				modules[mid] = mop
 
 		from utilities import module_select
-		ms = module_select.ModuleSelector(self.window, modules)
-		ms.bind("<Destroy>", lambda e: self._module_done(e, ms))
+		ms = module_select.ModuleSelector(self, modules)
+		ms.event_handler.WindowDestroy(lambda: self._module_done(ms))
+
 		self.status_text = "Modules configured, restarting..."
 		self.open_window("module_select", ms)
 		self.hidden = True
 
-	def _module_done(self, event, selector):
-		if len(str(event.widget).split(".")) == 2:
-			if selector.confirm:
-				self.hidden = False
-				self._cfg["modules"] = selector.modules
-				import json
-				with open("modules.json", "w") as file: json.dump(self._cfg["modules"], file)
-				self.after(1, self._restart)
-			else: self.after(1, self._terminate)
+	def _module_done(self, selector):
+		if selector.confirm:
+			self.hidden = False
+			self._cfg["modules"] = selector.modules
+			import json
+			with open("modules.json", "w") as file: json.dump(self._cfg["modules"], file)
+			self.schedule(sec=1, func=self._restart)
+		else: self.schedule(sec=1, func=self._terminate)
 
 	def _restart(self):
 		print("INFO", "Restarting player!")
@@ -232,7 +227,7 @@ class PySplashWindow(pywindow.RootPyWindow):
 		if self._interp is not None and self._interp.is_alive():
 			self._interp.stop()
 			self._interp.join()
-		self.after(2, self.destroy)
+		self.schedule(sec=2, func=self.destroy)
 
 if __name__ == "__main__":
 	w = PySplashWindow()

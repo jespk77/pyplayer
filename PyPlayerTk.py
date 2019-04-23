@@ -1,15 +1,8 @@
 import datetime
 import humanize
-from traceback import format_exception
 
 from console import TextConsole
 from ui import pywindow, pyelement
-
-
-class PyPlayerEvent:
-	def __init__(self, **kwargs):
-		for key, value in kwargs.items():
-			setattr(self, key, value)
 
 import enum
 class PyPlayerCloseReason(enum.Enum):
@@ -17,25 +10,22 @@ class PyPlayerCloseReason(enum.Enum):
 	RESTART = 1,
 	MODULE_CONFIGURE = 2
 
-initial_cfg = { "autosave_delay": 5, "directory":{}, "default_path": "", "header_format": "PyPlayer - %a %b %d, %Y %I:%M %p -", "loglevel": "warning", "version": 1 }
-progressbar_cfg = {"background": "cyan", "foreground": "white"}
-header_cfg = { "background": "black", "foreground": "white" }
-browser_cfg = { "background": "black", "foreground": "white", "selectforeground": "cyan" }
-console_cfg = { "background": "black", "error.foreground": "red", "font":{"family":"terminal","size":10}, "foreground": "white", "info.foreground": "yellow",
+initial_cfg = { "autosave_delay": 5, "directory":{}, "default_path": "", "header_format": "PyPlayer - %a %b %d, %Y %I:%M %p -", "loglevel": "info" }
+progressbar_cfg = { "background": "cyan", "troughcolor": "black" }
+browser_cfg = { "background": "black", "selectforeground": "cyan" }
+console_cfg = { "background": "black", "error.foreground": "red", "font":{"family":"terminal","size":10}, "info.foreground": "yellow",
 				"insertbackground": "white", "reply.foreground": "gray", "selectbackground": "gray30" }
 
 class PyPlayer(pywindow.PyWindow):
 	def __init__(self, root):
-		pywindow.PyWindow.__init__(self, master=root.window, id="client", initial_cfg=initial_cfg)
-		self.root = root
-		self.hidden = True
-		self.set_widget("header_left", pyelement.PyTextlabel(self.frame), initial_cfg=header_cfg)
-		self.set_widget("header", pyelement.PyTextlabel(self.frame), initial_cfg=header_cfg, column=1)
-		self.set_widget("header_right", pyelement.PyTextlabel(self.frame), initial_cfg=header_cfg, column=2)
-		self.column_options(1, minsize=30, weight=1)
+		pywindow.PyWindow.__init__(self, root, id="client", initial_cfg=initial_cfg)
+		self.content.place_widget(pyelement.PyTextlabel(self.content, "header_left", initial_cfg={"background": "black", "foreground": "cyan"}))
+		self.content.place_widget(pyelement.PyTextlabel(self.content, "header", initial_cfg={"background": "black"}), column=1)
+		self.content.place_widget(pyelement.PyTextlabel(self.content, "header_right", initial_cfg={"background": "black", "foreground": "gray"}), column=2)
+		self.content.layer.column(1, minsize=30, weight=1)
 		self.title_song = ""
 		self.icon = "assets/icon"
-		self.interp = None
+		self._interp = self._cmd = None
 
 		try:
 			import psutil
@@ -46,94 +36,70 @@ class PyPlayer(pywindow.PyWindow):
 			self._process = None
 			self._boottime = datetime.datetime.today()
 
-		pbar = pyelement.PyProgressbar(self.frame)
+		pbar = pyelement.PyProgressbar(self.content, "progressbar", initial_cfg=progressbar_cfg)
 		pbar.maximum = 1
-		pbar.bind("<Button-1>", self.on_progressbar_click)
-		self.set_widget("progressbar", pbar, initial_cfg=progressbar_cfg, row=1, columnspan=9)
-		self.set_widget("console", TextConsole(self, command_callback=self.parse_command), initial_cfg=console_cfg, row=3, columnspan=9).focus()
-		self.row_options(3, minsize=100, weight=1)
+		self.content.place_widget(pbar, row=1, columnspan=9)
+		@pbar.event_handler.MouseClickEvent("left")
+		def on_progressbar_click(x):
+			try: self._interp.put_command("player position {}".format(x / pbar.width))
+			except Exception as e: print("WARNING", "Error while updating position:", e)
 
+		console = TextConsole(self.content, initial_cfg=console_cfg)
+		self.content.place_widget(console, row=3, columnspan=9).set_focus()
+		@console.event_handler.KeyEvent("enter")
+		def _command_confirm():
+			cmd = console.get_current_line().rstrip("\n")
+			if len(cmd) > 0:
+				print("INFO", "Processing command:", cmd)
+				self._interp.put_command(cmd, self._cmd)
+			return console.event_handler.block
+
+		self.content.layer.row(3, minsize=100, weight=1)
 		self._flags = PyPlayerCloseReason.NONE
-		self.last_cmd = None
-		self.event_handlers = {
-			"progressbar_update": [],  # parameters [ progress: int ]
-			"tick_second": [],  # parameters [ date: datetime ]
-			"title_update": []  # parameters [ title: str ]
-		}
-
 		self.focus_followsmouse()
-		self.update_label()
 		self.update_loglevel()
-		self.cfg_register_listener("loglevel", self.update_loglevel)
 
 	@property
 	def flags(self): return self._flags.name.lower()
 
-	def subscribe_event(self, name, callback):
-		if name in self.event_handlers and callable(callback):
-			if callback not in self.event_handlers[name]: self.event_handlers[name].append(callback)
-
-	def unsubscribe_event(self, name, callback):
-		if name in self.event_handlers:
-			self.event_handlers[name].remove(callback)
-
-	def post_event(self, name, data):
-		if name in self.event_handlers:
-			for c in self.event_handlers[name]:
-				try: c(self, data)
-				except Exception as e: print("ERROR", "An error occured while processing event '", name, "' -> ", "\n".join(format_exception(None, e, e.__traceback__)), sep="")
-
 	def update_loglevel(self, value=None):
-		if not value: value = self["loglevel"]
-		else: print("INFO", "Received log update:", value)
-
+		if value is None: value = self.configuration["loglevel"].value
+		print("INFO", "Set loglevel:", value)
 		import pylogging
 		pylogging.get_logger().log_level = value
 
-	def update_label(self):
-		self.date = datetime.datetime.today()
-		self.widgets["header"].display_text = self.date.strftime(self["header_format"])
-		uptime = str(self.date - self._boottime).split(".")[0]
-		if self._process is not None: self.widgets["header_right"].display_text = "{} / {}".format(uptime, humanize.naturalsize(self._process.memory_info().rss))
-		else: self.widgets["header_right"].display_text = uptime
-
-		self.post_event("tick_second", PyPlayerEvent(date=self.date))
-		self.after(1, self.update_label)
+	def window_tick(self, date):
+		self.content["header"].text = date.strftime(self.configuration["header_format"].value)
+		uptime = str(date - self._boottime).split(".")[0]
+		if self._process is not None: self.content["header_right"].text = "{} / {}".format(uptime, humanize.naturalsize(self._process.memory_info().rss))
+		else: self.content["header_right"].text = uptime
+		pywindow.PyWindow.window_tick(self, date)
 
 	def update_title(self, title, checks=None):
-		prefix = " ".join(["[{}]".format(c) for c in (checks if checks is not None else self.interp.arguments)])
+		prefix = " ".join(["[{}]".format(c) for c in (checks if checks is not None else self._interp.arguments)])
 		self.title_song = title
 		self.title = prefix + ' ' + title
-		self.post_event("title_update", PyPlayerEvent(title=title))
 
 	def update_title_media(self, media_data, color=None):
 		self.update_title(media_data.display_name)
-		self.widgets["progressbar"].progress = 0
-		self.widgets["progressbar"].configure(background=color if color else self["progressbar::background"])
+		self.content["progressbar"].progress = 0
+		self.content["progressbar"].configure(background=color if color else self.content.configuration["progressbar::background"])
 
 	def update_progressbar(self, progress):
-		if progress > self.widgets["progressbar"].maximum: progress = self["progressbar"].maximum
+		if progress > self.content["progressbar"].maximum: progress = self.content["progressbar"].maximum
 		elif progress < 0: progress = 0
-		self.widgets["progressbar"].progress = progress
-		self.post_event("progressbar_update", PyPlayerEvent(progress=progress))
+		self.content["progressbar"].progress = progress
 
 	def set_songbrowser(self, browser):
-		self.set_widget("songbrowser", browser, row=2, columnspan=9)
-		if browser is None:
-			self.row_options(2, minsize=0, weight=0)
-			self.row_options(3, weight=1)
-		else:
-			self.row_options(2, minsize=200, weight=70)
-			self.row_options(3, weight=20)
+		self.content.place_widget(browser, row=2, columnspan=9)
+		if browser is None: self.content.layer.row(2, minsize=0, weight=0).row(3, weight=1)
+		else: self.content.layer.row(2, minsize=200, weight=70).row(3, weight=20)
 
 	def show_lyrics(self, title):
 		from modules.utilities.lyricviewer import LyricViewer
-		wd = self.children.get("lyric_viewer")
-		if wd is not None: create_new = not wd.is_alive
-		else: create_new = True
-
-		if create_new:
-			wd = LyricViewer(self.window)
+		wd = self.get_window("lyric_viewer")
+		if wd:
+			wd = LyricViewer(self.content)
 			self.open_window("lyric_viewer", wd)
 
 		title = title.split(" - ", maxsplit=1)
@@ -142,23 +108,16 @@ class PyPlayer(pywindow.PyWindow):
 			return True
 		else: return False
 
-	def on_progressbar_click(self, event):
-		try: self.interp.put_command("player position {}".format(event.x / event.widget.winfo_width()))
-		except Exception as e: print("WARNING", "Error while updating position:", e)
-
-	def parse_command(self, cmd, dt=None):
-		try: self.interp.put_command(cmd, dt)
-		except Exception as e: self.widgets["console"].set_reply(msg="Cannot send command: " + str(e))
-
-	def add_reply(self, args):
-		self.after(.1, self.widgets["console"].set_reply, *args)
-
-	def add_message(self, args, s=0.1):
-		self.after(s, self.widgets["console"].set_notification, *args)
-
 	def close_with_reason(self, reason):
 		reason = reason.upper()
 		try:
 			self._flags = PyPlayerCloseReason[reason]
-			self.after(1, self.destroy)
+			self.schedule(func=self.destroy)
 		except KeyError: raise ValueError("Unknown reason '{}'".format(reason))
+
+	def on_reply(self, reply, tags=(), cmd=None):
+		self._cmd = cmd
+		self.schedule(func=self.content["console"].add_reply, reply=reply, tags=tags, prefix=" ? " if cmd else None)
+
+	def on_notification(self, message, tags=()):
+		self.schedule(func=self.content["console"].add_notification, message=message, tags=tags)
