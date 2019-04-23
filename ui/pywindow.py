@@ -217,27 +217,23 @@ class PyWindow:
 		delay = (min * 60000) + (sec * 1000) + ms
 		if delay < 0: raise ValueError("Delay cannot be smaller than 0")
 
-		if loop:
-			self._tick_operations[func.__name__] = delay, func
-			self._tk.after(delay, self._run_tickoperation, func.__name__, kwargs)
+		if loop: self._tk.after(delay, self._create_rescheduled_task(func, delay), kwargs)
 		else: self._tk.after(delay, func, *kwargs.values())
 
-	def _run_tickoperation(self, name, kwargs):
-		operation = self._tick_operations.get(name)
-		if operation:
-			delay, func = operation
+	def _create_rescheduled_task(self, fn, delay):
+		def _call_task(kwargs):
 			try:
-				res = func(**kwargs)
-				if res is not False: self._tk.after(delay, self._run_tickoperation, name, kwargs)
-				else: print("INFO", "Callback '{}' returned False, it will not be rescheduled".format(name))
+				fn(**kwargs)
+				self._tk.after(delay, _call_task, kwargs)
 			except Exception as e:
-				print("ERROR", "Calling scheduled operation '{}', it will not be rescheduled\n".format(name), e)
-				del self._tick_operations[name]
-		else: print("WARNING", "Got operation callback for '{}', but no callback was found!".format(name))
+				print("WARNING", "During processing of scheduled task '{}', it won't be rescheduled!".format(fn.__name__))
+				print("ERROR", "While calling scheduled task '{}':".format(fn.__name__), e)
+		return _call_task
 
-	def window_tick(self, date=None):
-		if date:
-			print("tick!", date)
+	def window_tick(self, date):
+		""" Called every second with the current date on all windows, can be used to update elements inside it
+		 	Note: make sure to call the super method as well if you want the call to propagate! """
+		if self.is_alive:
 			for c in self._children.values(): c.window_tick(date)
 
 	def destroy(self):
@@ -257,17 +253,12 @@ class PyTkRoot(PyWindow):
 		PyWindow.__init__(self, parent=None, id=name)
 		self.decorator = False
 		self.hidden = False
-		self.window_tick()
+		self.schedule(sec=1, loop=True, func=self.window_tick, date=datetime.datetime.today())
 
 	def open_window(self, id, window):
 		""" Open connected window, after this is called the root window will automatically be set to hidden """
 		PyWindow.open_window(self, id, window)
 		self.hidden = True
-
-	def window_tick(self, date=None):
-		PyWindow.window_tick(self, date)
-		self._tk.after(1000, self.window_tick, datetime.datetime.today())
-
 
 	def start(self):
 		""" Initialize and start GUI """
