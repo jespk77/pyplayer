@@ -50,8 +50,7 @@ class Configuration(ConfigurationItem):
 			cval = self.get(key[0])
 			nval = create_entry(value, self.read_only)
 			tc, tn = type(cval), type(nval)
-			if cval and tc is not tn:
-				raise TypeError("Incompatible types: '{.__name__}' and '{.__name__}'!".format(tc, tn))
+			if cval and tc is not tn: raise TypeError("Incompatible types: '{.__name__}' and '{.__name__}'!".format(tc, tn))
 			self._value[key[0]] = nval
 		else: self._value[key[0]][key[1]] = value
 		self._dirty = True
@@ -94,13 +93,14 @@ class Configuration(ConfigurationItem):
 	def dirty(self): return self._dirty
 
 
-cfg_file_version = "1b"
 class ConfigurationFile(Configuration):
 	""" Same as a Configuration, but adds the ability read from/write to file """
+	cfg_version = "1b"
 	def __init__(self, filepath, cfg_values, readonly=False):
 		self._file = filepath
 		Configuration.__init__(self, cfg_values=cfg_values, read_only=readonly)
 		self._initialvalues = self._value
+		self._file_exists = False
 		self.load()
 
 	def load(self):
@@ -118,20 +118,23 @@ class ConfigurationFile(Configuration):
 		print("INFO", "Reading configuration file data from '{}'".format(self.filename))
 		try:
 			with open(self._file, "r") as file:
+				self._file_exists = True
 				import json
 				try: return json.load(file)
 				except json.JSONDecodeError as e:
 					print("ERROR", "Parsing configuration file '{}':".format(self._file), e)
-				raise ValueError(e)
-		except FileNotFoundError: print("WARNING", "Configuration file '{}' not found!".format(self._file))
+				raise ValueError("JSON parsing error:" + str(e))
+		except FileNotFoundError: print("INFO", "Configuration file '{}' not found".format(self._file))
 
 	def save(self):
 		if self.read_only: raise PermissionError("Cannot write configuration file when it is set to read only")
 
-		print("INFO", "Writing configuration to file '{}' (if dirty)".format(self._file))
-		if not self.dirty:
+		print("INFO", "Trying to save file '{}'".format(self._file))
+		if self.dirty or not self._file_exists:
 			with open(self._file, "w") as file:
-				self["_version"] = cfg_file_version
+				print("INFO", "Writing configuration to file '{}'".format(self._file))
+				self["_version"] = self.cfg_version
 				import json
 				json.dump(self.value, file, indent=5)
+				file.flush()
 				self._dirty = False
