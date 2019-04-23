@@ -5,19 +5,14 @@ def try_call_handler(event_name, cb, **kwargs):
 		import traceback
 		print("ERROR", "While processing event '{}':\n".format(event_name), "".join(traceback.format_exception(e.__class__, e, e.__traceback__)))
 
-def block_action(): return "break"
-
 from functools import wraps
 class PyWindowEvents:
-	#create, destroy, resize, moved pos
 	def __init__(self, window):
 		self._wd = window
 		self._w = self._h = -1
 
 	@property
-	def block(self):
-		""" Return this property in an event handler method to prevent this event from being processed further """
-		return block_action()
+	def block(self): raise AttributeError("Blocking is not possible for window events!")
 
 	def WindowOpen(self, cb):
 		""" Fired whenever the window is shown on screen for the first time
@@ -69,14 +64,14 @@ class PyElementEvents:
 	@property
 	def block(self):
 		""" Return this property in an event handler method to prevent this event from being processed further """
-		return block_action()
+		return "break"
 
 	def MouseEnter(self, cb):
 		""" Fired when the mouse pointer enters the element
 		 	- no callback keywords """
 		event_name = "<Enter>"
 		@wraps(cb)
-		def wrapper(event): try_call_handler(event_name, cb)
+		def wrapper(event): return try_call_handler(event_name, cb)
 		self._element._tk.bind(event_name, wrapper, add=True)
 		return wrapper
 
@@ -85,7 +80,7 @@ class PyElementEvents:
 		 	- no callback keywords """
 		event_name = "<Leave>"
 		@wraps(cb)
-		def wrapper(event): try_call_handler(event_name, cb)
+		def wrapper(event): return try_call_handler(event_name, cb)
 		self._element._tk.bind(event_name, wrapper, add=True)
 		return wrapper
 
@@ -94,7 +89,7 @@ class PyElementEvents:
 		 	- no callback keywords """
 		event_name = "<FocusIn>"
 		@wraps(cb)
-		def wrapper(event): try_call_handler(event_name, cb)
+		def wrapper(event): return try_call_handler(event_name, cb)
 		self._element._tk.bind(event_name, wrapper, add=True)
 		return wrapper
 
@@ -103,7 +98,7 @@ class PyElementEvents:
 		 	- no callback keywords """
 		event_name = "<FocusOut>"
 		@wraps(cb)
-		def wrapper(event): try_call_handler(event_name, cb)
+		def wrapper(event): return try_call_handler(event_name, cb)
 		self._element._tk.bind(event_name, wrapper, add=True)
 		return wrapper
 
@@ -120,12 +115,12 @@ class PyElementEvents:
 
 		code = "<{}>".format(button)
 		def wrapped(cb):
-			def wrapper(event): try_call_handler(code, cb, x=event.x, y=event.y)
+			def wrapper(event): return try_call_handler(code, cb, x=event.x, y=event.y)
 			self._element._tk.bind(code, wrapper, add=True)
 			return wrapper
 		return wrapped
 
-	_key_translations = {"all": "<Key>", "enter": "<Return>", "break": "<Cancel>", "shift": "<Shift_L>", "ctrl": "<Control_L>", "alt": "<Alt_L>", "pageup": "<Prior>", "pagedown": "<Next>", "capslock": "<Caps_Lock>", "numlock": "<Num_Lock>", "scrolllock": "<Scroll_Lock>"}
+	_key_translations = {"all": "<Key>", "enter": "<Return>", "break": "<Cancel>", "shift": "<Shift_L>", "ctrl": "<Control_L>", "alt": "<Alt_L>", "pageup": "<Prior>", "pagedown": "<Next>", "capslock": "<Caps_Lock>", "numlock": "<Num_Lock>", "scrolllock": "<Scroll_Lock>", "backspace": "<BackSpace>"}
 	def KeyEvent(self, key):
 		""" Fired if the specified key was pressed or 'all' for all keypresses (only if this element currently has input focus)
 		 	- supported callback keywords:
@@ -133,9 +128,10 @@ class PyElementEvents:
 		 		* code: the keycode of the pressed key """
 		ky = self._key_translations.get(key.lower())
 		if ky: key = ky
+		else: key = "<{}>".format(key.capitalize())
 
 		def wrapped(cb):
-			def wrapper(event): try_call_handler(key, cb, char=event.char, code=event.keycode)
+			def wrapper(event): return try_call_handler(key, cb, char=event.char, code=event.keycode)
 			self._element._tk.bind(key, wrapper, add=True)
 			return wrapper
 		return wrapped
