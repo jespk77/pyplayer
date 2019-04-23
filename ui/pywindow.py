@@ -1,7 +1,4 @@
-import os
-import sys
-import tkinter
-import weakref
+import os, sys, tkinter, weakref
 
 from ui import pyimage, pyconfiguration, pycontainer, pyevents
 
@@ -13,15 +10,13 @@ class PyWindow:
 			self._tk = tkinter.Toplevel(parent._tk)
 		else: self._tk = tkinter.Tk()
 
+		self._children = weakref.WeakValueDictionary()
 		self._event_handler = pyevents.PyWindowEvents(self)
 		self.hidden = True
 		self._windowid = id
 		self.title = "PyWindow: " + self._windowid
 		self.icon = ""
 
-		self._children = weakref.WeakValueDictionary()
-		self._tick_operations = {}
-		self._autosave, self._autosave_delay = None, 0
 
 		if cfg_file is None: cfg_file = ".cfg/" + self._windowid.lower()
 		elif not cfg_file.startswith(".cfg/"): cfg_file = ".cfg/" + cfg_file
@@ -105,6 +100,9 @@ class PyWindow:
 				it automatically updates to fit all widgets and the previously set value (when resized)
 			* update: width clamped between 0 and screen_width """
 		self._tk.configure(width=max(0, min(vl, self.screen_width)))
+	def with_width(self, wd):
+		self.width = wd
+		return self
 
 	@property
 	def height(self):
@@ -116,6 +114,9 @@ class PyWindow:
 				it automatically updates to fit all widgets and the previously set value (when resized)
 		 	* update: height clamped between 0 and screen_height """
 		self._tk.configure(height=max(0, min(vl, self.screen_height)))
+	def with_height(self, ht):
+		self.height = ht
+		return self
 
 	@property
 	def title(self):
@@ -125,12 +126,14 @@ class PyWindow:
 	def title(self, value):
 		""" Update current window title """
 		self._tk.wm_title(value)
+	def with_title(self, title):
+		self.title = title
+		return self
 
 	@property
 	def icon(self):
 		""" Get current window icon """
 		return self._tk.wm_iconbitmap()
-
 	@icon.setter
 	def icon(self, value):
 		""" Set window icon, this must be a valid path to an image
@@ -145,18 +148,19 @@ class PyWindow:
 									pyimage.PyImage(file=os.path.join(path, os.pardir, value + ".png")))
 			elif "win" in sys.platform: self._tk.iconbitmap(value + ".ico")
 		except Exception as e: print("ERROR", "Setting icon bitmap {}".format(e)); raise
+	def with_icon(self, icon):
+		self.icon = icon
+		return self
 
 	# ===== Base Operations =====
 	def load_configuration(self):
 		""" (Re)load configuration from file """
 		self._configuration.load()
 		self._tk.wm_geometry(self._configuration.get("geometry").value)
-		self.autosave_delay = self._configuration.get_or_create("autosave_delay", 5)
 
 	def write_configuration(self):
 		""" Write window configuration to file (if dirty) """
 		self._configuration["geometry"] = self._tk.wm_geometry()
-		self._configuration["autosave_delay"] = self._autosave_delay
 		self._configuration.save()
 
 	def open_window(self, id, window):
@@ -164,7 +168,7 @@ class PyWindow:
 		 	(any window already assigned to this identifier will be destroyed)
 		 	Returns the bound window if successful, None otherwise
 		 	* update: it is no longer an error if a previously open window cannot be closed
-		 	* update: now returns None instead of False """
+		 	* update: returns None if not successful instead of False """
 		id = id.lower()
 		self.close_window(id)
 		window.id = id
@@ -180,7 +184,7 @@ class PyWindow:
 		wd = self._children.get(id)
 		if self._children is not None and wd is not None:
 			try: wd.destroy()
-			except Exception as e: print("ERROR", "Couldn't destroy window '{}' properly: ".format(id), e); return False
+			except Exception as e: print("ERROR", "Couldn't destroy window '{}' properly:".format(id), e); return False
 		return True
 
 	def get_window(self, id):
@@ -223,8 +227,8 @@ class PyWindow:
 	def _create_rescheduled_task(self, fn, delay):
 		def _call_task(kwargs):
 			try:
-				fn(**kwargs)
-				self._tk.after(delay, _call_task, kwargs)
+				rs = fn(**kwargs)
+				if rs is not False: self._tk.after(delay, _call_task, kwargs)
 			except Exception as e:
 				print("WARNING", "During processing of scheduled task '{}', it won't be rescheduled!".format(fn.__name__))
 				print("ERROR", "While calling scheduled task '{}':".format(fn.__name__), e)
@@ -241,6 +245,7 @@ class PyWindow:
 		for cd in self._children.values():
 			if cd.is_alive: cd.destroy()
 		self._tk.destroy()
+	close = destroy
 
 	def force_update(self):
 		""" Forces background updates that would normally only happen when the program is idle """
