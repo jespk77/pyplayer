@@ -1,7 +1,9 @@
 def try_call_handler(event_name, cb, **kwargs):
 	args = cb.__code__.co_varnames
 	try: return cb(**{key: value for key, value in kwargs.items() if key in args})
-	except Exception as e: print("ERROR", "While processing event '{}':".format(event_name), e)
+	except Exception as e:
+		import traceback
+		print("ERROR", "While processing event '{}':\n".format(event_name), "".join(traceback.format_exception(e.__class__, e, e.__traceback__)))
 
 def block_action(): return "break"
 
