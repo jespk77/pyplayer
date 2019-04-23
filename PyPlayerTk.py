@@ -1,5 +1,4 @@
-import datetime
-import humanize
+import datetime, humanize
 
 from console import TextConsole
 from ui import pywindow, pyelement
@@ -10,12 +9,13 @@ class PyPlayerCloseReason(enum.Enum):
 	RESTART = 1,
 	MODULE_CONFIGURE = 2
 
-initial_cfg = { "autosave_delay": 5, "directory":{}, "default_path": "", "header_format": "PyPlayer - %a %b %d, %Y %I:%M %p -", "loglevel": "info" }
+initial_cfg = { "autosave_delay": 5, "directory":{}, "default_path": "", "header_format": "PyPlayer - %a %b %d, %Y %I:%M %p -", "loglevel": "info", "timer_command": "effect ftl_distress_beacon" }
 progressbar_cfg = { "background": "cyan", "troughcolor": "black" }
 browser_cfg = { "background": "black", "selectforeground": "cyan" }
 console_cfg = { "background": "black", "error.foreground": "red", "font":{"family":"terminal","size":10}, "info.foreground": "yellow",
 				"insertbackground": "white", "reply.foreground": "gray", "selectbackground": "gray30" }
 
+second_time = datetime.timedelta(seconds=1)
 class PyPlayer(pywindow.PyWindow):
 	def __init__(self, root):
 		pywindow.PyWindow.__init__(self, root, id="client", initial_cfg=initial_cfg)
@@ -26,6 +26,7 @@ class PyPlayer(pywindow.PyWindow):
 		self.title_song = ""
 		self.icon = "assets/icon"
 		self._interp = self._cmd = None
+		self._timer = None
 
 		try:
 			import psutil
@@ -68,7 +69,20 @@ class PyPlayer(pywindow.PyWindow):
 		import pylogging
 		pylogging.get_logger().log_level = value
 
+	def set_timer(self, hour=0, minute=0, second=0):
+		if hour == minute == second == 0: raise ValueError("Timer must be at least one second")
+		self._timer = datetime.timedelta(hours=hour, minutes=minute, seconds=second+1)
+
 	def window_tick(self, date):
+		if self._timer is not None:
+			if self._timer.total_seconds() == 1:
+				self._interp.put_command(self.configuration["timer_command"].value)
+				self.content["header_left"].text = ""
+				self._timer = None
+			else:
+				self._timer -= second_time
+				self.content["header_left"].text = "\u23f0 {!s}".format(self._timer)
+
 		self.content["header"].text = date.strftime(self.configuration["header_format"].value)
 		uptime = str(date - self._boottime).split(".")[0]
 		if self._process is not None: self.content["header_right"].text = "{} / {}".format(uptime, humanize.naturalsize(self._process.memory_info().rss))
