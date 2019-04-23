@@ -262,7 +262,10 @@ class PyTkRoot(PyWindow):
 		PyWindow.__init__(self, parent=None, id=name)
 		self.decorator = False
 		self.hidden = False
-		self.schedule(sec=1, loop=True, func=self.window_tick, date=datetime.datetime.today())
+		self.schedule(sec=1, func=self._tick, loop=True)
+
+	def _tick(self):
+		self.window_tick(datetime.datetime.today())
 
 	def open_window(self, id, window):
 		""" Open connected window, after this is called the root window will automatically be set to hidden """
