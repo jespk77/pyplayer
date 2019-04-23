@@ -2,6 +2,7 @@ import os, sys, tkinter, weakref
 
 from ui import pyimage, pyconfiguration, pycontainer, pyevents
 
+cfg_folder = ".cfg"
 class PyWindow:
 	""" Framework class for windows, they have to be created with a valid root """
 	def __init__(self, parent, id, initial_cfg=None, cfg_file=None):
@@ -17,13 +18,16 @@ class PyWindow:
 		self.title = "PyWindow: " + self._windowid
 		self.icon = ""
 
-
-		if cfg_file is None: cfg_file = ".cfg/" + self._windowid.lower()
-		elif not cfg_file.startswith(".cfg/"): cfg_file = ".cfg/" + cfg_file
+		if not os.path.isdir(cfg_folder): os.mkdir(cfg_folder)
+		if cfg_file is None: cfg_file = cfg_folder + "/" + self._windowid.lower()
+		elif not cfg_file.startswith(cfg_folder): cfg_file = cfg_folder + cfg_file
 		self._configuration = pyconfiguration.ConfigurationFile(filepath=cfg_file, cfg_values=initial_cfg)
 		self._content = pycontainer.PyFrame(self, self._configuration.get_or_create("content", {}))
 		self.create_widgets()
 		self._content.show()
+
+		@self.event_handler.WindowDestroy
+		def _window_close(): self._configuration.save()
 
 	def create_widgets(self):
 		""" Can be used in subclasses to separate widget creation and placement from the rest of the program,
