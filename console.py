@@ -39,7 +39,7 @@ class TextConsole(pyelement.PyTextfield):
 
 		@self.event_handler.KeyEvent("escape")
 		def _on_escape_key():
-			self.set_current_line()
+			self.set_current_line("")
 			return self.event_handler.block
 
 		@self.event_handler.KeyEvent("enter")
@@ -51,14 +51,25 @@ class TextConsole(pyelement.PyTextfield):
 				self.accept_input = False
 		self.add_reply(" -PyPlayer ready-", tags=("reply",))
 
+		@self.event_handler.KeyEvent("up")
+		def _on_previous_history():
+			self.set_current_line(self._cmdhistory.get_previous())
+			return self.event_handler.block
+
+		@self.event_handler.KeyEvent("down")
+		def _on_next_history():
+			self.set_current_line(self._cmdhistory.get_next(""))
+			return self.event_handler.block
+
 	def get_current_line(self):
 		""" Get the text on the current line """
 		return self.get_text(input_mark, self.current_end)
-	def set_current_line(self, text=None):
-		""" Update the text on the current line (pass nothing to clear) """
-		self.current_pos = self.back
-		self.delete(input_mark, self.current_end)
-		self.insert(input_mark, text)
+	def set_current_line(self, text=""):
+		""" Update the text on the current line, has no effect if called with none """
+		if text is not None:
+			self.current_pos = self.back
+			self.delete(input_mark, self.current_end)
+			if text: self.insert(input_mark, text)
 
 	def add_reply(self, reply, tags=(), prefix=None):
 		if not self.accept_input:
