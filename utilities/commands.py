@@ -8,6 +8,8 @@ def process_command(cmd, stdin=None, stdout=None, stderr=None, timeout=None):
 			- If stderr is provided, must be callable, it receives any error messages from the command; when not provided errors are directed to stdout
 	 	Waits for the process to be finished but can be aborted if it takes longer than n seconds using 'timeout' argument
 	 	Returns the finished process when termated """
+	if isinstance(cmd, str): cmd = cmd.split(" ")
+
 	if stderr is None: stderr = stdout
 	import subprocess
 	if "win" in sys.platform:
@@ -15,7 +17,7 @@ def process_command(cmd, stdin=None, stdout=None, stderr=None, timeout=None):
 		pi.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 	else: pi = None
 
-	pc = subprocess.Popen(cmd.split(" "), startupinfo=pi, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	pc = subprocess.Popen(cmd, startupinfo=pi, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	while pc.returncode is None:
 		try:
 			out, err = pc.communicate(stdin, timeout=1)
