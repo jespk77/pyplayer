@@ -2,35 +2,11 @@ import datetime
 import sys
 
 from ui import pywindow, pyelement, pyimage
+from utilities import commands
 
 resolution = 350, 200
 program_info_file = "pyplayer.json"
-def get_version_string(): return "{0.major}.{0.minor}".format(sys.version_info)
 
-def process_command(cmd, stdin=None, stdout=None, stderr=None, timeout=None):
-	""" Run a command that can be interacted with using standard IO: 'stdin', 'stdout', 'stderr'
-			- If stdin is provided, it must be a bytes object
-			- If stdout is provided, it must be callable: all command output is directed to this method'; when not provided all output is ignored
-			- If stderr is provided, must be callable, it receives any error messages from the command; when not provided errors are directed to stdout
-	 	Waits for the process to be finished but can be aborted if it takes longer than n seconds using 'timeout' argument
-	 	Returns the finished process when termated """
-	if stderr is None: stderr = stdout
-	import subprocess
-	if "win" in sys.platform:
-		pi = subprocess.STARTUPINFO()
-		pi.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-	else: pi = None
-
-	pc = subprocess.Popen(cmd.split(" "), startupinfo=pi, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-	while pc.returncode is None:
-		try:
-			out, err = pc.communicate(stdin, timeout=1)
-			if out and stdout: stdout(out.decode())
-			if err and stderr: stderr(err.decode())
-		except subprocess.TimeoutExpired: pass
-		except Exception as e: print("error communicating:", e); break
-	pc.wait(timeout)
-	return pc
 
 class PySplashWindow(pywindow.PyTkRoot):
 	def __init__(self):
@@ -68,12 +44,12 @@ class PySplashWindow(pywindow.PyTkRoot):
 		if "no_update" not in sys.argv:
 			print("INFO", "Doing an update check!")
 			self.status_text = "Checking for updates..."
-			pc = process_command("git pull -s recursive -Xtheirs", stdout=self._git_status)
+			pc = commands.process_command("git pull -s recursive -Xtheirs", stdout=self._git_status)
 
 			if pc.returncode:
 				self.status_text = "Failed to update PyPlayer, continuing in 5 seconds..."
 				return self.schedule(sec=5, func=self._load_modules)
-			process_command("git rev-parse HEAD", stdout=self.git_hash)
+			commands.process_command("git rev-parse HEAD", stdout=self.git_hash)
 		else:
 			self.status_text = "Updating skipped."
 			self.schedule(sec=1, func=self._load_modules, dependency_check=False)
@@ -102,7 +78,7 @@ class PySplashWindow(pywindow.PyTkRoot):
 		self._update_data = out[0], datetime.datetime.strptime(out[1], "%Y-%m-%d %H:%M:%S %z")
 
 	def _load_modules(self, dependency_check=True):
-		process_command("git log -1 --pretty=%B%ci", stdout=self._git_update)
+		commands.process_command("git log -1 --pretty=%B%ci", stdout=self._git_update)
 		import json
 		with open(program_info_file, "r") as file:
 			try: self._cfg = json.load(file)
@@ -111,7 +87,7 @@ class PySplashWindow(pywindow.PyTkRoot):
 				self.schedule(sec=5, func=self.destroy)
 				return
 
-		vs = get_version_string()
+		vs = commands.get_python_version()
 		if self._cfg["python_version"] != vs:
 			print("WARNING", "Installed Python version ({}) different from build version ({}), things might not work correctly".format(vs, self._cfg["python_version"]))
 
@@ -136,7 +112,7 @@ class PySplashWindow(pywindow.PyTkRoot):
 				pip_install = "{} -m pip install {}"
 				if self._platform == "linux": pip_install += " --user"
 				self.status_text = "Checking dependencies"
-				for dp in dependencies: process_command(pip_install.format(sys.executable, dp), stdout=self._pip_status)
+				for dp in dependencies: commands.process_command(pip_install.format(sys.executable, dp), stdout=self._pip_status)
 			else: print("INFO", "No dependencies found, continuing...")
 		self.status_text = "Loading PyPlayer..."
 		self.schedule(sec=1, func=self._load_program)
