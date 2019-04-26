@@ -71,7 +71,7 @@ def convert(url, filename=None):
 def process_path(narg, nargc, **data):
 	if nargc == 1:
 		argn = " ".join(narg)
-		path = client["directory"].get(argn)
+		path = client.configuration["directory"].get(argn)
 		if path is not None: return process_song(**data, path=path)
 		else: return messagetypes.Reply("Unknown path '{}'".format(argn))
 
