@@ -23,9 +23,9 @@ class ConfigurationItem:
 	def __len__(self):
 		try: return len(self.value)
 		except TypeError: return 1 if self.value is not None else 0
-	def __getitem__(self, item): raise KeyError(item)
-	def __setitem__(self, key, value): raise KeyError(key)
-	def __delitem__(self, key): raise KeyError(key)
+	def __getitem__(self, item): raise KeyError("ConfigurationItem has no items: " + str(item))
+	def __setitem__(self, key, value): raise KeyError("ConfigurationItem has no items: " + str(key))
+	def __delitem__(self, key): raise "ConfigurationItem has no items: " + str(key)
 	def __str__(self): return "ConfigurationItem({!s})".format(self._value)
 
 
@@ -52,7 +52,9 @@ class Configuration(ConfigurationItem):
 			tc, tn = type(cval), type(nval)
 			if cval and tc is not tn: raise TypeError("Incompatible types: '{.__name__}' and '{.__name__}'!".format(tc, tn))
 			self._value[key[0]] = nval
-		else: self._value[key[0]][key[1]] = value
+		else:
+			if key[0] not in self._value: self._value[key[0]] = Configuration()
+			self._value[key[0]][key[1]] = value
 		self._dirty = True
 
 	def __delitem__(self, key):
