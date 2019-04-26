@@ -195,7 +195,7 @@ class PyWindow:
 		""" Get the child window that was bound to given id, returns None if the id wasn't bound """
 		id = id.lower()
 		wd = self._children.get(id)
-		return wd if wd.is_alive else None
+		return wd if wd is not None and wd.is_alive else None
 
 	@property
 	def always_on_top(self):
