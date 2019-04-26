@@ -32,7 +32,7 @@ class ConfigurationItem:
 class Configuration(ConfigurationItem):
 	""" Object that stores a number of configuration items and/or sub-configuration objects
 	 	Each item is bound to a keyword, similar to a dictionary, and getting/setting values is done through higher levels recursively """
-	def __init__(self, cfg_values, read_only=False):
+	def __init__(self, cfg_values=None, read_only=False):
 		if cfg_values: ConfigurationItem.__init__(self, value={ key: create_entry(value, read_only) for key, value in cfg_values.items() })
 		else: ConfigurationItem.__init__(self, value={})
 		self._dirty = False
@@ -96,7 +96,7 @@ class Configuration(ConfigurationItem):
 class ConfigurationFile(Configuration):
 	""" Same as a Configuration, but adds the ability read from/write to file """
 	cfg_version = "1b"
-	def __init__(self, filepath, cfg_values, readonly=False):
+	def __init__(self, filepath, cfg_values=None, readonly=False):
 		self._file = filepath
 		Configuration.__init__(self, cfg_values=cfg_values, read_only=readonly)
 		self._initialvalues = self._value
