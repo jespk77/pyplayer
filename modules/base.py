@@ -58,9 +58,8 @@ def command_cfg(arg, argc):
 			cg.write_configuration()
 			return msg
 		elif len(arg) == 1:
-			ot = cg.configuration[arg[0]].value
-			if ot is None: return messagetypes.Reply("Option '{}' is not set".format(arg[0]))
-			else: return messagetypes.Reply("Option '{}' is set to '{}'".format(arg[0], ot))
+			try: return messagetypes.Reply("Option '{}' is set to '{}'".format(arg[0], cg.configuration[arg[0]].value))
+			except KeyError: return messagetypes.Reply("Option '{}' was not found".format(arg[0]))
 
 def command_debug_memory(arg, argc):
 	if argc == 0:
@@ -111,9 +110,22 @@ def command_timer(arg, argc):
 			except ValueError as e: return messagetypes.Reply(str(e))
 		else: return messagetypes.Reply("Cannot decode time syntax, try again...")
 
+version_command = ["git", "log", "-1", "--pretty=%H//%ci"]
+version_output = None
 def command_version(arg, argc):
 	if argc == 0:
-		return messagetypes.Reply("PyPlayer was last updated on '{date}'\n  -> '{msg}'".format(msg=client.root.update_message, date=client.root.update_date))
+		if not version_output:
+			from utilities import commands
+			def get_output(o): global version_output; version_output = o
+			commands.process_command(version_command, stdout=get_output)
+
+		try:
+			version, date = version_output.split("//")
+			date = datetime.datetime.strptime(date, "%Y-%m-%d %H:%M:%S %z\n")
+			return messagetypes.Reply("The current version is {version:.7}, it was released on {date}".format(version=version, date=date.strftime("%b %d, %Y")))
+		except Exception as e:
+			print("ERROR", "Processing git version command:", e)
+			return messagetypes.Reply("Unable to get version number")
 
 def initialize():
 	cmds = client.configuration.get_or_create("startup_commands", []).value
