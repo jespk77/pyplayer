@@ -8,11 +8,6 @@ interpreter = client = None
 
 # MODULE SPECIFIC VARIABLES
 cfg_folder = ".cfg/"
-timer = None
-time_str = ""
-second_time = datetime.timedelta(seconds=1)
-last_drink = 0
-drink_delay = 0
 
 def get_time_from_string(delay):
 	try:
@@ -32,34 +27,17 @@ def get_time_from_string(delay):
 		if len(sec) > 0 and sec[0] != "": sec = int(sec[0])
 		else: sec = 0
 	except ValueError: return None
-	if hour == min == sec == 0: return None
-	return datetime.timedelta(hours=hour, minutes=min, seconds=sec)
-
-def on_tick(client, event):
-	timer_check()
-
-def timer_check():
-	global timer
-	time_widget = client.widgets["header_left"]
-	if timer is not None and time_widget is not None:
-		timer -= second_time
-		if timer.total_seconds() == 0:
-			timer = None
-			client.widgets["header_left"].display_text = ""
-			client.unsubscribe_event("tick_second", on_tick)
-			interpreter.put_command("effect ftl_distress_beacon")
-		else: client.widgets["header_left"].display_text = str(timer)#"\u23f0 " + str(timer)
-	else: timer = None
+	else: return hour, min, sec
 
 # ===== MAIN COMMANDS =====
 def command_cfg(arg, argc):
 	if argc > 0:
-		cg = client.children.get(arg[0])
+		cg = client.get_window(arg[0])
 		if cg is None:
 			import os
 			file = os.path.join(cfg_folder, arg[0])
 			if os.path.isfile(file):
-				cg = pyconfiguration.Configuration(filepath=file)
+				cg = pyconfiguration.ConfigurationFile(filepath=file)
 				arg.pop(0)
 			else: cg = client
 		else: arg.pop(0)
@@ -69,18 +47,18 @@ def command_cfg(arg, argc):
 			key, value = arg
 			if value == "none":
 				try:
-					del cg[key]
+					del cg.configuration[key]
 					msg = messagetypes.Reply("Option '{}' was deleted".format(key))
 				except Exception as e: return messagetypes.Reply(str(e))
 			else:
 				try:
-					cg[key] = value
+					cg.configuration[key] = value
 					msg = messagetypes.Reply("Option '{}' is updated to '{}'".format(key, value))
 				except Exception as e: return messagetypes.Reply(str(e))
 			cg.write_configuration()
 			return msg
 		elif len(arg) == 1:
-			ot = cg[arg[0]]
+			ot = cg.configuration[arg[0]].value
 			if ot is None: return messagetypes.Reply("Option '{}' is not set".format(arg[0]))
 			else: return messagetypes.Reply("Option '{}' is set to '{}'".format(arg[0], ot))
 
@@ -127,13 +105,10 @@ def command_timer(arg, argc):
 	if argc == 1:
 		time = get_time_from_string(arg[0])
 		if time is not None:
-			if isinstance(time, datetime.timedelta):
-				global timer
-				timer = time
-				client.widgets["header_left"].display_text = str(timer)#"\u23f0 {}".format(timer)
-				client.subscribe_event("tick_second", on_tick)
+			try:
+				client.set_timer(*time)
 				return messagetypes.Reply("Timer set")
-			else: return messagetypes.Reply(str(time))
+			except ValueError as e: return messagetypes.Reply(str(e))
 		else: return messagetypes.Reply("Cannot decode time syntax, try again...")
 
 def command_version(arg, argc):
@@ -141,7 +116,7 @@ def command_version(arg, argc):
 		return messagetypes.Reply("PyPlayer was last updated on '{date}'\n  -> '{msg}'".format(msg=client.root.update_message, date=client.root.update_date))
 
 def initialize():
-	cmds = client.get_or_create("startup_commands", [])
+	cmds = client.configuration.get_or_create("startup_commands", []).value
 	for c in cmds: interpreter.put_command(c)
 
 commands = {
