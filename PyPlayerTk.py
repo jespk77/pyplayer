@@ -126,7 +126,7 @@ class PyPlayer(pywindow.PyWindow):
 		reason = reason.upper()
 		try:
 			self._flags = PyPlayerCloseReason[reason]
-			self.schedule(func=self.destroy)
+			self.schedule(sec=1, func=self.destroy)
 		except KeyError: raise ValueError("Unknown reason '{}'".format(reason))
 
 	def on_reply(self, reply, tags=(), cmd=None):
