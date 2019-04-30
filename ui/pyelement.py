@@ -53,6 +53,9 @@ class PyElement:
 		try: self._tk.configure(**self._cfg.value)
 		except Exception as e: print("ERROR", "Loading configuration for widget '{}':".format(self.widget_id), e)
 
+	def __getitem__(self, item):
+		return self._tk.cget(item)
+
 
 element_cfg = { "background": background_color, "foreground": foreground_color }
 # === ELEMENT ITEMS ===
