@@ -23,8 +23,8 @@ class PyWindow:
 		elif not cfg_file.startswith(cfg_folder): cfg_file = cfg_folder + cfg_file
 		self._configuration = pyconfiguration.ConfigurationFile(filepath=cfg_file, cfg_values=initial_cfg)
 		self._content = pycontainer.PyFrame(self, self._configuration.get_or_create("content", {}))
-		self.create_widgets()
 		self._content.show()
+		self.create_widgets()
 
 		@self.event_handler.WindowDestroy
 		def _window_close(): self._configuration.save()

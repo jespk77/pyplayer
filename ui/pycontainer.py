@@ -1,10 +1,18 @@
 from ui import pyelement, pyconfiguration
 import tkinter
 
-class WidgetLayer:
-	def __init__(self, frame):
-		self._frame = frame
-		self._layers = {}
+class BaseWidgetContainer:
+	def __init__(self, container, tk, configuration):
+		if configuration is None: configuration = pyconfiguration.Configuration()
+		self._container = container
+		self._tk = tk
+		self._elements = {}
+		self._subframes = []
+		self._cfg = configuration
+		self._tk.configure(background="black")
+
+	@property
+	def configuration(self): return self._cfg
 
 	def row(self, index, minsize=None, padding=None, weight=None):
 		""" Customize row behavior at given index:
@@ -12,7 +20,7 @@ class WidgetLayer:
 		 		- padding: amount of padding set to the biggest element in this row
 		 		- weight: how much this row should expand when the window is resized
 		 	Returns itself for simplified updating """
-		self._frame.grid_rowconfigure(index, minsize=minsize, pad=padding, weight=weight)
+		self._tk.grid_rowconfigure(index, minsize=minsize, pad=padding, weight=weight)
 		return self
 
 	def column(self, index, minsize=None, padding=None, weight=None):
@@ -21,42 +29,24 @@ class WidgetLayer:
 				- padding: amount of padding set to the biggest element in this column
 				- weight: how much this column should expand when the window is resized
 			Returns itself for simplified updating """
-		self._frame.grid_columnconfigure(index, minsize=minsize, pad=padding, weight=weight)
+		self._tk.grid_columnconfigure(index, minsize=minsize, pad=padding, weight=weight)
 		return self
 
-	def __getitem__(self, item):
-		try: item = int(item)
-		except ValueError: item = None
-		if not item: raise ValueError("Index must be convertible to a number")
-		elif item < 0: raise IndexError("Index cannot be negative")
+	def place_element(self, element, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		if isinstance(element, pyelement.PyElement):
+			self._elements[element.widget_id] = element
+			element._tk.grid(row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
+			return self._elements[element.widget_id]
+		else: raise ValueError("Placed element must be a 'PyElement', not '{.__name__}'".format(type(element)))
 
-		l = self._layers.get(item)
-		if not l:
-			l = PyFrame(self._frame, self._frame["layer_{}".format(item)])
-			self._layers[item] = l
-		return l
+	def place_frame(self, frame, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		if isinstance(frame, BaseWidgetContainer):
+			self._subframes.append(frame)
+			frame._tk.grid(row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
+			return len(self._subframes) - 1
+		else: raise ValueError("Placed frame must be a 'PyFrame', not '{.__name__}'".format(type(frame)))
 
-class BaseWidgetContainer:
-	def __init__(self, container, tk, configuration):
-		self._container = container
-		self._tk = tk
-		self._elements = {}
-		self._layer = WidgetLayer(self._tk)
-		self._cfg = configuration
-
-	@property
-	def layer(self): return self._layer
-	@property
-	def configuration(self): return self._cfg
-
-	def place_widget(self, widget, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
-		if not isinstance(widget, pyelement.PyElement): raise ValueError("Passed widget must be a 'PyElement', not '{.__name__}'".format(type(widget)))
-
-		self._elements[widget.widget_id] = widget
-		widget._tk.grid(row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
-		return self._elements[widget.widget_id]
-
-	def remove_widget(self, id):
+	def remove_element(self, id):
 		id = id.lower()
 		prev_wd = self._elements.get(id)
 		if prev_wd:
@@ -67,15 +57,14 @@ class BaseWidgetContainer:
 			except Exception as e: print("ERROR", "Destroying previously bound widget for '{}':".format(id), e)
 
 	def show(self):
-		""" Make this container (and all of its contained widgets) visible on screen """
 		self._tk.pack(fill="both", expand=True)
 
 	def __getitem__(self, item):
 		""" Get the element that was assigned to given name, returns this element or None if nothing bound """
 		return self._elements.get(item)
 
-	def __setitem__(self, key, value): raise AttributeError("Cannot set or replace elements directly, use 'place_widget' instead!")
-	def __delitem__(self, key): raise AttributeError("Cannot delete elements directly, use 'remove_widget' instead!")
+	def __setitem__(self, key, value): raise AttributeError("Cannot set or replace elements directly, use 'place_element' instead!")
+	def __delitem__(self, key): raise AttributeError("Cannot delete elements directly, use 'remove_element' instead!")
 
 class PyFrame(BaseWidgetContainer):
 	def __init__(self, parent, configuration=None):
@@ -89,3 +78,9 @@ class PyLabelFrame(BaseWidgetContainer):
 class PyCanvas(BaseWidgetContainer):
 	def __init__(self, parent, configuration=None):
 		BaseWidgetContainer.__init__(self, parent, tkinter.Canvas(parent._tk), configuration)
+
+class PyScrollableFrame(PyFrame):
+	def __init__(self, parent, configuration=None):
+		PyFrame.__init__(self, parent, configuration)
+		self._scrollable = PyCanvas(self)
+		self._content = PyFrame(self._scrollable)
