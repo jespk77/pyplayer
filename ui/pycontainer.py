@@ -4,15 +4,19 @@ import tkinter
 class BaseWidgetContainer:
 	def __init__(self, container, tk, configuration):
 		if configuration is None: configuration = pyconfiguration.Configuration()
+		elif isinstance(configuration, dict): configuration = pyconfiguration.Configuration(configuration)
 		self._container = container
 		self._tk = tk
 		self._elements = {}
 		self._subframes = []
 		self._cfg = configuration
-		self._tk.configure(background="black")
+		self.load_configuration()
 
 	@property
 	def configuration(self): return self._cfg
+	def load_configuration(self):
+		try: self._tk.configure(**{key: value for key, value in self._cfg.value.items() if not isinstance(value, dict)})
+		except tkinter.TclError as e: print("ERROR", "Failed to load configuration:", e)
 
 	def row(self, index, minsize=None, padding=None, weight=None):
 		""" Customize row behavior at given index:
@@ -66,18 +70,26 @@ class BaseWidgetContainer:
 	def __setitem__(self, key, value): raise AttributeError("Cannot set or replace elements directly, use 'place_element' instead!")
 	def __delitem__(self, key): raise AttributeError("Cannot delete elements directly, use 'remove_element' instead!")
 
+frame_cfg = {"background": "black"}
 class PyFrame(BaseWidgetContainer):
 	def __init__(self, parent, configuration=None):
 		if configuration and not isinstance(configuration, pyconfiguration.Configuration): raise ValueError("Configuration, when not empty, must be a configuration object, not '{.__name__}'! Check your setup!".format(type(configuration)))
-		BaseWidgetContainer.__init__(self, parent, tkinter.Frame(parent._tk), configuration)
+		BaseWidgetContainer.__init__(self, parent, tkinter.Frame(parent._tk, **frame_cfg), configuration)
 
+label_cfg = {"foreground": "white"}
+label_cfg.update(frame_cfg)
 class PyLabelFrame(BaseWidgetContainer):
 	def __init__(self, parent, configuration=None):
-		BaseWidgetContainer.__init__(self, parent, tkinter.LabelFrame(parent._tk), configuration)
+		BaseWidgetContainer.__init__(self, parent, tkinter.LabelFrame(parent._tk, **label_cfg), configuration)
+
+	@property
+	def label(self): return self._tk.cget("text")
+	@label.setter
+	def label(self, lbl): self._tk.configure(text=lbl)
 
 class PyCanvas(BaseWidgetContainer):
 	def __init__(self, parent, configuration=None):
-		BaseWidgetContainer.__init__(self, parent, tkinter.Canvas(parent._tk), configuration)
+		BaseWidgetContainer.__init__(self, parent, tkinter.Canvas(parent._tk, **frame_cfg), configuration)
 
 class PyScrollableFrame(PyFrame):
 	def __init__(self, parent, configuration=None):
