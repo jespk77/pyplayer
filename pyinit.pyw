@@ -175,7 +175,7 @@ class PySplashWindow(pywindow.PyTkRoot):
 				mop["new"] = True
 				modules[mid] = mop
 
-		from utilities import module_select
+		import module_select
 		ms = module_select.ModuleSelector(self, modules)
 		ms.event_handler.WindowDestroy(lambda: self._module_done(ms))
 
