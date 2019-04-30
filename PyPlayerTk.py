@@ -19,10 +19,10 @@ second_time = datetime.timedelta(seconds=1)
 class PyPlayer(pywindow.PyWindow):
 	def __init__(self, root):
 		pywindow.PyWindow.__init__(self, root, id="client", initial_cfg=initial_cfg)
-		self.content.place_widget(pyelement.PyTextlabel(self.content, "header_left", initial_cfg={"background": "black", "foreground": "cyan"}))
-		self.content.place_widget(pyelement.PyTextlabel(self.content, "header", initial_cfg={"background": "black"}), column=1)
-		self.content.place_widget(pyelement.PyTextlabel(self.content, "header_right", initial_cfg={"background": "black", "foreground": "gray"}), column=2)
-		self.content.layer.column(1, minsize=30, weight=1)
+		self.content.place_element(pyelement.PyTextlabel(self.content, "header_left", initial_cfg={"background": "black", "foreground": "cyan"}))
+		self.content.place_element(pyelement.PyTextlabel(self.content, "header", initial_cfg={"background": "black"}), column=1)
+		self.content.place_element(pyelement.PyTextlabel(self.content, "header_right", initial_cfg={"background": "black", "foreground": "gray"}), column=2)
+		self.content.column(1, minsize=30, weight=1)
 		self.title_song = ""
 		self.icon = "assets/icon"
 		self._interp = self._cmd = None
@@ -39,14 +39,14 @@ class PyPlayer(pywindow.PyWindow):
 
 		pbar = pyelement.PyProgressbar(self.content, "progressbar", initial_cfg=progressbar_cfg)
 		pbar.maximum = 1
-		self.content.place_widget(pbar, row=1, columnspan=9)
+		self.content.place_element(pbar, row=1, columnspan=9)
 		@pbar.event_handler.MouseClickEvent("left")
 		def on_progressbar_click(x):
 			try: self._interp.put_command("player position {}".format(x / pbar.width))
 			except Exception as e: print("WARNING", "Error while updating position:", e)
 
 		console = TextConsole(self.content, initial_cfg=console_cfg)
-		self.content.place_widget(console, row=3, columnspan=9).set_focus()
+		self.content.place_element(console, row=3, columnspan=9).set_focus()
 		@console.event_handler.KeyEvent("enter")
 		def _command_confirm():
 			cmd = console.get_current_line().rstrip("\n")
@@ -55,7 +55,7 @@ class PyPlayer(pywindow.PyWindow):
 				self._interp.put_command(cmd, self._cmd)
 			return console.event_handler.block
 
-		self.content.layer.row(3, minsize=100, weight=1)
+		self.content.row(3, minsize=100, weight=1)
 		self._flags = PyPlayerCloseReason.NONE
 		self.focus_followsmouse()
 		self.update_loglevel()

@@ -1,5 +1,4 @@
-import datetime
-import sys
+import datetime, sys
 
 from ui import pywindow, pyelement, pyimage
 from utilities import commands
@@ -12,23 +11,23 @@ class PySplashWindow(pywindow.PyTkRoot):
 	def __init__(self):
 		pywindow.PyTkRoot.__init__(self, "splash")
 		self.center_window(*resolution)
-		self.content.layer.column(0, weight=1, minsize=260).row(1, weight=1)
+		self.content.column(0, weight=1, minsize=260).row(1, weight=1)
 		head = pyelement.PyTextlabel(self.content, "header")
-		self.content.place_widget(head)
+		self.content.place_element(head)
 
 		btn = pyelement.PyButton(self.content, "close_window", initial_cfg={"highlightthickness": 0, "borderwidth": 0})
 		btn.text = "X"
 		btn.command = self.destroy
-		self.content.place_widget(btn, column=1)
+		self.content.place_element(btn, column=1)
 
 		logo = pyimage.PyImage(file="assets/logo")
 		logo_label = pyelement.PyTextlabel(self.content, "logo_image")
 		logo_label.image = logo
-		self.content.place_widget(logo_label, row=1, columnspan=2)
+		self.content.place_element(logo_label, row=1, columnspan=2)
 
 		label_status = pyelement.PyTextlabel(self.content, "label_status", initial_cfg={"cursor": "watch"})
 		label_status.text = "Initializing..."
-		self.content.place_widget(label_status, row=2, columnspan=2)
+		self.content.place_element(label_status, row=2, columnspan=2)
 
 		self._cfg = self._interp = None
 		self._platform = sys.platform
