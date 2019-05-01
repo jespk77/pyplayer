@@ -51,7 +51,7 @@ class PyWindowEvents:
 		self._w, self._h = self._wd.width, self._wd.height
 		@wraps(cb)
 		def wrapper(event):
-			if event.widget is self._wd.window_handle and (self._w != event.width or self._h != event.height):
+			if event.widget is self._wd._tk and (self._w != event.width or self._h != event.height):
 				try_call_handler(event_name, cb, width=event.width, height=event.height)
 				self._w, self._h = event.width, event.height
 		self._wd._tk.bind(event_name, wrapper, add=True)
@@ -60,6 +60,7 @@ class PyWindowEvents:
 class PyElementEvents:
 	def __init__(self, el):
 		self._element = el
+		self._w = self._h = -1
 
 	@property
 	def block(self):
@@ -101,6 +102,21 @@ class PyElementEvents:
 		def wrapper(event): return try_call_handler(event_name, cb)
 		self._element._tk.bind(event_name, wrapper, add=True)
 		return wrapper
+
+	def ElementResize(self, cb):
+		""" Fired when the size of this element has changed
+		 	callback keywords:
+		 		* height: the new height of the element (in pixels)
+		 		* width: the new width of the element (in pixels) """
+		event_name = "<Configure>"
+		@wraps(cb)
+		def wrapper(event):
+			if self._w != event.width or self._h != event.height:
+				self._w, self._h = event.width, event.height
+				return try_call_handler(event_name, cb, width=event.width, height=event.height)
+		self._element._tk.bind(event_name, wrapper, add=True)
+		return wrapper
+
 
 	_mouse_translations = {"left": "Button-1", "middle": "Button-2", "right": "Button-3"}
 	def MouseClickEvent(self, button, doubleclick=False, include_children=False):
