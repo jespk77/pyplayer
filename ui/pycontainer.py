@@ -81,13 +81,15 @@ class BaseWidgetContainer:
 	def __setitem__(self, key, value): raise AttributeError("Cannot set or replace elements directly, use 'place_element' instead!")
 	def __delitem__(self, key): raise AttributeError("Cannot delete elements directly, use 'remove_element' instead!")
 
-frame_cfg = {"background": "black"}
+
+frame_cfg = { "background": "black" }
 class PyFrame(BaseWidgetContainer):
 	def __init__(self, parent, configuration=None):
 		if configuration and not isinstance(configuration, pyconfiguration.Configuration): raise ValueError("Configuration, when not empty, must be a configuration object, not '{.__name__}'! Check your setup!".format(type(configuration)))
 		BaseWidgetContainer.__init__(self, parent, tkinter.Frame(parent._tk, **frame_cfg), configuration)
 
-label_cfg = {"foreground": "white"}
+
+label_cfg = { "foreground": "white" }
 label_cfg.update(frame_cfg)
 class PyLabelFrame(BaseWidgetContainer):
 	def __init__(self, parent, configuration=None):
@@ -98,12 +100,108 @@ class PyLabelFrame(BaseWidgetContainer):
 	@label.setter
 	def label(self, lbl): self._tk.configure(text=lbl)
 
+canvas_cfg = { "highlightthickness": 0 }
+canvas_cfg.update(frame_cfg)
 class PyCanvas(BaseWidgetContainer):
 	def __init__(self, parent, configuration=None):
-		BaseWidgetContainer.__init__(self, parent, tkinter.Canvas(parent._tk, **frame_cfg), configuration)
+		BaseWidgetContainer.__init__(self, parent, tkinter.Canvas(parent._tk, **canvas_cfg), configuration)
+
+	@property
+	def horizontal_command(self): return self._tk.cget("xscrollcommand")
+	@horizontal_command.setter
+	def horizontal_command(self, cmd): self._tk.configure(xscrollcommand=cmd)
+
+	@property
+	def vertical_command(self): return self._tk.cget("yscrollcommand")
+	@vertical_command.setter
+	def vertical_command(self, cmd): self._tk.configure(yscrollcommand=cmd)
+
+	@property
+	def horizontal_view(self): return self._tk.xview
+	@property
+	def vertical_view(self): return self._tk.yview
+
+	@property
+	def scrollregion(self): return self._tk.cget("scrollregion")
+	@scrollregion.setter
+	def scrollregion(self, rg): self._tk.configure(scrollregion=rg)
+
+	def get_bounds(self, tag):
+		""" Get the size (in pixels) of the element with the given tag, or 'all' for the total size """
+		return self._tk.bbox(tag)
+
 
 class PyScrollableFrame(PyFrame):
+	_content_tag = "content_frame"
+	_mouse_sensitivity = 100
+
 	def __init__(self, parent, configuration=None):
 		PyFrame.__init__(self, parent, configuration)
 		self._scrollable = PyCanvas(self)
 		self._content = PyFrame(self._scrollable)
+		PyFrame.place_frame(self, self._scrollable)
+		self._scrollable.row(0, weight=1).column(0, weight=1)
+		self._scrollbar_x = self._scrollbar_y = None
+
+		PyFrame.row(self, 0, weight=1)
+		PyFrame.column(self, 0, weight=1)
+		self._scrollable._tk.create_window((0,0), window=self._content._tk, anchor="center", tags=self._content_tag)
+
+		@self._scrollable.event_handler.ElementResize
+		def canvas_resize(width, height):
+			if not self._scrollbar_x: self._scrollable._tk.itemconfigure(self._content_tag, width=width)
+			if not self._scrollbar_y: self._scrollable._tk.itemconfigure(self._content_tag, height=height)
+		@self._content.event_handler.ElementResize
+		def content_resize(): self._scrollable.scrollregion = self._scrollable.get_bounds("all")
+		@self.event_handler.MouseScrollEvent(include_children=True)
+		def scroll_mouse(delta): self._scrollable._tk.yview_scroll(-(delta//self._mouse_sensitivity), "units")
+
+	@property
+	def content(self): return self._content
+
+	_horizontal_id = "horizontal_scrollbar"
+	@property
+	def scrollbar_x(self): return self._scrollbar_x is not None
+	@scrollbar_x.setter
+	def scrollbar_x(self, enable):
+		if not self.scrollbar_x and enable:
+			print("INFO", "Adding horizontal scrollbar")
+			self._scrollbar_x = pyelement.PyScrollbar(self, self._horizontal_id)
+			self._scrollbar_x.scrollcommand = self._scrollable.horizontal_view
+			self._scrollbar_x.orientation = "horizontal"
+			self._scrollable.horizontal_command = self._scrollbar_x.set_command
+			PyFrame.place_element(self, self._scrollbar_x, row=1, sticky="ew")
+			PyFrame.row(self, 1, minsize=20)
+
+		if self.scrollbar_x and not enable:
+			print("INFO", "Removing horizontal scrollbar")
+			PyFrame.remove_element(self, self._horizontal_id)
+			PyFrame.row(self, 1, minsize=0)
+			self._scrollbar_x = None
+
+	_vertical_id = "vertical_scrollbar"
+	@property
+	def scrollbar_y(self): return self._scrollbar_y is not None
+	@scrollbar_y.setter
+	def scrollbar_y(self, enable):
+		if not self._scrollbar_y and enable:
+			print("INFO", "Adding vertical scrollbar")
+			self._scrollbar_y = pyelement.PyScrollbar(self, self._vertical_id)
+			self._scrollbar_y.scrollcommand = self._scrollable.vertical_view
+			self._scrollbar_y.orientation = "vertical"
+			self._scrollable.vertical_command = self._scrollbar_y.set_command
+			PyFrame.place_element(self, self._scrollbar_y, column=1, sticky="ns")
+			PyFrame.column(self, 1, minsize=20)
+
+		if self.scrollbar_x and not enable:
+			print("INFO", "Removing vertical scrollbar")
+			PyFrame.remove_element(self, self._vertical_id)
+			PyFrame.column(self, 1, minsize=0)
+			self._scrollbar_y = None
+
+	def row(self, index, minsize=None, padding=None, weight=None): return self._content.row(index, minsize, padding, weight)
+	def column(self, index, minsize=None, padding=None, weight=None): return self._content.column(index, minsize, padding, weight)
+	def place_element(self, element, row=0, column=0, rowspan=1, columnspan=1, sticky="news"): return self._content.place_element(element, row, column, rowspan, columnspan, sticky)
+	def place_frame(self, frame, row=0, column=0, rowspan=1, columnspan=1, sticky="news"): return self._content.place_frame(frame, row, column, rowspan, columnspan, sticky)
+	def remove_element(self, id): return self._content.remove_element(id)
+	def __getitem__(self, item): return self._content[item]
