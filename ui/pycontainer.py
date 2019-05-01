@@ -1,4 +1,4 @@
-from ui import pyelement, pyconfiguration
+from ui import pyelement, pyconfiguration, pyevents
 import tkinter
 
 class BaseWidgetContainer:
@@ -6,11 +6,15 @@ class BaseWidgetContainer:
 		if configuration is None: configuration = pyconfiguration.Configuration()
 		elif isinstance(configuration, dict): configuration = pyconfiguration.Configuration(configuration)
 		self._container = container
+		self._event_handler = pyevents.PyElementEvents(self)
 		self._tk = tk
 		self._elements = {}
 		self._subframes = []
 		self._cfg = configuration
 		self.load_configuration()
+
+	@property
+	def event_handler(self): return self._event_handler
 
 	@property
 	def configuration(self): return self._cfg
