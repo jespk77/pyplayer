@@ -120,6 +120,18 @@ class PyElementEvents:
 			return wrapper
 		return wrapped
 
+	def MouseScrollEvent(self, include_children=False):
+		""" Fired when the mouse wheel was scrolled while the pointer is inside this widget
+		 	- supported callback keywords:
+		 	 	* delta: the amount the mouse wheel was scrolled """
+		import sys
+		code = ("<MouseWheel>",) if sys.platform == "win32" else ("<Button-4>", "<Button-5>")
+		def wrapped(cb):
+			def wrapper(event): return try_call_handler("".join(code), cb, delta=event.delta)
+			for c in code: (self._element._tk.bind_all if include_children else self._element._tk.bind)(c, wrapper, add=True)
+			return wrapper
+		return wrapped
+
 	_key_translations = {"all": "<Key>", "enter": "<Return>", "break": "<Cancel>", "shift": "<Shift_L>", "ctrl": "<Control_L>", "alt": "<Alt_L>", "pageup": "<Prior>", "pagedown": "<Next>", "capslock": "<Caps_Lock>", "numlock": "<Num_Lock>", "scrolllock": "<Scroll_Lock>", "backspace": "<BackSpace>"}
 	def KeyEvent(self, key, include_children=False):
 		""" Fired if the specified key was pressed or 'all' for all keypresses (only if this element currently has input focus)
