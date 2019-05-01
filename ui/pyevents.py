@@ -103,7 +103,7 @@ class PyElementEvents:
 		return wrapper
 
 	_mouse_translations = {"left": "Button-1", "middle": "Button-2", "right": "Button-3"}
-	def MouseClickEvent(self, button, doubleclick=False):
+	def MouseClickEvent(self, button, doubleclick=False, include_children=False):
 		""" Fired if the specified mouse button was clicked inside this widget, for double clicks add 'doubleclick=True'
 			If both single and double click are bound, both are called on double click
 		 \	- supported callback keywords:
@@ -116,12 +116,12 @@ class PyElementEvents:
 		code = "<{}>".format(button)
 		def wrapped(cb):
 			def wrapper(event): return try_call_handler(code, cb, x=event.x, y=event.y)
-			self._element._tk.bind(code, wrapper, add=True)
+			(self._element._tk.bind_all if include_children else self._element._tk.bind)(code, wrapper, add=True)
 			return wrapper
 		return wrapped
 
 	_key_translations = {"all": "<Key>", "enter": "<Return>", "break": "<Cancel>", "shift": "<Shift_L>", "ctrl": "<Control_L>", "alt": "<Alt_L>", "pageup": "<Prior>", "pagedown": "<Next>", "capslock": "<Caps_Lock>", "numlock": "<Num_Lock>", "scrolllock": "<Scroll_Lock>", "backspace": "<BackSpace>"}
-	def KeyEvent(self, key):
+	def KeyEvent(self, key, include_children=False):
 		""" Fired if the specified key was pressed or 'all' for all keypresses (only if this element currently has input focus)
 		 	- supported callback keywords:
 		 		* char: the key that was pressed (as character)
@@ -132,6 +132,6 @@ class PyElementEvents:
 
 		def wrapped(cb):
 			def wrapper(event): return try_call_handler(key, cb, char=event.char, code=event.keycode)
-			self._element._tk.bind(key, wrapper, add=True)
+			(self._element._tk.bind_all if include_children else self._element._tk.bind)(key, wrapper, add=True)
 			return wrapper
 		return wrapped
