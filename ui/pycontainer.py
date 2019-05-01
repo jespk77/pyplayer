@@ -37,6 +37,10 @@ class BaseWidgetContainer:
 		return self
 
 	def place_element(self, element, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		""" Place an element (must be a variant of PyElement) on this widget, use additional arguments to position it in this container
+		 	row, rowspan: the row in the frame grid layout and how many rows it should cover
+		 	column, columnspan: the column in the frame grid layout and how many columns it should cover
+		 	Returns the added element """
 		if isinstance(element, pyelement.PyElement):
 			self._elements[element.widget_id] = element
 			element._tk.grid(row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
@@ -44,6 +48,9 @@ class BaseWidgetContainer:
 		else: raise ValueError("Placed element must be a 'PyElement', not '{.__name__}'".format(type(element)))
 
 	def place_frame(self, frame, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
+		""" Create another element container (must be a 'PyFrame' or any of its variants) inside this container,
+			supported arguments and their behavior are the same as for elements
+			Returns the index of the added container """
 		if isinstance(frame, BaseWidgetContainer):
 			self._subframes.append(frame)
 			frame._tk.grid(row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
