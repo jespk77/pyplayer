@@ -10,8 +10,8 @@ class ModuleSelector(pywindow.PyWindow):
 		self.title = "Pyplayer Module Configuration"
 
 		moptions = pycontainer.PyScrollableFrame(self.content)
-		moptions.vertical_scrollbar = True
-		moptions.column(0, weight=1, minsize=100)
+		moptions.scrollbar_y = True
+		moptions.content.column(0, weight=1, minsize=100)
 		self.content.place_frame(moptions, columnspan=2)
 
 		b_cancel = pyelement.PyButton(self.content, "button_cancel")
@@ -24,7 +24,7 @@ class ModuleSelector(pywindow.PyWindow):
 		b_enable.command = self._on_enable_all
 		self.content.place_element(b_enable, row=1, column=1)
 
-		self.confirm = True
+		self.confirm = False#True
 		self.content.column(0, weight=1).column(1, weight=1).row(0, weight=1)
 
 		index = 0
@@ -34,7 +34,7 @@ class ModuleSelector(pywindow.PyWindow):
 			invalid_platform = pt is not None and pt != sys.platform
 			moptions.row(index, weight=1, minsize=85)
 
-			mod_frame = pycontainer.PyLabelFrame(moptions, configuration={"background": b_enable["background"]})
+			mod_frame = pycontainer.PyLabelFrame(moptions.content, configuration={"background": b_enable["background"]})
 			mod_frame.label = "Module: {}".format(module_id)
 			if module_options.get("new"):
 				del module_options["new"]
