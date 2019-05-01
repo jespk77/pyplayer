@@ -402,12 +402,20 @@ class PyProgressbar(PyElement):
 
 class PyScrollbar(PyElement):
 	def __init__(self, container, id, initial_cfg=None):
-		PyElement.__init__(self, id, container, tkinter.Scrollbar(container._tk, **element_cfg), initial_cfg)
+		PyElement.__init__(self, id, container, tkinter.Scrollbar(container._tk), initial_cfg)
+
+	@property
+	def set_command(self): return self._tk.set
 
 	@property
 	def scrollcommand(self): return self._tk.cget("command")
 	@scrollcommand.setter
 	def scrollcommand(self, value): self._tk.configure(command=value)
+
+	@property
+	def orientation(self): return self._tk.cget("orient")
+	@orientation.setter
+	def orientation(self, ort): self._tk.configure(orient=ort)
 
 list_cfg = { "selectbackground": background_color, "selectforeground": highlight_color }
 list_cfg.update(element_cfg)
