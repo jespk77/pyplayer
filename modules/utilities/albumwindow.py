@@ -94,7 +94,7 @@ class AlbumWindowInput(pywindow.PyWindow):
 		inpt.value = self._dt.get("image", "")
 		inpt.command = self._reset_button
 		self.content.place_element(pyelement.PyTextlabel(self.content, "image_label"), row=5).display_text = "Cover image:"
-		self.content.place_element(pyelement.PyTextInput(self.content), row=5, column=1)
+		self.content.place_element(pyelement.PyTextInput(self.content, "image_input"), row=5, column=1)
 
 		self.content.column(0, minsize=30).column(1, weight=1).row(4, weight=1)
 		for i in range(5): self.content.row(i, minsize=30)
