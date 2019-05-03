@@ -38,12 +38,15 @@ class Configuration(ConfigurationItem):
 		self._dirty = False
 
 	def __getitem__(self, key):
+		if not isinstance(key, str): raise ValueError("Getting keys must be given as string")
+
 		key = key.split(separator, maxsplit=1)
 		if len(key) > 1: return self._value[key[0]][key[1]]
 		else: return self._value[key[0]]
 
 	def __setitem__(self, key, value):
 		if self.read_only: raise RuntimeError("Cannot update this configuration since it was set to read-only!")
+		elif not isinstance(key, str): raise ValueError("Getting keys must be given as string!")
 
 		key = key.split(separator, maxsplit=1)
 		if len(key) == 1:
