@@ -1,6 +1,6 @@
 import json
 
-from ui import pywindow, pyelement
+from ui import pywindow, pyelement, pyimage
 
 album_folder = "albums"
 album_format = album_folder + "/{}.{}"
@@ -13,42 +13,36 @@ class AlbumWindow(pywindow.PyWindow):
 
 		self.icon = "assets/blank"
 		self.title = "Album: {} - {}".format(self._metadata["artist"], self._metadata["name"])
-		self.set_widget("artist", pyelement.PyTextlabel(self.window)).display_text = "{}: {}".format(self._metadata["artist"], self._metadata["name"])
-		self.set_widget("release_date", pyelement.PyTextlabel(self.window), row=1).display_text = "Released {}".format(self._metadata["release_date"])
+		self.content.place_element(pyelement.PyTextlabel(self.content, "artist")).display_text = "{}: {}".format(self._metadata["artist"], self._metadata["name"])
+		self.content.place_element(pyelement.PyTextlabel(self.content, "release_date"), row=1).display_text = "Released {}".format(self._metadata["release_date"])
 
-		items = pyelement.PyItemlist(self.window)
+		items = pyelement.PyItemlist(self.content, "songlist")
 		items.itemlist = self._metadata["songlist"]
-		items.bind("<Double-Button-1>", self._callback)
-		items.configure(activestyle="none")
-		self.set_widget("songlist", items, row=2)
+		@items.event_handler.MouseClickEvent("left", doubleclick=True)
+		def _double_click(y):
+			self._cb("player", [self.content["songlist"].get_nearest_item(y)])
+		self.content.place_element(items, row=2)
 
-		bt = pyelement.PyButton(self.window)
-		bt.command = self._callback
+		bt = pyelement.PyButton(self.content, "action_queue")
+		bt.command = lambda : self._cb("queue", self.content["songlist"].itemlist)
 		bt.text = "Queue all"
-		self.set_widget("action_queue", bt, row=3)
+		self.content.place_element(bt, row=3)
 
 		self._cb = command_callback
 		self._path = self._metadata["song_path"]
-		self.row_options(2, weight=1)
-		self.column_options(0, weight=5)
+		self.content.row(2, weight=1).column(0, weight=5)
 
 		img_path = self._metadata["image"]
 		if len(img_path.split("/")) == 1: img_path = "images/" + img_path
 
 		import os
 		if os.path.exists(album_format.format(img_path, "png")):
-			img = pyelement.PyImage(file=album_format.format(self._metadata["image"], "png"))
-			cover = pyelement.PyTextlabel(self.window)
+			img = pyimage.PyImage(file=album_format.format(self._metadata["image"], "png"))
+			cover = pyelement.PyTextlabel(self.content, "cover")
 			cover.image = img
-			self.set_widget("cover", cover, column=1, rowspan=4)
-			self.column_options(1, weight=1, minsize=100)
+			self.content.place_element(cover, column=1, rowspan=4)
+			self.content.column(1, weight=1, minsize=100)
 		else: print("ERROR", "No image found: '{}'".format(album_format.format(self._metadata["image"], "png")))
-
-	def _callback(self, event=None):
-		if callable(self._cb):
-			if event: self._cb("player", [self.widgets["songlist"].get_item_from_event(event)])
-			else: self._cb("queue", self.widgets["songlist"].itemlist)
-		else: print("WARNING", "No (valid) callback was bound to the album window")
 
 
 class AlbumWindowInput(pywindow.PyWindow):
@@ -60,74 +54,76 @@ class AlbumWindowInput(pywindow.PyWindow):
 		else: self._dt = {}
 
 		pywindow.PyWindow.__init__(self, master, "album_input")
-		inpt = pyelement.PyTextInput(self.window)
+		inpt = pyelement.PyTextInput(self.content, "input_artist")
 		inpt.value = self._dt.get("artist", "")
 		inpt.command = self._reset_button
-		self.set_widget("artist_label", pyelement.PyTextlabel(self.window)).display_text = "Artist:"
-		self.set_widget("input_artist", inpt, column=1)
+		self.content.place_element(pyelement.PyTextlabel(self.content, "artist_label")).display_text = "Artist:"
+		self.content.place_element(inpt, column=1)
 
-		inpt = pyelement.PyTextInput(self.window)
+		inpt = pyelement.PyTextInput(self.content, "input_name")
 		inpt.value = self._dt.get("name", "")
 		inpt.command = self._reset_button
-		self.set_widget("name_label", pyelement.PyTextlabel(self.window), row=1).display_text = "Album:"
-		self.set_widget("input_name", inpt, row=1, column=1)
+		self.content.place_element(pyelement.PyTextlabel(self.content, "name_label"), row=1).display_text = "Album:"
+		self.content.place_element(inpt, row=1, column=1)
 
-		inpt = pyelement.PyTextInput(self.window)
+		inpt = pyelement.PyTextInput(self.content, "input_release_date")
 		inpt.value = self._dt.get("release_date", "")
 		inpt.command = self._reset_button
-		self.set_widget("release_label", pyelement.PyTextlabel(self.window), row=2).display_text = "Release date:"
-		self.set_widget("input_release_date", inpt, row=2, column=1)
+		self.content.place_element(pyelement.PyTextlabel(self.content, "release_label"), row=2).display_text = "Release date:"
+		self.content.place_element(inpt, row=2, column=1)
 
-		inpt = pyelement.PyTextInput(self.window)
+		inpt = pyelement.PyTextInput(self.content, "input_song_path")
 		inpt.value = self._dt.get("song_path", "")
 		inpt.command = self._reset_button
-		self.set_widget("song_path", pyelement.PyTextlabel(self.window), row=3).display_text = "Song path:"
-		self.set_widget("input_song_path", inpt, row=3, column=1)
+		self.content.place_element(pyelement.PyTextlabel(self.content, "song_path"), row=3).display_text = "Song path:"
+		self.content.place_element(inpt, row=3, column=1)
 
-		inpt = pyelement.PyTextfield(self.window)
+		inpt = pyelement.PyTextfield(self.content, "input_songlist")
 		inpt.text = "\n".join(self._dt.get("songlist", []))
 		inpt.command = self._reset_button
-		inpt.bind("<Tab>", inpt.focus_next)
-		inpt.bind("<Return>", self._autocomplete_line)
-		self.set_widget("songlist_label", pyelement.PyTextlabel(self.window), row=4).display_text = "Song list:"
-		self.set_widget("input_songlist", inpt, row=4, column=1)
 
-		inpt = pyelement.PyTextInput(self.window)
+		@inpt.event_handler.KeyEvent("Tab")
+		def _move_focus_down(): inpt.move_focus_down()
+		@inpt.event_handler.KeyEvent("Enter")
+		def _try_autocomplete(): self._autocomplete_line()
+
+		self.content.place_element(pyelement.PyTextlabel(self.content, "songlist_label"), row=4).display_text = "Song list:"
+		self.content.place_element(inpt, row=4, column=1)
+
+		inpt = pyelement.PyTextInput(self.content, "input_image")
 		inpt.value = self._dt.get("image", "")
 		inpt.command = self._reset_button
-		self.set_widget("image_label", pyelement.PyTextlabel(self.window), row=5).display_text = "Cover image:"
-		self.set_widget("input_image", pyelement.PyTextInput(self.window), row=5, column=1)
+		self.content.place_element(pyelement.PyTextlabel(self.content, "image_label"), row=5).display_text = "Cover image:"
+		self.content.place_element(pyelement.PyTextInput(self.content), row=5, column=1)
 
-		self.column_options(0, minsize=30)
-		self.column_options(1, weight=1)
-		self.row_options(4, weight=1)
-		for i in range(5): self.row_options(i, minsize=30)
+		self.content.column(0, minsize=30).column(1, weight=1).row(4, weight=1)
+		for i in range(5): self.content.row(i, minsize=30)
 
-		bt = pyelement.PyButton(self.window)
+		bt = pyelement.PyButton(self.content, "confirm_write")
 		bt.command = self.write_file
-		self.set_widget("confirm_write", bt, row=5, columnspan=2)
+		self.content.place_element(bt, row=5, columnspan=2)
 		self._reset_button()
 
 		self.icon = "assets/blank"
 		self.title = "Create new album..."
 		self.transient = True
-		self.row_options(3, weight=1)
+		self.content.row(3, weight=1)
 
 	@property
-	def status_display(self): return self.widgets["confirm_write"].text
+	def status_display(self): return self.content["confirm_write"].text
 	@status_display.setter
-	def status_display(self, vl): self.widgets["confirm_write"].text = str(vl)
+	def status_display(self, vl): self.content["confirm_write"].text = str(vl)
 
 	def _reset_button(self):
 		self.status_display = "Save & Close"
-		self.widgets["confirm_write"].accept_input = True
+		self.content["confirm_write"].accept_input = True
 
-	def _autocomplete_line(self, event):
-		textfield = self.widgets["input_songlist"]
+	def _autocomplete_line(self):
+		textfield = self.content["input_songlist"]
 		line = textfield.get("insert linestart", "insert lineend")
 		if line and self._autocomplete:
 			try:
-				sg = self._autocomplete(self.widgets["input_song_path"].value, line)
+				sg = self._autocomplete(self.content["input_song_path"].value, line)
 				if sg:
 					textfield.delete("insert linestart", "insert lineend")
 					textfield.insert("insert", sg[0])
@@ -136,20 +132,20 @@ class AlbumWindowInput(pywindow.PyWindow):
 	def write_file(self):
 		import os
 		if not os.path.isdir("albums"): os.mkdir("albums")
-		filename = album_format.format(self.widgets["input_name"].value.lower().replace(' ', '_'), "json")
+		filename = album_format.format(self.content["input_name"].value.lower().replace(' ', '_'), "json")
 
 		print("INFO", "Processing album information")
-		wd = self.widgets["confirm_write"]
+		wd = self.content["confirm_write"]
 		try:
-			self._dt["artist"] = self.widgets["input_artist"].value
+			self._dt["artist"] = self.content["input_artist"].value
 			if not self._dt["artist"]: raise LookupError("Missing required 'Artist' field")
-			self._dt["name"] = self.widgets["input_name"].value
+			self._dt["name"] = self.content["input_name"].value
 			if not self._dt["name"]: raise LookupError("Missing required 'Album' field")
-			self._dt["release_date"] = self.widgets["input_release_date"].value
-			self._dt["song_path"] = self.widgets["input_song_path"].value
-			self._dt["songlist"] = self.widgets["input_songlist"].text.split("\n")
+			self._dt["release_date"] = self.content["input_release_date"].value
+			self._dt["song_path"] = self.content["input_song_path"].value
+			self._dt["songlist"] = self.content["input_songlist"].text.split("\n")
 			if not self._dt["songlist"] or not self._dt["songlist"][0]: raise LookupError("Missing required 'Song list' field")
-			self._dt["image"] = self.widgets["input_image"].value
+			self._dt["image"] = self.content["input_image"].value
 			if not self._dt["image"].startswith("/"): self._dt["image"] = "images/" + self._dt["image"]
 
 			with open(filename, "w") as file:
