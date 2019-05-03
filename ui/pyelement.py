@@ -384,6 +384,13 @@ class PyProgressbar(PyElement):
 	def horizontal(self, vl): self._horizontal = vl is True
 
 	@property
+	def background_color(self): return self._tk.cget("background")
+	@background_color.setter
+	def background_color(self, c):
+		try: self._style.configure(style="default", background=c)
+		except tkinter.TclError as e: print("ERROR", "Setting background color for progressbar '{}':".format(self.widget_id), e)
+
+	@property
 	def determinate(self):
 		""" If determinate is true, the bar is set to the current value
 		 	If determinate is false, the bar is moving back and forth """
@@ -395,10 +402,13 @@ class PyProgressbar(PyElement):
 		""" Returns the total size of the bar, if the progress is set to this value the bar is full (default is 100) """
 		return self._tk.cget("maximum")
 	@maximum.setter
-	def maximum(self, value): self._tk.configure(maximum=value)
+	def maximum(self, value):
+		try: self._tk.configure(maximum=value)
+		except tkinter.TclError as e: print("ERROR", "Setting maximum value for progressbar '{}':".format(self.widget_id), e)
 
 	def load_configuration(self):
-		self._style.configure(style="Horizontal.TProgressbar" if self.horizontal else "Vertical.TProgressbar", **self._cfg.value)
+		try: self._style.configure(style="Horizontal.TProgressbar" if self.horizontal else "Vertical.TProgressbar", **self._cfg.value)
+		except tkinter.TclError as e: print("ERROR", "Loading configuration for '{}':".format(self.widget_id), e)
 
 class PyScrollbar(PyElement):
 	def __init__(self, container, id, initial_cfg=None):
