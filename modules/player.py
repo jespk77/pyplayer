@@ -419,7 +419,7 @@ def on_stopped(event, player):
 
 def on_player_update(event, player):
 	md = event.data
-	default_directory = client.configuration["directory"].get(client.configuration["default_path"])
+	default_directory = client.configuration["directory"].get(client.configuration["default_path"].value)
 
 	if default_directory is not None and md.path == default_directory["path"]:
 		song_tracker.add(md.display_name)
