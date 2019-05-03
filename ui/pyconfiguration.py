@@ -87,6 +87,16 @@ class Configuration(ConfigurationItem):
 			else: return None
 		else: return self._value.get(key[0])
 
+	def keys(self):
+		""" Get iterator with all configured keys (return type is equal to dictionary 'keys') """
+		return self.value.keys()
+	def values(self):
+		""" Get iterator with all configured values (return type is equal to dictionary 'values')  """
+		return self.value.values()
+	def items(self):
+		""" Get iterator with all configured key-value pairs (return type is equal to dictionary 'items') """
+		return self.value.items()
+
 	@property
 	def is_set(self): return len(self._value) > 0
 	@property
