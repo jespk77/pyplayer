@@ -59,11 +59,11 @@ class Select(Question):
 		except ValueError:
 			self._choices = [o for o in self._choices if cmd.lower() in o[0].lower()]
 
-		res = self._callback()
+		res = self._execute_callback()
 		if res is not None: return res
 		else: return self
 
-	def _callback(self):
+	def _execute_callback(self):
 		if len(self._choices) == 1: return self._callback(*self._choices[0], **self._kwargs)
 
 	def _display_options(self):
@@ -72,7 +72,7 @@ class Select(Question):
 	def get_contents(self):
 		if len(self._choices) > 30: return "< {} options is way too many! Refine your keyword a little".format(len(self._choices)), ("reply",)
 
-		res = self._callback()
+		res = self._execute_callback()
 		if res is not None: return res.get_contents()
 		elif len(self._choices) == 0: return "< Nothing found", ("reply",)
 		else: return self.get_prefix() + self._message + "\n" + self._display_options() + "\n < Select item:", ("reply",), self
