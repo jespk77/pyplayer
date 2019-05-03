@@ -45,8 +45,9 @@ class PyElement:
 	@height.setter
 	def height(self, value): self._tk.configure(height=value)
 
-	def set_focus(self):
-		self._tk.focus_set()
+	def set_focus(self): self._tk.focus_set()
+	def move_focus_up(self): self._tk.tk_focusPrev()
+	def move_focus_down(self): self._tk.tk_focusNext()
 
 	def load_configuration(self):
 		""" Set configuration options stored in configuration file """
@@ -447,8 +448,8 @@ class PyItemlist(PyElement):
 		self._items = value
 		self._list_var.set(self._items)
 
-	def get_item_from_event(self, event):
+	def get_nearest_item(self, y):
 		""" Get the element at the mouse pointer when processing event from bound callback """
-		return self._items[self._tk.nearest(event.y)]
+		return self._items[self._tk.nearest(y)]
 
 	#todo: add custom customization loader/setter (style + font customization)
