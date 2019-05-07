@@ -23,9 +23,10 @@ class ConfigurationItem:
 	def __len__(self):
 		try: return len(self.value)
 		except TypeError: return 1 if self.value is not None else 0
-	def __getitem__(self, item): raise KeyError("ConfigurationItem has no items: " + str(item))
-	def __setitem__(self, key, value): raise KeyError("ConfigurationItem has no items: " + str(key))
-	def __delitem__(self, key): raise "ConfigurationItem has no items: " + str(key)
+	def _getitem(self, key): self.__getitem__(key)
+	def __getitem__(self, item): raise AttributeError("ConfigurationItem is not a valid container!")
+	def __setitem__(self, key, value): self.__getitem__(key)
+	def __delitem__(self, key): self.__getitem__(key)
 	def __str__(self): return "ConfigurationItem({!s})".format(self._value)
 
 
@@ -37,12 +38,16 @@ class Configuration(ConfigurationItem):
 		else: ConfigurationItem.__init__(self, value={})
 		self._dirty = False
 
-	def __getitem__(self, key):
+	def _getitem(self, key):
 		if not isinstance(key, str): raise ValueError("Getting keys must be given as string")
 
 		key = key.split(separator, maxsplit=1)
-		if len(key) > 1: return self._value[key[0]][key[1]]
+		if len(key) > 1: return self._value.__getitem__(key[0])._getitem(key[1])
 		else: return self._value[key[0]]
+
+
+	def __getitem__(self, key):
+		return self._getitem(key).value
 
 	def __setitem__(self, key, value):
 		if self.read_only: raise RuntimeError("Cannot update this configuration since it was set to read-only!")
@@ -71,6 +76,7 @@ class Configuration(ConfigurationItem):
 	def __len__(self): return len(self.value)
 	def __str__(self): return "Configuration({!s})".format(self._value)
 
+
 	def get(self, key, default=None):
 		""" Get the value bound to given key, returns 'default' argument if nothing bound """
 		try: return self[key]
@@ -81,14 +87,6 @@ class Configuration(ConfigurationItem):
 		if self.get(key) is None and create_value is not None: self[key] = create_value
 		return self.get(key)
 
-	def configuration_get(self, key):
-		""" Get the configuration object bound to given key or None if nothing bound """
-		key = key.split(separator, maxsplit=1)
-		if len(key) > 1:
-			cfg = self._value.get(key[0])
-			if cfg and cfg.is_set: return cfg.configuration_get(key[1])
-			else: return None
-		else: return self._value.get(key[0])
 
 	def keys(self):
 		""" Get iterator with all configured keys (return type is equal to dictionary 'keys') """
