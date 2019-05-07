@@ -38,12 +38,19 @@ class Configuration(ConfigurationItem):
 		else: ConfigurationItem.__init__(self, value={})
 		self._dirty = False
 
+
 	def _getitem(self, key):
 		if not isinstance(key, str): raise ValueError("Getting keys must be given as string")
 
 		key = key.split(separator, maxsplit=1)
 		if len(key) > 1: return self._value.__getitem__(key[0])._getitem(key[1])
 		else: return self._value[key[0]]
+
+	def _createitem(self, key, add_value):
+		try: return self._getitem(key)
+		except KeyError:
+			self[key] = add_value
+			return self._getitem(key)
 
 
 	def __getitem__(self, key):
@@ -55,7 +62,8 @@ class Configuration(ConfigurationItem):
 
 		key = key.split(separator, maxsplit=1)
 		if len(key) == 1:
-			cval = self.get(key[0])
+			try: cval = self._getitem(key[0])
+			except KeyError: cval = None
 			nval = create_entry(value, self.read_only)
 			tc, tn = type(cval), type(nval)
 			if cval and tc is not tn: raise TypeError("Incompatible types: '{.__name__}' and '{.__name__}'!".format(tc, tn))

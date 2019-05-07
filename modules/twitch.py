@@ -9,7 +9,7 @@ window_id = "twitch_viewer"
 def command_twitch(arg, argc, limit=False):
 	if argc == 1:
 		client.close_window(window_id)
-		viewer = client.open_window(window_id, twitchviewer.TwitchViewer(client.window, arg[0], interpreter.put_command, limit))
+		viewer = client.open_window(window_id, twitchviewer.TwitchViewer(client, arg[0], interpreter.put_command, limit))
 		return messagetypes.Reply("Twitch viewer for '{}' started".format(viewer.channel))
 
 def command_twitch_limited(arg, argc):
@@ -39,7 +39,7 @@ def command_twitch_say(arg, argc):
 	if argc > 1:
 		viewer = client.children.get(window_id)
 		if viewer is not None and viewer.channel.lower() == arg[0].lower():
-			viewer.widgets["chat_viewer"].send_message(" ".join(arg[1:]))
+			viewer["chat_viewer"].send_message(" ".join(arg[1:]))
 			return messagetypes.Reply("Message sent")
 		return messagetypes.Reply("No twitch viewer for channel '{}' open".format(arg[0]))
 	elif argc == 1: return messagetypes.Reply("Name of channel to send to is required now")

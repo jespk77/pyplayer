@@ -5,6 +5,7 @@ class BaseWidgetContainer:
 	def __init__(self, container, tk, configuration):
 		if configuration is None: configuration = pyconfiguration.Configuration()
 		elif isinstance(configuration, dict): configuration = pyconfiguration.Configuration(configuration)
+		else: raise TypeError("Configuration (when not None) must be a dictionary, not '{.__name__}'".format(type(configuration)))
 		self._container = container
 		self._event_handler = pyevents.PyElementEvents(self)
 		self._tk = tk
@@ -85,7 +86,6 @@ class BaseWidgetContainer:
 frame_cfg = { "background": "black" }
 class PyFrame(BaseWidgetContainer):
 	def __init__(self, parent, configuration=None):
-		if configuration and not isinstance(configuration, pyconfiguration.Configuration): raise ValueError("Configuration, when not empty, must be a configuration object, not '{.__name__}'! Check your setup!".format(type(configuration)))
 		BaseWidgetContainer.__init__(self, parent, tkinter.Frame(parent._tk, **frame_cfg), configuration)
 
 

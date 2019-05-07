@@ -1,7 +1,7 @@
 from tkinter import ttk, font
 import tkinter
 
-from ui import pycontainer, pyevents, pyimage
+from ui import pycontainer, pyevents, pyimage, pyconfiguration
 
 def scroll_event():
 	import sys
@@ -24,8 +24,11 @@ class PyElement:
 		self._id = id
 		self._container = container
 		self._tk = tk
-		self._cfg = self._container.configuration.get_or_create(self.widget_id.lower(), initial_cfg)
+
+		self._cfg = self._container.configuration._createitem(self.widget_id.lower(), initial_cfg)
+		if not isinstance(self._cfg, pyconfiguration.Configuration): raise TypeError("Invalid configuration loaded, check your setup")
 		self.load_configuration()
+
 		self._event_handler = pyevents.PyElementEvents(self)
 
 	@property
@@ -52,7 +55,7 @@ class PyElement:
 	def load_configuration(self):
 		""" Set configuration options stored in configuration file """
 		try: self._tk.configure(**self._cfg.value)
-		except Exception as e: print("ERROR", "Loading configuration for widget '{}':".format(self.widget_id), e)
+		except Exception as e: print("ERROR", "Loading configuration for element '{}':".format(self.widget_id), e)
 
 	def __getitem__(self, item):
 		return self._tk.cget(item)

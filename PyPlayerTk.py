@@ -64,7 +64,7 @@ class PyPlayer(pywindow.PyWindow):
 	def flags(self): return self._flags.name.lower()
 
 	def update_loglevel(self, value=None):
-		if value is None: value = self.configuration["loglevel"].value
+		if value is None: value = self.configuration["loglevel"]
 		print("INFO", "Set loglevel:", value)
 		import pylogging
 		pylogging.get_logger().log_level = value
@@ -76,14 +76,14 @@ class PyPlayer(pywindow.PyWindow):
 	def window_tick(self, date):
 		if self._timer is not None:
 			if self._timer.total_seconds() == 1:
-				self._interp.put_command(self.configuration["timer_command"].value)
+				self._interp.put_command(self.configuration["timer_command"])
 				self.content["header_left"].text = ""
 				self._timer = None
 			else:
 				self._timer -= second_time
 				self.content["header_left"].text = "\u23f0 {!s}".format(self._timer)
 
-		self.content["header"].text = date.strftime(self.configuration["header_format"].value)
+		self.content["header"].text = date.strftime(self.configuration["header_format"])
 		uptime = str(date - self._boottime).split(".")[0]
 		if self._process is not None: self.content["header_right"].text = "{} / {}".format(uptime, humanize.naturalsize(self._process.memory_info().rss))
 		else: self.content["header_right"].text = uptime
@@ -105,9 +105,9 @@ class PyPlayer(pywindow.PyWindow):
 		self.content["progressbar"].progress = progress
 
 	def set_songbrowser(self, browser):
-		self.content.place_widget(browser, row=2, columnspan=9)
-		if browser is None: self.content.layer.row(2, minsize=0, weight=0).row(3, weight=1)
-		else: self.content.layer.row(2, minsize=200, weight=70).row(3, weight=20)
+		self.content.place_element(browser, row=2, columnspan=9)
+		if browser is None: self.content.row(2, minsize=0, weight=0).row(3, weight=1)
+		else: self.content.row(2, minsize=200, weight=70).row(3, weight=20)
 
 	def show_lyrics(self, title):
 		from modules.utilities.lyricviewer import LyricViewer

@@ -124,7 +124,7 @@ def command_album_add(arg, argc, display=None, album=None):
 		if albums: return messagetypes.Select("Multiple albums found", lambda d,a: command_album_add(arg, argc, display=d, album=a), albums)
 		else: return messagetypes.Reply("No albums found")
 
-	client.open_window("albumimput", albumwindow.AlbumWindowInput(client, file=album, autocomplete_callback=get_songmatches))
+	client.open_window("albuminput", albumwindow.AlbumWindowInput(client, file=album, autocomplete_callback=get_songmatches))
 	return messagetypes.Reply("Album editor for '{}' opened".format(display) if display else "Album creator opened")
 
 def command_album_remove(arg, argc):
@@ -388,7 +388,7 @@ commands = {
 }
 
 def initialize():
-	media_player.update_blacklist(client.configuration.get_or_create("artist_blacklist", []).value)
+	media_player.update_blacklist(client.configuration.get_or_create("artist_blacklist", []))
 	media_player.attach_event("media_changed", on_media_change)
 	media_player.attach_event("pos_changed", on_pos_change)
 	media_player.attach_event("player_updated", on_player_update)
@@ -419,7 +419,7 @@ def on_stopped(event, player):
 
 def on_player_update(event, player):
 	md = event.data
-	default_directory = client.configuration["directory"].get(client.configuration["default_path"].value)
+	default_directory = client.configuration["directory"].get(client.configuration["default_path"])
 
 	if default_directory is not None and md.path == default_directory["path"]:
 		song_tracker.add(md.display_name)

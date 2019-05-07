@@ -58,14 +58,8 @@ def command_cfg(arg, argc):
 			cg.write_configuration()
 			return msg
 		elif len(arg) == 1:
-			try: return messagetypes.Reply("Option '{}' is set to '{}'".format(arg[0], cg.configuration[arg[0]].value))
+			try: return messagetypes.Reply("Option '{}' is set to '{}'".format(arg[0], cg.configuration[arg[0]]))
 			except KeyError: return messagetypes.Reply("Option '{}' was not found".format(arg[0]))
-
-def command_debug_memory(arg, argc):
-	if argc == 0:
-		import gc
-		gc.collect()
-		return messagetypes.Reply("DEBUG: Garbage collection finished")
 
 def command_log_open(arg, argc):
 	if argc == 0:
@@ -128,7 +122,7 @@ def command_version(arg, argc):
 			return messagetypes.Reply("Unable to get version number")
 
 def initialize():
-	cmds = client.configuration.get_or_create("startup_commands", []).value
+	cmds = client.configuration.get_or_create("startup_commands", [])
 	for c in cmds: interpreter.put_command(c)
 
 commands = {

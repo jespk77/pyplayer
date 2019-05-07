@@ -160,7 +160,7 @@ class PyWindow:
 	def load_configuration(self):
 		""" (Re)load configuration from file """
 		self._configuration.load()
-		self._tk.wm_geometry(self._configuration.get("geometry").value)
+		self._tk.wm_geometry(self._configuration.get("geometry"))
 
 	def write_configuration(self):
 		""" Write window configuration to file (if dirty) """
@@ -234,7 +234,7 @@ class PyWindow:
 				rs = fn(**kwargs)
 				if rs is not False: self._tk.after(delay, _call_task, kwargs)
 			except Exception as e:
-				print("WARNING", "During processing of scheduled task '{}', it won't be rescheduled!".format(fn.__name__))
+				print("INFO", "During processing of scheduled task '{}', it won't be rescheduled!".format(fn.__name__))
 				print("ERROR", "While calling scheduled task '{}':".format(fn.__name__), e)
 		return _call_task
 

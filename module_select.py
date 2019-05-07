@@ -24,7 +24,7 @@ class ModuleSelector(pywindow.PyWindow):
 		b_enable.command = self._on_enable_all
 		self.content.place_element(b_enable, row=1, column=1)
 
-		self.confirm = False#True
+		self.confirm = True
 		self.content.column(0, weight=1).column(1, weight=1).row(0, weight=1)
 
 		index = 0
