@@ -37,7 +37,7 @@ class Interpreter(Thread):
 			for module_id, module_options in mdl:
 				try:
 					r = self._load_module(module_id)
-					if isinstance(r, messagetypes.Error): self._client.on_notification(*r.get_contents())
+					if isinstance(r, messagetypes.Error): client.add_message(r.get_contents())
 				except Exception as e: print("ERROR", "While loading module '{}':".format(module_id), e)
 		self.start()
 
@@ -89,13 +89,12 @@ class Interpreter(Thread):
 					else: op = res
 
 				print("INFO", "Got command result:", op)
-				if op is False: op = messagetypes.Reply("Invalid command")
-				elif not isinstance(op, messagetypes.Empty): op = messagetypes.Reply("No answer :(")
+				if not isinstance(op, messagetypes.Empty): op = messagetypes.Reply("No answer :(")
 				self.print_additional_debug()
-				self._client.on_reply(*op.get_contents())
+				self._client.on_reply(op.get_contents())
 			except Exception as e:
 				print("ERROR", "Error processing command '{}':".format(cmd), e)
-				self._client.on_reply(*messagetypes.Error(e, "Error processing command").get_contents())
+				self._client.on_reply(messagetypes.Error(e, "Error processing command").get_contents())
 
 		self._on_destroy()
 
