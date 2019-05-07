@@ -451,5 +451,16 @@ class PyItemlist(PyElement):
 	def get_nearest_item(self, y):
 		""" Get the element at the mouse pointer when processing event from bound callback """
 		return self._items[self._tk.nearest(y)]
+	def move_to(self, position):
+		""" Scroll up/down so that the given position is visible """
+		self._tk.see(position)
+
+	def clear_selection(self):
+		""" Clear any previously selected items """
+		self._tk.selection_clear(0, "end")
+	def set_selection(self, start, end=None, clear=True):
+		""" Set selection to provided range (if start and end are given, when only start is given only one item gets selected), also clears any previous selection(s), unless 'clear' keyword is set to false """
+		if clear: self.clear_selection()
+		self._tk.selection_set(start, end)
 
 	#todo: add custom customization loader/setter (style + font customization)
