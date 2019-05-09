@@ -391,7 +391,7 @@ class PyProgressbar(PyElement):
 	def background_color(self): return self._tk.cget("background")
 	@background_color.setter
 	def background_color(self, c):
-		try: self._style.configure(style="default", background=c)
+		try: self._style.configure(self._active_theme(), background=c)
 		except tkinter.TclError as e: print("ERROR", "Setting background color for progressbar '{}':".format(self.widget_id), e)
 
 	@property
@@ -409,9 +409,10 @@ class PyProgressbar(PyElement):
 	def maximum(self, value):
 		try: self._tk.configure(maximum=value)
 		except tkinter.TclError as e: print("ERROR", "Setting maximum value for progressbar '{}':".format(self.widget_id), e)
+	def _active_theme(self): return "Horizontal.TProgressbar" if self.horizontal else "Vertical.TProgressbar"
 
 	def load_configuration(self):
-		try: self._style.configure(style="Horizontal.TProgressbar" if self.horizontal else "Vertical.TProgressbar", **self._cfg.value)
+		try: self._style.configure(style=self._active_theme(), **self._cfg.value)
 		except tkinter.TclError as e: print("ERROR", "Loading configuration for '{}':".format(self.widget_id), e)
 
 class PyScrollbar(PyElement):
