@@ -19,14 +19,16 @@ second_time = datetime.timedelta(seconds=1)
 class PyPlayer(pywindow.PyWindow):
 	def __init__(self, root):
 		pywindow.PyWindow.__init__(self, root, id="client", initial_cfg=initial_cfg)
-		self.content.place_element(pyelement.PyTextlabel(self.content, "header_left", initial_cfg={"background": "black", "foreground": "cyan"}))
-		self.content.place_element(pyelement.PyTextlabel(self.content, "header", initial_cfg={"background": "black"}), column=1)
-		self.content.place_element(pyelement.PyTextlabel(self.content, "header_right", initial_cfg={"background": "black", "foreground": "gray"}), column=2)
+		self.content.row(3, minsize=100, weight=1)
 		self.content.column(1, minsize=30, weight=1)
-		self.title_song = ""
+
+		self.title = "PyPlayer"
 		self.icon = "assets/icon"
+
+		self.title_song = ""
 		self._interp = self._cmd = None
 		self._timer = None
+		self._flags = PyPlayerCloseReason.NONE
 
 		try:
 			import psutil
@@ -37,6 +39,15 @@ class PyPlayer(pywindow.PyWindow):
 			self._process = None
 			self._boottime = datetime.datetime.today()
 
+		self.focus_followsmouse()
+		self.update_loglevel()
+
+	def create_widgets(self):
+		pywindow.PyWindow.create_widgets(self)
+		self.content.place_element(pyelement.PyTextlabel(self.content, "header_left", initial_cfg={"background": "black", "foreground": "cyan"}))
+		self.content.place_element(pyelement.PyTextlabel(self.content, "header", initial_cfg={"background": "black"}), column=1)
+		self.content.place_element(pyelement.PyTextlabel(self.content, "header_right", initial_cfg={"background": "black", "foreground": "gray"}), column=2)
+
 		pbar = pyelement.PyProgressbar(self.content, "progressbar", initial_cfg=progressbar_cfg)
 		pbar.maximum = 1
 		self.content.place_element(pbar, row=1, columnspan=9)
@@ -46,7 +57,7 @@ class PyPlayer(pywindow.PyWindow):
 			except Exception as e: print("WARNING", "Error while updating position:", e)
 
 		console = TextConsole(self.content, initial_cfg=console_cfg)
-		self.content.place_element(console, row=3, columnspan=9).set_focus()
+		self.content.place_element(console, row=3, columnspan=3).set_focus()
 		@console.event_handler.KeyEvent("enter")
 		def _command_confirm():
 			cmd = console.get_current_line().rstrip("\n")
@@ -54,24 +65,6 @@ class PyPlayer(pywindow.PyWindow):
 				print("INFO", "Processing command:", cmd)
 				self._interp.put_command(cmd, self._cmd)
 			return console.event_handler.block
-
-		self.content.row(3, minsize=100, weight=1)
-		self._flags = PyPlayerCloseReason.NONE
-		self.focus_followsmouse()
-		self.update_loglevel()
-
-	@property
-	def flags(self): return self._flags.name.lower()
-
-	def update_loglevel(self, value=None):
-		if value is None: value = self.configuration["loglevel"]
-		print("INFO", "Set loglevel:", value)
-		import pylogging
-		pylogging.get_logger().log_level = value
-
-	def set_timer(self, hour=0, minute=0, second=0):
-		if hour == minute == second == 0: raise ValueError("Timer must be at least one second")
-		self._timer = datetime.timedelta(hours=hour, minutes=minute, seconds=second+1)
 
 	def window_tick(self, date):
 		if self._timer is not None:
@@ -88,6 +81,19 @@ class PyPlayer(pywindow.PyWindow):
 		if self._process is not None: self.content["header_right"].text = "{} / {}".format(uptime, humanize.naturalsize(self._process.memory_info().rss))
 		else: self.content["header_right"].text = uptime
 		pywindow.PyWindow.window_tick(self, date)
+
+	@property
+	def flags(self): return self._flags.name.lower()
+
+	def update_loglevel(self, value=None):
+		if value is None: value = self.configuration["loglevel"]
+		print("INFO", "Set loglevel:", value)
+		import pylogging
+		pylogging.get_logger().log_level = value
+
+	def set_timer(self, hour=0, minute=0, second=0):
+		if hour == minute == second == 0: raise ValueError("Timer must be at least one second")
+		self._timer = datetime.timedelta(hours=hour, minutes=minute, seconds=second+1)
 
 	def update_title(self, title, checks=None):
 		prefix = " ".join(["[{}]".format(c) for c in (checks if checks is not None else self._interp.arguments)])
