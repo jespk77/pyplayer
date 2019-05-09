@@ -103,7 +103,7 @@ class PyPlayer(pywindow.PyWindow):
 	def update_title_media(self, media_data, color=None):
 		self.update_title(media_data.display_name)
 		self.content["progressbar"].progress = 0
-		self.content["progressbar"].background_color = color if color else self.content.configuration["progressbar::background"]
+		self.content["progressbar"].background_color = color if color else self.configuration["content::progressbar::background"]
 
 	def update_progressbar(self, progress):
 		if progress > self.content["progressbar"].maximum: progress = self.content["progressbar"].maximum
