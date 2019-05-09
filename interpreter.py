@@ -31,10 +31,12 @@ class Interpreter(Thread):
 		self._checks = []
 		self._platform = sys.platform
 
-		self._set_sys_arg()
 		self._events = {}
-		self._ps = self.register_event("parse_command", self._parse_command)
-		self._ds = self.register_event("destroy", self._on_destroy)
+		self._handlers = []
+		self._handlers.append(self.register_event("parse_command", self._parse_command))
+		self._handlers.append(self.register_event("destroy", self._on_destroy))
+		self._handlers.append(self.register_event("title_update", self._client.update_title))
+		self._set_sys_arg()
 
 		self._modules = []
 		if modules:
@@ -57,7 +59,7 @@ class Interpreter(Thread):
 				self.mem_tracker.print_diff()
 				self._checks.append("MemoryLog")
 			except Exception as e: print("ERROR", "Cannot load memory tracker:", e)
-		self._client.update_title("PyPlayerTk", self._checks)
+		self._notify_event("title_update", "PyPlayerTk", self._checks)
 
 
 	@property
@@ -125,7 +127,6 @@ class Interpreter(Thread):
 			except KeyError: pass
 		return False
 
-
 	def _notify_event(self, event_id, *args, **kwargs):
 		print("INFO", "Notifying listeners for the '{}' event".format(event_id))
 		event_list = self._events.get(event_id)
@@ -141,7 +142,6 @@ class Interpreter(Thread):
 					print("ERROR", "Calling callback for event '{}':".format(event_id), e)
 					errs = e
 		return errs
-
 
 	def _parse_command(self, command, cb=None):
 		try:
