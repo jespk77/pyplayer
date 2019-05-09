@@ -12,11 +12,23 @@ class PySplashWindow(pywindow.PyTkRoot):
 		pywindow.PyTkRoot.__init__(self, "splash")
 		self.center_window(*resolution)
 		self.content.column(0, weight=1, minsize=260).row(1, weight=1)
+
+		self._module_cfg = {}
+		self._interp = None
+		self._actions = {
+			"module_configure": self._module_configure,
+			"restart": self._restart
+		}
+
+		self.schedule(sec=1, func=self._update_program)
+
+	def create_widgets(self):
+		pywindow.PyTkRoot.create_widgets(self)
 		head = pyelement.PyTextlabel(self.content, "header")
 		self.content.place_element(head)
 
 		btn = pyelement.PyButton(self.content, "close_window", initial_cfg={"highlightthickness": 0, "borderwidth": 0})
-		btn.text = "X"
+		btn.text = "X "
 		btn.command = self.destroy
 		self.content.place_element(btn, column=1)
 
@@ -29,16 +41,15 @@ class PySplashWindow(pywindow.PyTkRoot):
 		label_status.text = "Initializing..."
 		self.content.place_element(label_status, row=2, columnspan=2)
 
-		self._cfg = self._interp = None
-		self._platform = sys.platform
-		self._update_data = None
-		self._actions = {
-			"module_configure": self._module_configure,
-			"restart": self._restart
-		}
+	@property
+	def status_text(self):
+		return self.content["label_status"].text
 
-		self.schedule(sec=1, func=self._update_program)
+	@status_text.setter
+	def status_text(self, vl):
+		self.content["label_status"].text = vl.split("\n")[0]
 
+	# STEP 1: check for program updates, unless 'no_update' startup argument specified
 	def _update_program(self):
 		if "no_update" not in sys.argv:
 			print("INFO", "Doing an update check!")
@@ -48,7 +59,7 @@ class PySplashWindow(pywindow.PyTkRoot):
 			if pc.returncode:
 				self.status_text = "Failed to update PyPlayer, continuing in 5 seconds..."
 				return self.schedule(sec=5, func=self._load_modules)
-			commands.process_command("git rev-parse HEAD", stdout=self.git_hash)
+			commands.process_command("git rev-parse HEAD", stdout=self._check_git_hash)
 		else:
 			self.status_text = "Updating skipped."
 			self.schedule(sec=1, func=self._load_modules, dependency_check=False)
@@ -61,7 +72,7 @@ class PySplashWindow(pywindow.PyTkRoot):
 		elif len(out) == 1: self.status_text = out[0]
 		self.force_update()
 
-	def git_hash(self, out):
+	def _check_git_hash(self, out):
 		hash = self.configuration.get_or_create("hash", "none")
 		out = out.rstrip("\n")
 		if hash != out:
@@ -72,36 +83,34 @@ class PySplashWindow(pywindow.PyTkRoot):
 			print("INFO", "Git hash equal to last time, skip dependency checking")
 			self.schedule(sec=1, func=self._load_modules, dependency_check=False)
 
-	def _git_update(self, out):
-		out = out.split('\n')
-		self._update_data = out[0], datetime.datetime.strptime(out[1], "%Y-%m-%d %H:%M:%S %z")
 
+	# STEP 2: Load module configuration and check dependencies for each modules
 	def _load_modules(self, dependency_check=True):
 		commands.process_command("git log -1 --pretty=%B%ci", stdout=self._git_update)
 		import json
 		with open(program_info_file, "r") as file:
-			try: self._cfg = json.load(file)
-			except json.JSONDecodeError as e:
-				self.status_text = "Cannot load 'pyplayer.json': {}, exiting in 5 seconds...".format(e)
-				self.schedule(sec=5, func=self.destroy)
-				return
+			try: self._module_cfg = json.load(file)
+			except (FileNotFoundError, json.JSONDecodeError) as e:
+				print("ERROR", "Loading 'pyplayer.json':", e)
+				return self._close_broken_program()
 
 		vs = commands.get_python_version()
-		if self._cfg["python_version"] != vs:
-			print("WARNING", "Installed Python version ({}) different from build version ({}), things might not work correctly".format(vs, self._cfg["python_version"]))
+		if self._module_cfg["python_version"] != vs:
+			print("WARNING", "Installed Python version ({}) different from build version ({}), things might not work correctly".format(vs, self._module_cfg["python_version"]))
 
 		try:
 			with open("modules.json", "r") as file:
 				import json
-				self._cfg["modules"] = json.load(file)
+				self._module_cfg["modules"] = json.load(file)
 		except (FileNotFoundError, json.JSONDecodeError):
 			print("INFO", "Invalid module configuration, launching module options window...")
 			return self.schedule(sec=1, func=self._module_configure)
 
-		self._loaded_modules = { mid: mot for mid, mot in self._cfg["modules"].items() if mot.get("enabled") }
+		self._loaded_modules = {mid: mot for mid, mot in self._module_cfg["modules"].items() if mot.get("enabled")}
 		if dependency_check:
 			self.status_text = "Checking dependencies..."
-			dependencies = set(self._cfg.get("dependencies", []))
+			print("INFO", "Checking for dependencies")
+			dependencies = set(self._module_cfg.get("dependencies", []))
 			for module_id, module_options in self._loaded_modules.items():
 				dps = module_options.get("dependencies")
 				if dps: dependencies.update(dps)
@@ -109,12 +118,17 @@ class PySplashWindow(pywindow.PyTkRoot):
 			if dependencies:
 				print("INFO", "Found dependencies:", dependencies)
 				pip_install = "{} -m pip install {}"
-				if self._platform == "linux": pip_install += " --user"
-				self.status_text = "Checking dependencies"
+				if sys.platform == "linux": pip_install += " --user"
+				self.status_text = "Installing dependencies..."
 				for dp in dependencies: commands.process_command(pip_install.format(sys.executable, dp), stdout=self._pip_status)
 			else: print("INFO", "No dependencies found, continuing...")
+
 		self.status_text = "Loading PyPlayer..."
 		self.schedule(sec=1, func=self._load_program)
+
+	def _git_update(self, out):
+		out = out.split('\n')
+		self._update_data = out[0], datetime.datetime.strptime(out[1], "%Y-%m-%d %H:%M:%S %z")
 
 	def _pip_status(self, out):
 		try:
@@ -122,6 +136,8 @@ class PySplashWindow(pywindow.PyTkRoot):
 			self.force_update()
 		except: pass
 
+
+	# STEP 3: initialize program and run
 	def _load_program(self):
 		print("INFO", "Creating PyPlayer and interpreter")
 		from PyPlayerTk import PyPlayer
@@ -134,39 +150,27 @@ class PySplashWindow(pywindow.PyTkRoot):
 		client._interp = self._interp
 		@client.event_handler.WindowDestroy
 		def on_close():
-			self.on_close(client)
+			self._close(client)
 
 		self.open_window("client", client)
 		self.hidden = True
 
-	@property
-	def update_message(self):
-		if not self._update_data: return '???'
-		else: return self._update_data[0]
-	@property
-	def update_date(self):
-		if not self._update_data: return '???'
-		else: return self._update_data[1].strftime("%a %b %d, %Y - %I:%M %p")
 
-	@property
-	def status_text(self): return self.content["label_status"].text
-	@status_text.setter
-	def status_text(self, vl):
-		self.content["label_status"].text = vl.split("\n")[0]
-
-	def on_close(self, client):
-		cd = self._actions.get(client.flags, self._terminate)
-		if cd: cd()
-
+	# STEP 2b: open module configuration window
 	def _module_configure(self):
 		import os, json
 		print("INFO", "Opening module configuration window")
 		self.status_text = "Configuring modules..."
-		modules = self._cfg.get("modules")
-		if not modules: self._cfg["modules"] = modules = {}
+		modules = self._module_cfg.get("modules")
+		if not modules: self._module_cfg["modules"] = modules = {}
 
 		for m in ["modules/{}".format(mfile) for mfile in os.listdir("modules") if mfile.endswith(".json")]:
-			with open(m, "r") as file: mop = json.load(file)
+			with open(m, "r") as file:
+				try: mop = json.load(file)
+				except (FileNotFoundError, json.JSONDecodeError) as e:
+					print("ERROR", "Loading '{}':".format(m), e)
+					self._close_broken_program()
+
 			mid = mop["id"]
 			del mop["id"]
 			mop["enabled"] = mop["required"]
@@ -186,11 +190,19 @@ class PySplashWindow(pywindow.PyTkRoot):
 	def _module_done(self, selector):
 		if selector.confirm:
 			self.hidden = False
-			self._cfg["modules"] = selector.modules
+			self._module_cfg["modules"] = selector.modules
 			import json
-			with open("modules.json", "w") as file: json.dump(self._cfg["modules"], file)
+			with open("modules.json", "w") as file: json.dump(self._module_cfg["modules"], file)
 			self.schedule(sec=1, func=self._restart)
 		else: self.schedule(sec=1, func=self._terminate)
+
+	def _close_broken_program(self):
+		self.status_text = "Missing required program files, try verifying local data or redownloading the program"
+		self.schedule(sec=5, func=self.destroy)
+
+	def _close(self, client):
+		cd = self._actions.get(client.flags, self._terminate)
+		if cd: cd()
 
 	def _restart(self):
 		print("INFO", "Restarting player!")
