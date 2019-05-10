@@ -148,10 +148,9 @@ class PyWindow:
 		try:
 			if "linux" in sys.platform:
 				path = os.path.dirname(os.path.realpath(__file__))
-				self._tk.tk.call("wm", "iconphoto", self._tk._w,
-									pyimage.PyImage(file=os.path.join(path, os.pardir, value + ".png")))
+				self._tk.tk.call("wm", "iconphoto", self._tk._w, pyimage.PyImage(file=os.path.join(path, os.pardir, value + ".png")))
 			elif "win" in sys.platform: self._tk.iconbitmap(value + ".ico")
-		except Exception as e: print("ERROR", "Setting icon bitmap {}".format(e)); raise
+		except Exception as e: print("ERROR", "Setting icon bitmap {}".format(e))
 	def with_icon(self, icon):
 		self.icon = icon
 		return self
