@@ -69,7 +69,6 @@ class PyTextlabel(PyElement):
 		PyElement.__init__(self, id, container, tkinter.Label(container._tk, **element_cfg), initial_cfg)
 		self._string_var = tkinter.StringVar()
 		self._tk.configure(textvariable=self._string_var)
-		self._img = None
 
 	@property
 	def text(self):
@@ -84,14 +83,12 @@ class PyTextlabel(PyElement):
 
 	@property
 	def image(self):
-		""" Get the image currently displayed on this label (or None if not set) """
-		return self._img
+		""" [DEPRECATED] Get the image currently displayed on this label (or None if not set) """
+		raise DeprecationWarning("Deprecated, use PyImage instead!")
 	@image.setter
 	def image(self, img):
 		""" Set the image that should be displayed, it should either be set to an instance of 'PyImage' or None to remove it """
-		if img and not isinstance(img, pyimage.PyImage): raise ValueError("Image can only be set to 'PyImage' or None, not '{.__name__}'".format(type(img)))
-		self._img = img
-		self._tk.configure(image=img)
+		raise DeprecationWarning("Deprecated, use PyImage instead!")
 
 
 input_cfg = { "insertbackground": foreground_color, "selectforeground": sel_foreground_color, "selectbackground": sel_background_color }
