@@ -75,6 +75,9 @@ class BaseWidgetContainer:
 	def show(self):
 		self._tk.pack(fill="both", expand=True)
 
+	def schedule(self, min=0, sec=0, ms=0, func=None, loop=False, **kwargs):
+		self._container.schedule(min, sec, ms, func, loop, **kwargs)
+
 	def __getitem__(self, item):
 		""" Get the element that was assigned to given name, returns this element or None if nothing bound """
 		return self._elements.get(item)
