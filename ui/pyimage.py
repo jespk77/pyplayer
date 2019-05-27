@@ -66,3 +66,46 @@ class PyImage(pyelement.PyTextlabel):
 		self._tk.configure(image=self._image.images[self._n])
 		self._n = (self._n + 1) % self._image.image_count
 		return self._active
+
+import os
+from ui import pyconfiguration
+class ImageCache:
+	""" Container for a number of images, each image is bound to a unique identifier (that must be hashable)
+	  	fetch_url: a url to fetch new images from, this must be a string containing a '{key}' segment in which the given key is inserted """
+	def __init__(self, folder, fetch_url):
+		if not os.path.isdir(folder): os.mkdir(folder)
+		self._cfg = pyconfiguration.ConfigurationFile(os.path.join(folder, "data"))
+		self._img_storage = {}
+		self._dir = folder
+		self._fturl = fetch_url
+		self.expiration_date = self._cfg.get_or_create("expiration_date", 0)
+
+	def clear(self):
+		""" Remove all images from cache """
+		import shutil
+		shutil.rmtree(self._dir)
+		self._img_storage.clear()
+
+	def load_image(self, key):
+		""" Ensure an image exists for given key, has no effect if key already bound """
+		if not key in self._img_storage:
+			#todo: fetch image from url
+			pass
+
+	def get_image(self, key):
+		""" Get image with bound identifier, if the key was not set already the image is fetched from url """
+		img = self._img_storage.get(key)
+		if not key: self.load_image(key)
+		return img
+
+	def __getitem__(self, item):
+		img = self.get_image(item)
+		if not img: raise KeyError(item)
+		else: return img
+
+	@property
+	def expiration_date(self): return self._expiry
+	@expiration_date.setter
+	def expiration_date(self, value):
+		self._expiry = value
+		os.path.getctime(self._dir)
