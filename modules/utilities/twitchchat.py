@@ -494,7 +494,10 @@ class TwitchChat(pyelement.PyTextfield):
 		self.update_idletasks()
 		start_index = self.index("end-1l")
 		self.insert("end", text + level + '\n')
-		if len(data) > 0: self.on_privmsg(meta, data)
+		if len(data) > 0:
+			start_index = self.index("end-2l")
+			self.on_privmsg(meta, data)
+
 		self.tag_add("subnotice", start_index, "end-1c")
 		self.tag_lower("subnotice")
 		self.scroll_bottom()
