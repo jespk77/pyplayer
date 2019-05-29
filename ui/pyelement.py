@@ -465,3 +465,13 @@ class PyItemlist(PyElement):
 		self._tk.selection_set(start, end)
 
 	#todo: add custom customization loader/setter (style + font customization)
+
+class PySeparator(PyElement):
+	""" A separator element to divide a window into multiple 'sections' """
+	def __init__(self, container, id, initial_cfg=None):
+		PyElement.__init__(self, id, container, ttk.Separator(container._tk), initial_cfg)
+
+	@property
+	def orientation(self): return self._tk.cget("orient")
+	@orientation.setter
+	def orientation(self, vl): self._tk.configure(orient=vl)
