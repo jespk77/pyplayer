@@ -1,6 +1,6 @@
 import datetime
 
-from modules.utilities import time_counter
+from modules.programs import time_counter
 from utilities import messagetypes
 
 # DEFAULT MODULE VARIABLES

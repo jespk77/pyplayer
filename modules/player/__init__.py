@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from multiprocessing import Queue
 
-from modules.utilities.mediaplayer import MediaPlayer
+from modules.player.mediaplayer import MediaPlayer
 from utilities import messagetypes, song_tracker, history
 
 # DEFAULT MODULE VARIABLES
@@ -98,7 +98,7 @@ def get_songmatches(path, keyword):
 	else: return None
 
 def album_list(keyword):
-	from modules.utilities import albumwindow
+	from modules.player import albumwindow
 	try:
 		with os.scandir(albumwindow.album_folder) as dir:
 			return [(os.path.splitext(f.name)[0], f.name) for f in dir if f.is_file() and keyword in f.name]
@@ -110,7 +110,7 @@ def album_process(type, songs):
 # ===== MAIN COMMANDS =====
 def command_album(arg, argc):
 	if argc > 0:
-		from modules.utilities import albumwindow
+		from modules.player import albumwindow
 		try: aw = albumwindow.AlbumWindow(client, album_process, "_".join(arg))
 		except FileNotFoundError: return messagetypes.Reply("Unknown album")
 
@@ -118,7 +118,7 @@ def command_album(arg, argc):
 		return messagetypes.Reply("Album opened")
 
 def command_album_add(arg, argc, display=None, album=None):
-	from modules.utilities import albumwindow
+	from modules.player import albumwindow
 	if argc > 0 and display is album is None:
 		albums = album_list(" ".join(arg))
 		if albums: return messagetypes.Select("Multiple albums found", lambda d,a: command_album_add(arg, argc, display=d, album=a), albums)
@@ -130,7 +130,7 @@ def command_album_add(arg, argc, display=None, album=None):
 def command_album_remove(arg, argc):
 	if argc > 0:
 		import os
-		from modules.utilities import albumwindow
+		from modules.player import albumwindow
 		filename = albumwindow.album_format.format("_".join(arg), "json")
 		try: os.remove(filename)
 		except FileNotFoundError: return messagetypes.Reply("Unknown album")

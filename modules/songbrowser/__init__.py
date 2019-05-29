@@ -1,4 +1,4 @@
-from modules.utilities.songbrowser import SongBrowser
+from modules.songbrowser.songbrowser_element import SongBrowser
 from utilities import messagetypes, song_tracker
 
 # DEFAULT MODULE VARIABLES

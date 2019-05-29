@@ -187,8 +187,6 @@ class Interpreter(Thread):
 
 	def _load_module(self, md):
 		if not md.startswith("modules."): md = "modules." + md
-		if md.endswith(".py"): md = md[:-3]
-
 		if md in [n.__name__ for n in self._modules]: raise RuntimeError("Another module with name '{}' was already registered!".format(md))
 		try:
 			print("INFO", "Loading module '{}'...".format(md))

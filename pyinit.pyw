@@ -5,6 +5,7 @@ from utilities import commands
 
 resolution = 350, 200
 program_info_file = "pyplayer.json"
+module_info_file = "module_data"
 
 
 class PySplashWindow(pywindow.PyTkRoot):
@@ -32,10 +33,8 @@ class PySplashWindow(pywindow.PyTkRoot):
 		btn.command = self.destroy
 		self.content.place_element(btn, column=1)
 
-		logo = pyimage.PyImage(file="assets/logo")
-		logo_label = pyelement.PyTextlabel(self.content, "logo_image")
-		logo_label.image = logo
-		self.content.place_element(logo_label, row=1, columnspan=2)
+		logo = pyimage.PyImage(self.content, "logo_image", img=pyimage.ImageData(file="assets/logo.png"))
+		self.content.place_element(logo, row=1, columnspan=2)
 
 		label_status = pyelement.PyTextlabel(self.content, "label_status", initial_cfg={"cursor": "watch"})
 		label_status.text = "Initializing..."
@@ -99,7 +98,7 @@ class PySplashWindow(pywindow.PyTkRoot):
 			print("WARNING", "Installed Python version ({}) different from build version ({}), things might not work correctly".format(vs, self._module_cfg["python_version"]))
 
 		try:
-			with open("modules.json", "r") as file:
+			with open(module_info_file, "r") as file:
 				import json
 				self._module_cfg["modules"] = json.load(file)
 		except (FileNotFoundError, json.JSONDecodeError):
@@ -164,12 +163,16 @@ class PySplashWindow(pywindow.PyTkRoot):
 		modules = self._module_cfg.get("modules")
 		if not modules: self._module_cfg["modules"] = modules = {}
 
-		for m in ["modules/{}".format(mfile) for mfile in os.listdir("modules") if mfile.endswith(".json")]:
-			with open(m, "r") as file:
-				try: mop = json.load(file)
-				except (FileNotFoundError, json.JSONDecodeError) as e:
-					print("ERROR", "Loading '{}':".format(m), e)
-					self._close_broken_program()
+		for m in ["modules/{}".format(md.name) for md in os.scandir("modules") if md.is_dir() and not md.name.startswith("_")]:
+			try:
+				with open(m + "/package.json", "r") as file:
+					try: mop = json.load(file)
+					except json.JSONDecodeError as e:
+						print("ERROR", "Loading '{}':".format(m), e)
+						self._close_broken_program()
+			except FileNotFoundError:
+				print("ERROR", "No package data found for module '{}', it will not be loaded".format(m.split("/")[-1]))
+				continue
 
 			mid = mop["id"]
 			del mop["id"]
@@ -192,7 +195,7 @@ class PySplashWindow(pywindow.PyTkRoot):
 			self.hidden = False
 			self._module_cfg["modules"] = selector.modules
 			import json
-			with open("modules.json", "w") as file: json.dump(self._module_cfg["modules"], file)
+			with open(module_info_file, "w") as file: json.dump(self._module_cfg["modules"], file)
 			self.schedule(sec=1, func=self._restart)
 		else: self.schedule(sec=1, func=self._terminate)
 

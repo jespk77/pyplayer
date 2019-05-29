@@ -1,4 +1,4 @@
-from modules.utilities import twitchviewer
+from modules.twitch import twitchviewer
 from utilities import messagetypes
 
 # DEFAULT MODULE VARIABLES
