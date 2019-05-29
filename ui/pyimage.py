@@ -68,15 +68,17 @@ class PyImage(pyelement.PyTextlabel):
 		return self._active
 
 import os
+if not os.path.isdir(".cache"): os.mkdir(".cache")
 from ui import pyconfiguration
 class ImageCache:
 	""" Container for a number of images, each image is bound to a unique identifier (that must be hashable)
 	  	fetch_url: a url to fetch new images from, this must be a string containing a '{key}' segment in which the given key is inserted """
 	def __init__(self, folder, fetch_url):
-		if not os.path.isdir(folder): os.mkdir(folder)
-		self._cfg = pyconfiguration.ConfigurationFile(os.path.join(folder, "data"))
 		self._img_storage = {}
-		self._dir = folder
+		self._dir = ".cache/" + folder
+		if not os.path.isdir(self._dir): os.mkdir(self._dir)
+		self._cfg = pyconfiguration.ConfigurationFile(os.path.join(folder, "data"))
+
 		self._fturl = fetch_url
 		self.expiration_date = self._cfg.get_or_create("expiration_date", 0)
 
