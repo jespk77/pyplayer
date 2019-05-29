@@ -89,13 +89,17 @@ class ImageCache:
 	def load_image(self, key):
 		""" Ensure an image exists for given key, has no effect if key already bound """
 		if not key in self._img_storage:
-			#todo: fetch image from url
-			pass
+			self._img_storage[key] = ImageData(url=self._fturl.format(key))
+			return self._img_storage[key]
 
 	def get_image(self, key):
 		""" Get image with bound identifier, if the key was not set already the image is fetched from url """
 		img = self._img_storage.get(key)
-		if not key: self.load_image(key)
+		if not img:
+			try: return self.load_image(key)
+			except Exception as e:
+				print("ERROR", "Cannot load image into cache properly!", e)
+				return None
 		return img
 
 	def __getitem__(self, item):
@@ -103,9 +107,13 @@ class ImageCache:
 		if not img: raise KeyError(item)
 		else: return img
 
+	def __delitem__(self, key):
+		del self._img_storage[key]
+
 	@property
 	def expiration_date(self): return self._expiry
 	@expiration_date.setter
 	def expiration_date(self, value):
 		self._expiry = value
-		os.path.getctime(self._dir)
+		import time
+		if time.time() - os.path.getmtime(self._dir) < self._expiry: self.clear()
