@@ -75,6 +75,9 @@ class BaseWidgetContainer:
 	def show(self):
 		self._tk.pack(fill="both", expand=True)
 
+	def destroy(self):
+		self._tk.destroy()
+
 	def schedule(self, min=0, sec=0, ms=0, func=None, loop=False, **kwargs):
 		self._container.schedule(min, sec, ms, func, loop, **kwargs)
 
@@ -161,6 +164,11 @@ class PyScrollableFrame(PyFrame):
 
 	@property
 	def content(self): return self._content
+
+	def clear_content(self):
+		for f in self._content._subframes:
+			try: f.destroy()
+			except Exception as e: print("ERROR", "Closing subframe", e)
 
 	_horizontal_id = "horizontal_scrollbar"
 	@property
