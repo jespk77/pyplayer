@@ -1,10 +1,13 @@
-from ui import pywindow, pyelement, pyimage
+from ui import pywindow, pyelement, pyimage, pycontainer
 
 CLIENT_ID = "6adynlxibzw3ug8udhyzy6w3yt70pw"
 emote_cache = pyimage.ImageCache("emote_cache", "http://static-cdn.jtvnw.net/emoticons/v1/{key}/1.0")
 bttv_emote_cache = pyimage.ImageCache("bttv_emote_cache", "https://cdn.betterttv.net/emote/{key}/1x")
 
+# all requests done using new twitch API: https://dev.twitch.tv/docs/api/reference/
 user_info_url = "https://api.twitch.tv/helix/users"
+user_follows_url = "https://api.twitch.tv/helix/users/follows?from_id={user_id}"
+user_stream_url = "https://api.twitch.tv/helix/streams?user_id={ids}"
 
 def generate_random_code(n=30):
 	import random
@@ -62,6 +65,25 @@ class TwitchSigninWindow(pywindow.PyWindow):
 			self.destroy()
 
 
+class StreamEntry(pycontainer.PyLabelFrame):
+	def __init__(self, parent, meta, go_cb):
+		pycontainer.PyLabelFrame.__init__(self, parent)
+		self._meta = meta
+
+		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_title"), columnspan=2)
+		lbl.text = meta.get("title", "No stream title")
+		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_name", {"foreground": "gray"}), row=1)
+		lbl.text = meta.get("user_name", "?")
+		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_game"), row=1, column=1)
+		lbl.text = meta.get("game_id", "undefined")
+		self.row(0, weight=1).row(1, weight=1).column(0, weight=1).column(1, weight=1)
+
+		btn = self.place_element(pyelement.PyButton(self, "goto"), rowspan=2, column=2)
+		btn.text = "Open"
+		btn.command = lambda : go_cb(self._meta.get("user_name"))
+		self.column(2, minsize=50)
+
+
 user_logindata, user_meta = ".cache/userdata", ".cache/usermeta"
 class TwitchPlayer(pywindow.PyWindow):
 	CACHE_EXPIRY = 86400
@@ -72,7 +94,7 @@ class TwitchPlayer(pywindow.PyWindow):
 		self.title = "Twitch Overview"
 		self._userlogin = None
 		self.content.column(0, weight=1).row(0, minsize=20)
-		self._refresh_account_status()
+		self.schedule(func=self._refresh_account_status)
 
 	def create_widgets(self):
 		pywindow.PyWindow.create_widgets(self)
@@ -82,6 +104,22 @@ class TwitchPlayer(pywindow.PyWindow):
 		self.content.place_element(pyelement.PyButton(self.content, "login_action"), column=1)
 		self.content["login_action"].text = "Sign in"
 		self.content["login_action"].command = self._do_signin
+		self.content.place_element(pyelement.PySeparator(self.content, "separator1"), row=1, columnspan=2)
+
+		lbl = self.content.place_element(pyelement.PyTextlabel(self.content, "live_channels"), row=2, columnspan=2)
+		lbl.text = "- Followed live channels -"
+		self._live_content = pycontainer.PyScrollableFrame(self.content)
+		self.content.place_frame(self._live_content, row=3, columnspan=2)
+		self.content.row(3, weight=1)
+		self._live_content.content.column(0, weight=1)
+		self._live_content.scrollbar_y = True
+
+		bt = self.content.place_element(pyelement.PyButton(self.content, "refresh_list"), row=4, columnspan=2)
+		bt.text = "Manual refresh"
+		bt.command = self.update_livestreams
+		bt = self.content.place_element(pyelement.PyButton(self.content, "debug_deleteusermeta"), row=5, columnspan=2)
+		bt.text = "DEBUG: delete user meta"
+		bt.command = self.clear_userdata_cache()
 
 	def _refresh_account_status(self):
 		if not self._userlogin:
@@ -95,22 +133,15 @@ class TwitchPlayer(pywindow.PyWindow):
 			print("INFO", "Existing user data found, updating data")
 			import os, time, json
 
-			if not os.path.isfile(user_meta) or time.time() - os.path.getmtime(user_meta) > self.CACHE_EXPIRY:
-				import requests
-				r = requests.get(user_info_url, headers=self._userlogin)
-				try: data = json.loads(r.content.decode())
-				except json.JSONDecodeError:
-					print("ERROR", "Unknown data format returned, execution cannot continue")
-					return self.destroy()
+			if not os.path.isfile(user_meta):# or time.time() - os.path.getmtime(user_meta) > self.CACHE_EXPIRY:
+				data = self._process_request(user_info_url)
+				if not data: return
+				print("INFO", "User data succesfully received, updating cache and elements")
+				self._usermeta = data["data"][0]
 
-				if r.status_code == 200:
-					print("INFO", "User data succesfully received, updating cache and elements")
-					self._usermeta = data["data"][0]
-					with open(user_meta, "w") as file: json.dump(self._usermeta, file)
-
-				else:
-					print("ERROR", "Unexpected status code '{}' received, caused by:".format(r.status_code), data)
-					return self.destroy()
+				fls = self._process_request(user_follows_url.format(user_id=self._usermeta["id"]))
+				self._usermeta["followed"] = fls["data"] if fls else []
+				with open(user_meta, "w") as file: json.dump(self._usermeta, file)
 
 			else:
 				try:
@@ -124,8 +155,25 @@ class TwitchPlayer(pywindow.PyWindow):
 				self.content["status_label"].text = "Signed in as {}".format(self._usermeta["display_name"])
 				self.content["login_action"].text = "Sign out"
 				self.content["login_action"].command = self._do_signout
+				self.update_livestreams()
 			except Exception as e: print("ERROR", "Updating profile state:", e)
 
+	def _process_request(self, get_url):
+		import requests, json
+		r = requests.get(get_url, headers=self._userlogin)
+		body = r.content.decode()
+		try: data = json.loads(body)
+		except json.JSONDecodeError: return self._invalid_data()
+		if r.status_code != 200: return self._invalid_response(r.status_code, body)
+		else: return data
+
+	def _invalid_data(self):
+		print("ERROR", "Unknown data format returned, execution cannot continue")
+		self.destroy()
+
+	def _invalid_response(self, code, data):
+		print("ERROR", "Unexpected status code '{}' received, error body:".format(code), data)
+		self.destroy()
 
 	def _do_signin(self):
 		if not self.get_window("login_window"):
@@ -144,8 +192,35 @@ class TwitchPlayer(pywindow.PyWindow):
 
 	def _do_signout(self):
 		import os
-		try:
-			os.remove(user_logindata)
-			os.remove(user_meta)
+		try: os.remove(user_logindata)
+		except: pass
+		try: os.remove(user_meta)
 		except: pass
 		self.destroy()
+
+	def clear_userdata_cache(self, refresh=True):
+		""" Remove all cached user metadata, updated data will be requested automatically (unless refresh is set to False) """
+		import os
+		try:
+			os.remove(user_meta)
+			if refresh: self._refresh_account_status()
+			return True
+		except: return False
+
+	def update_livestreams(self):
+		""" Update the live followed channel list, can be requested several times and each time an updated list will be fetched """
+		follow_data = self._usermeta.get("followed", [])
+		follow_channels = "&user_id=".join([c["to_id"] for c in follow_data])
+		live_follows = self._process_request(user_stream_url.format(ids=follow_channels))
+		if not live_follows: return
+
+		live_follows = live_follows["data"]
+		i = 0
+		self._live_content.clear_content()
+		for live_data in live_follows:
+			self._live_content.place_frame(StreamEntry(self._live_content.content, live_data, self._open_stream), row=i)
+			self._live_content.row(i, weight=1)
+			i += 1
+
+	def _open_stream(self, id):
+		print("clicked", id)
