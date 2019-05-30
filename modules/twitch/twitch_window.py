@@ -8,6 +8,7 @@ bttv_emote_cache = pyimage.ImageCache("bttv_emote_cache", "https://cdn.betterttv
 user_info_url = "https://api.twitch.tv/helix/users"
 user_follows_url = "https://api.twitch.tv/helix/users/follows?from_id={user_id}"
 user_stream_url = "https://api.twitch.tv/helix/streams?user_id={ids}"
+user_game_url = "https://api.twitch.tv/helix/games?id={ids}"
 
 def generate_random_code(n=30):
 	import random
@@ -70,15 +71,16 @@ class StreamEntry(pycontainer.PyLabelFrame):
 		pycontainer.PyLabelFrame.__init__(self, parent)
 		self._meta = meta
 
-		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_title"), columnspan=2)
-		lbl.text = meta.get("title", "No stream title")
-		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_name", {"foreground": "gray"}), row=1)
-		lbl.text = meta.get("user_name", "?")
-		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_game"), row=1, column=1)
-		lbl.text = meta.get("game_id", "undefined")
+		self.place_element(pyelement.PyTextlabel(self, "header"), columnspan=2)
+		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_title"), row=1, columnspan=2)
+		lbl.text = self._meta.get("title", "No stream title")
+		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_name", {"foreground": "gray"}), row=2)
+		lbl.text = self._meta.get("user_name", "?")
+		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_game"), row=2, column=1)
+		lbl.text = self._meta.get("game_id", "undefined")
 		self.row(0, weight=1).row(1, weight=1).column(0, weight=1).column(1, weight=1)
 
-		btn = self.place_element(pyelement.PyButton(self, "goto"), rowspan=2, column=2)
+		btn = self.place_element(pyelement.PyButton(self, "goto"), rowspan=4, column=2)
 		btn.text = "Open"
 		btn.command = lambda : go_cb(self._meta.get("user_name"))
 		self.column(2, minsize=50)
@@ -118,8 +120,8 @@ class TwitchPlayer(pywindow.PyWindow):
 		bt.text = "Manual refresh"
 		bt.command = self.update_livestreams
 		bt = self.content.place_element(pyelement.PyButton(self.content, "debug_deleteusermeta"), row=5, columnspan=2)
-		bt.text = "DEBUG: delete user meta"
-		bt.command = self.clear_userdata_cache()
+		bt.text = "(DEBUG) refresh user meta"
+		bt.command = self.clear_userdata_cache
 
 	def _refresh_account_status(self):
 		if not self._userlogin:
@@ -155,7 +157,8 @@ class TwitchPlayer(pywindow.PyWindow):
 				self.content["status_label"].text = "Signed in as {}".format(self._usermeta["display_name"])
 				self.content["login_action"].text = "Sign out"
 				self.content["login_action"].command = self._do_signout
-				self.update_livestreams()
+				self.content["refresh_list"].accept_input = False
+				self.schedule(sec=1, func=self.update_livestreams)
 			except Exception as e: print("ERROR", "Updating profile state:", e)
 
 	def _process_request(self, get_url):
@@ -196,6 +199,8 @@ class TwitchPlayer(pywindow.PyWindow):
 		except: pass
 		try: os.remove(user_meta)
 		except: pass
+
+		#todo: unauthorize stored token
 		self.destroy()
 
 	def clear_userdata_cache(self, refresh=True):
@@ -205,22 +210,31 @@ class TwitchPlayer(pywindow.PyWindow):
 			os.remove(user_meta)
 			if refresh: self._refresh_account_status()
 			return True
-		except: return False
+		except Exception as e: print("ERROR", e); return False
 
 	def update_livestreams(self):
 		""" Update the live followed channel list, can be requested several times and each time an updated list will be fetched """
+		print("INFO", "Refreshing live channels list")
+		self.content["refresh_list"].accept_input = False
 		follow_data = self._usermeta.get("followed", [])
 		follow_channels = "&user_id=".join([c["to_id"] for c in follow_data])
 		live_follows = self._process_request(user_stream_url.format(ids=follow_channels))
 		if not live_follows: return
 
 		live_follows = live_follows["data"]
-		i = 0
+		game_set = set([l["game_id"] for l in live_follows])
+		game_data = self._process_request(user_game_url.format(ids="&id=".join(game_set)))
+		if not game_data: game_data = {}
+		else: game_data = {et["id"]: et["name"] for et in game_data["data"]}
 		self._live_content.clear_content()
+
+		i = 0
 		for live_data in live_follows:
+			live_data["game_id"] = game_data.get(live_data["game_id"], live_data["game_id"])
 			self._live_content.place_frame(StreamEntry(self._live_content.content, live_data, self._open_stream), row=i)
 			self._live_content.row(i, weight=1)
 			i += 1
+		self.content["refresh_list"].accept_input = True
 
 	def _open_stream(self, id):
 		print("clicked", id)
