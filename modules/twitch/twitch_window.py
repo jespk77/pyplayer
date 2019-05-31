@@ -1,9 +1,6 @@
 from ui import pywindow, pyelement, pyimage, pycontainer
 
 CLIENT_ID = "6adynlxibzw3ug8udhyzy6w3yt70pw"
-emote_cache = pyimage.ImageCache("emote_cache", "http://static-cdn.jtvnw.net/emoticons/v1/{key}/1.0")
-bttv_emote_cache = pyimage.ImageCache("bttv_emote_cache", "https://cdn.betterttv.net/emote/{key}/1x")
-
 # all requests done using new twitch API: https://dev.twitch.tv/docs/api/reference/
 user_info_url = "https://api.twitch.tv/helix/users"
 user_follows_url = "https://api.twitch.tv/helix/users/follows?from_id={user_id}"
@@ -95,8 +92,15 @@ class TwitchPlayer(pywindow.PyWindow):
 		self.icon = "assets/icon_twitchviewer"
 		self.title = "Twitch Overview"
 		self._userlogin = None
+		self._irc = None
+		self._chatwindows = {}
 		self.content.column(0, weight=1).row(0, minsize=20)
 		self.schedule(func=self._refresh_account_status)
+
+		@self.event_handler.WindowClose
+		def _on_window_close():
+			if len(self._chatwindows.keys()) > 0: self.hidden = True
+			else: self.destroy()
 
 	def create_widgets(self):
 		pywindow.PyWindow.create_widgets(self)
@@ -135,7 +139,7 @@ class TwitchPlayer(pywindow.PyWindow):
 			print("INFO", "Existing user data found, updating data")
 			import os, time, json
 
-			if not os.path.isfile(user_meta):# or time.time() - os.path.getmtime(user_meta) > self.CACHE_EXPIRY:
+			if not os.path.isfile(user_meta) or time.time() - os.path.getmtime(user_meta) > self.CACHE_EXPIRY:
 				data = self._process_request(user_info_url)
 				if not data: return
 				print("INFO", "User data succesfully received, updating cache and elements")
@@ -236,5 +240,30 @@ class TwitchPlayer(pywindow.PyWindow):
 			i += 1
 		self.content["refresh_list"].accept_input = True
 
-	def _open_stream(self, id):
-		print("clicked", id)
+	def open_channel(self, channel):
+		self._open_stream(channel)
+		self.hidden = True
+
+	def destroy(self):
+		if self._irc:
+			try:
+				self._irc.disconnect()
+				self._irc.join()
+			except Exception as e: print("ERROR", "while stopping IRC client:", e)
+		pywindow.PyWindow.destroy(self)
+
+	def _open_stream(self, channel):
+		print("INFO", "Opening", channel, "stream")
+		if self._irc is None:
+			from modules.twitch import twitch_irc
+			self._irc = twitch_irc.IRCClient()
+			self._irc.connect(self._usermeta["display_name"].lower(), "oauth:" + self._userlogin["Authorization"][7:])
+
+		if not channel in self._chatwindows:
+			from modules.twitch import twitch_chatviewer
+			vw = twitch_chatviewer.TwitchChatWindow(self)
+			self.open_window("twitch_" + channel, vw)
+			self._chatwindows[channel] = vw
+
+			@vw.event_handler.WindowDestroy
+			def _viewer_destroy(): del self._chatwindows[channel]
