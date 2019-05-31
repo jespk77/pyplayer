@@ -8,7 +8,9 @@ window_id = "twitch_viewer"
 # MODULE COMMANDS
 def command_twitch(arg, argc):
 	if argc == 0:
-		viewer = client.open_window(window_id, twitch_window.TwitchPlayer(client))
+		viewer = client.get_window(window_id)
+		if viewer: viewer.hidden = False
+		else: client.open_window(window_id, twitch_window.TwitchPlayer(client))
 		return messagetypes.Reply("Twitch overview window opened")
 
 def command_twitch_resetcache(arg, argc):
