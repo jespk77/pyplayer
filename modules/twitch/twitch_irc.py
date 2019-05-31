@@ -2,6 +2,8 @@ import socket, threading, multiprocessing
 from collections import namedtuple
 
 twitch_irc = "irc.chat.twitch.tv", 6667
+
+Message = namedtuple("Message", ["meta", "type", "data"])
 class IRCClient(threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self, name="IRCClient")
@@ -56,23 +58,42 @@ class IRCClient(threading.Thread):
 			try:
 				data = self._receive().split("\r\n", maxsplit=4)
 				for msg in data:
+					msg = msg.split(" ")
 					if not msg: continue
 					if msg[0] == "PING": self._send("PONG {}".format(msg[1:]))
 					else: self._process_data(msg)
 
 			except socket.timeout: pass
+			except ConnectionAbortedError: break
 			except socket.error as e:
 				print("ERROR", "Socket error!")
 				import traceback
-				traceback.format_exception(type(e), e, e.__traceback__)
+				traceback.print_exception(type(e), e, e.__traceback__)
 				break
+			except Exception as e:
+				print("ERROR", "Processing error!")
+				import traceback
+				traceback.print_exception(type(e), e, e.__traceback__)
 
-	_message = namedtuple("Message", ["meta", "type", "data"])
 	def _process_data(self, data):
-		try:
-			meta, type, channel, msg = data[0], data[2], data[3], data[4][1:]
-			self._channel_queue[channel].put(self._message(meta=meta, type=type, data=msg))
-		except (IndexError, KeyError): pass
+		if len(data) > 4:
+			meta, type, channel, msg = data[0], data[2], data[3][1:], data[4][1:]
+			q = self._channel_queue.get(channel)
+			if q:
+				try: meta = self._convert_meta(meta)
+				except ValueError: return
+				else: q.put(Message(meta=meta, type=type, data=msg))
 
-	def _send(self, data): self._s.send(bytes("{}\r\n".format(data)))
+	def _convert_meta(self, meta):
+		if not isinstance(meta, str): raise TypeError("'meta' must be a string!")
+		if not meta.startswith('@'): raise ValueError("Invalid metadata, first character should be '@'")
+		meta = meta[1:]
+
+		data = {}
+		for entry in meta.split(';'):
+			entry = entry.split("=", maxsplit=1)
+			if len(entry) == 2: data[entry[0]] = entry[1]
+		return data
+
+	def _send(self, data): self._s.send(bytes("{}\r\n".format(data), "UTF-8"))
 	def _receive(self, bufsize=1024): return self._s.recv(bufsize).decode()
