@@ -68,11 +68,10 @@ class StreamEntry(pycontainer.PyLabelFrame):
 		pycontainer.PyLabelFrame.__init__(self, parent)
 		self._meta = meta
 
-		self.place_element(pyelement.PyTextlabel(self, "header"), columnspan=2)
+		lbl = self.place_element(pyelement.PyTextlabel(self, "header"), columnspan=2)
+		lbl.text = self._meta.get("user_name", "?")
 		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_title"), row=1, columnspan=2)
 		lbl.text = self._meta.get("title", "No stream title")
-		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_name", {"foreground": "gray"}), row=2)
-		lbl.text = self._meta.get("user_name", "?")
 		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_game"), row=2, column=1)
 		lbl.text = self._meta.get("game_id", "undefined")
 		self.row(0, weight=1).row(1, weight=1).column(0, weight=1).column(1, weight=1)
@@ -104,28 +103,25 @@ class TwitchPlayer(pywindow.PyWindow):
 
 	def create_widgets(self):
 		pywindow.PyWindow.create_widgets(self)
-		self.content.place_element(pyelement.PyTextlabel(self.content, "status_label"))
+		self.content.place_element(pyelement.PyTextlabel(self.content, "status_label"), columnspan=2)
 		self.content["status_label"].text = "Not signed in"
-
-		self.content.place_element(pyelement.PyButton(self.content, "login_action"), column=1)
+		self.content.place_element(pyelement.PyButton(self.content, "login_action"), column=2)
 		self.content["login_action"].text = "Sign in"
 		self.content["login_action"].command = self._do_signin
-		self.content.place_element(pyelement.PySeparator(self.content, "separator1"), row=1, columnspan=2)
+		self.content.place_element(pyelement.PySeparator(self.content, "separator1"), row=1, columnspan=3)
 
-		lbl = self.content.place_element(pyelement.PyTextlabel(self.content, "live_channels"), row=2, columnspan=2)
-		lbl.text = "- Followed live channels -"
+		lbl = self.content.place_element(pyelement.PyTextlabel(self.content, "live_channels"), row=2, columnspan=3)
+		lbl.text = "Followed live channels"
+		self.content.place_element(pyelement.PyTextlabel(self.content, "live_update", {"foreground": "gray"}), row=3)
+		bt = self.content.place_element(pyelement.PyButton(self.content, "refresh_btn"), row=3, column=1, columnspan=2)
+		bt.text = "Refresh"
+		bt.command = self.update_livestreams
+
 		self._live_content = pycontainer.PyScrollableFrame(self.content)
-		self.content.place_frame(self._live_content, row=3, columnspan=2)
-		self.content.row(3, weight=1)
+		self.content.place_frame(self._live_content, row=4, columnspan=3)
+		self.content.row(4, weight=1).column(1, minsize=50)
 		self._live_content.content.column(0, weight=1)
 		self._live_content.scrollbar_y = True
-
-		bt = self.content.place_element(pyelement.PyButton(self.content, "refresh_list"), row=4, columnspan=2)
-		bt.text = "Manual refresh"
-		bt.command = self.update_livestreams
-		bt = self.content.place_element(pyelement.PyButton(self.content, "debug_deleteusermeta"), row=5, columnspan=2)
-		bt.text = "(DEBUG) refresh user meta"
-		bt.command = self.clear_userdata_cache
 
 	def _refresh_account_status(self):
 		if not self._userlogin:
@@ -219,12 +215,15 @@ class TwitchPlayer(pywindow.PyWindow):
 	def update_livestreams(self):
 		""" Update the live followed channel list, can be requested several times and each time an updated list will be fetched """
 		print("INFO", "Refreshing live channels list")
-		self.content["refresh_list"].accept_input = False
+		self.content["refresh_btn"].accept_input = False
+		self.content["live_update"].text = "Fetching..."
 		self.schedule(min=1, func=self._enable_refresh)
 		follow_data = self._usermeta.get("followed", [])
 		follow_channels = "&user_id=".join([c["to_id"] for c in follow_data])
 		live_follows = self._process_request(user_stream_url.format(ids=follow_channels))
-		if not live_follows: return
+		if not live_follows:
+			self.content["live_update"].text = "Error occured while fetching, try again later"
+			return
 
 		live_follows = live_follows["data"]
 		game_set = set([l["game_id"] for l in live_follows])
@@ -240,8 +239,11 @@ class TwitchPlayer(pywindow.PyWindow):
 			self._live_content.row(i, weight=1)
 			i += 1
 
+		import datetime
+		self.content["live_update"].text = datetime.datetime.today().strftime("Last update: %b %d, %Y - %I:%M %p")
+
 	def _enable_refresh(self):
-		self.content["refresh_list"].accept_input = True
+		self.content["refresh_btn"].accept_input = True
 
 	def open_channel(self, channel):
 		self._open_stream(channel)
