@@ -220,6 +220,7 @@ class TwitchPlayer(pywindow.PyWindow):
 		""" Update the live followed channel list, can be requested several times and each time an updated list will be fetched """
 		print("INFO", "Refreshing live channels list")
 		self.content["refresh_list"].accept_input = False
+		self.schedule(min=1, func=self._enable_refresh)
 		follow_data = self._usermeta.get("followed", [])
 		follow_channels = "&user_id=".join([c["to_id"] for c in follow_data])
 		live_follows = self._process_request(user_stream_url.format(ids=follow_channels))
@@ -238,6 +239,8 @@ class TwitchPlayer(pywindow.PyWindow):
 			self._live_content.place_frame(StreamEntry(self._live_content.content, live_data, self._open_stream), row=i)
 			self._live_content.row(i, weight=1)
 			i += 1
+
+	def _enable_refresh(self):
 		self.content["refresh_list"].accept_input = True
 
 	def open_channel(self, channel):
