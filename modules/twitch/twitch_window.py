@@ -68,15 +68,15 @@ class StreamEntry(pycontainer.PyLabelFrame):
 		pycontainer.PyLabelFrame.__init__(self, parent)
 		self._meta = meta
 
-		lbl = self.place_element(pyelement.PyTextlabel(self, "header"), columnspan=2)
+		lbl = self.place_element(pyelement.PyTextlabel(self, "header"))
 		lbl.text = self._meta.get("user_name", "?")
-		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_title"), row=1, columnspan=2)
+		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_title"), row=1)
 		lbl.text = self._meta.get("title", "No stream title")
-		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_game"), row=2, column=1)
+		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_game"), row=2)
 		lbl.text = self._meta.get("game_id", "undefined")
-		self.row(0, weight=1).row(1, weight=1).column(0, weight=1).column(1, weight=1)
+		self.row(0, weight=1).row(1, weight=1).column(0, weight=1)
 
-		btn = self.place_element(pyelement.PyButton(self, "goto"), rowspan=4, column=2)
+		btn = self.place_element(pyelement.PyButton(self, "goto"), rowspan=4, column=1)
 		btn.text = "Open"
 		btn.command = lambda : go_cb(self._meta.get("user_name"))
 		self.column(2, minsize=50)
@@ -157,7 +157,7 @@ class TwitchPlayer(pywindow.PyWindow):
 				self.content["status_label"].text = "Signed in as {}".format(self._usermeta["display_name"])
 				self.content["login_action"].text = "Sign out"
 				self.content["login_action"].command = self._do_signout
-				self.content["refresh_list"].accept_input = False
+				self.content["refresh_btn"].accept_input = False
 				self.schedule(sec=1, func=self.update_livestreams)
 			except Exception as e: print("ERROR", "Updating profile state:", e)
 
