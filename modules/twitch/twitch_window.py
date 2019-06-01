@@ -226,11 +226,13 @@ class TwitchPlayer(pywindow.PyWindow):
 			return
 
 		live_follows = live_follows["data"]
+		self._live_content.clear_content()
+		if len(live_follows) == 0: return
+
 		game_set = set([l["game_id"] for l in live_follows])
 		game_data = self._process_request(user_game_url.format(ids="&id=".join(game_set)))
 		if not game_data: game_data = {}
 		else: game_data = {et["id"]: et["name"] for et in game_data["data"]}
-		self._live_content.clear_content()
 
 		i = 0
 		for live_data in live_follows:
