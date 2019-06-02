@@ -7,6 +7,10 @@ def scroll_event():
 	import sys
 	return "<MouseWheel>" if "win" in sys.platform else "<Button-4>&&<Button-5>"
 
+# frequently used documentation:
+# * http://effbot.org/tkinterbook/
+# * http://infohost.nmt.edu/tcc/help/pubs/tkinter/web/index.html
+
 # PREDEFINED DEFAULT COLORS USED IN ELEMENT CONFIGURATIONS
 background_color = "gray15"
 foreground_color = "white"
