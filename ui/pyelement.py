@@ -298,7 +298,7 @@ class PyTextfield(PyElement):
 	back = "end"
 	def __init__(self, container, id, initial_cfg=None):
 		self._font = font.Font(family="segoeui", size="11")
-		PyElement.__init__(self, id, container, tkinter.Text(container._tk, **input_cfg), initial_cfg)
+		PyElement.__init__(self, id, container, tkinter.Text(container._tk, **input_cfg, undo=False), initial_cfg)
 		self.accept_input = True
 		self._tk.configure(font=self._font)
 		self._cmd = None
@@ -311,6 +311,14 @@ class PyTextfield(PyElement):
 		self._accept_input = value is True
 	def with_accept_input(self, value):
 		self.accept_input = value
+		return self
+
+	@property
+	def undo(self): return self._tk.cget("undo")
+	@undo.setter
+	def undo(self, value): self._tk.configure(undo=value)
+	def with_undo(self, value):
+		self.undo = value
 		return self
 
 	@property
