@@ -60,9 +60,9 @@ class IRCClient(threading.Thread):
 	def run(self):
 		while True:
 			try:
-				data = self._receive().split("\r\n", maxsplit=4)
+				data = self._receive().split("\r\n")
 				for msg in data:
-					msg = msg.split(" ")
+					msg = msg.split(" ", maxsplit=4)
 					if not msg: continue
 					if msg[0] == "PING": self._send("PONG {}".format(msg[1:]))
 					else: self._process_data(msg)
