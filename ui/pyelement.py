@@ -42,11 +42,17 @@ class PyElement:
 	def width(self): return self._tk.winfo_width()
 	@width.setter
 	def width(self, value): self._tk.configure(width=value)
+	def with_width(self, value):
+		self.width = value
+		return self
 
 	@property
 	def height(self): return self._tk.winfo_height()
 	@height.setter
 	def height(self, value): self._tk.configure(height=value)
+	def with_height(self, value):
+		self.height = value
+		return self
 
 	def set_focus(self): self._tk.focus_set()
 	def move_focus_up(self): self._tk.tk_focusPrev()
@@ -80,6 +86,9 @@ class PyTextlabel(PyElement):
 		""" Configure the text displayed on this label """
 		self._string_var.set(value)
 	display_text = text
+	def with_text(self, value):
+		self.text = value
+		return self
 
 	@property
 	def image(self):
@@ -110,6 +119,9 @@ class PyTextInput(PyElement):
 	def accept_input(self, vl):
 		""" Control whether the current input value can be adjusted """
 		self._tk.configure(state="normal" if vl else "disabled")
+	def with_accept_input(self, value):
+		self.accept_input = value
+		return self
 
 	@property
 	def format_str(self): return self._format_str if self._format_str else ""
@@ -133,6 +145,9 @@ class PyTextInput(PyElement):
 		else:
 			self._strvar.trace_remove("write", self._cmd)
 			self._cmd = None
+	def with_command(self, value):
+		self.command = value
+		return self
 
 	@property
 	def value(self): return self._strvar.get()
@@ -142,6 +157,9 @@ class PyTextInput(PyElement):
 		vl = str(vl)
 		if vl and not self._on_input_key(vl): raise ValueError("Cannot set value {}; contains non-allowed characters".format(vl))
 		self._strvar.set(vl)
+	def with_value(self, value):
+		self.value = value
+		return self
 
 	@property
 	def max_length(self): return self._input_length
@@ -149,6 +167,9 @@ class PyTextInput(PyElement):
 	def max_length(self, ln):
 		""" Character limit for this input field, when this limit is reached, no more characters can be entered; set to 0 to disable limit """
 		self._input_length = ln
+	def with_max_length(self, value):
+		self.max_length = value
+		return self
 
 	def _on_input_key(self, entry): return self._input_length == 0 or (len(entry) <= self._input_length and (not self._format_str or not self._format_str.search(entry)))
 
@@ -171,6 +192,9 @@ class PyCheckbox(PyElement):
 	@text.setter
 	def text(self, vl): self._desc.set(vl)
 	description = text
+	def with_text(self, value):
+		self.text = value
+		return self
 
 	@property
 	def image(self):
@@ -188,6 +212,9 @@ class PyCheckbox(PyElement):
 		return self._value.get()
 	@checked.setter
 	def checked(self, check): self._value.set(check)
+	def with_checked(self, value):
+		self.checked = value
+		return self
 
 	@property
 	def accept_input(self):
@@ -195,6 +222,8 @@ class PyCheckbox(PyElement):
 		return self._tk.cget("state") != "disabled"
 	@accept_input.setter
 	def accept_input(self, vl): self._tk.configure(state="normal" if vl else "disabled")
+	def with_accept_input(self, value):
+		self.accept_input = value
 
 	@property
 	def command(self):
@@ -204,6 +233,9 @@ class PyCheckbox(PyElement):
 	def command(self, cb):
 		if not callable(cb): raise TypeError("Callback must be callable!")
 		self._tk.configure(command=cb)
+	def with_command(self, value):
+		self.command = value
+		return self
 
 
 button_cfg = { "activebackground": background_color, "activeforeground": foreground_color }
@@ -228,6 +260,9 @@ class PyButton(PyElement):
 	def text(self, value):
 		""" Set the display string of this element (once this is set, using configure 'text' no longer has effect) """
 		self._string_var.set(value)
+	def with_text(self, value):
+		self.text = value
+		return self
 
 	@property
 	def image(self):
@@ -249,6 +284,9 @@ class PyButton(PyElement):
 		""" Set the callback that gets called when the button is pressed """
 		self._callback = value
 		self._tk.configure(command=value)
+	def with_command(self, value):
+		self.command = value
+		return self
 
 
 class PyTextfield(PyElement):
@@ -267,6 +305,9 @@ class PyTextfield(PyElement):
 	def accept_input(self, value):
 		self._tk.configure(state="normal" if value else "disabled")
 		self._accept_input = value is True
+	def with_accept_input(self, value):
+		self.accept_input = value
+		return self
 
 	@property
 	def current_pos(self): return "current"
@@ -279,6 +320,9 @@ class PyTextfield(PyElement):
 	def text(self, value):
 		self.delete(self.front, self.back)
 		self.insert(self.back, value)
+	def with_text(self, value):
+		self.text = value
+		return self
 
 	@property
 	def cursor(self):
@@ -303,6 +347,9 @@ class PyTextfield(PyElement):
 				if self._cmd:
 					try: self._cmd(char)
 					except Exception as e: print("ERROR", "Processing callback for textfield:", e)
+	def with_command(self, value):
+		self.command = value
+		return self
 
 	def can_interact(self): return self._tk.cget("state") == "normal"
 	def insert(self, index, chars, *args):
@@ -383,6 +430,9 @@ class PyProgressbar(PyElement):
 	def horizontal(self): return self._horizontal
 	@horizontal.setter
 	def horizontal(self, vl): self._horizontal = vl is True
+	def with_horizontal(self, value):
+		self.horizontal = value
+		return self
 
 	@property
 	def background_color(self): return self._tk.cget("background")
@@ -398,6 +448,10 @@ class PyProgressbar(PyElement):
 		return self._tk.cget("mode") == "determinate"
 	@determinate.setter
 	def determinate(self, value): self._tk.configure(mode="determinate" if value else "indeterminate")
+	def with_determinate(self, value):
+		self.determinate = value
+		return self
+
 	@property
 	def maximum(self):
 		""" Returns the total size of the bar, if the progress is set to this value the bar is full (default is 100) """
@@ -406,6 +460,10 @@ class PyProgressbar(PyElement):
 	def maximum(self, value):
 		try: self._tk.configure(maximum=value)
 		except tkinter.TclError as e: print("ERROR", "Setting maximum value for progressbar '{}':".format(self.widget_id), e)
+	def with_maximum(self, value):
+		self.maximum = value
+		return self
+
 	def _active_theme(self): return "Horizontal.TProgressbar" if self.horizontal else "Vertical.TProgressbar"
 
 	def load_configuration(self):
