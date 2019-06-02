@@ -30,12 +30,14 @@ class IRCClient(threading.Thread):
 	def join_channel(self, channel):
 		""" Join requested channel, once joined all messages received on this channel can be polled
 		 	It is fine to call this more than once, when already joined the channel this call is ignored """
+		channel = channel.lower()
 		if channel not in self._channel_queue:
 			self._channel_queue[channel] = multiprocessing.Queue()
 			self._send("JOIN #{}".format(channel))
 
 	def leave_channel(self, channel):
 		""" Leave requested channel, previously received messages still in queue will be dropped """
+		channel = channel.lower()
 		q = self._channel_queue.get(channel)
 		if q is not None:
 			self._send("PART #{}".format(channel))
@@ -46,12 +48,14 @@ class IRCClient(threading.Thread):
 		 	Use 'message_limit' to only request a certain number of items
 		 		(will return fewer messages if there aren't not enough messages available)
 		 	Returns a list of strings with all received messages """
+		channel = channel.lower()
 		if channel in self._channel_queue:
 			res = []
 			q = self._channel_queue[channel]
 			while not q.empty() and (not message_limit or len(res) < message_limit):
 				res.append(q.get_nowait())
 			return res
+		else: raise NameError("Not subscribed to messages from '{}'".format(channel))
 
 	def run(self):
 		while True:
@@ -76,8 +80,9 @@ class IRCClient(threading.Thread):
 				traceback.print_exception(type(e), e, e.__traceback__)
 
 	def _process_data(self, data):
-		if len(data) > 4:
-			meta, type, channel, msg = data[0], data[2], data[3][1:], data[4][1:]
+		if len(data) > 3:
+			meta, type, channel = data[0], data[2], data[3][1:]
+			msg = data[4][1:] if len(data) > 4 else ""
 			q = self._channel_queue.get(channel)
 			if q:
 				try: meta = self._convert_meta(meta)
