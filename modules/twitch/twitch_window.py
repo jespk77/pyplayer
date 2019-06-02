@@ -162,12 +162,10 @@ class TwitchPlayer(pywindow.PyWindow):
 			except Exception as e: print("ERROR", "Updating profile state:", e)
 
 	def _process_request(self, get_url):
-		import requests, json
+		import requests
 		r = requests.get(get_url, headers=self._userlogin)
-		body = r.content.decode()
-		try: data = json.loads(body)
-		except json.JSONDecodeError: return self._invalid_data()
-		if r.status_code != 200: return self._invalid_response(r.status_code, body)
+		data = r.json()
+		if r.status_code != 200: return self._invalid_response(r.status_code, data)
 		else: return data
 
 	def _invalid_data(self):
