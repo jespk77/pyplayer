@@ -62,6 +62,8 @@ class TwitchSigninWindow(pywindow.PyWindow):
 			self.user_token = txt
 			self.destroy()
 
+from collections import namedtuple
+ChannelData = namedtuple("ChannelData", ["name", "id"])
 
 class StreamEntry(pycontainer.PyLabelFrame):
 	def __init__(self, parent, meta, go_cb):
@@ -78,7 +80,7 @@ class StreamEntry(pycontainer.PyLabelFrame):
 
 		btn = self.place_element(pyelement.PyButton(self, "goto"), rowspan=4, column=1)
 		btn.text = "Open"
-		btn.command = lambda : go_cb(self._meta.get("user_name"))
+		btn.command = lambda : go_cb(ChannelData(name=self._meta.get("user_name"), id=self._meta.get("user_id")))
 		self.column(1, minsize=50)
 
 
@@ -132,7 +134,7 @@ class TwitchPlayer(pywindow.PyWindow):
 			ch = self.content["manual_channel"].value
 			if ch:
 				self.content["manual_channel"].value = ""
-				self._open_stream(self)
+				self.open_channel(ch)
 
 
 	def _refresh_account_status(self):
@@ -169,8 +171,6 @@ class TwitchPlayer(pywindow.PyWindow):
 				self.content["status_label"].text = "Signed in as {}".format(self._usermeta["display_name"])
 				self.content["login_action"].text = "Sign out"
 				self.content["login_action"].command = self._do_signout
-				self.content["refresh_btn"].accept_input = False
-				self.schedule(sec=1, func=self.update_livestreams)
 			except Exception as e: print("ERROR", "Updating profile state:", e)
 
 	def _process_request(self, get_url):
@@ -258,8 +258,12 @@ class TwitchPlayer(pywindow.PyWindow):
 		self.content["refresh_btn"].accept_input = True
 
 	def open_channel(self, channel):
-		self._open_stream(channel)
-		self.hidden = True
+		""" Manually choose channel to join """
+		channel_data = self._process_request(user_info_url + "?login={}".format(channel))
+		channel_data = channel_data.get("data")[0]
+		if channel_data:
+			self._open_stream(ChannelData(name=channel_data.get("display_name"), id=channel_data.get("id")))
+			self.hidden = True
 
 	def destroy(self):
 		if self._irc:
@@ -270,17 +274,20 @@ class TwitchPlayer(pywindow.PyWindow):
 		pywindow.PyWindow.destroy(self)
 
 	def _open_stream(self, channel):
-		print("INFO", "Opening", channel, "stream")
+		if not channel or not channel.name or not channel.id: raise ValueError("Invalid channel!")
+		print("INFO", "Opening", channel.name, "stream")
 		if self._irc is None:
 			from modules.twitch import twitch_irc
 			self._irc = twitch_irc.IRCClient()
 			self._irc.connect(self._usermeta["display_name"].lower(), "oauth:" + self._userlogin["Authorization"][7:])
 
-		if not channel in self._chatwindows:
+		if not channel.name in self._chatwindows:
 			from modules.twitch import twitch_chatviewer
 			vw = twitch_chatviewer.TwitchChatWindow(self, channel, self._irc)
-			self.open_window("twitch_" + channel, vw)
-			self._chatwindows[channel] = vw
+			self.open_window("twitch_" + channel.name, vw)
+			self._chatwindows[channel.name] = vw
 
 			@vw.event_handler.WindowDestroy
-			def _viewer_destroy(): del self._chatwindows[channel]
+			def _viewer_destroy():
+				try: del self._chatwindows[channel.name]
+				except KeyError: pass
