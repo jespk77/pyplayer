@@ -1,11 +1,10 @@
-import os, sys, tkinter, weakref
-
 from ui import pyimage, pyconfiguration, pycontainer, pyevents
 
 cfg_folder = ".cfg"
 class PyWindow:
 	""" Framework class for windows, they have to be created with a valid root """
 	def __init__(self, parent, id, initial_cfg=None, cfg_file=None):
+		import tkinter, weakref
 		if parent is not None:
 			if not isinstance(parent, PyWindow): raise ValueError("Parent window must be a PyWindow, not '{.__name__}'".format(type(parent)))
 			self._tk = tkinter.Toplevel(parent._tk)
@@ -15,9 +14,10 @@ class PyWindow:
 		self._event_handler = pyevents.PyWindowEvents(self)
 		self.hidden = True
 		self._windowid = id
-		self.title = "PyWindow: " + self._windowid
+		self.title = "PyWindow - " + self._windowid
 		self.icon = ""
 
+		import os
 		if not os.path.isdir(cfg_folder): os.mkdir(cfg_folder)
 		if cfg_file is None: cfg_file = cfg_folder + "/" + self._windowid.lower()
 		elif not cfg_file.startswith(cfg_folder): cfg_file = cfg_folder + cfg_file
@@ -146,9 +146,10 @@ class PyWindow:
 		if not value: value = "assets/blank"
 
 		try:
+			import sys, os
 			if "linux" in sys.platform:
 				path = os.path.dirname(os.path.realpath(__file__))
-				self._tk.tk.call("wm", "iconphoto", self._tk._w, pyimage.PyImage(file=os.path.join(path, os.pardir, value + ".png")))
+				self._tk.tk.call("wm", "iconphoto", self._tk._w, pyimage.ImageData(file=os.path.join(path, os.pardir, value + ".png")))
 			elif "win" in sys.platform: self._tk.iconbitmap(value + ".ico")
 		except Exception as e: print("ERROR", "Setting icon bitmap {}".format(e))
 	def with_icon(self, icon):
