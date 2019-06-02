@@ -79,7 +79,7 @@ class StreamEntry(pycontainer.PyLabelFrame):
 		btn = self.place_element(pyelement.PyButton(self, "goto"), rowspan=4, column=1)
 		btn.text = "Open"
 		btn.command = lambda : go_cb(self._meta.get("user_name"))
-		self.column(2, minsize=50)
+		self.column(1, minsize=50)
 
 
 user_logindata, user_meta = ".cache/userdata", ".cache/usermeta"
@@ -122,6 +122,18 @@ class TwitchPlayer(pywindow.PyWindow):
 		self.content.row(4, weight=1).column(1, minsize=50)
 		self._live_content.content.column(0, weight=1)
 		self._live_content.scrollbar_y = True
+		self.content.place_element(pyelement.PySeparator(self.content, "separator2"), row=5, columnspan=3)
+
+		lbl = self.content.place_element(pyelement.PyTextlabel(self.content, "manual_hint"), row=6)
+		lbl.text = "Join another channel:"
+		inpt: pyelement.PyTextInput = self.content.place_element(pyelement.PyTextInput(self.content, "manual_channel"), row=6, column=1, columnspan=2)
+		@inpt.event_handler.KeyEvent("enter")
+		def _join_channel():
+			ch = self.content["manual_channel"].value
+			if ch:
+				self.content["manual_channel"].value = ""
+				self._open_stream(self)
+
 
 	def _refresh_account_status(self):
 		if not self._userlogin:
@@ -266,7 +278,7 @@ class TwitchPlayer(pywindow.PyWindow):
 
 		if not channel in self._chatwindows:
 			from modules.twitch import twitch_chatviewer
-			vw = twitch_chatviewer.TwitchChatWindow(self)
+			vw = twitch_chatviewer.TwitchChatWindow(self, channel, self._irc)
 			self.open_window("twitch_" + channel, vw)
 			self._chatwindows[channel] = vw
 
