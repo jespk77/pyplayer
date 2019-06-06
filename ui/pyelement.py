@@ -79,6 +79,7 @@ class PyTextlabel(PyElement):
 		PyElement.__init__(self, id, container, tkinter.Label(container._tk, **element_cfg), initial_cfg)
 		self._string_var = tkinter.StringVar()
 		self._tk.configure(textvariable=self._string_var)
+		self._do_wrapping = False
 
 	@property
 	def text(self):
@@ -102,6 +103,15 @@ class PyTextlabel(PyElement):
 	def image(self, img):
 		""" Set the image that should be displayed, it should either be set to an instance of 'PyImage' or None to remove it """
 		raise DeprecationWarning("Deprecated, use PyImage instead!")
+
+	@property
+	def wrapping(self): return self._do_wrapping
+	@wrapping.setter
+	def wrapping(self, value):
+		self._do_wrapping = value
+		@self.event_handler.ElementResize
+		def _on_resize(width):
+			if self._do_wrapping: self._tk.configure(wraplength=width)
 
 
 input_cfg = { "insertbackground": foreground_color, "selectforeground": sel_foreground_color, "selectbackground": sel_background_color }
