@@ -298,6 +298,7 @@ class PyTextfield(PyElement):
 	back = "end"
 	def __init__(self, container, id, initial_cfg=None):
 		self._font = font.Font(family="segoeui", size="11")
+		self._bold_font = None
 		PyElement.__init__(self, id, container, tkinter.Text(container._tk, **input_cfg, undo=False), initial_cfg)
 		self.accept_input = True
 		self._tk.configure(font=self._font)
@@ -363,6 +364,15 @@ class PyTextfield(PyElement):
 		self.command = value
 		return self
 
+	@property
+	def font(self): return self._font
+	@property
+	def bold_font(self):
+		if not self._bold_font:
+			self._bold_font = self._font.copy()
+			self._bold_font.configure(weight="bold")
+		return self._bold_font
+
 	def can_interact(self): return self._tk.cget("state") == "normal"
 	def insert(self, index, chars, *args):
 		""" Insert text into the given position (ignores 'accept_input' property) """
@@ -375,6 +385,11 @@ class PyTextfield(PyElement):
 		self._tk.configure(state="normal")
 		self._tk.delete(index1, index2)
 		if not self.accept_input: self._tk.configure(state="disabled")
+
+	def place_image(self, index, img):
+		if isinstance(img, pyimage.ImageData): self._tk.image_create(index, image=img.images[0])
+		elif isinstance(img, pyimage.PyImage): self._tk.window_create(index, img)
+		else: raise TypeError("Image type '{}' not supported, only PyImage or ImageData!".format(type(img).__name__))
 
 	def position(self, tag):
 		""" Get the exact coordinates in this text field, or emtpy string if nothing found """
@@ -393,10 +408,24 @@ class PyTextfield(PyElement):
 		self._tk.mark_set(mark, position)
 		self._tk.mark_gravity(mark, gravity)
 
+	def get_tag_option(self, tag, option):
+		""" Get configuration set for given tag, raises KeyError if there's no tag with that name set """
+		try: return self._tk.tag_cget(tag, option)
+		except tkinter.TclError: pass
+		raise KeyError(tag)
+
+	def set_tag_option(self, tag, **options):
+		""" Update tag option, will create new tag if it doesn't exist """
+		self._tk.tag_configure(tag, **options)
+
 	def clear_selection(self):
 		""" Remove selection in this text field (has no effect if nothing was selected) """
 		try: self._tk.tag_remove("sel", self.front, self.back)
 		except: pass
+
+	def with_option(self, **options):
+		self._tk.configure(**options)
+		return self
 
 	def load_configuration(self):
 		dt = self._cfg.value
