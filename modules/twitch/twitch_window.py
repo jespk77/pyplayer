@@ -237,6 +237,8 @@ class TwitchPlayer(pywindow.PyWindow):
 
 		live_follows = live_follows["data"]
 		self._live_content.clear_content()
+		import datetime
+		self.content["live_update"].text = datetime.datetime.today().strftime("Last update: %b %d, %Y - %I:%M %p")
 		if len(live_follows) == 0: return
 
 		game_set = set([l["game_id"] for l in live_follows])
@@ -250,9 +252,6 @@ class TwitchPlayer(pywindow.PyWindow):
 			self._live_content.place_frame(StreamEntry(self._live_content.content, live_data, self._open_stream), row=i)
 			self._live_content.row(i, weight=1)
 			i += 1
-
-		import datetime
-		self.content["live_update"].text = datetime.datetime.today().strftime("Last update: %b %d, %Y - %I:%M %p")
 
 	def _enable_refresh(self):
 		self.content["refresh_btn"].accept_input = True
