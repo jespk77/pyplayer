@@ -29,6 +29,9 @@ class ImageData:
 		return len(self._images) > 1
 
 	@property
+	def data(self): return self._bin
+
+	@property
 	def images(self): return self._images
 	@property
 	def image_count(self): return len(self._images)
@@ -91,8 +94,16 @@ class ImageCache:
 	def load_image(self, key):
 		""" Ensure an image exists for given key, has no effect if key already bound """
 		if not key in self._img_storage:
-			self._img_storage[key] = ImageData(url=self._fturl.format(key))
-			return self._img_storage[key]
+			filepath = os.path.join(self._dir, key)
+			try: img = ImageData(file=filepath)
+			except Exception as e:
+				if not isinstance(e, FileNotFoundError):
+					print("ERROR", "While reading '{}' from cache:".format(filepath), e)
+				img = ImageData(url=self._fturl.format(key=key))
+				with open(filepath, "wb") as file: file.write(img.data.getvalue())
+
+			self._img_storage[key] = img
+			return img
 
 	def get_image(self, key):
 		""" Get image with bound identifier, if the key was not set already the image is fetched from url """
