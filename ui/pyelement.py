@@ -387,7 +387,8 @@ class PyTextfield(PyElement):
 	def insert(self, index, chars, *args):
 		""" Insert text into the given position (ignores 'accept_input' property) """
 		if not self.accept_input: self._tk.configure(state="normal")
-		self._tk.insert(index, chars, *args)
+		try: self._tk.insert(index, chars, *args)
+		except tkinter.TclError as e: print("ERROR", "Inserting characters '{}':".format(chars), e)
 		if not self.accept_input: self._tk.configure(state="disabled")
 
 	def delete(self, index1, index2=None):
