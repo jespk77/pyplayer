@@ -24,6 +24,7 @@ class TwitchChatViewer(pyelement.PyTextfield):
 		self._badge_cache = {}
 		self._timestamp = None
 		self._load_badges()
+		self.with_option(cursor="left_ptr", wrap="word", spacing1=3, padx=5)
 
 	def _load_badges(self):
 		badges = _do_request(badge_url.format(channel_name=self._window.channel_name))
@@ -61,10 +62,14 @@ class TwitchChatViewer(pyelement.PyTextfield):
 		self._insert_badges(meta.get("badges", "").split(","))
 		self._insert_username(meta.get("display-name"), color=meta.get("color"))
 		self._insert_message(meta, msg)
+		self.insert("end", "\n")
 
 	def _insert_badges(self, badges):
 		for b in badges:
-			try: self.place_image("end", self._get_badge(b))
+			try:
+				self.place_image("end", self._get_badge(b))
+				self.insert("end", " ")
+			except KeyError as e: print("INFO", "Unknown badge:", e)
 			except Exception as e: print("ERROR", "While fetching badge '{}':".format(b), e)
 
 	def _insert_username(self, user, color=None):
@@ -109,7 +114,7 @@ class TwitchChatWindow(pywindow.PyWindow):
 		self._ircclient.join_channel(self._channel.name)
 		@self.event_handler.WindowDestroy
 		def _on_destroy():
-			print("INFO", "Window destroyed, leaving channel '{}'".format(self._channel.name))
+			print("INFO", "Chat window closed, leaving channel '{}'".format(self._channel.name))
 			self._ircclient.leave_channel(self._channel.name)
 		self.schedule(ms=500, func=self._poll_message, loop=True)
 
