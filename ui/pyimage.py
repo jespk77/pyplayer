@@ -16,12 +16,19 @@ class ImageData:
 
 		try:
 			from PIL import Image, ImageTk, ImageSequence
-			img = Image.open(self._bin)
+			img = Image.open(self._bin).convert("RGBA")
 			self._images = [ImageTk.PhotoImage(i) for i in ImageSequence.Iterator(img)]
+			return
 		except ImportError:
 			print("WARNING", "Required 'Pillow' library not found, functionality limited!")
 			import base64, tkinter
 			self._images = [tkinter.PhotoImage(data=base64.encodebytes(self._bin.read()))]
+			return
+		except Exception as e:
+			print("ERROR", "Creating image from data:")
+			import traceback
+			traceback.print_exception(type(e), e, e.__traceback__)
+		raise ValueError("Invalid image")
 
 	@property
 	def animated(self):
