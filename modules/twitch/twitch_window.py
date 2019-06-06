@@ -71,11 +71,12 @@ class StreamEntry(pycontainer.PyLabelFrame):
 		self._meta = meta
 
 		lbl = self.place_element(pyelement.PyTextlabel(self, "header"))
-		lbl.text = self._meta.get("user_name", "?")
+		lbl.text = self._meta.get("user_name", "<No username found>")
 		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_title"), row=1)
-		lbl.text = self._meta.get("title", "No stream title")
+		lbl.text = self._meta.get("title", "<No stream title found>")
+		lbl.wrapping = True
 		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_game"), row=2)
-		lbl.text = self._meta.get("game_id", "undefined")
+		lbl.text = self._meta.get("game_id", "<Undefined>")
 		self.row(0, weight=1).row(1, weight=1).column(0, weight=1)
 
 		btn = self.place_element(pyelement.PyButton(self, "goto"), rowspan=4, column=1)
