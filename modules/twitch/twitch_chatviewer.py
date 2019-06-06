@@ -90,7 +90,11 @@ class TwitchChatViewer(pyelement.PyTextfield):
 			emote = emote.split(":")
 			if len(emote) == 2: emote_list[emote[0]] = emote[1]
 		self.insert("end", text)
-		self.insert("end", "\n")
+		for e in emote_list.keys():
+			img = emote_cache.get_image(e)
+			if img.animated: img = pyimage.PyImage(self._window.content, e, img=img)
+			self.insert("end", " ")
+			if img: self.place_image("end", img)
 
 
 class TwitchChatWindow(pywindow.PyWindow):
