@@ -16,8 +16,8 @@ class ImageData:
 
 		try:
 			from PIL import Image, ImageTk, ImageSequence
-			img = Image.open(self._bin).convert("RGBA")
-			self._images = [ImageTk.PhotoImage(i) for i in ImageSequence.Iterator(img)]
+			img = Image.open(self._bin)
+			self._images = [ImageTk.PhotoImage(i.convert("RGBA")) for i in ImageSequence.Iterator(img)]
 			return
 		except ImportError:
 			print("WARNING", "Required 'Pillow' library not found, functionality limited!")
