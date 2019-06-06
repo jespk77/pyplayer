@@ -41,11 +41,14 @@ from ui import pyelement
 class PyImage(pyelement.PyTextlabel):
 	PLAYBACK_RATE_MS = 30
 
-	def __init__(self, container, id, img=None):
+	def __init__(self, container, id, img=None, file=None, url=None):
+		if file or url: img = ImageData(file=file, url=url)
+
 		if img:
 			if isinstance(img, PyImage): img = img._image
 			if isinstance(img, ImageData): self._image = img
 			else: raise TypeError("Incompatible image type '{.__name__}'".format(type(img)))
+		else: raise ValueError("Missing image data!")
 
 		pyelement.PyTextlabel.__init__(self, container, id)
 		self._container = container
