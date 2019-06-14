@@ -76,12 +76,19 @@ class PyImage(pyelement.PyTextlabel):
 			self._active = False
 
 	def _update_img(self):
-		self._tk.configure(image=self._image.images[self._n])
-		self._n = (self._n + 1) % self._image.image_count
+		bbox = self._container.bbox(self._tk)
+		if bbox:
+			self._tk.configure(image=self._image.images[self._n])
+			self._n = (self._n + 1) % self._image.image_count
+		else:
+			print("INFO", "Image '{}' out of bounds, stopping animation".format(self.widget_id))
+			self.stop()
 		return self._active
+
 
 import os
 if not os.path.isdir(".cache"): os.mkdir(".cache")
+
 from ui import pyconfiguration
 class ImageCache:
 	""" Container for a number of images, each image is bound to a unique identifier (that must be hashable)
