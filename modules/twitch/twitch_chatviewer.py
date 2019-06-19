@@ -1,5 +1,9 @@
-from ui import pywindow, pyelement, pyimage
-from modules.twitch.twitch_window import CLIENT_ID
+from modules.twitch.twitch_window import \
+	CLIENT_ID
+from ui import \
+	pyelement, \
+	pyimage, \
+	pywindow
 
 badge_url = "https://api.twitch.tv/kraken/chat/{channel_name}/badges?client_id=" + CLIENT_ID
 channel_badge_url = "https://badges.twitch.tv/v1/badges/channels/{channel_id}/display"
@@ -27,12 +31,20 @@ class TwitchChatViewer(pyelement.PyTextfield):
 		self._badge_cache = {}
 		self._timestamp = None
 		self._scroll_enabled = True
+		self._cmd_cb = None
 		@self.event_handler.MouseEnter
 		def _enable_scroll(): self._scroll_enabled = False
 		@self.event_handler.MouseLeave
 		def _disable_scroll(): self._scroll_enabled = True
 		self._load_badges()
 		self.with_option(cursor="left_ptr", wrap="word", spacing1=3, padx=5)
+
+	@property
+	def command_callback(self): return self._cmd_cb
+	@command_callback.setter
+	def command_callback(self, cb):
+		if not callable(cb): raise ValueError("Callback must be callable!")
+		else: self._cmd_cb = cb
 
 	def _load_badges(self):
 		badges = _do_request(badge_url.format(channel_name=self._window.channel_name))
@@ -61,17 +73,6 @@ class TwitchChatViewer(pyelement.PyTextfield):
 			return self._badge_cache.get(key)
 		elif isinstance(bg, pyimage.ImageData): return bg
 		else: raise KeyError(key)
-
-	def on_privmsg(self, meta, msg):
-		if not meta or not msg: return
-		#print("//", meta, "\n//", msg)
-
-		if self.configuration.get("enable_timestamp") and self._timestamp: self.insert("end", self._timestamp.strftime("%I:%M "), ("timestamp",))
-		self._insert_badges(meta.get("badges", "").split(","))
-		self._insert_username(meta.get("display-name"), color=meta.get("color"))
-		self._insert_message(meta, msg)
-		self.see_bottom()
-		self.insert("end", "\n")
 
 	def _insert_badges(self, badges):
 		for b in badges:
@@ -108,8 +109,10 @@ class TwitchChatViewer(pyelement.PyTextfield):
 						emote_list[text[index_from:index_to]] = emote[0]
 
 		for word in text.split(" "):
-			if 1+1 == 5: #word in chat_triggers
-				pass
+			if word in self._window.configuration["chat_triggers"]:
+				if self._cmd_cb:
+					try: self._cmd_cb(word)
+					except Exception as e: print("ERROR", "While calling chat trigger callback:", e)
 
 			if word in emote_list:
 				img = emote_cache.get_image(emote_list[word])
@@ -123,8 +126,68 @@ class TwitchChatViewer(pyelement.PyTextfield):
 						img.start()
 					self.place_image("end", img)
 
-
 			else: self.insert("end", word + " ")
+
+	def on_privmsg(self, meta, msg):
+		if not meta or not msg: return
+		if self.configuration.get("enable_timestamp") and self._timestamp: self.insert("end", self._timestamp.strftime("%I:%M "), ("timestamp",))
+		self._insert_badges(meta.get("badges", "").split(","))
+		self._insert_username(meta.get("display-name"), color=meta.get("color"))
+		self._insert_message(meta, msg)
+		self.see_bottom()
+		self.insert("end", "\n")
+
+	def on_usernotice(self, meta, data):
+		if meta is None: return
+		type = meta.get("msg-id")
+
+		if type == "resub":
+			text = "{} resubscribed for {} months".format(meta["display-name"], meta["msg-param-cumulative-months"])
+			if meta["msg-param-should-share-streak"] == '1': text += " and is on a {} month streak".format(meta["msg-param-streak-months"])
+		elif type == "sub": text = meta["display-name"] + " subscribed"
+
+		elif type == "subgift":
+			text = "{} gifted a subscription to {}".format(meta["display-name"], meta["msg-param-recipient-display-name"])
+			amt = meta.get("msg-param-sender-count", "0")
+			if amt > "0": text += " for {} total gifts".format(meta["msg-param-sender-count"])
+		elif type == "submysterygift":
+			text = "{} is gifting {} random subscriptions".format(meta["display-name"], meta["msg-param-mass-gift-count"])
+			amt = meta.get("msg-param-sender-count", "0")
+			if amt > "0": text += " for {} total gifts".format(meta["msg-param-sender-count"])
+		elif type == "charity": return self.on_charity(meta, data)
+		else: return
+
+		if meta["msg-param-sub-plan"] == "Prime": level = " with Prime"
+		elif meta["msg-param-sub-plan"] == "1000": level = ""
+		elif meta["msg-param-sub-plan"] == "2000": level = " at tier 2"
+		else: level = " at tier 3"
+
+		start_index = self.position("end-1l")
+		self.insert("end", text + level + '\n')
+		if len(data) > 0:
+			start_index = self.position("end-2l")
+			self.on_privmsg(meta, data)
+		self.place_tag("subnotice", start_index, "end-1c")
+		self.tag_lower("subnotice")
+		self.see_bottom()
+
+	def on_notice(self, meta, data):
+		self.insert("end", data + "\n", ("notice",))
+		self.see_bottom()
+
+	def on_charity(self, meta, data):
+		self.insert("end", "${:,} raised for {} so far! {} days left\n".format(int(meta["msg-param-total"]), meta["msg-param-charity-name"].replace("\s", " "), meta["msg-param-charity-days-remaining"]), ("notice",))
+		self.see_bottom()
+
+	def on_whisper(self, meta, data):
+		self.insert("end", " ***** Received Whisper ***** \n", ("notice",))
+		self.on_privmsg(meta, data)
+		self.insert("end", "-----------------------------------------\n", ("notice",))
+
+	def on_clearchat(self, user, data=None):
+		tag = user + ".last"
+		try: self.place_tag("deleted", tag, tag + " lineend")
+		except: pass
 
 	def see_bottom(self):
 		if self._scroll_enabled:
@@ -142,7 +205,11 @@ class TwitchChatWindow(pywindow.PyWindow):
 		self._userstate = None
 		self._msg_type_callbacks = {
 			"PRIVMSG": self._chat.on_privmsg,
-			"USERSTATE": self._on_userstate
+			"NOTICE": self._chat.on_notice,
+			"USERSTATE": self._on_userstate,
+			"USERNOTICE": self._chat.on_usernotice,
+			"CLEARCHAT": self._chat.on_clearchat,
+			"WHISPER": self._chat.on_whisper
 		}
 
 		self.title = "Twitch Chat Viewer"
@@ -170,7 +237,8 @@ class TwitchChatWindow(pywindow.PyWindow):
 
 		self._chat = TwitchChatViewer(self.content, self)
 		self.content.place_element(self._chat, row=1)
-		self._talker = pyelement.PyTextfield(self.content, "chatter").with_undo(True).with_option(wrap="word", spacing1=3, padx=5)
+		self._talker = pyelement.PyTextfield(self.content, "chatter").with_undo(True)
+		self._talker.with_option(wrap="word", spacing1=3, padx=5)
 		self.content.place_element(self._talker, row=2)
 		self._talker.height = 5
 
