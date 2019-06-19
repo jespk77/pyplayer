@@ -409,7 +409,7 @@ class PyTextfield(PyElement):
 		if isinstance(img, pyimage.ImageData): self._tk.image_create(index, image=img.images[0])
 		elif isinstance(img, pyimage.PyImage):
 			self._tk.window_create(index, window=img._tk)
-			img.image_container = self._tk
+			img._image_container = self._tk
 		else: raise TypeError("Image type '{}' not supported, only PyImage or ImageData!".format(type(img).__name__))
 
 	def position(self, tag):
