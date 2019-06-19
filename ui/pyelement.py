@@ -1,7 +1,15 @@
-from tkinter import ttk, font
-import tkinter
+import \
+	tkinter
+from tkinter import \
+	font, \
+	ttk
 
-from ui import pycontainer, pyevents, pyimage, pyconfiguration
+from ui import \
+	pyconfiguration, \
+	pycontainer, \
+	pyevents, \
+	pyimage
+
 
 def scroll_event():
 	import sys
@@ -399,7 +407,9 @@ class PyTextfield(PyElement):
 
 	def place_image(self, index, img):
 		if isinstance(img, pyimage.ImageData): self._tk.image_create(index, image=img.images[0])
-		elif isinstance(img, pyimage.PyImage): self._tk.window_create(index, window=img._tk)
+		elif isinstance(img, pyimage.PyImage):
+			self._tk.window_create(index, window=img._tk)
+			img.image_container = self._tk
 		else: raise TypeError("Image type '{}' not supported, only PyImage or ImageData!".format(type(img).__name__))
 
 	def position(self, tag):
@@ -416,8 +426,22 @@ class PyTextfield(PyElement):
 		return self._tk.get(from_pos, to_pos)
 
 	def place_mark(self, mark, position, gravity="right"):
+		""" Place mark at specified location """
 		self._tk.mark_set(mark, position)
 		self._tk.mark_gravity(mark, gravity)
+
+	def place_tag(self, tag_name, start_index, stop_index=None):
+		""" Place tag from start_index to stop_index or for one character if stop_index not defined """
+		self._tk.tag_add(tag_name, start_index, stop_index)
+
+	def tag_lower(self, tag_name, below=None):
+		""" Lower the tag with specified name in the rendering/evaluation ordering,
+			set below to another tag to set it below that one or nothing to place at the bottom """
+		self._tk.tag_lower(tag_name, below)
+	def tag_raise(self, tag_name, above=None):
+		""" Raise the specified tag in the rendering/evaluation ordering,
+		 	set above to another tag to set it just above it or nothing to place it on top """
+		self._tk.tag_raise(tag_name, above)
 
 	def get_tag_option(self, tag, option):
 		""" Get configuration set for given tag, raises KeyError if there's no tag with that name set """
