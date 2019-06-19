@@ -1,13 +1,10 @@
-from modules.twitch.twitch_window import \
-	CLIENT_ID
-from ui import \
-	pyelement, \
-	pyimage, \
-	pywindow
+from modules.twitch.twitch_window import CLIENT_ID
+from ui import pyelement, pyimage, pywindow
 
 badge_url = "https://api.twitch.tv/kraken/chat/{channel_name}/badges?client_id=" + CLIENT_ID
 channel_badge_url = "https://badges.twitch.tv/v1/badges/channels/{channel_id}/display"
 emote_cache = pyimage.ImageCache("emote_cache", "http://static-cdn.jtvnw.net/emoticons/v1/{key}/1.0")
+cheermote_list_url = "https://api.twitch.tv/v5/bits/actions?channel_id={channel_id}&client_id=" + CLIENT_ID
 
 bttv_emote_list_url = "https://api.betterttv.net/2/emotes"
 bttv_emote_cache = pyimage.ImageCache("bttv_emote_cache", "https://cdn.betterttv.net/emote/{key}/1x")
@@ -21,8 +18,21 @@ def _do_request(url):
 	else: print("ERROR", "'{}': Invalid response while requesting data:".format(url), data)
 bttv_emote_map = {entry["code"]: entry["id"] for entry in _do_request(bttv_emote_list_url)["emotes"]}
 
+def _split_bits(text):
+	# todo: requires optimization
+	t = list(text)
+	t.reverse()
+	dg = []
+	for t1 in t:
+		if not t1.isdigit(): break
+		else: dg.append(t1)
+	t = t[len(dg):]
+	t.reverse()
+	dg.reverse()
+	return "".join(t), int("".join(dg))
 
-chat_cfg = {"subnotice.background": "gray15", "subnotice.foreground": "white", "notice.foreground": "gray", "deleted.foreground": "gray15", "timestamp.foreground": "gray"}
+
+chat_cfg = {"background": "gray5", "subnotice.background": "gray15", "subnotice.foreground": "white", "notice.foreground": "gray", "deleted.foreground": "gray15", "timestamp.foreground": "gray"}
 class TwitchChatViewer(pyelement.PyTextfield):
 	def __init__(self, container, window):
 		pyelement.PyTextfield.__init__(self, container, "chat_viewer", initial_cfg=chat_cfg)
@@ -31,12 +41,14 @@ class TwitchChatViewer(pyelement.PyTextfield):
 		self._badge_cache = {}
 		self._timestamp = None
 		self._scroll_enabled = True
+		self._cheermote_map = {}
 		self._cmd_cb = None
 		@self.event_handler.MouseEnter
 		def _enable_scroll(): self._scroll_enabled = False
 		@self.event_handler.MouseLeave
 		def _disable_scroll(): self._scroll_enabled = True
 		self._load_badges()
+		self._load_cheermotes()
 		self.with_option(cursor="left_ptr", wrap="word", spacing1=3, padx=5)
 
 	@property
@@ -66,6 +78,20 @@ class TwitchChatViewer(pyelement.PyTextfield):
 			if bbadges:
 				for version, url in bbadges["versions"].items(): self._badge_cache["bits/" + version] = url["image_url_1x"]
 
+	def _load_cheermotes(self):
+		cheers = _do_request(cheermote_list_url.format(channel_id=self._window.channel_id))
+		if cheers:
+			from collections import namedtuple
+			CheermoteData = namedtuple("CheermoteData", ["min_bits", "color", "image"])
+			for emote in cheers["actions"]:
+				try:
+					tierlist = [CheermoteData(min_bits=int(entry["min_bits"]), color=entry["color"], image=entry["images"]["dark"]["animated"]["1"]) for entry in emote["tiers"]]
+					tierlist.reverse()
+					self._cheermote_map[emote["prefix"]] = tierlist
+				except Exception as e:
+					print("ERROR", "Processing cheermote data:", emote)
+					import traceback; traceback.print_exception(type(e), e, e.__traceback__)
+
 	def _get_badge(self, key):
 		bg = self._badge_cache.get(key)
 		if isinstance(bg, str):
@@ -73,6 +99,25 @@ class TwitchChatViewer(pyelement.PyTextfield):
 			return self._badge_cache.get(key)
 		elif isinstance(bg, pyimage.ImageData): return bg
 		else: raise KeyError(key)
+
+	def _get_cheermote(self, key):
+		try: name, value = _split_bits(key)
+		except ValueError: return
+
+		data = self._cheermote_map.get(name)
+		if data:
+			bit_index, bit_data = 0, None
+			for d in data:
+				bit_index, bit_data = bit_index + 1, d
+				if d.min_bits < value: break
+
+			if bit_data:
+				if isinstance(bit_data.image, str):
+					try: img = pyimage.PyImage(self._window.content, "cheer_{}_{}".format(name, bit_data.min_bits), url=bit_data.image)
+					except Exception as e: return print("ERROR", "Getting image:", e)
+					bit_data = bit_data._replace(image=img)
+					self._cheermote_map[name][bit_index] = bit_data
+				return bit_data.image, value, bit_data.color
 
 	def _insert_badges(self, badges):
 		for b in badges:
@@ -117,16 +162,28 @@ class TwitchChatViewer(pyelement.PyTextfield):
 			if word in emote_list:
 				img = emote_cache.get_image(emote_list[word])
 				if img: self.place_image("end", img)
+				continue
 
-			elif word in bttv_emote_map:
+			if word in bttv_emote_map:
 				img = bttv_emote_cache.get_image(bttv_emote_map[word])
 				if img:
 					if img.animated:
 						img = pyimage.PyImage(self._window.content, word, img=img)
 						img.start()
 					self.place_image("end", img)
+				continue
 
-			else: self.insert("end", word + " ")
+			if "bits" in meta:
+				img = self._get_cheermote(word)
+				if img:
+					img, amount, color = img
+					self.place_image("end", img)
+					tag_amount = "cheer_{}".format(amount)
+					self.set_tag_option(tag_amount, foreground=color)
+					self.insert("end", "{} ".format(amount), (tag_amount,))
+					continue
+
+			self.insert("end", word + " ")
 
 	def on_privmsg(self, meta, msg):
 		if not meta or not msg: return
