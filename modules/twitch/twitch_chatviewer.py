@@ -46,7 +46,10 @@ class TwitchChatViewer(pyelement.PyTextfield):
 		@self.event_handler.MouseEnter
 		def _enable_scroll(): self._scroll_enabled = False
 		@self.event_handler.MouseLeave
-		def _disable_scroll(): self._scroll_enabled = True
+		def _disable_scroll():
+			self._scroll_enabled = True
+			self.see_bottom()
+
 		self._load_badges()
 		self._load_cheermotes()
 		self.with_option(cursor="left_ptr", wrap="word", spacing1=3, padx=5)
