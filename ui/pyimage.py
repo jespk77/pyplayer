@@ -61,6 +61,7 @@ class PyImage(pyelement.PyTextlabel):
 		self._container = container
 		self._n = 0
 		self._active = False
+		self._image_container = None
 		self._update_img()
 		self.start()
 
@@ -76,7 +77,9 @@ class PyImage(pyelement.PyTextlabel):
 			self._active = False
 
 	def _update_img(self):
-		bbox = self._container.bbox(self._tk)
+		try: bbox = self._image_container.bbox(self._tk)
+		except: bbox = True
+
 		if bbox:
 			self._tk.configure(image=self._image.images[self._n])
 			self._n = (self._n + 1) % self._image.image_count
