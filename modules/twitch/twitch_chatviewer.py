@@ -10,6 +10,10 @@ bttv_emote_list_url = "https://api.betterttv.net/2/emotes"
 bttv_emote_cache = pyimage.ImageCache("bttv_emote_cache", "https://cdn.betterttv.net/emote/{key}/1x")
 # bobross: 105458682 - own id: 61667394
 
+# --- DEBUG OPTIONS ---
+log_unknown_badges = False
+# =====================
+
 def _do_request(url):
 	import requests
 	r = requests.get(url)
@@ -32,9 +36,14 @@ def _split_bits(text):
 	return "".join(t), int("".join(dg))
 
 
-chat_cfg = {"background": "gray5", "subnotice.background": "gray15", "subnotice.foreground": "white", "notice.foreground": "gray", "deleted.foreground": "gray15", "timestamp.foreground": "gray"}
+chat_cfg = {"subnotice.background": "gray15", "subnotice.foreground": "white", "notice.foreground": "gray", "deleted.foreground": "gray15", "timestamp.foreground": "gray"}
 class TwitchChatViewer(pyelement.PyTextfield):
-	def __init__(self, container, window):
+	def __init__(self, container, window, initial_cfg=None):
+		global chat_cfg
+		if initial_cfg:
+			chat_cfg = chat_cfg.copy()
+			chat_cfg.update(initial_cfg)
+
 		pyelement.PyTextfield.__init__(self, container, "chat_viewer", initial_cfg=chat_cfg)
 		self._window = window
 		self.accept_input = False
@@ -69,6 +78,7 @@ class TwitchChatViewer(pyelement.PyTextfield):
 			self._badge_cache["broadcaster/1"] = badges["broadcaster"]["alpha"]
 			self._badge_cache["staff/1"] = badges["staff"]["alpha"]
 			self._badge_cache["moderator/1"] = badges["mod"]["alpha"]
+		else: print("WARNING", "Badge data fetch failed, badges not visible")
 
 		channel_badges = _do_request(channel_badge_url.format(channel_id=self._window.channel_id))
 		if channel_badges:
@@ -80,6 +90,7 @@ class TwitchChatViewer(pyelement.PyTextfield):
 			bbadges = badge_set.get("bits")
 			if bbadges:
 				for version, url in bbadges["versions"].items(): self._badge_cache["bits/" + version] = url["image_url_1x"]
+		else: print("WARNING", "Tiered badges data fetch failed, tiered badges not visible")
 
 	def _load_cheermotes(self):
 		cheers = _do_request(cheermote_list_url.format(channel_id=self._window.channel_id))
@@ -94,6 +105,7 @@ class TwitchChatViewer(pyelement.PyTextfield):
 				except Exception as e:
 					print("ERROR", "Processing cheermote data:", emote)
 					import traceback; traceback.print_exception(type(e), e, e.__traceback__)
+		else: print("WARNING", "Cheermote data fetch failed, cheermotes not visible")
 
 	def _get_badge(self, key):
 		bg = self._badge_cache.get(key)
@@ -107,20 +119,26 @@ class TwitchChatViewer(pyelement.PyTextfield):
 		try: name, value = _split_bits(key)
 		except ValueError: return
 
+		print("INFO", "Getting cheermote '{}' with value:".format(name), value)
 		data = self._cheermote_map.get(name)
 		if data:
 			bit_index, bit_data = 0, None
-			for d in data:
-				bit_index, bit_data = bit_index + 1, d
-				if d.min_bits < value: break
+			for b_index, b_data in enumerate(data):
+				if b_data.min_bits < value:
+					bit_index = b_index
+					bit_data = b_data
+					break
 
 			if bit_data:
+				print("INFO", "Found data for image on index:", bit_index)
 				if isinstance(bit_data.image, str):
+					print("INFO", "Image not yet cached, collecting image from url")
 					try: img = pyimage.PyImage(self._window.content, "cheer_{}_{}".format(name, bit_data.min_bits), url=bit_data.image)
 					except Exception as e: return print("ERROR", "Getting image:", e)
 					bit_data = bit_data._replace(image=img)
 					self._cheermote_map[name][bit_index] = bit_data
 				return bit_data.image, value, bit_data.color
+			else: print("WARNING", "No valid bit emote found for '{}', it is either a false positive or something went wrong during bit info collection".format(key))
 
 	def _insert_badges(self, badges):
 		for b in badges:
@@ -129,7 +147,8 @@ class TwitchChatViewer(pyelement.PyTextfield):
 			try:
 				self.place_image("end", self._get_badge(b))
 				self.insert("end", " ")
-			except KeyError as e: print("INFO", "Unknown badge:", e)
+			except KeyError as e:
+				if log_unknown_badges: print("INFO", "Unknown badge:", e)
 			except Exception as e: print("ERROR", "While fetching badge '{}':".format(b), e)
 
 	def _insert_username(self, user, color=None):
@@ -254,6 +273,7 @@ class TwitchChatViewer(pyelement.PyTextfield):
 			self.show("end")
 
 
+element_cfg = {"foreground": "white", "background": "black"}
 class TwitchChatWindow(pywindow.PyWindow):
 	def __init__(self, parent, channel, irc_client):
 		# channel: twitch_window.ChannelData(name, id)
@@ -291,13 +311,13 @@ class TwitchChatWindow(pywindow.PyWindow):
 
 	def create_widgets(self):
 		pywindow.PyWindow.create_widgets(self)
-		self._header = pyelement.PyTextlabel(self.content, "chat_header")
+		self._header = pyelement.PyTextlabel(self.content, "chat_header", initial_cfg=element_cfg)
 		self.content.place_element(self._header)
 		self._header.wrapping = True
 
-		self._chat = TwitchChatViewer(self.content, self)
+		self._chat = TwitchChatViewer(self.content, self, initial_cfg=element_cfg)
 		self.content.place_element(self._chat, row=1)
-		self._talker = pyelement.PyTextfield(self.content, "chatter").with_undo(True)
+		self._talker = pyelement.PyTextfield(self.content, "chatter", initial_cfg=element_cfg).with_undo(True)
 		self._talker.with_option(wrap="word", spacing1=3, padx=5)
 		self.content.place_element(self._talker, row=2)
 		self._talker.height = 5
