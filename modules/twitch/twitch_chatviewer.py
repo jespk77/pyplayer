@@ -163,6 +163,11 @@ class TwitchChatViewer(pyelement.PyTextfield):
 		self.insert("end", user + " ", (tagname,))
 
 	def _insert_message(self, meta, text):
+		if text.startswith("\x01ACTION"):
+			text = text.lstrip("\x01ACTION ").rstrip("\x01")
+			tags = (meta.get("display-name", "").lower(),)
+		else: tags = None
+
 		emotes = meta.get("emotes", "").split("/")
 		emote_list = {}
 		for emote in emotes:
@@ -205,7 +210,7 @@ class TwitchChatViewer(pyelement.PyTextfield):
 					self.insert("end", "{} ".format(amount), (tag_amount,))
 					continue
 
-			self.insert("end", word + " ")
+			self.insert("end", word + " ", tags)
 
 	def on_privmsg(self, meta, msg):
 		if not meta or not msg: return
@@ -263,8 +268,8 @@ class TwitchChatViewer(pyelement.PyTextfield):
 		self.on_privmsg(meta, data)
 		self.insert("end", "-----------------------------------------\n", ("notice",))
 
-	def on_clearchat(self, user, data=None):
-		tag = user + ".last"
+	def on_clearchat(self, meta, data=None):
+		tag = meta.get("display-name", "") + ".last"
 		try: self.place_tag("deleted", tag, tag + " lineend")
 		except: pass
 
