@@ -1,3 +1,8 @@
+
+# --- DEBUG options ---
+debug_image_bbox = False
+# ---------------------
+
 class ImageData:
 	def __init__(self, file=None, url=None):
 		from io import BytesIO
@@ -84,7 +89,7 @@ class PyImage(pyelement.PyTextlabel):
 			self._tk.configure(image=self._image.images[self._n])
 			self._n = (self._n + 1) % self._image.image_count
 		else:
-			print("INFO", "Image '{}' out of bounds, stopping animation".format(self.widget_id))
+			if debug_image_bbox: print("INFO", "Image '{}' out of bounds, stopping animation".format(self.widget_id))
 			self.stop()
 		return self._active
 
