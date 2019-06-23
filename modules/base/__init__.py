@@ -1,12 +1,7 @@
-import datetime
-
 from ui import pyconfiguration
 from utilities import messagetypes
 
-# DEFAULT MODULE VARIABLES
 interpreter = client = None
-
-# MODULE SPECIFIC VARIABLES
 cfg_folder = ".cfg/"
 
 def get_time_from_string(delay):
@@ -29,7 +24,6 @@ def get_time_from_string(delay):
 	except ValueError: return None
 	else: return hour, min, sec
 
-# ===== MAIN COMMANDS =====
 def command_cfg(arg, argc):
 	if argc > 0:
 		cg = client.get_window(arg[0])
@@ -67,7 +61,7 @@ def command_log_open(arg, argc):
 		try:
 			if pylogging.open_logfile(): return messagetypes.Reply("Log file opened")
 			else: return messagetypes.Reply("Cannot open log file")
-		except FileNotFoundError: return messagetypes.Reply("Log file not found! Are you using console?")
+		except FileNotFoundError: return messagetypes.Reply("Log file not found. Are you using console?")
 
 def command_log_clear(arg, argc, all=False):
 	if argc == 0:
@@ -108,12 +102,14 @@ version_command = ["git", "log", "-1", "--pretty=%H//%ci"]
 version_output = None
 def command_version(arg, argc):
 	if argc == 0:
+		global version_output
 		if not version_output:
 			from utilities import commands
 			def get_output(o): global version_output; version_output = o
 			commands.process_command(version_command, stdout=get_output)
 
 		try:
+			import datetime
 			version, date = version_output.split("//")
 			date = datetime.datetime.strptime(date, "%Y-%m-%d %H:%M:%S %z\n")
 			return messagetypes.Reply("The current version is {version:.7}, it was released on {date}".format(version=version, date=date.strftime("%b %d, %Y")))
