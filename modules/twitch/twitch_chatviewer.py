@@ -327,6 +327,12 @@ class TwitchChatWindow(pywindow.PyWindow):
 		self.content.place_element(self._talker, row=2)
 		self._talker.height = 5
 
+		@self._talker.event_handler.KeyEvent("enter")
+		def _send_message():
+			self._ircclient.send_message(self._channel.name, self._talker.text)
+			self._talker.text = ""
+			return self._talker.event_handler.block
+
 	def window_tick(self, date):
 		self._chat._timestamp = date
 		pywindow.PyWindow.window_tick(self, date)

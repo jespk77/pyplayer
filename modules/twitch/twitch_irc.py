@@ -57,6 +57,12 @@ class IRCClient(threading.Thread):
 			return res
 		else: raise NameError("Not subscribed to messages from '{}'".format(channel))
 
+	def send_message(self, channel, message):
+		""" Send a message to given channel, must have joined that channel in order to have an effect """
+		channel = channel.lower()
+		if channel not in self._channel_queue: raise KeyError(channel)
+		self._send("PRIVMSG #{} : {}".format(channel, message))
+
 	def run(self):
 		while True:
 			try:
