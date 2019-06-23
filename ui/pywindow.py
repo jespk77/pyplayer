@@ -1,6 +1,35 @@
-from ui import pyimage, pyconfiguration, pycontainer, pyevents
+from ui import pyconfiguration, pycontainer, pyevents, pyimage
 
 cfg_folder = ".cfg"
+class _ScheduledTask:
+	def __init__(self, func, delay, loop):
+		self._cb = func
+		self._delay = delay
+		self._loop = loop
+		self._cb_ptr = None
+
+	@property
+	def is_scheduled(self): return self._cb_ptr is not None
+
+	def schedule(self, tk, kwargs, delay=0):
+		if delay > 0: self._delay = delay
+		self._cb_ptr = tk.after(self._delay, self._execute, tk, kwargs)
+
+	def cancel(self, tk):
+		if self.is_scheduled:
+			tk.after_cancel(self._cb_ptr)
+			self._cb_ptr = None
+
+	def _execute(self, tk, kwargs):
+		self._cb_ptr = None
+		try:
+			rs = self._cb(**kwargs)
+			if self._loop and rs is not False: self.schedule(tk, kwargs)
+		except Exception as e:
+			print("INFO", "During processing of scheduled task '{}', it won't be rescheduled!".format(self._cb.__name__))
+			print("ERROR", "While calling scheduled task '{}':".format(self._cb.__name__), e)
+
+
 class PyWindow:
 	""" Framework class for windows, they have to be created with a valid root """
 	def __init__(self, parent, id, initial_cfg=None, cfg_file=None):
@@ -25,6 +54,7 @@ class PyWindow:
 		self._content = pycontainer.PyFrame(self, self._configuration.get_or_create("content", {}))
 		self._content.show()
 		self.create_widgets()
+		self._scheduled_tasks = {}
 
 		@self.event_handler.WindowDestroy
 		def _window_close(): self._configuration.save()
@@ -214,29 +244,49 @@ class PyWindow:
 		""" Center this widget on screen, any previously set geometry is overwritten """
 		self._tk.wm_geometry("{}x{}+{}+{}".format(width, height, (self.screen_width // 2) - (width // 2), (self.screen_height // 2) - (height // 2)))
 
-	def schedule(self, min=0, sec=0, ms=0, func=None, loop=False, **kwargs):
+	def schedule(self, min=0, sec=0, ms=0, func=None, loop=False, task_id=None, **kwargs):
 		""" Schedule an operation to be executed at least after the given time, all registered callbacks will stop when the window is closed
 		 	 -	Amount of time to wait can be specified with minutes (keyword 'min'), seconds (keyword 'sec') and/or milliseconds (keyword 'ms')
 		 	 -	The argument passed to func must be callable and accept the extra arguments passed to this function
-		 	 -	The function can be called repeatedly by setting 'loop' to true;
-		 	 		in this case it will be called repeatedly after the given time until an error occurs or the callback returns False
-			* update: delay is allowed to be 0, in this case the callback is executed as soon as possible """
-		if not callable(func): raise ValueError("'func' argument must be callable!")
+		 	 -	The function can be executed repeatedly by setting 'loop' to True;
+		 	 		in this case it will be executed repeatedly after the given time either until the window is destroyed, an error occurs, or the callback returns False
+
+			* update: delay is allowed to be 0, in this case the callback is executed as soon as possible; however 'loop' must not be True in this case
+			* update: added 'task_id' option to save scheduled tasks with a certain id, they can be rescheduled (optionally with a different delay) without needing to pass the original function again
+			 			note: if task with given id is set to looping, the task must be canceled or deleted before this function is called """
 		delay = (min * 60000) + (sec * 1000) + ms
+
+		if task_id:
+			tsk: _ScheduledTask = self._scheduled_tasks.get(task_id)
+			if tsk:
+				if not tsk.is_scheduled:
+					tsk.schedule(self._tk, kwargs, delay)
+					return
+				else: raise NameError("A scheduled task with id '{}' already exists and is active, make sure to cancel it first".format(task_id))
+
 		if delay < 0: raise ValueError("Delay cannot be smaller than 0")
+		elif delay == 0 and loop: raise ValueError("Looping without delay is not allowed")
+		if not callable(func): raise ValueError("'func' argument must be callable")
 
-		if loop: self._tk.after(delay, self._create_rescheduled_task(func, delay), kwargs)
-		else: self._tk.after(delay, func, *kwargs.values())
+		task = _ScheduledTask(func, delay, loop)
+		if task_id: self._scheduled_tasks[task_id] = task
+		task.schedule(self._tk, kwargs)
 
-	def _create_rescheduled_task(self, fn, delay):
-		def _call_task(kwargs):
-			try:
-				rs = fn(**kwargs)
-				if rs is not False: self._tk.after(delay, _call_task, kwargs)
-			except Exception as e:
-				print("INFO", "During processing of scheduled task '{}', it won't be rescheduled!".format(fn.__name__))
-				print("ERROR", "While calling scheduled task '{}':".format(fn.__name__), e)
-		return _call_task
+	def cancel_scheduled_task(self, task_id):
+		""" Cancel a previously scheduled task with given id, the id must be previously registered with 'scedule'
+		 	Has no effect if task is not looping and was previously executed """
+		task: _ScheduledTask = self._scheduled_tasks.get(task_id)
+		if task: task.cancel(self._tk)
+
+	def delete_scheduled_task(self, task_id):
+		""" Cancel and remove scheduled task with given id, the id must be previously registered with 'schedule'
+		  	The task is no longer executed if still waiting during this call, but could still be running if previously activated """
+		task: _ScheduledTask = self._scheduled_tasks.get(task_id)
+		if task:
+			task.cancel(self._tk)
+			del self._scheduled_tasks[task_id]
+		else: raise KeyError("Unknown task id '{}'".format(task_id))
+
 
 	def window_tick(self, date):
 		""" Called every second with the current date on all windows, can be used to update elements inside it
