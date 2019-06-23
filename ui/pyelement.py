@@ -1,15 +1,7 @@
-import \
-	tkinter
-from tkinter import \
-	font, \
-	ttk
+import tkinter
+from tkinter import font, ttk
 
-from ui import \
-	pyconfiguration, \
-	pycontainer, \
-	pyevents, \
-	pyimage
-
+from ui import pyconfiguration, pycontainer, pyevents
 
 def scroll_event():
 	import sys
@@ -224,6 +216,7 @@ class PyCheckbox(PyElement):
 		return self._img
 	@image.setter
 	def image(self, ig):
+		from ui import pyimage
 		if ig and not isinstance(ig, pyimage.PyImage): raise TypeError("Image must be a PyImage, not {.__name__}".format(type(ig)))
 		self._tk.configure(image=ig)
 		self._img = ig
@@ -406,6 +399,7 @@ class PyTextfield(PyElement):
 		if not self.accept_input: self._tk.configure(state="disabled")
 
 	def place_image(self, index, img):
+		from ui import pyimage
 		if isinstance(img, pyimage.ImageData): self._tk.image_create(index, image=img.images[0])
 		elif isinstance(img, pyimage.PyImage):
 			self._tk.window_create(index, window=img._tk)
