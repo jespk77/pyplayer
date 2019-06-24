@@ -134,8 +134,9 @@ class PyCanvas(BaseWidgetContainer):
 	@scrollregion.setter
 	def scrollregion(self, rg): self._tk.configure(scrollregion=rg)
 
-	def get_bounds(self, tag):
-		""" Get the size (in pixels) of the element with the given tag, or 'all' for the total size """
+	def get_bounds(self, tag="all"):
+		""" Get the size (in pixels) of the element with the given tag
+		 	If no tag specified the bounding box of the complete element is returned """
 		return self._tk.bbox(tag)
 
 class PyScrollableFrame(PyFrame):
