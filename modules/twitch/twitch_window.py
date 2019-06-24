@@ -250,7 +250,10 @@ class TwitchPlayer(pywindow.PyWindow):
 
 		i = 0
 		for live_data in live_follows:
-			live_data["game_id"] = game_data.get(live_data["game_id"], live_data["game_id"])
+			game = game_data.get(live_data["game_id"])
+			if game: live_data["game_id"] = game
+			else: del live_data["game_id"]
+
 			self._live_content.place_frame(StreamEntry(self._live_content.content, live_data, self._open_stream), row=i)
 			self._live_content.row(i, weight=1)
 			i += 1
