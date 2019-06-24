@@ -134,6 +134,11 @@ class PyCanvas(BaseWidgetContainer):
 	@scrollregion.setter
 	def scrollregion(self, rg): self._tk.configure(scrollregion=rg)
 
+	def scroll_to(self, x=0, y=0):
+		""" Scroll element to specified position, if no position specified the top left position is used """
+		self._tk.xview_moveto(x)
+		self._tk.yview_moveto(y)
+
 	def get_bounds(self, tag="all"):
 		""" Get the size (in pixels) of the element with the given tag
 		 	If no tag specified the bounding box of the complete element is returned """
@@ -161,7 +166,7 @@ class PyScrollableFrame(PyFrame):
 			if not self._scrollbar_x: self._scrollable._tk.itemconfigure(self._content_tag, width=width)
 			if not self._scrollbar_y: self._scrollable._tk.itemconfigure(self._content_tag, height=height)
 		@self._content.event_handler.ElementResize
-		def content_resize(): self._scrollable.scrollregion = self._scrollable.get_bounds("all")
+		def content_resize(): self._scrollable.scrollregion = self._scrollable.get_bounds()
 		@self.event_handler.MouseScrollEvent(include_children=True)
 		def scroll_mouse(delta): self._scrollable._tk.yview_scroll(-(delta//self._mouse_sensitivity), "units")
 
@@ -169,9 +174,11 @@ class PyScrollableFrame(PyFrame):
 	def content(self): return self._content
 
 	def clear_content(self):
+		""" Remove all previously placed elements """
 		for f in self._content._subframes:
 			try: f.destroy()
 			except Exception as e: print("ERROR", "Closing subframe", e)
+		self._scrollable.scroll_to()
 
 	_horizontal_id = "horizontal_scrollbar"
 	@property
@@ -233,7 +240,7 @@ class PyScrollableBrowser(PyFrame):
 		@self._scrollable.event_handler.ElementResize
 		def _content_resize(width):
 			self._reorganize(width)
-			self._scrollable.scrollregion = self._scrollable.get_bounds("all")
+			self._scrollable.scrollregion = self._scrollable.get_bounds()
 
 		@self.event_handler.MouseScrollEvent(include_children=True)
 		def scroll_mouse(delta): self._scrollable._tk.yview_scroll(-(delta // PyScrollableFrame._mouse_sensitivity), "units")
@@ -307,6 +314,7 @@ class PyScrollableBrowser(PyFrame):
 			try: item.destroy()
 			except Exception as e: print("ERROR", "While clearing content:", e)
 		self._items.clear()
+		self._scrollable.scroll_to()
 
 	def _add_element(self, element):
 		if not isinstance(element, pyelement.PyElement): raise TypeError("Can only bind instances of PyElement, not '{.__name__}'".format(type(element)))
