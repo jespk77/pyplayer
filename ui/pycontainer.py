@@ -91,13 +91,14 @@ class BaseWidgetContainer:
 
 frame_cfg = { "background": "black" }
 class PyFrame(BaseWidgetContainer):
+	""" Base element container """
 	def __init__(self, parent, configuration=None):
 		BaseWidgetContainer.__init__(self, parent, tkinter.Frame(parent._tk, **frame_cfg), configuration)
-
 
 label_cfg = { "foreground": "white" }
 label_cfg.update(frame_cfg)
 class PyLabelFrame(BaseWidgetContainer):
+	""" Base element container with outline and an optional label """
 	def __init__(self, parent, configuration=None):
 		BaseWidgetContainer.__init__(self, parent, tkinter.LabelFrame(parent._tk, **label_cfg), configuration)
 
@@ -109,6 +110,7 @@ class PyLabelFrame(BaseWidgetContainer):
 canvas_cfg = { "highlightthickness": 0 }
 canvas_cfg.update(frame_cfg)
 class PyCanvas(BaseWidgetContainer):
+	""" Dynamic container that supports drawing figures """
 	def __init__(self, parent, configuration=None):
 		BaseWidgetContainer.__init__(self, parent, tkinter.Canvas(parent._tk, **canvas_cfg), configuration)
 
@@ -136,8 +138,8 @@ class PyCanvas(BaseWidgetContainer):
 		""" Get the size (in pixels) of the element with the given tag, or 'all' for the total size """
 		return self._tk.bbox(tag)
 
-
 class PyScrollableFrame(PyFrame):
+	""" Element container with fixed grid that can be larger than the window size, view can be adjusted with mouse scrolling and/or scrollbars """
 	_content_tag = "content_frame"
 	_mouse_sensitivity = 100
 
@@ -178,17 +180,16 @@ class PyScrollableFrame(PyFrame):
 		if not self.scrollbar_x and enable:
 			print("INFO", "Adding horizontal scrollbar")
 			self._scrollbar_x = pyelement.PyScrollbar(self, self._horizontal_id)
-			self._scrollbar_x.scrollcommand = self._scrollable.horizontal_view
 			self._scrollbar_x.orientation = "horizontal"
-			self._scrollable.horizontal_command = self._scrollbar_x.set_command
+			self._scrollbar_x.attach_to(self._scrollable)
 			PyFrame.place_element(self, self._scrollbar_x, row=1, sticky="ew")
 			PyFrame.row(self, 1, minsize=20)
 
 		if self.scrollbar_x and not enable:
 			print("INFO", "Removing horizontal scrollbar")
+			self._scrollbar_x = None
 			PyFrame.remove_element(self, self._horizontal_id)
 			PyFrame.row(self, 1, minsize=0)
-			self._scrollbar_x = None
 
 	_vertical_id = "vertical_scrollbar"
 	@property
@@ -198,17 +199,16 @@ class PyScrollableFrame(PyFrame):
 		if not self._scrollbar_y and enable:
 			print("INFO", "Adding vertical scrollbar")
 			self._scrollbar_y = pyelement.PyScrollbar(self, self._vertical_id)
-			self._scrollbar_y.scrollcommand = self._scrollable.vertical_view
 			self._scrollbar_y.orientation = "vertical"
-			self._scrollable.vertical_command = self._scrollbar_y.set_command
+			self._scrollbar_y.attach_to(self._scrollable)
 			PyFrame.place_element(self, self._scrollbar_y, column=1, sticky="ns")
 			PyFrame.column(self, 1, minsize=20)
 
 		if self.scrollbar_x and not enable:
 			print("INFO", "Removing vertical scrollbar")
+			self._scrollbar_y = None
 			PyFrame.remove_element(self, self._vertical_id)
 			PyFrame.column(self, 1, minsize=0)
-			self._scrollbar_y = None
 
 	def row(self, index, minsize=None, padding=None, weight=None): return self._content.row(index, minsize, padding, weight)
 	def column(self, index, minsize=None, padding=None, weight=None): return self._content.column(index, minsize, padding, weight)
@@ -216,3 +216,111 @@ class PyScrollableFrame(PyFrame):
 	def place_frame(self, frame, row=0, column=0, rowspan=1, columnspan=1, sticky="news"): return self._content.place_frame(frame, row, column, rowspan, columnspan, sticky)
 	def remove_element(self, id): return self._content.remove_element(id)
 	def __getitem__(self, item): return self._content[item]
+
+class PyScrollableBrowser(PyFrame):
+	""" Similar to a scrollable frame except there is no grid, instead elements are stored in a list and automatically organized so they fit the window width """
+	def __init__(self, parent, configuration=None):
+		PyFrame.__init__(self, parent, configuration)
+		self._scrollable = PyCanvas(self)
+		PyFrame.place_frame(self, self._scrollable)
+		PyFrame.column(self, 0, weight=1)
+		PyFrame.row(self, 0, weight=1)
+		self._items = []
+		self._minx, self._miny = 50, 50
+		self._scrollbar = None
+
+		@self._scrollable.event_handler.ElementResize
+		def _content_resize(width):
+			self._reorganize(width)
+			self._scrollable.scrollregion = self._scrollable.get_bounds("all")
+
+		@self.event_handler.MouseScrollEvent(include_children=True)
+		def scroll_mouse(delta): self._scrollable._tk.yview_scroll(-(delta // PyScrollableFrame._mouse_sensitivity), "units")
+
+	def _reorganize(self, new_width=None):
+		print("INFO", "Content resized, updating layout")
+		if new_width is None:
+			self._scrollable._tk.update_idletasks()
+			new_width = int(self._scrollable._tk.cget("width"))
+
+		column_count = new_width // self._minx
+		column_offset = (new_width - (self._minx * column_count)) / column_count
+		for i, element in enumerate(self._items):
+			row = i // column_count
+			column = i % column_count
+			e_id = "element_{}".format(i)
+			self._scrollable._tk.coords(e_id, column * (self._minx + column_offset), row * self._miny)
+			self._scrollable._tk.itemconfigure(e_id, width=self._minx + column_offset, height=self._miny)
+
+	@property
+	def content(self): return self._scrollable
+
+	@property
+	def itemlist(self): return self._items
+	@itemlist.setter
+	def itemlist(self, vl):
+		""" Replace all existing items with a new list """
+		self.clear_content()
+		self._items = vl
+
+	@property
+	def min_width(self): return self._minx
+	@min_width.setter
+	def min_width(self, x):
+		""" Set the minimum width (in pixels) for all containing elements, causes an update when set
+		 	The minimum value allowed is 10 """
+		if x < 10: raise ValueError("Minimum width is 10")
+		self._minx = x
+		self._reorganize()
+
+	@property
+	def min_height(self): return self._miny
+	@min_height.setter
+	def min_height(self, y):
+		""" Set the minimum height (in pixels) for all containing elements, causes an update when set
+		 	The minimum allowed value is 10 """
+		if y < 10: raise ValueError("Minimum height is 10")
+		self._miny = y
+		self._reorganize()
+
+	_scrollbar_id = "scrollbar_y"
+	@property
+	def scrollbar(self): return self._scrollbar is not None
+	@scrollbar.setter
+	def scrollbar(self, enabled):
+		if not self.scrollbar and enabled:
+			self._scrollbar = pyelement.PyScrollbar(self, self._scrollbar_id)
+			self._scrollbar.orientation = "vertical"
+			self._scrollbar.attach_to(self._scrollable)
+			PyFrame.place_element(self, self._scrollbar, column=1, sticky="ns")
+			PyFrame.column(self, 1, minsize=20)
+
+		if self.scrollbar and not enabled:
+			self._scrollbar = None
+			PyFrame.remove_element(self, self._scrollbar_id)
+			PyFrame.column(self, 1, minsize=0)
+
+	def clear_content(self):
+		""" Removes all previously added elements """
+		for item in self.content._subframes:
+			try: item.destroy()
+			except Exception as e: print("ERROR", "While clearing content:", e)
+		self._items.clear()
+
+	def _add_element(self, element):
+		if not isinstance(element, pyelement.PyElement): raise TypeError("Can only bind instances of PyElement, not '{.__name__}'".format(type(element)))
+		self._scrollable._tk.create_window((0, 0), window=element._tk, anchor="nw", tag="element_{}".format(len(self._items)))
+		self._items.append(element)
+
+	def append_element(self, element):
+		""" Add an element (or a list of elements) to the end of the itemlist, all elements must be instances of PyElement """
+		if isinstance(element, list):
+			for e in element: self._add_element(e)
+		else: self._add_element(element)
+
+	def _unsupported(self): raise TypeError("This operation is not supported for this type")
+	def row(self, *args): self._unsupported()
+	def column(self, *args): self._unsupported()
+	def place_element(self, *args): self._unsupported()
+	def place_frame(self, *args): self._unsupported()
+	def remove_element(self, *args): self._unsupported()
