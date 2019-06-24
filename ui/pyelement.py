@@ -545,17 +545,19 @@ class PyScrollbar(PyElement):
 		PyElement.__init__(self, id, container, tkinter.Scrollbar(container._tk), initial_cfg)
 
 	@property
-	def set_command(self): return self._tk.set
-
-	@property
-	def scrollcommand(self): return self._tk.cget("command")
-	@scrollcommand.setter
-	def scrollcommand(self, value): self._tk.configure(command=value)
-
-	@property
 	def orientation(self): return self._tk.cget("orient")
 	@orientation.setter
 	def orientation(self, ort): self._tk.configure(orient=ort)
+
+	def attach_to(self, scrollable):
+		""" Attach to given scrollable """
+		if self.orientation == "horizontal":
+			self._tk.configure(command=scrollable._tk.xview)
+			scrollable._tk.configure(xscrollcommand=self._tk.set)
+		elif self.orientation == "vertical":
+			self._tk.configure(command=scrollable._tk.yview)
+			scrollable._tk.configure(yscrollcommand=self._tk.set)
+
 
 list_cfg = { "selectbackground": background_color, "selectforeground": highlight_color }
 list_cfg.update(element_cfg)
