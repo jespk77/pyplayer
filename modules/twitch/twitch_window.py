@@ -85,6 +85,56 @@ class StreamEntry(pycontainer.PyLabelFrame):
 		self.column(1, minsize=50)
 
 
+class AutoRefreshOption(pycontainer.PyFrame):
+	_refresh_task_id = "autorefresh"
+
+	def __init__(self, parent, window):
+		self._window: TwitchPlayer = window
+		pycontainer.PyFrame.__init__(self, parent)
+		self._delay = 15
+		self._checkbox = pyelement.PyCheckbox(self, "enable_checkbox")
+		self._checkbox.command = self._on_checkbox_click
+		self._checkbox.text = "Auto refresh every"
+		self.place_element(self._checkbox)
+
+		self._value_input = pyelement.PyTextInput(self, "value_input")
+		self._value_input.max_length = 2
+		self._value_input.format_str = r'[0-9]*'
+		self._value_input.width = 3
+		self._value_input.value = str(self._delay)
+		self._value_input.accept_input = False
+		@self._value_input.event_handler.FocusLoss
+		def _lose_input_focus(): self._on_value_update()
+		self.place_element(self._value_input, column=1)
+		lbl2 = pyelement.PyTextlabel(self, "label2")
+		lbl2.text = "minutes"
+		self.place_element(lbl2, column=2)
+
+	def _on_checkbox_click(self):
+		self._value_input.accept_input = self._checkbox.checked
+		if not self._checkbox.checked:
+			print("INFO", "Unchecked auto refresh, canceling...")
+			self._window.cancel_scheduled_task(self._refresh_task_id)
+		else:
+			print("INFO", "Checked auto refresh, scheduling update")
+			self._window.schedule(min=int(self._value_input.value), func=self._window.update_livestreams, task_id=self._refresh_task_id, loop=True)
+
+	def _on_value_update(self):
+		try:
+			vl = max(5, int(self._value_input.value))
+			print("INFO", "Got updated value for task delay:", vl)
+		except ValueError:
+			print("INFO", "Invalid value, reverting to default")
+			vl = 15
+
+		if vl != self._delay:
+			self._delay = vl
+			self._value_input.value = str(vl)
+			print("INFO", "Rescheduling auto refresh task for in", vl, "minutes")
+			self._window.cancel_scheduled_task(self._refresh_task_id)
+			self._window.schedule(min=vl, task_id=self._refresh_task_id)
+
+
 user_logindata, user_meta = ".cache/userdata", ".cache/usermeta"
 init_cfg = {"chat_triggers": []}
 class TwitchPlayer(pywindow.PyWindow):
@@ -114,9 +164,10 @@ class TwitchPlayer(pywindow.PyWindow):
 		self.content["login_action"].command = self._do_signin
 		self.content.place_element(pyelement.PySeparator(self.content, "separator1"), row=1, columnspan=3)
 
-		lbl = self.content.place_element(pyelement.PyTextlabel(self.content, "live_channels"), row=2, columnspan=3)
+		lbl = self.content.place_element(pyelement.PyTextlabel(self.content, "live_channels"), row=2)
 		lbl.text = "Followed live channels"
 		self.content.place_element(pyelement.PyTextlabel(self.content, "live_update", {"foreground": "gray"}), row=3)
+		self.content.place_frame(AutoRefreshOption(self.content, self), row=2, column=1, columnspan=2)
 		bt = self.content.place_element(pyelement.PyButton(self.content, "refresh_btn"), row=3, column=1, columnspan=2)
 		bt.text = "Refresh"
 		bt.command = self.update_livestreams
