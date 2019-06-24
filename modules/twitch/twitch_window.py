@@ -86,11 +86,12 @@ class StreamEntry(pycontainer.PyLabelFrame):
 
 
 user_logindata, user_meta = ".cache/userdata", ".cache/usermeta"
+init_cfg = {"chat_triggers": []}
 class TwitchPlayer(pywindow.PyWindow):
 	CACHE_EXPIRY = 86400
 
 	def __init__(self, parent):
-		pywindow.PyWindow.__init__(self, parent, "twitch_overview")
+		pywindow.PyWindow.__init__(self, parent, "twitch_overview", initial_cfg=init_cfg)
 		self.icon = "assets/icon_twitchviewer"
 		self.title = "Twitch Overview"
 		self._userlogin = None
