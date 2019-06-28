@@ -38,8 +38,6 @@ class PyPlayer(pywindow.PyWindow):
 			print("INFO", "psutil package not found, extra info cannot be displayed")
 			self._process = None
 			self._boottime = datetime.datetime.today()
-
-		self.focus_followsmouse()
 		self.update_loglevel()
 
 	def create_widgets(self):
@@ -116,7 +114,7 @@ class PyPlayer(pywindow.PyWindow):
 		else: self.content.row(2, minsize=200, weight=70).row(3, weight=20)
 
 	def show_lyrics(self, title):
-		from modules.utilities.lyricviewer import LyricViewer
+		from modules.player.lyricviewer import LyricViewer
 		wd = self.get_window("lyric_viewer")
 		if not wd:
 			wd = LyricViewer(self)
