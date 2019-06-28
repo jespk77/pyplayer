@@ -286,7 +286,11 @@ class PyButton(PyElement):
 	@image.setter
 	def image(self, vl):
 		""" Set the image displayed on this button """
-		self._tk.configure(image=vl)
+		from ui import pyimage
+		if isinstance(vl, pyimage.ImageData): img = vl.images[0]
+		elif isinstance(vl, pyimage.PyImage): img = vl._image.images[0]
+		else: raise ValueError("Unknown image type '{.__name__}'".format(type(vl)))
+		self._tk.configure(image=img)
 		self._image = vl
 
 	@property
