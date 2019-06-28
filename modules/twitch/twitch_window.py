@@ -147,6 +147,7 @@ class TwitchPlayer(pywindow.PyWindow):
 		self._userlogin = None
 		self._irc = None
 		self._chatwindows = {}
+		self._emote_window = None
 		self.content.column(0, weight=1).row(0, minsize=20)
 		self.schedule(func=self._refresh_account_status)
 
@@ -336,8 +337,13 @@ class TwitchPlayer(pywindow.PyWindow):
 			self._irc = twitch_irc.IRCClient()
 			self._irc.connect(self._usermeta["display_name"].lower(), "oauth:" + self._userlogin["Authorization"][7:])
 
+		from modules.twitch import twitch_chatviewer
+		if self._emote_window is None:
+			import modules.twitch.twitch_emotebrowser as emote_browser
+			self._emote_window = emote_browser.TwitchEmoteBrowser(self, twitch_chatviewer.emote_cache)
+			self.open_window("emote_window", self._emote_window)
+
 		if not channel.name in self._chatwindows:
-			from modules.twitch import twitch_chatviewer
 			vw = twitch_chatviewer.TwitchChatWindow(self, channel, self._irc)
 			self.open_window("twitch_" + channel.name, vw)
 			self._chatwindows[channel.name] = vw
@@ -346,3 +352,7 @@ class TwitchPlayer(pywindow.PyWindow):
 			def _viewer_destroy():
 				try: del self._chatwindows[channel.name]
 				except KeyError: pass
+
+	def update_emoteset(self, sets):
+		if self._emote_window:
+			self._emote_window.update_emoteset(sets)

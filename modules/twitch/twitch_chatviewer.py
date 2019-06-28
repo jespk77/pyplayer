@@ -300,6 +300,7 @@ class TwitchChatWindow(pywindow.PyWindow):
 		self.title = "Twitch Chat Viewer"
 		self.icon = "assets/icon_twitchviewer"
 		self.content.row(0, minsize=20).row(1, weight=1).column(0, weight=1)
+		self._window = parent
 		self._header.text = self._channel.name
 
 		self._ircclient.join_channel(self._channel.name)
@@ -339,6 +340,7 @@ class TwitchChatWindow(pywindow.PyWindow):
 
 	def _on_userstate(self, meta, data=None):
 		self._userstate = meta
+		self._window.update_emoteset(meta.get("emote-sets", "").split(","))
 
 	def _poll_message(self):
 		for msg in self._ircclient.get_message(self._channel.name):
