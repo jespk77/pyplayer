@@ -246,7 +246,6 @@ class PyScrollableBrowser(PyFrame):
 		def scroll_mouse(delta): self._scrollable._tk.yview_scroll(-(delta // PyScrollableFrame._mouse_sensitivity), "units")
 
 	def _reorganize(self, new_width=None):
-		print("INFO", "Content resized, updating layout")
 		if new_width is None:
 			self._scrollable._tk.update_idletasks()
 			new_width = int(self._scrollable._tk.cget("width"))
