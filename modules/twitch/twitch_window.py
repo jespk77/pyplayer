@@ -117,7 +117,7 @@ class AutoRefreshOption(pycontainer.PyFrame):
 			self._window.cancel_scheduled_task(self._refresh_task_id)
 		else:
 			print("INFO", "Checked auto refresh, scheduling update")
-			self._window.schedule(min=int(self._value_input.value), func=self._window.update_livestreams, task_id=self._refresh_task_id, loop=True)
+			self._window.schedule(min=int(self._value_input.value), func=self._window.update_livestreams, task_id=self._refresh_task_id, loop=True, _auto=True)
 
 	def _on_value_update(self):
 		try:
@@ -189,7 +189,6 @@ class TwitchPlayer(pywindow.PyWindow):
 			if ch:
 				self.content["manual_channel"].value = ""
 				self.open_channel(ch)
-
 
 	def _refresh_account_status(self):
 		if not self._userlogin:
@@ -276,7 +275,7 @@ class TwitchPlayer(pywindow.PyWindow):
 			return True
 		except Exception as e: print("ERROR", e); return False
 
-	def update_livestreams(self):
+	def update_livestreams(self, _auto=False):
 		""" Update the live followed channel list, can be requested several times and each time an updated list will be fetched """
 		print("INFO", "Refreshing live channels list")
 		self.content["refresh_btn"].accept_input = False
@@ -309,6 +308,13 @@ class TwitchPlayer(pywindow.PyWindow):
 			self._live_content.place_frame(StreamEntry(self._live_content.content, live_data, self._open_stream), row=i)
 			self._live_content.row(i, weight=1)
 			i += 1
+
+		if not _auto:
+			try:
+				self.cancel_scheduled_task(AutoRefreshOption._refresh_task_id)
+				self.schedule(task_id=AutoRefreshOption._refresh_task_id)
+				print("INFO", "Channel list was refreshed manually, auto refresh task restarted")
+			except: pass
 
 	def _enable_refresh(self):
 		self.content["refresh_btn"].accept_input = True
