@@ -62,6 +62,10 @@ class IRCClient:
 			return res
 		else: raise NameError("Not subscribed to messages from '{}'".format(channel))
 
+	def get_irc_message(self):
+		""" Get general IRC notices, returns None if nothing was recieved """
+		if not self._general_queue.empty(): return self._general_queue.get_nowait()
+
 	def send_message(self, channel, message):
 		""" Send a message to given channel, must have joined that channel in order to have an effect """
 		channel = channel.lower()
@@ -75,9 +79,11 @@ class IRCClient:
 				if not data or len(data) == 1 and not data[0]: break
 				for msg in data:
 					msg = msg.split(" ", maxsplit=4)
-					if not msg: continue
-					if msg[0] == "PING": self._send("PONG {}".format(msg[1:]))
-					else: self._process_data(msg)
+					try:
+						if msg[0] == "PING": self._send("PONG {}".format(msg[1:]))
+						elif msg[1] == "NOTICE": self._general_queue.put(" ".join(msg[3:])[1:])
+						else: self._process_data(msg)
+					except IndexError: continue
 
 			except socket.timeout: pass
 			except socket.error as e:
