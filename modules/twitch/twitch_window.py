@@ -114,7 +114,7 @@ class AutoRefreshOption(pycontainer.PyFrame):
 		self._value_input.accept_input = self._checkbox.checked
 		if not self._checkbox.checked:
 			print("INFO", "Unchecked auto refresh, canceling...")
-			self._window.cancel_scheduled_task(self._refresh_task_id)
+			self._window.cancel_scheduled_task(task_id=self._refresh_task_id)
 		else:
 			print("INFO", "Checked auto refresh, scheduling update")
 			self._window.schedule(min=int(self._value_input.value), func=self._window.update_livestreams, task_id=self._refresh_task_id, loop=True, _auto=True)
@@ -131,7 +131,7 @@ class AutoRefreshOption(pycontainer.PyFrame):
 			self._delay = vl
 			self._value_input.value = str(vl)
 			print("INFO", "Rescheduling auto refresh task for in", vl, "minutes")
-			self._window.cancel_scheduled_task(self._refresh_task_id)
+			self._window.cancel_scheduled_task(task_id=self._refresh_task_id)
 			self._window.schedule(min=vl, task_id=self._refresh_task_id)
 
 
@@ -311,8 +311,8 @@ class TwitchPlayer(pywindow.PyWindow):
 
 		if not _auto:
 			try:
-				self.cancel_scheduled_task(AutoRefreshOption._refresh_task_id)
-				self.schedule(task_id=AutoRefreshOption._refresh_task_id)
+				self.cancel_scheduled_task(task_id=AutoRefreshOption._refresh_task_id)
+				self.schedule(task_id=AutoRefreshOption._refresh_task_id, _auto=True)
 				print("INFO", "Channel list was refreshed manually, auto refresh task restarted")
 			except: pass
 
@@ -340,8 +340,7 @@ class TwitchPlayer(pywindow.PyWindow):
 		print("INFO", "Opening", channel.name, "stream")
 		if self._irc is None:
 			from modules.twitch import twitch_irc
-			self._irc = twitch_irc.IRCClient()
-			self._irc.connect(self._usermeta["display_name"].lower(), "oauth:" + self._userlogin["Authorization"][7:])
+			self._irc = twitch_irc.IRCClient(self._usermeta["display_name"].lower(), "oauth:" + self._userlogin["Authorization"][7:])
 
 		from modules.twitch import twitch_chatviewer
 		if self._emote_window is None:
