@@ -95,6 +95,7 @@ class PyFrame(BaseWidgetContainer):
 	def __init__(self, parent, configuration=None):
 		BaseWidgetContainer.__init__(self, parent, tkinter.Frame(parent._tk, **frame_cfg), configuration)
 
+
 label_cfg = { "foreground": "white" }
 label_cfg.update(frame_cfg)
 class PyLabelFrame(BaseWidgetContainer):
@@ -106,6 +107,7 @@ class PyLabelFrame(BaseWidgetContainer):
 	def label(self): return self._tk.cget("text")
 	@label.setter
 	def label(self, lbl): self._tk.configure(text=lbl)
+
 
 canvas_cfg = { "highlightthickness": 0 }
 canvas_cfg.update(frame_cfg)
@@ -143,6 +145,7 @@ class PyCanvas(BaseWidgetContainer):
 		""" Get the size (in pixels) of the element with the given tag
 		 	If no tag specified the bounding box of the complete element is returned """
 		return self._tk.bbox(tag)
+
 
 class PyScrollableFrame(PyFrame):
 	""" Element container with fixed grid that can be larger than the window size, view can be adjusted with mouse scrolling and/or scrollbars """
@@ -191,7 +194,7 @@ class PyScrollableFrame(PyFrame):
 			self._scrollbar_x.orientation = "horizontal"
 			self._scrollbar_x.attach_to(self._scrollable)
 			PyFrame.place_element(self, self._scrollbar_x, row=1, sticky="ew")
-			PyFrame.row(self, 1, minsize=20)
+			PyFrame.row(self, 1, minsize=15)
 
 		if self.scrollbar_x and not enable:
 			print("INFO", "Removing horizontal scrollbar")
@@ -210,7 +213,7 @@ class PyScrollableFrame(PyFrame):
 			self._scrollbar_y.orientation = "vertical"
 			self._scrollbar_y.attach_to(self._scrollable)
 			PyFrame.place_element(self, self._scrollbar_y, column=1, sticky="ns")
-			PyFrame.column(self, 1, minsize=20)
+			PyFrame.column(self, 1, minsize=15)
 
 		if self.scrollbar_x and not enable:
 			print("INFO", "Removing vertical scrollbar")
@@ -224,6 +227,7 @@ class PyScrollableFrame(PyFrame):
 	def place_frame(self, frame, row=0, column=0, rowspan=1, columnspan=1, sticky="news"): return self._content.place_frame(frame, row, column, rowspan, columnspan, sticky)
 	def remove_element(self, id): return self._content.remove_element(id)
 	def __getitem__(self, item): return self._content[item]
+
 
 class PyScrollableBrowser(PyFrame):
 	""" Similar to a scrollable frame except there is no grid, instead elements are stored in a list and automatically organized so they fit the window width """
@@ -252,12 +256,14 @@ class PyScrollableBrowser(PyFrame):
 
 		column_count = new_width // self._minx
 		column_offset = (new_width - (self._minx * column_count)) / column_count
+		row = 0
 		for i, element in enumerate(self._items):
 			row = i // column_count
 			column = i % column_count
 			e_id = "element_{}".format(i)
 			self._scrollable._tk.coords(e_id, column * (self._minx + column_offset), row * self._miny)
 			self._scrollable._tk.itemconfigure(e_id, width=self._minx + column_offset, height=self._miny)
+		if self.scrollbar: self._tk.configure(height=min(5, row) * self._miny)
 
 	@property
 	def content(self): return self._scrollable
@@ -309,11 +315,11 @@ class PyScrollableBrowser(PyFrame):
 
 	def clear_content(self):
 		""" Removes all previously added elements """
+		self._scrollable.scroll_to()
 		for item in self.content._subframes:
 			try: item.destroy()
 			except Exception as e: print("ERROR", "While clearing content:", e)
 		self._items.clear()
-		self._scrollable.scroll_to()
 
 	def _add_element(self, element):
 		if not isinstance(element, pyelement.PyElement): raise TypeError("Can only bind instances of PyElement, not '{.__name__}'".format(type(element)))
