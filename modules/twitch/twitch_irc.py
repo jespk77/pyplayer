@@ -4,28 +4,33 @@ from collections import namedtuple
 twitch_irc = "irc.chat.twitch.tv", 6667
 
 Message = namedtuple("Message", ["meta", "type", "data"])
-class IRCClient(threading.Thread):
-	def __init__(self):
-		threading.Thread.__init__(self, name="IRCClient")
-		self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+class IRCClient:
+	def __init__(self, name, auth):
+		""" Create a new client, provided credentials will be used to log onto the server """
+		self._auth = name, auth
+		self._th = threading.Thread(name="IRCClient", target=self.run)
+		self._s = None
+		self._general_queue = multiprocessing.Queue()
 		self._channel_queue = {}
+		self.connect()
+		self._th.start()
 
-	def start(self): raise TypeError("Please call 'connect' instead to start this thread")
-
-	def connect(self, name, auth):
-		""" Start this thread, provide corrent credentials to be connected to the server """
+	def connect(self):
+		""" Start the client if it hasn't been started yet """
+		if self._s is not None: raise RuntimeError("Client already started!")
+		self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self._s.connect(twitch_irc)
-		self._send("PASS {}".format(auth))
-		self._send("NICK {}".format(name))
+		self._send("PASS {}".format(self._auth[1]))
+		self._send("NICK {}".format(self._auth[0]))
 		self._send("CAP REQ :twitch.tv/tags")
 		self._send("CAP REQ :twitch.tv/commands")
-		threading.Thread.start(self)
 
 	def disconnect(self):
 		""" Leave all previously joined channels, disconnect from server and close this socket """
 		if self._s:
 			self._send("QUIT")
 			self._s.close()
+			self._s = None
 
 	def join_channel(self, channel):
 		""" Join requested channel, once joined all messages received on this channel can be polled
@@ -67,6 +72,7 @@ class IRCClient(threading.Thread):
 		while True:
 			try:
 				data = self._receive().split("\r\n")
+				if not data or len(data) == 1 and not data[0]: break
 				for msg in data:
 					msg = msg.split(" ", maxsplit=4)
 					if not msg: continue
@@ -74,7 +80,6 @@ class IRCClient(threading.Thread):
 					else: self._process_data(msg)
 
 			except socket.timeout: pass
-			except ConnectionAbortedError: break
 			except socket.error as e:
 				print("ERROR", "Socket error!")
 				import traceback
@@ -92,8 +97,8 @@ class IRCClient(threading.Thread):
 			q = self._channel_queue.get(channel)
 			if q:
 				try: meta = self._convert_meta(meta)
-				except ValueError: return
-				else: q.put(Message(meta=meta, type=type, data=msg))
+				except ValueError: meta = {}
+				q.put(Message(meta=meta, type=type, data=msg))
 
 	def _convert_meta(self, meta):
 		if not isinstance(meta, str): raise TypeError("'meta' must be a string!")
