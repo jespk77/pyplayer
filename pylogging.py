@@ -1,9 +1,5 @@
-import builtins
-import datetime
-import enum
-import inspect
-import os
-import sys
+import builtins, datetime, enum, inspect, traceback
+import os, sys
 
 
 class PyLogLevel(enum.Enum):
@@ -83,7 +79,8 @@ class PyLog:
 		if l != PyLogLevel.NDEFINE: objects = objects[1:]
 
 		if self._level.is_match(level):
-			return self._prev_print(datetime.datetime.today().strftime("[%H:%M:%S]"), PyLog._get_traceback_string(level), *objects,
+			return self._prev_print(datetime.datetime.today().strftime("[%H:%M:%S]"), PyLog._get_traceback_string(level),
+									*[('\n' + ''.join(traceback.format_exception(type(o), o, o.__traceback__)) + '\n') if isinstance(o, Exception) else o for o in objects],
 									sep=sep, end=end, file=file, flush=flush)
 		return False
 
