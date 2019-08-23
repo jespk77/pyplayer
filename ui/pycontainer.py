@@ -229,25 +229,20 @@ class PyScrollableFrame(PyFrame):
 	def __getitem__(self, item): return self._content[item]
 
 
-class PyScrollableBrowser(PyFrame):
-	""" Similar to a scrollable frame except there is no grid, instead elements are stored in a list and automatically organized so they fit the window width """
+class PyItemBrowser(PyLabelFrame):
+	""" Similar to a frame except there is no static grid, instead elements are stored in a list and automatically organized so they fit the window width """
 	def __init__(self, parent, configuration=None):
-		PyFrame.__init__(self, parent, configuration)
+		PyLabelFrame.__init__(self, parent, configuration)
 		self._scrollable = PyCanvas(self)
-		PyFrame.place_frame(self, self._scrollable)
-		PyFrame.column(self, 0, weight=1)
-		PyFrame.row(self, 0, weight=1)
+		PyLabelFrame.place_frame(self, self._scrollable)
+		PyLabelFrame.column(self, 0, weight=1)
+		PyLabelFrame.row(self, 0, weight=1)
 		self._items = []
 		self._minx, self._miny = 50, 50
-		self._scrollbar = None
 
 		@self._scrollable.event_handler.ElementResize
 		def _content_resize(width):
 			self._reorganize(width)
-			self._scrollable.scrollregion = self._scrollable.get_bounds()
-
-		@self.event_handler.MouseScrollEvent(include_children=True)
-		def scroll_mouse(delta): self._scrollable._tk.yview_scroll(-(delta // PyScrollableFrame._mouse_sensitivity), "units")
 
 	def _reorganize(self, new_width=None):
 		if new_width is None:
@@ -256,14 +251,12 @@ class PyScrollableBrowser(PyFrame):
 
 		column_count = new_width // self._minx
 		column_offset = (new_width - (self._minx * column_count)) / column_count
-		row = 0
 		for i, element in enumerate(self._items):
 			row = i // column_count
 			column = i % column_count
 			e_id = "element_{}".format(i)
 			self._scrollable._tk.coords(e_id, column * (self._minx + column_offset), row * self._miny)
 			self._scrollable._tk.itemconfigure(e_id, width=self._minx + column_offset, height=self._miny)
-		if self.scrollbar: self._tk.configure(height=min(5, row) * self._miny)
 
 	@property
 	def content(self): return self._scrollable
@@ -295,23 +288,6 @@ class PyScrollableBrowser(PyFrame):
 		if y < 10: raise ValueError("Minimum height is 10")
 		self._miny = y
 		self._reorganize()
-
-	_scrollbar_id = "scrollbar_y"
-	@property
-	def scrollbar(self): return self._scrollbar is not None
-	@scrollbar.setter
-	def scrollbar(self, enabled):
-		if not self.scrollbar and enabled:
-			self._scrollbar = pyelement.PyScrollbar(self, self._scrollbar_id)
-			self._scrollbar.orientation = "vertical"
-			self._scrollbar.attach_to(self._scrollable)
-			PyFrame.place_element(self, self._scrollbar, column=1, sticky="ns")
-			PyFrame.column(self, 1, minsize=20)
-
-		if self.scrollbar and not enabled:
-			self._scrollbar = None
-			PyFrame.remove_element(self, self._scrollbar_id)
-			PyFrame.column(self, 1, minsize=0)
 
 	def clear_content(self):
 		""" Removes all previously added elements """
