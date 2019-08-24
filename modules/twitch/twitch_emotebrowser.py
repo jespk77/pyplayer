@@ -1,7 +1,8 @@
 from ui import pywindow, pycontainer, pyelement
 
 from modules.twitch.twitch_window import CLIENT_ID
-emoteset_url = "https://api.twitch.tv/kraken/chat/emoticon_images?emotesets={}&client_id=" + CLIENT_ID
+emoteset_url = "https://api.twitch.tv/kraken/chat/emoticon_images?emotesets={}"
+request_header = {"Client-ID": CLIENT_ID, "Accept": "application/vnd.twitchtv.v5+json"}
 
 from collections import namedtuple
 SetData = namedtuple("SetData", ["code", "id"])
@@ -20,7 +21,7 @@ class _EmotesetFetch(Thread):
 	def run(self):
 		print("INFO", "Started fetching task for sets:", self._sets)
 		import requests
-		r = requests.get(emoteset_url.format(",".join([s for s in self._sets])))
+		r = requests.get(emoteset_url.format(",".join([s for s in self._sets])), headers=request_header)
 		data = None
 		if r.status_code == 200:
 			try:
@@ -50,6 +51,13 @@ class TwitchEmoteBrowser(pywindow.PyWindow):
 		self._window = parent
 		self._emote_cache = emote_cache
 
+		self._content_frame = pycontainer.PyScrollableFrame(self.content)
+		self._content_frame.scrollbar_y = True
+		self._content_frame.column(0, weight=1)
+		self.content.place_frame(self._content_frame)
+		self.content.row(0, weight=1).column(0, weight=1)
+
+
 	def update_emoteset(self, emotesets):
 		""" Make sure all emotes from given list are loaded, if not these are loaded asyncronously """
 		emotesets = set(emotesets)
@@ -69,24 +77,24 @@ class TwitchEmoteBrowser(pywindow.PyWindow):
 	def _append_emotesets(self, data):
 		self._t.join()
 		self._t = None
+
 		print("INFO", "Emote set fetching done, updating interface...")
-		for set_id, set_data in data.items():
-			bframe = pycontainer.PyLabelFrame(self.content)
-			browser = pycontainer.PyScrollableBrowser(bframe)
+		for row, (set_id, set_data) in enumerate(data.items()):
+			browser = pycontainer.PyItemBrowser(self._content_frame.content)
+			browser.min_width = browser.min_height = 40
 			for sd in set_data:
 				btn = pyelement.PyButton(browser, "emote_{}".format(sd.code))
 				def _click(): self._on_button_click(sd)
 				btn.command = _click
 				btn.image = self._emote_cache.get_image(sd.id)
 				browser.append_element(btn)
-			browser.scrollbar = True
 
-			bframe.place_frame(browser)
-			bframe.row(0, weight=1).column(0, weight=1)
-			self.content.place_frame(bframe, row=len(self._emoteset))
-			self.content.row(len(self._emoteset), weight=1, minsize=20)
+			self._content_frame.place_frame(browser, row=row)
+			self._content_frame.row(row, weight=1)
 			self._emoteset.add(set_id)
-		self.content.column(0, weight=1)
+
+		print("INFO", "Interface updating complete, window can now be shown")
+		#todo: update emote button on chat window
 
 	def _on_button_click(self, emote_data):
 		print("Clicked!", emote_data)
