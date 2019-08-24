@@ -233,33 +233,35 @@ class PyItemBrowser(PyLabelFrame):
 	""" Similar to a frame except there is no static grid, instead elements are stored in a list and automatically organized so they fit the window width """
 	def __init__(self, parent, configuration=None):
 		PyLabelFrame.__init__(self, parent, configuration)
-		self._scrollable = PyCanvas(self)
-		PyLabelFrame.place_frame(self, self._scrollable)
+		self._content = PyCanvas(self)
+		PyLabelFrame.place_frame(self, self._content)
 		PyLabelFrame.column(self, 0, weight=1)
 		PyLabelFrame.row(self, 0, weight=1)
 		self._items = []
 		self._minx, self._miny = 50, 50
 
-		@self._scrollable.event_handler.ElementResize
+		@self._content.event_handler.ElementResize
 		def _content_resize(width):
 			self._reorganize(width)
 
 	def _reorganize(self, new_width=None):
 		if new_width is None:
-			self._scrollable._tk.update_idletasks()
-			new_width = int(self._scrollable._tk.cget("width"))
+			self._content._tk.update_idletasks()
+			new_width = int(self._content._tk.cget("width"))
 
 		column_count = new_width // self._minx
 		column_offset = (new_width - (self._minx * column_count)) / column_count
+		row = 0
 		for i, element in enumerate(self._items):
 			row = i // column_count
 			column = i % column_count
 			e_id = "element_{}".format(i)
-			self._scrollable._tk.coords(e_id, column * (self._minx + column_offset), row * self._miny)
-			self._scrollable._tk.itemconfigure(e_id, width=self._minx + column_offset, height=self._miny)
+			self._content._tk.coords(e_id, column * (self._minx + column_offset), row * self._miny)
+			self._content._tk.itemconfigure(e_id, width=self._minx + column_offset, height=self._miny)
+		self._content._tk.configure(height=(row + 1) * self.min_height)
 
 	@property
-	def content(self): return self._scrollable
+	def content(self): return self._content
 
 	@property
 	def itemlist(self): return self._items
@@ -291,7 +293,6 @@ class PyItemBrowser(PyLabelFrame):
 
 	def clear_content(self):
 		""" Removes all previously added elements """
-		self._scrollable.scroll_to()
 		for item in self.content._subframes:
 			try: item.destroy()
 			except Exception as e: print("ERROR", "While clearing content:", e)
@@ -299,7 +300,7 @@ class PyItemBrowser(PyLabelFrame):
 
 	def _add_element(self, element):
 		if not isinstance(element, pyelement.PyElement): raise TypeError("Can only bind instances of PyElement, not '{.__name__}'".format(type(element)))
-		self._scrollable._tk.create_window((0, 0), window=element._tk, anchor="nw", tag="element_{}".format(len(self._items)))
+		self._content._tk.create_window((0,0), window=element._tk, anchor="nw", tag="element_{}".format(len(self._items)))
 		self._items.append(element)
 
 	def append_element(self, element):
