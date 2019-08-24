@@ -1,7 +1,7 @@
 from modules.twitch.twitch_window import CLIENT_ID
 from ui import pyelement, pyimage, pywindow
 
-badge_url = "https://api.twitch.tv/kraken/chat/{channel_name}/badges?client_id=" + CLIENT_ID
+global_badge_url = "https://badges.twitch.tv/v1/badges/global/display"
 channel_badge_url = "https://badges.twitch.tv/v1/badges/channels/{channel_id}/display"
 emote_cache = pyimage.ImageCache("emote_cache", "http://static-cdn.jtvnw.net/emoticons/v1/{key}/1.0")
 cheermote_list_url = "https://api.twitch.tv/v5/bits/actions?channel_id={channel_id}&client_id=" + CLIENT_ID
@@ -71,14 +71,17 @@ class TwitchChatViewer(pyelement.PyTextfield):
 		else: self._cmd_cb = cb
 
 	def _load_badges(self):
-		badges = _do_request(badge_url.format(channel_name=self._window.channel_name))
-		if badges:
-			self._badge_cache["global_mod/1"] = badges["global_mod"]["alpha"]
-			self._badge_cache["admin/1"] = badges["admin"]["alpha"]
-			self._badge_cache["broadcaster/1"] = badges["broadcaster"]["alpha"]
-			self._badge_cache["staff/1"] = badges["staff"]["alpha"]
-			self._badge_cache["moderator/1"] = badges["mod"]["alpha"]
-		else: print("WARNING", "Badge data fetch failed, badges not visible")
+		print("INFO", "Fetching chat badge data...")
+		try: self._badge_cache["global_mod/1"] = pyimage.ImageData(file="modules/twitch/badges/global_moderator-alpha.png")
+		except FileNotFoundError: print("WARNING", "Global moderator alpha badge not found")
+		try: self._badge_cache["admin/1"] = pyimage.ImageData(file="modules/twitch/badges/administrator-alpha.png")
+		except FileNotFoundError: print("WARNING", "Administrator alpha badge not found")
+		try: self._badge_cache["broadcaster/1"] = pyimage.ImageData(file="modules/twitch/badges/broadcaster-alpha.png")
+		except FileNotFoundError: print("WARNING", "Broadcaster alpha badge not found")
+		try: self._badge_cache["staff/1"] = pyimage.ImageData(file="modules/twitch/badges/staff-alpha.png")
+		except FileNotFoundError: print("WARNING", "Staff alpha badge not found")
+		try: self._badge_cache["moderator/1"] = pyimage.ImageData(file="modules/twitch/badges/moderator-alpha.png")
+		except FileNotFoundError: print("WARNING", "Moderator alpha badge not found")
 
 		channel_badges = _do_request(channel_badge_url.format(channel_id=self._window.channel_id))
 		if channel_badges:
@@ -93,6 +96,7 @@ class TwitchChatViewer(pyelement.PyTextfield):
 		else: print("WARNING", "Tiered badges data fetch failed, tiered badges not visible")
 
 	def _load_cheermotes(self):
+		print("INFO", "Fetching cheer emote data...")
 		cheers = _do_request(cheermote_list_url.format(channel_id=self._window.channel_id))
 		if cheers:
 			from collections import namedtuple
@@ -122,7 +126,7 @@ class TwitchChatViewer(pyelement.PyTextfield):
 		print("INFO", "Getting cheermote '{}' with value:".format(name), value)
 		data = self._cheermote_map.get(name)
 		if data:
-			bit_index, bit_data = 0, None
+			bit_index, bit_data = len(data) - 1, data[-1]
 			for b_index, b_data in enumerate(data):
 				if b_data.min_bits < value:
 					bit_index = b_index
