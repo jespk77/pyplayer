@@ -36,6 +36,7 @@ class Interpreter(Thread):
 		self._handlers.append(self.register_event("parse_command", self._parse_command))
 		self._handlers.append(self.register_event("destroy", self._on_destroy))
 		self._handlers.append(self.register_event("title_update", self._client.update_title))
+		self._handlers.append(self.register_event("media_update", self._client.update_title_media))
 		self._set_sys_arg()
 
 		self._modules = []
@@ -133,17 +134,18 @@ class Interpreter(Thread):
 	def _notify_event(self, event_id, *args, **kwargs):
 		print("INFO", f"Notifying listeners for the '{event_id}' event")
 		event_list = self._events.get(event_id)
+		if event_list is None: return print("ERROR", "Unknown event id '{}', event ignored...")
+
 		errs = None
-		if event_list:
-			for cb in event_list:
-				try:
-					try: cb(*args, **kwargs)
-					except TypeError as t:
-						if "{.__name__}() takes".format(cb) not in t: raise
-						else: print("ERROR", f"Invalid callback! Nonmatching number of variables for '{cb.__name__}' in event '{event_id}'")
-				except Exception as e:
-					print("ERROR", f"Processing event callback '{event_id}':", e)
-					errs = e
+		for cb in event_list:
+			try:
+				try: cb(*args, **kwargs)
+				except TypeError as t:
+					if "{.__name__}() takes".format(cb) not in t: raise
+					else: print("ERROR", f"Invalid callback! Nonmatching number of variables for '{cb.__name__}' in event '{event_id}'")
+			except Exception as e:
+				print("ERROR", f"Processing event callback '{event_id}':", e)
+				errs = e
 		return errs
 
 	def _parse_command(self, command, cb=None):
@@ -155,7 +157,7 @@ class Interpreter(Thread):
 
 			if op is None:
 				try: res = self._process_command(command)
-				except Exception as e: res = messagetypes.Error(e, "Error parsing command")
+				except Exception as e: res = messagetypes.Error(e, "Error processing command")
 
 				if res is not None and not isinstance(res, messagetypes.Empty):
 					op = messagetypes.Error(TypeError(f"Expected a 'messagetype' object, not a '{type(res).__name__}'"), "Invalid response from command")

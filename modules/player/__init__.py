@@ -409,7 +409,7 @@ def on_media_change(event, player):
 		if media_player.current_media.path == options["path"]:
 			color = options.get("color")
 			break
-	client.schedule(func=client.update_title_media, media_data=media_player.current_media, color=color)
+	interpreter.put_event("media_update", media_player.current_media, color)
 
 def on_pos_change(event, player):
 	client.schedule(func=client.update_progressbar, progress=event.u.new_position)

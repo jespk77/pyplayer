@@ -31,11 +31,11 @@ def bind_events():
 		@browser.event_handler.MouseClickEvent("right")
 		def _browser_rightclick(y): interpreter.put_command("queue {path} {song}.".format(path=client.widgets["songbrowser"].path[0], song=client.widgets["songbrowser"].get_nearest_song(y)))
 
-		client.subscribe_event("title_update", title_update)
+		interpreter.register_event("media_update", title_update)
 		browser.select_song(client.title_song)
 
-def unbind_events(): client.unsubscribe_event("title_update", title_update)
-def title_update(widget, data): client.content[element_id].select_song(data.title)
+def unbind_events(): interpreter.unregister_event("media_update", title_update)
+def title_update(data, color): client.content[element_id].select_song(data.display_name)
 def unsupported_path(): print("INFO", "Tried to open songbrowser sorted on plays with unsupported path, using name sorting instead...")
 
 # ===== MAIN COMMANDS =====
