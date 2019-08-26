@@ -6,7 +6,7 @@ class Empty():
 	""" Base class for console user interaction, can be used to finish given command without specifying a reply message """
 	def __str__(self): return "{}{}".format(type(self).__name__, ["{}={}".format(k,v) for k,v in self.__dict__.items() if not k.startswith("__")])
 	def get_prefix(self): return "< "
-	def get_contents(self): return self.get_prefix() + "Command processed", ("reply",)
+	def get_contents(self): return self.get_prefix() + "Command processed (but no reply added)", ("reply",)
 
 class Pass(Empty):
 	""" Can be used when features are not working yet, while already showing the command exists """
