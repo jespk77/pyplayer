@@ -1,5 +1,5 @@
-import importlib
-import sys
+import importlib, sys
+
 from multiprocessing import Queue
 from threading import Thread
 from weakref import WeakSet
@@ -45,7 +45,7 @@ class Interpreter(Thread):
 				try:
 					r = self._load_module(module_id)
 					if isinstance(r, messagetypes.Error): client.on_notification(*r.get_contents())
-				except Exception as e: print("ERROR", "While loading module '{}':".format(module_id), e)
+				except Exception as e: print("ERROR", f"While loading '{module_id}':", e)
 		self.start()
 
 	def _set_sys_arg(self):
@@ -77,7 +77,7 @@ class Interpreter(Thread):
 		print("INFO", "Interpreter thread started")
 		while True:
 			event, *args = self._queue.get()
-			print("INFO", "Processing event '{}' with data:".format(event), *args)
+			print("INFO", f"Processing event '{event}' with data:", ','.join(args))
 			if event is False:
 				self._notify_event("destroy")
 				return
@@ -103,6 +103,7 @@ class Interpreter(Thread):
 		""" Terminate the interpreter, any commands already queued will still be handled but commands added after this call are ignored
 			Once the interpreter has finished the 'on_destroy' method is called that cleans up all loaded modules before it is destroyed
 		 	This operation uses a multiprocessing.queue and therefore is thread-safe and uses the 'put' operation without wait and therefore will not block """
+		print("INFO", "Received end event, terminating interpreter...")
 		self._queue.put_nowait((False,))
 
 
@@ -111,7 +112,8 @@ class Interpreter(Thread):
 			* If the callback was already registered, this call has no effect
 			* This object does not increase the reference counter for the callback; if the callback container is destroyed the callback is no longer called
 			Returns the callback registered to manually increase the reference count if needed """
-		if not callable(callback): raise TypeError("Event callback for '{}' must be callable!".format(event_id))
+		print("INFO", f"Registering callback '{callback.__name__}' for event '{event_id}'")
+		if not callable(callback): raise TypeError(f"Event callback for '{event_id}' must be callable!")
 		if event_id not in self._events: self._events[event_id] = WeakSet()
 		self._events[event_id].add(callback)
 		return callback
@@ -119,6 +121,7 @@ class Interpreter(Thread):
 	def unregister_event(self, event_id, callback):
 		""" Remove listener from specified event id, this call has no effect if the event id doesn't exist or the callback was not registered
 		 	Returns True if the callback was found and removed, or False otherwise """
+		print("INFO", f"Unregistering callback '{callback.__name__}' for event '{event_id}'")
 		event_list = self._events.get(event_id)
 		if event_list:
 			try:
@@ -128,7 +131,7 @@ class Interpreter(Thread):
 		return False
 
 	def _notify_event(self, event_id, *args, **kwargs):
-		print("INFO", "Notifying listeners for the '{}' event".format(event_id))
+		print("INFO", f"Notifying listeners for the '{event_id}' event")
 		event_list = self._events.get(event_id)
 		errs = None
 		if event_list:
@@ -137,9 +140,9 @@ class Interpreter(Thread):
 					try: cb(*args, **kwargs)
 					except TypeError as t:
 						if "{.__name__}() takes".format(cb) not in t: raise
-						else: print("WARNING", "Ignored callback: Nonmatching number of variables for '{.__name__}' in event '{}'".format(cb, event_id))
+						else: print("ERROR", f"Invalid callback! Nonmatching number of variables for '{cb.__name__}' in event '{event_id}'")
 				except Exception as e:
-					print("ERROR", "Calling callback for event '{}':".format(event_id), e)
+					print("ERROR", f"Processing event callback '{event_id}':", e)
 					errs = e
 		return errs
 
@@ -155,7 +158,7 @@ class Interpreter(Thread):
 				except Exception as e: res = messagetypes.Error(e, "Error parsing command")
 
 				if res is not None and not isinstance(res, messagetypes.Empty):
-					op = messagetypes.Error(TypeError("Expected a 'messagetype' object here, not a '{}'".format(type(res).__name__)), "Invalid response from command")
+					op = messagetypes.Error(TypeError(f"Expected a 'messagetype' object, not a '{type(res).__name__}'"), "Invalid response from command")
 				else: op = res
 
 			print("INFO", "Got command result:", op)
@@ -163,17 +166,18 @@ class Interpreter(Thread):
 			self.print_additional_debug()
 			self._client.on_reply(*op.get_contents())
 		except Exception as e:
-			print("ERROR", "Error processing command '{}':".format(command), e)
+			print("ERROR", f"Error processing command '{command}':", e)
 			self._client.on_reply(*messagetypes.Error(e, "Error processing command").get_contents())
 
 	def _process_command(self, command):
+		print("INFO", f"Processing command '{' '.join(command)}'...")
 		for md in self._modules:
 			try: cl = md.commands
 			except AttributeError:
-				print("WARNING", f"Module '{md.__name__}' does not have a 'commands' dictionary, this is most likely not intended...")
+				print("WARNING", f"'{md.__name__}' does not have a 'commands' dictionary, this is most likely not intended...")
 				continue
 
-			if "" in cl: raise TypeError(f"Module '{md.__name__}' contains a default command, this is not allowed in the top level")
+			if "" in cl: raise TypeError(f"'{md.__name__}' contains a default command, this is not allowed in the top level")
 			while isinstance(cl, dict):
 				if len(command) == 0: break
 				c = cl.get(command[0])
@@ -189,7 +193,7 @@ class Interpreter(Thread):
 		if not md.startswith("modules."): md = "modules." + md
 		if md in [n.__name__ for n in self._modules]: raise RuntimeError("Another module with name '{}' was already registered!".format(md))
 		try:
-			print("INFO", "Loading module '{}'...".format(md))
+			print("INFO", f"Loading '{md.__name__}'...")
 			m = importlib.import_module(md)
 			m.interpreter = self
 			m.client = self._client
@@ -198,15 +202,15 @@ class Interpreter(Thread):
 			try: m.initialize()
 			except AttributeError as a:
 				if "initialize" not in str(a): raise
-			except Exception as e: return messagetypes.Error(e, "Failed to initialize module '{}'".format(md))
+			except Exception as e: return messagetypes.Error(e, f"Failed to initialize '{md.__name__}', module will not be available")
 
 			self._modules.append(m)
 			return messagetypes.Reply("Module successfully loaded")
-		except Exception as e: return messagetypes.Error(e, "Failed to import module '{}'".format(md))
+		except Exception as e: return messagetypes.Error(e, f"Failed to import '{md.__name__}', module will not be available")
 
 
 	def _on_destroy(self):
 		for module in self._modules:
 			try: module.on_destroy()
 			except AttributeError: pass
-			except Exception as e: print("ERROR", "Couldn't close module '{}' properly:".format(module.__name__), e)
+			except Exception as e: print("ERROR", f"'{module.__name__}' was not destroyed properly:", e)
