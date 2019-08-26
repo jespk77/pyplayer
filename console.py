@@ -71,14 +71,16 @@ class TextConsole(pyelement.PyTextfield):
 			self.delete(input_mark, self.current_end)
 			if text: self.insert(input_mark, text)
 
-	def add_reply(self, reply, tags=(), prefix=None):
+	def add_reply(self, reply, tags=(), prefix=None, text=None):
 		if not self.accept_input:
 			if not prefix: prefix = "> "
 			self.insert(self.back, "{}\n".format(reply), tags)
 			self.cursor = self.back
 			self.insert(self.back, prefix)
 			self.place_mark(input_mark, self.cursor, gravity="left")
+			if text: self.insert(self.back, text)
 			self.accept_input = True
+			self.show(self.back)
 
 	def add_notification(self, message, tags=()):
 		self.insert("end-1l linestart", "{}\n".format(message), tags)

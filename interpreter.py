@@ -170,10 +170,10 @@ class Interpreter(Thread):
 		for md in self._modules:
 			try: cl = md.commands
 			except AttributeError:
-				print("WARNING", "Module '{}' does not have a 'commands' dictionary, this is most likely not intended...")
+				print("WARNING", f"Module '{md.__name__}' does not have a 'commands' dictionary, this is most likely not intended...")
 				continue
 
-			if "" in cl: raise TypeError("Module '" + md.__name__ + "' contains a default command, this is not allowed in the top level")
+			if "" in cl: raise TypeError(f"Module '{md.__name__}' contains a default command, this is not allowed in the top level")
 			while isinstance(cl, dict):
 				if len(command) == 0: break
 				c = cl.get(command[0])

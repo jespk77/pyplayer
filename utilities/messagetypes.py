@@ -38,7 +38,7 @@ class Question(Empty):
 
 	def __call__(self, cmd): return self._callback(cmd, len(cmd), **self._kwargs)
 	def get_prefix(self): return " ? "
-	def get_contents(self): return self.get_prefix() + self._message, ("reply",), self
+	def get_contents(self): return self.get_prefix() + self._message, ("reply",), self, " - ", self._text
 
 class Select(Question):
 	""" Provide a list of options to let the user choose from, they can either use index or keyword to filter items
@@ -75,7 +75,7 @@ class Select(Question):
 		res = self._execute_callback()
 		if res is not None: return res.get_contents()
 		elif len(self._choices) == 0: return "< Nothing found", ("reply",)
-		else: return self.get_prefix() + self._message + "\n" + self._display_options() + "\n < Select item:", ("reply",), self
+		else: return self.get_prefix() + self._message + "\n" + self._display_options() + "\n < Select item:", ("reply",), self, " - ", self._text
 
 class Error(Empty):
 	""" Show the user that an error occured while processing their command,

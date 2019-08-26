@@ -133,9 +133,9 @@ class PyPlayer(pywindow.PyWindow):
 			self.schedule(sec=1, func=self.destroy)
 		except KeyError: raise ValueError("Unknown reason '{}'".format(reason))
 
-	def on_reply(self, reply, tags=(), cmd=None):
+	def on_reply(self, reply, tags=(), cmd=None, prefix='', text=''):
 		self._cmd = cmd
-		self.schedule(func=self.content["console"].add_reply, reply=reply, tags=tags, prefix=" ? " if cmd else None)
+		self.schedule(func=self.content["console"].add_reply, reply=reply, tags=tags, prefix=prefix, text=text)
 
 	def on_notification(self, message, tags=()):
 		self.schedule(func=self.content["console"].add_notification, message=message, tags=tags)
