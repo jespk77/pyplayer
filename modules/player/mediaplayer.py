@@ -107,7 +107,7 @@ class MediaPlayer():
 				path: the path to search in
 				keyword: [optional], returns all items matching this keyword or all items if no argument passed
 				exact_search: [optional], set true to only look for songs with an exact match """
-		print("INFO", "looking for songs in '{}' with keyword(s) '{}'".format(path, keyword))
+		print("INFO", f"looking for songs in '{path}' with keyword(s) '{keyword}'")
 		res1 = []
 		res2 = []
 		keyword = keyword.lower()
@@ -122,8 +122,12 @@ class MediaPlayer():
 						elif " " + keyword + " " in " " + song + " ": res1.append(file)
 						elif keyword == "" or keyword in song: res2.append(file)
 
-		if len(res1) > 0: return res1
-		else: return res2
+		if len(res1) > 0:
+			print("INFO", f"Found {len(res1)} exact match(es)")
+			return res1
+		else:
+			print("INFO", f"Found {len(res2)} match(es) containing required keyword(s)")
+			return res2
 
 	def find_song(self, path, keyword=None):
 		""" Find songs in given path that contain given keyword, where keyword should be a string list separated by spaces
