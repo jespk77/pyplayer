@@ -27,11 +27,12 @@ class PyLogLevel(enum.Enum):
 
 	def __str__(self): return self.name
 
-file_format = "logs" + os.path.sep + "pylog_{}{}.log"
+log_folder = ".log"
+file_format = log_folder + os.path.sep + "pylog_{}{}.log"
 class PyLog:
 	def __init__(self, log_to_file=True):
 		self._level = PyLogLevel.INFO
-		if not os.path.isdir("logs"): os.mkdir("logs")
+		if not os.path.isdir(log_folder): os.mkdir(log_folder)
 
 		date_str = datetime.datetime.today().strftime("%y-%m-%d")
 		if log_to_file:
@@ -107,7 +108,7 @@ def get_logger():
 
 def open_logfile(file=None):
 	if not file: file = get_logger().filename
-	else: file = "logs{}{}.log".format(os.path.sep, file)
-	if not file or not os.path.isfile(file): raise FileNotFoundError("'{}' is not a file".format(file))
+	else: file = f"{log_folder}{os.path.sep}{file}.log"
+	if not file or not os.path.isfile(file): raise FileNotFoundError(f"'{file}' is not a file")
 	import webbrowser
 	return webbrowser.open(file)
