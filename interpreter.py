@@ -191,9 +191,9 @@ class Interpreter(Thread):
 
 	def _load_module(self, md):
 		if not md.startswith("modules."): md = "modules." + md
-		if md in [n.__name__ for n in self._modules]: raise RuntimeError("Another module with name '{}' was already registered!".format(md))
+		if md in [n.__name__ for n in self._modules]: raise RuntimeError(f"Another module with name '{md}' was already registered!")
 		try:
-			print("INFO", f"Loading '{md.__name__}'...")
+			print("INFO", f"Loading '{md}'...")
 			m = importlib.import_module(md)
 			m.interpreter = self
 			m.client = self._client
@@ -202,11 +202,11 @@ class Interpreter(Thread):
 			try: m.initialize()
 			except AttributeError as a:
 				if "initialize" not in str(a): raise
-			except Exception as e: return messagetypes.Error(e, f"Failed to initialize '{md.__name__}', module will not be available")
+			except Exception as e: return messagetypes.Error(e, f"Failed to initialize '{md}': module will not be available")
 
 			self._modules.append(m)
 			return messagetypes.Reply("Module successfully loaded")
-		except Exception as e: return messagetypes.Error(e, f"Failed to import '{md.__name__}', module will not be available")
+		except Exception as e: return messagetypes.Error(e, f"Failed to import '{md}': module will not be available")
 
 
 	def _on_destroy(self):
