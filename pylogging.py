@@ -5,11 +5,12 @@ import os, sys
 class PyLogLevel(enum.Enum):
 	""" Defines the importance of the log message
 			when the logger is set to a level, all messages that are below that level are omitted """
-	INFO = 0
-	WARNING = 1
-	ERROR = 2
-	NDEFINE = 5
-	MESSAGE = 99
+	VERBOSE = 0
+	INFO = 1
+	WARNING = 2
+	ERROR = 3
+	NDEFINE = 4
+	MESSAGE = 5
 
 	@staticmethod
 	def from_arg(level):
