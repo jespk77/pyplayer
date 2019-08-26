@@ -71,12 +71,12 @@ class StreamEntry(pycontainer.PyLabelFrame):
 		self._meta = meta
 
 		lbl = self.place_element(pyelement.PyTextlabel(self, "header"))
-		lbl.text = self._meta.get("user_name", "<No username found>")
+		lbl.text = self._meta.get("user_name", "(No username set)")
 		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_title"), row=1)
-		lbl.text = self._meta.get("title", "<No stream title found>")
+		lbl.text = self._meta.get("title", "(No title set)")
 		lbl.wrapping = True
 		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_game"), row=2)
-		lbl.text = self._meta.get("game_id", "<Undefined>")
+		lbl.text = self._meta.get("game_id", "(No game set)")
 		self.row(0, weight=1).row(1, weight=1).column(0, weight=1)
 
 		btn = self.place_element(pyelement.PyButton(self, "goto"), rowspan=4, column=1)
@@ -114,7 +114,7 @@ class AutoRefreshOption(pycontainer.PyFrame):
 		self._value_input.accept_input = self._checkbox.checked
 		if not self._checkbox.checked:
 			print("INFO", "Unchecked auto refresh, canceling...")
-			self._window.cancel_scheduled_task(task_id=self._refresh_task_id)
+			self._window.delete_scheduled_task(task_id=self._refresh_task_id)
 		else:
 			print("INFO", "Checked auto refresh, scheduling update")
 			self._window.schedule(min=int(self._value_input.value), func=self._window.update_livestreams, task_id=self._refresh_task_id, loop=True, _auto=True)
