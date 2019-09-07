@@ -99,7 +99,12 @@ class TwitchEmoteBrowser(pywindow.PyWindow):
 
 			set_data.reverse()
 			for sd in set_data:
-				btn = pyelement.PyButton(browser, "emote_{}".format(sd.code))
+				btn_code = f"emote_{sd.code}"
+				if browser.find_item(btn_code):
+					print("INFO", f"Skipping an already existing emote with id '{btn_code}'")
+					continue
+
+				btn = pyelement.PyButton(browser, btn_code)
 				def _click(): self._on_button_click(sd)
 				btn.command = _click
 				btn.image = self._emote_cache.get_image(sd.id)
