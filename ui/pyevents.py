@@ -163,3 +163,13 @@ class PyElementEvents:
 			(self._element._tk.bind_all if include_children else self._element._tk.bind)(key, wrapper, add=True)
 			return wrapper
 		return wrapped
+
+	def InteractEvent(self, cb):
+		""" Fired if the user clicks on this element and the element can receive user input (not grayed out)
+			Currently only supported on PyButton and PyCheckbox
+			- supported callback keywords:
+				* button: a reference to the element that was pressed """
+		@wraps(cb)
+		def wrapper(): try_call_handler("ElementInteract", cb, button=self._element)
+		self._element._tk.configure(command=wrapper)
+		return wrapper

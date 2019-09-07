@@ -242,14 +242,12 @@ class PyCheckbox(PyElement):
 
 	@property
 	def command(self):
-		""" The handler that gets called whenever the checkbox gets toggled """
-		return self._tk.cget("command")
+		raise DeprecationWarning("This property was moved to event_handler.InteractEvent")
 	@command.setter
 	def command(self, cb):
-		if not callable(cb): raise TypeError("Callback must be callable!")
-		self._tk.configure(command=cb)
+		self.command()
 	def with_command(self, value):
-		self.command = value
+		self.command()
 		return self
 
 
@@ -295,16 +293,11 @@ class PyButton(PyElement):
 
 	@property
 	def command(self):
-		""" Returns the callback that is currently assigned to when the button is pressed or None if nothing bound """
-		if not callable(self._callback): self._callback = None
-		return self._callback
+		raise DeprecationWarning("This property was moved to event_handler.InteractEvent")
 	@command.setter
-	def command(self, value):
-		""" Set the callback that gets called when the button is pressed """
-		self._callback = value
-		self._tk.configure(command=value)
+	def command(self, value): self.command()
 	def with_command(self, value):
-		self.command = value
+		self.command()
 		return self
 
 
