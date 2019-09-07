@@ -19,7 +19,7 @@ class _EmotesetFetch(Thread):
 		Thread.start(self)
 
 	def run(self):
-		print("INFO", "Started fetching task for sets:", self._sets)
+		print("VERBOSE", "Started fetching task for sets:", self._sets)
 		import requests
 		r = requests.get(emoteset_url.format(",".join([s for s in self._sets])), headers=request_header)
 		data = None
@@ -47,6 +47,7 @@ class TwitchEmoteBrowser(pywindow.PyWindow):
 		self.icon = "assets/icon_twitchviewer"
 
 		self._emoteset = set()
+		self._browser_frames = {}
 		self._t = None
 		self._window = parent
 		self._emote_cache = emote_cache
@@ -66,7 +67,7 @@ class TwitchEmoteBrowser(pywindow.PyWindow):
 
 	def _load_emotesets(self, sets):
 		if self._t is None and sets:
-			print("INFO", "New emote sets found, starting fetch task...")
+			print("VERBOSE", "New emote sets found, starting fetch task...")
 			self._t = _EmotesetFetch(self._emote_cache, sets)
 			self._t.start(self._done_loading)
 
@@ -78,22 +79,34 @@ class TwitchEmoteBrowser(pywindow.PyWindow):
 		self._t.join()
 		self._t = None
 
-		print("INFO", "Emote set fetching done, updating interface...")
-		for row, (set_id, set_data) in enumerate(data.items()):
-			browser = pycontainer.PyItemBrowser(self._content_frame.content)
-			browser.min_width = browser.min_height = 40
+		print("VERBOSE", "Emote set fetching done, updating interface...")
+		for set_id, set_data in data.items():
+			self._emoteset.add(set_id)
+			try: set_id = int(set_id)
+			except ValueError: print("WARNING", f"Invalid emote set '{set_id}', trying to proceed but things may not work correctly")
+			# workaround: merge all special emotesets into one id
+			if set_id > 300000000: set_id = 1
+
+			browser = self._browser_frames.get(set_id)
+			if not browser:
+				browser = pycontainer.PyItemBrowser(self._content_frame.content)
+				browser.min_width = browser.min_height = 40
+				row = len(self._browser_frames)
+
+				self._browser_frames[set_id] = browser
+				self._content_frame.place_frame(browser, row=row)
+				self._content_frame.row(row, weight=1)
+
+			set_data.reverse()
 			for sd in set_data:
 				btn = pyelement.PyButton(browser, "emote_{}".format(sd.code))
 				def _click(): self._on_button_click(sd)
 				btn.command = _click
 				btn.image = self._emote_cache.get_image(sd.id)
 				browser.append_element(btn)
+			browser.update_frame()
 
-			self._content_frame.place_frame(browser, row=row)
-			self._content_frame.row(row, weight=1)
-			self._emoteset.add(set_id)
-
-		print("INFO", "Interface updating complete, window can now be shown")
+		print("VERBOSE", "Interface updating complete, window can now be shown")
 		#todo: update emote button on chat window
 
 	def _on_button_click(self, emote_data):
@@ -104,4 +117,5 @@ class TwitchEmoteBrowser(pywindow.PyWindow):
 
 	def destroy(self):
 		if self._t: self._t.join()
+		self._browser_frames.clear()
 		pywindow.PyWindow.destroy(self)
