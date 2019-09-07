@@ -252,6 +252,11 @@ class PyItemBrowser(PyLabelFrame):
 		def _content_resize(width):
 			self._reorganize(width)
 
+	def update_frame(self):
+		""" Trigger a refresh for this browser without resizing the frame
+		 	Note: can cause lag/stutter when used frequently: don't call this from within a loop """
+		self._reorganize()
+
 	def _reorganize(self, new_width=None):
 		if new_width is None:
 			self._content._tk.update_idletasks()
