@@ -37,6 +37,7 @@ class IRCClient:
 		 	It is fine to call this more than once, when already joined the channel this call is ignored """
 		channel = channel.lower()
 		if channel not in self._channel_queue:
+			print("VERBOSE", f"Joining channel '{channel}'")
 			self._channel_queue[channel] = multiprocessing.Queue()
 			self._send("JOIN #{}".format(channel))
 
@@ -45,6 +46,7 @@ class IRCClient:
 		channel = channel.lower()
 		q = self._channel_queue.get(channel)
 		if q is not None:
+			print("VERBOSE", f"Leaving channel '{channel}'")
 			self._send("PART #{}".format(channel))
 			del self._channel_queue[channel]
 
@@ -67,7 +69,7 @@ class IRCClient:
 		if not self._general_queue.empty(): return self._general_queue.get_nowait()
 
 	def send_message(self, channel, message):
-		""" Send a message to given channel, must have joined that channel in order to have an effect """
+		""" Send a message to given channel, must have joined that channel before this call otherwise an exception is thrown """
 		channel = channel.lower()
 		if channel not in self._channel_queue: raise KeyError(channel)
 		self._send("PRIVMSG #{} : {}".format(channel, message))
@@ -81,7 +83,10 @@ class IRCClient:
 					msg = msg.split(" ", maxsplit=4)
 					try:
 						if msg[0] == "PING": self._send("PONG {}".format(msg[1:]))
-						elif msg[1] == "NOTICE": self._general_queue.put(" ".join(msg[3:])[1:])
+						elif msg[1] == "NOTICE":
+							message = " ".join(msg[3:])[1:]
+							print("INFO", f"Received general IRC notice:", message)
+							self._general_queue.put(message)
 						else: self._process_data(msg)
 					except IndexError: continue
 
