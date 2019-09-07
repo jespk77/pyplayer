@@ -30,7 +30,8 @@ class PySplashWindow(pywindow.PyTkRoot):
 
 		btn = pyelement.PyButton(self.content, "close_window", initial_cfg={"highlightthickness": 0, "borderwidth": 0})
 		btn.text = "X "
-		btn.command = self.destroy
+		@btn.event_handler.InteractEvent
+		def _click(): self.destroy()
 		self.content.place_element(btn, column=1)
 
 		logo = pyimage.PyImage(self.content, "logo_image", img=pyimage.ImageData(file="assets/logo.png"))
