@@ -108,7 +108,7 @@ class TwitchEmoteBrowser(pywindow.PyWindow):
 				btn.data = sd
 				btn.image = self._emote_cache.get_image(sd.id)
 				@btn.event_handler.InteractEvent
-				def _press(button): self._on_emote_press(button)
+				def _press(element): self._on_emote_press(element)
 				browser.append_element(btn)
 			browser.update_frame()
 
