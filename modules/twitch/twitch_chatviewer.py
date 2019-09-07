@@ -18,8 +18,10 @@ def _do_request(url):
 	import requests
 	r = requests.get(url)
 	data = r.json()
-	if r.status_code == 200: return data
-	else: print("ERROR", "'{}': Invalid response while requesting data:".format(url), data)
+	if r.status_code == 200:
+		print("VERBOSE", f"Data request on url '{url}' complete")
+		return data
+	else: print("ERROR", f"'{url}': Invalid response while requesting data:", data)
 bttv_emote_map = {entry["code"]: entry["id"] for entry in _do_request(bttv_emote_list_url)["emotes"]}
 
 def _split_bits(text):
@@ -106,9 +108,8 @@ class TwitchChatViewer(pyelement.PyTextfield):
 					tierlist = [CheermoteData(min_bits=int(entry["min_bits"]), color=entry["color"], image=entry["images"]["dark"]["animated"]["1"]) for entry in emote["tiers"]]
 					tierlist.reverse()
 					self._cheermote_map[emote["prefix"]] = tierlist
-				except Exception as e:
-					print("ERROR", "Processing cheermote data:", emote)
-					import traceback; traceback.print_exception(type(e), e, e.__traceback__)
+				except Exception as e: print("ERROR", f"Processing data for cheermote '{emote}'", e)
+			print("VERBOSE", "Cheermote data loaded")
 		else: print("WARNING", "Cheermote data fetch failed, cheermotes not visible")
 
 	def _get_badge(self, key):
@@ -123,7 +124,7 @@ class TwitchChatViewer(pyelement.PyTextfield):
 		try: name, value = _split_bits(key)
 		except ValueError: return
 
-		print("INFO", "Getting cheermote '{}' with value:".format(name), value)
+		print("VERBOSE", f"Getting cheermote '{name}' with value:", value)
 		data = self._cheermote_map.get(name)
 		if data:
 			bit_index, bit_data = len(data) - 1, data[-1]
@@ -134,15 +135,15 @@ class TwitchChatViewer(pyelement.PyTextfield):
 					break
 
 			if bit_data:
-				print("INFO", "Found data for image on index:", bit_index)
+				print("VERBOSE", "Found data for image on index:", bit_index)
 				if isinstance(bit_data.image, str):
-					print("INFO", "Image not yet cached, collecting image from url")
-					try: img = pyimage.PyImage(self._window.content, "cheer_{}_{}".format(name, bit_data.min_bits), url=bit_data.image)
+					print("VERBOSE", "Image not yet cached, collecting image from url")
+					try: img = pyimage.PyImage(self._window.content, f"cheer_{name}_{bit_data.min_bits}", url=bit_data.image)
 					except Exception as e: return print("ERROR", "Getting image:", e)
 					bit_data = bit_data._replace(image=img)
 					self._cheermote_map[name][bit_index] = bit_data
 				return bit_data.image, value, bit_data.color
-			else: print("WARNING", "No valid bit emote found for '{}', it is either a false positive or something went wrong during bit info collection".format(key))
+			else: print("WARNING", f"No valid bit emote found for '{key}', it is either a false positive or something went wrong during bit info collection")
 
 	def _insert_badges(self, badges):
 		for b in badges:
@@ -153,7 +154,7 @@ class TwitchChatViewer(pyelement.PyTextfield):
 				self.insert("end", " ")
 			except KeyError as e:
 				if log_unknown_badges: print("INFO", "Unknown badge:", e)
-			except Exception as e: print("ERROR", "While fetching badge '{}':".format(b), e)
+			except Exception as e: print("ERROR", f"While fetching badge '{b}':", e)
 
 	def _insert_username(self, user, color=None):
 		tagname = user.lower()
@@ -353,5 +354,4 @@ class TwitchChatWindow(pywindow.PyWindow):
 				try: cb(msg.meta, msg.data)
 				except Exception as e:
 					import traceback
-					print("ERROR", "During message callback:")
-					traceback.print_exception(type(e), e, e.__traceback__)
+					print("ERROR", "During message callback:", e)
