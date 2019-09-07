@@ -85,8 +85,8 @@ class BaseWidgetContainer:
 		""" Get the element that was assigned to given name, returns this element or None if nothing bound """
 		return self._elements.get(item)
 
-	def __setitem__(self, key, value): raise AttributeError("Cannot set or replace elements directly, use 'place_element' instead!")
-	def __delitem__(self, key): raise AttributeError("Cannot delete elements directly, use 'remove_element' instead!")
+	def __setitem__(self, key, value): raise TypeError("Cannot set or replace elements directly, use 'place_element' instead!")
+	def __delitem__(self, key): raise TypeError("Cannot delete elements directly, use 'remove_element' instead!")
 
 
 frame_cfg = { "background": "black" }
@@ -268,7 +268,7 @@ class PyItemBrowser(PyLabelFrame):
 		for i, element in enumerate(self._items):
 			row = i // column_count
 			column = i % column_count
-			e_id = "element_{}".format(i)
+			e_id = element.widget_id
 			self._content._tk.coords(e_id, column * (self._minx + column_offset), row * self._miny)
 			self._content._tk.itemconfigure(e_id, width=self._minx + column_offset, height=self._miny)
 		self._content._tk.configure(height=(row + 1) * self.min_height)
@@ -311,9 +311,11 @@ class PyItemBrowser(PyLabelFrame):
 			except Exception as e: print("ERROR", "While clearing content:", e)
 		self._items.clear()
 
+	def find_item(self, tag): return self._content._tk.find_withtag(tag)
+
 	def _add_element(self, element):
-		if not isinstance(element, pyelement.PyElement): raise TypeError("Can only bind instances of PyElement, not '{.__name__}'".format(type(element)))
-		self._content._tk.create_window((0,0), window=element._tk, anchor="nw", tag="element_{}".format(len(self._items)))
+		if not isinstance(element, pyelement.PyElement): raise TypeError(f"Can only bind instances of PyElement, not '{type(element).__name__}'")
+		self._content._tk.create_window((0,0), window=element._tk, anchor="nw", tag=f"{element.widget_id}")
 		self._items.append(element)
 
 	def append_element(self, element):
@@ -322,9 +324,15 @@ class PyItemBrowser(PyLabelFrame):
 			for e in element: self._add_element(e)
 		else: self._add_element(element)
 
+	def remove_element(self, element_id):
+		""" Removes an element with specified id, has no effect if there was no element with the id found """
+		element = self.find_item(element_id)
+		if element:
+			self._items.remove(element)
+			element.destroy()
+
 	def _unsupported(self): raise TypeError("This operation is not supported for this type")
 	def row(self, *args): self._unsupported()
 	def column(self, *args): self._unsupported()
 	def place_element(self, *args): self._unsupported()
 	def place_frame(self, *args): self._unsupported()
-	def remove_element(self, *args): self._unsupported()
