@@ -16,12 +16,21 @@ class ModuleSelector(pywindow.PyWindow):
 
 		b_cancel = pyelement.PyButton(self.content, "button_cancel")
 		b_cancel.text = "Cancel & close"
-		b_cancel.command = self._on_cancel
+		@b_cancel.event_handler.InteractEvent
+		def _close():
+			self.confirm = False
+			self.destroy()
 		self.content.place_element(b_cancel, row=1)
 
 		b_enable = pyelement.PyButton(self.content, "button_enable")
 		b_enable.text = "Enable all"
-		b_enable.command = self._on_enable_all
+		@b_enable.event_handler.InteractEvent
+		def _enable_all():
+			for check, py in self._module_inputs.values():
+				if check.accept_input:
+					check.checked = True
+					try: self._module_enable(check)
+					except AttributeError: pass
 		self.content.place_element(b_enable, row=1, column=1)
 
 		self.confirm = True
@@ -46,7 +55,8 @@ class ModuleSelector(pywindow.PyWindow):
 			mod_enable.module = module_id
 			mod_enable.checked = not invalid_platform and module_options.get("enabled", False)
 			mod_enable.accept_input = not invalid_platform and not module_options.get("required", False)
-			mod_enable.command = lambda check=mod_enable: self._module_enable(check)
+			@mod_enable.event_handler.InteractEvent
+			def _mod_enable(element): self._module_enable(element)
 			mod_frame.place_element(mod_enable, row=index, columnspan=2)
 			self._update_checkbox(mod_enable)
 
@@ -72,17 +82,6 @@ class ModuleSelector(pywindow.PyWindow):
 
 			index += 1
 			self._module_inputs[module_id] = mod_enable, mod_priority
-
-	def _on_cancel(self):
-		self.confirm = False
-		self.destroy()
-
-	def _on_enable_all(self):
-		for check, py in self._module_inputs.values():
-			if check.accept_input:
-				check.checked = True
-				try: self._module_enable(check)
-				except AttributeError: pass
 
 	@property
 	def modules(self):
