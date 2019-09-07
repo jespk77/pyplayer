@@ -68,24 +68,33 @@ from collections import namedtuple
 ChannelData = namedtuple("ChannelData", ["name", "id"])
 
 class StreamEntry(pycontainer.PyLabelFrame):
+	THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT = 128, 64
+
 	def __init__(self, parent, meta, go_cb):
 		pycontainer.PyLabelFrame.__init__(self, parent)
 		self._meta = meta
 
-		lbl = self.place_element(pyelement.PyTextlabel(self, "header"))
+		lbl = self.place_element(pyelement.PyTextlabel(self, "header"), column=1)
 		lbl.text = self._meta.get("user_name", "(No username set)")
-		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_title"), row=1)
+		lbl.wrapping = True
+		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_title"), row=1, column=1)
 		lbl.text = self._meta.get("title", "(No title set)")
 		lbl.wrapping = True
-		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_game"), row=2)
+		lbl = self.place_element(pyelement.PyTextlabel(self, "stream_game"), row=2, column=1)
 		lbl.text = self._meta.get("game_id", "(No game set)")
-		self.row(0, weight=1).row(1, weight=1).column(0, weight=1)
+		lbl.wrapping = True
 
-		btn = self.place_element(pyelement.PyButton(self, "goto"), rowspan=4, column=1)
+		thumbnail_url = self._meta.get("thumbnail_url")
+		if thumbnail_url:
+			thumbnail_url = thumbnail_url.format(width=self.THUMBNAIL_WIDTH, height=self.THUMBNAIL_HEIGHT)
+			self.place_element(pyimage.PyImage(self, "thumbnail", url=thumbnail_url), rowspan=4)
+		self.row(0, weight=1).row(1, weight=1).column(1, weight=1, minsize=30)
+
+		btn = self.place_element(pyelement.PyButton(self, "goto"), rowspan=4, column=2)
 		btn.text = "Open"
 		@btn.event_handler.InteractEvent
 		def _goto(): go_cb(ChannelData(name=self._meta.get("user_name"), id=self._meta.get("user_id")))
-		self.column(1, minsize=50)
+		self.column(2, minsize=50)
 
 
 class AutoRefreshOption(pycontainer.PyFrame):
@@ -170,7 +179,8 @@ class TwitchPlayer(pywindow.PyWindow):
 
 		lbl = self.content.place_element(pyelement.PyTextlabel(self.content, "live_channels"), row=2)
 		lbl.text = "Followed live channels"
-		self.content.place_element(pyelement.PyTextlabel(self.content, "live_update", {"foreground": "gray"}), row=3)
+		bt = self.content.place_element(pyelement.PyTextlabel(self.content, "live_update", {"foreground": "gray"}), row=3)
+		bt.wrapping = True
 		self.content.place_frame(AutoRefreshOption(self.content, self), row=2, column=1, columnspan=2)
 		bt = self.content.place_element(pyelement.PyButton(self.content, "refresh_btn"), row=3, column=1, columnspan=2)
 		bt.text = "Refresh"
