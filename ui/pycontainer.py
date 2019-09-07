@@ -159,6 +159,7 @@ class PyScrollableFrame(PyFrame):
 		PyFrame.place_frame(self, self._scrollable)
 		self._scrollable.row(0, weight=1).column(0, weight=1)
 		self._scrollbar_x = self._scrollbar_y = None
+		self._enable_scroll = False
 
 		PyFrame.row(self, 0, weight=1)
 		PyFrame.column(self, 0, weight=1)
@@ -170,8 +171,15 @@ class PyScrollableFrame(PyFrame):
 			if not self._scrollbar_y: self._scrollable._tk.itemconfigure(self._content_tag, height=height)
 		@self._content.event_handler.ElementResize
 		def content_resize(): self._scrollable.scrollregion = self._scrollable.get_bounds()
+
+		@self.event_handler.MouseEnter
+		def enable_scroll(): self._enable_scroll = True
+		@self.event_handler.MouseLeave
+		def disable_scroll(): self._enable_scroll = False
+
 		@self.event_handler.MouseScrollEvent(include_children=True)
-		def scroll_mouse(delta): self._scrollable._tk.yview_scroll(-(delta//self._mouse_sensitivity), "units")
+		def scroll_mouse(delta):
+			if self._enable_scroll:	self._scrollable._tk.yview_scroll(-(delta//self._mouse_sensitivity), "units")
 
 	@property
 	def content(self): return self._content
