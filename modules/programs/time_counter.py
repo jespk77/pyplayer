@@ -20,12 +20,14 @@ class TimeCount(pywindow.PyWindow):
 		lbl = self.content.place_element(pyelement.PyTextlabel(self.content, "label", initial_cfg={"background": background_color, "foreground": foreground_color}))
 		lbl.text = "initializing..."
 		ubt = self.content.place_element(pyelement.PyButton(self.content, "update_button", initial_cfg={"background": background_color}), row=1)
-		ubt.command = self.on_noise_click
+		@ubt.event_handler_InteractEvent
+		def _noise_click(): self.on_noise_click()
 		try: ubt.image = pyimage.PyImage(file=self.icon)
 		except ValueError: print("WARNING", "Invalid/none specified for icon '{}', button will be left blank".format(self.icon))
 		rbt = self.content.place_element(pyelement.PyButton(self.content, "reset_button", initial_cfg={"background": background_color, "foreground": foreground_color}), row=2)
 		rbt.text = "Reset"
-		rbt.command = self.on_timer_reset
+		@rbt.event_handler.InteractEvent
+		def _noise_reset(): self.on_timer_reset()
 
 	def window_tick(self, date):
 		if self._countdown == 0:
