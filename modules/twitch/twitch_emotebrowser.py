@@ -105,17 +105,18 @@ class TwitchEmoteBrowser(pywindow.PyWindow):
 					continue
 
 				btn = pyelement.PyButton(browser, btn_code)
-				def _click(): self._on_button_click(sd)
-				btn.command = _click
+				btn.data = sd
 				btn.image = self._emote_cache.get_image(sd.id)
+				@btn.event_handler.InteractEvent
+				def _press(button): self._on_emote_press(button)
 				browser.append_element(btn)
 			browser.update_frame()
 
 		print("VERBOSE", "Interface updating complete, window can now be shown")
 		#todo: update emote button on chat window
 
-	def _on_button_click(self, emote_data):
-		print("Clicked!", emote_data)
+	def _on_emote_press(self, btn):
+		print("press!", btn.data)
 
 	def _remove_emotesets(self, sets):
 		if self._t is None and sets: pass

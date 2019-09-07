@@ -31,36 +31,38 @@ class TwitchSigninWindow(pywindow.PyWindow):
 		self.content.place_element(pyelement.PyTextlabel(self.content, "header"), columnspan=2)
 		self.content["header"].text = "Sign into twitch account..."
 		self.content.place_element(pyelement.PyTextlabel(self.content, "status"), row=1, columnspan=2)
+		self.content["status"].wrapping = True
 		self.content["status"].text = "Enter access token"
 		self.content.place_element(pyelement.PyTextInput(self.content, "token"), row=2, columnspan=2)
 		self.content.column(0, weight=1, minsize=30).column(1, weight=1, minsize=30).row(2, weight=1)
 
 		bt = self.content.place_element(pyelement.PyButton(self.content, "get_url"), row=3, columnspan=2)
 		bt.text = "Get token"
-		bt.command = self._goto_autl_url
+		@bt.event_handler.InteractEvent
+		def _goto_autl_url():
+			self._state = generate_random_code()
+			import webbrowser
+			webbrowser.open(self.auth_url.format(client_id=CLIENT_ID, resp_uri=self.resp_uri, state=self._state, scope="+".join(self.scope)))
+			self.content["status"].text = f"State should equal '{self._state}'"
+
 		bt = self.content.place_element(pyelement.PyButton(self.content, "submit_btn"), row=4)
 		bt.text = "Submit"
-		bt.command = self._submit_code
+		@bt.event_handler.InteractEvent
+		def _submit_code():
+			txt = self.content["token"].value
+			if txt:
+				self.user_token = txt
+				self.destroy()
+
 		bt = self.content.place_element(pyelement.PyButton(self.content, "cancel"), row=4, column=1)
 		bt.text = "Cancel"
-		bt.command = self.destroy
+		@bt.event_handler.InteractEvent
+		def _close(): self.destroy()
 
 	@property
 	def user_token(self): return self._token
 	@user_token.setter
 	def user_token(self, dt): self._token = dt
-
-	def _goto_autl_url(self):
-		self._state = generate_random_code()
-		import webbrowser
-		webbrowser.open(self.auth_url.format(client_id=CLIENT_ID, resp_uri=self.resp_uri, state=self._state, scope="+".join(self.scope)))
-		self.content["status"].text = "State should equal '{}'".format(self._state)
-
-	def _submit_code(self):
-		txt = self.content["token"].value
-		if txt:
-			self.user_token = txt
-			self.destroy()
 
 from collections import namedtuple
 ChannelData = namedtuple("ChannelData", ["name", "id"])
@@ -81,7 +83,8 @@ class StreamEntry(pycontainer.PyLabelFrame):
 
 		btn = self.place_element(pyelement.PyButton(self, "goto"), rowspan=4, column=1)
 		btn.text = "Open"
-		btn.command = lambda : go_cb(ChannelData(name=self._meta.get("user_name"), id=self._meta.get("user_id")))
+		@btn.event_handler.InteractEvent
+		def _goto(): go_cb(ChannelData(name=self._meta.get("user_name"), id=self._meta.get("user_id")))
 		self.column(1, minsize=50)
 
 
@@ -93,8 +96,16 @@ class AutoRefreshOption(pycontainer.PyFrame):
 		pycontainer.PyFrame.__init__(self, parent)
 		self._delay = 15
 		self._checkbox = pyelement.PyCheckbox(self, "enable_checkbox")
-		self._checkbox.command = self._on_checkbox_click
 		self._checkbox.text = "Auto refresh every"
+		@self._checkbox.event_handler.InteractEvent
+		def _on_checkbox_click(self):
+			self._value_input.accept_input = self._checkbox.checked
+			if not self._checkbox.checked:
+				print("VERBOSE", "Unchecked auto refresh, canceling...")
+				self._window.delete_scheduled_task(task_id=self._refresh_task_id)
+			else:
+				print("VERBOSE", "Checked auto refresh, scheduling update")
+				self._window.schedule(min=int(self._value_input.value),	func=self._window.update_livestreams, task_id=self._refresh_task_id, loop=True,	_auto=True)
 		self.place_element(self._checkbox)
 
 		self._value_input = pyelement.PyTextInput(self, "value_input")
@@ -109,15 +120,6 @@ class AutoRefreshOption(pycontainer.PyFrame):
 		lbl2 = pyelement.PyTextlabel(self, "label2")
 		lbl2.text = "minutes"
 		self.place_element(lbl2, column=2)
-
-	def _on_checkbox_click(self):
-		self._value_input.accept_input = self._checkbox.checked
-		if not self._checkbox.checked:
-			print("INFO", "Unchecked auto refresh, canceling...")
-			self._window.delete_scheduled_task(task_id=self._refresh_task_id)
-		else:
-			print("INFO", "Checked auto refresh, scheduling update")
-			self._window.schedule(min=int(self._value_input.value), func=self._window.update_livestreams, task_id=self._refresh_task_id, loop=True, _auto=True)
 
 	def _on_value_update(self):
 		try:
@@ -158,11 +160,12 @@ class TwitchPlayer(pywindow.PyWindow):
 
 	def create_widgets(self):
 		pywindow.PyWindow.create_widgets(self)
-		self.content.place_element(pyelement.PyTextlabel(self.content, "status_label"), columnspan=2)
-		self.content["status_label"].text = "Not signed in"
-		self.content.place_element(pyelement.PyButton(self.content, "login_action"), column=2)
-		self.content["login_action"].text = "Sign in"
-		self.content["login_action"].command = self._do_signin
+		lbl = self.content.place_element(pyelement.PyTextlabel(self.content, "status_label"), columnspan=2)
+		lbl.text = "Not signed in"
+		bt = self.content.place_element(pyelement.PyButton(self.content, "login_action"), column=2)
+		bt.text = "Sign in"
+		@bt.event_handler.InteractEvent
+		def _signin(): self._do_signin()
 		self.content.place_element(pyelement.PySeparator(self.content, "separator1"), row=1, columnspan=3)
 
 		lbl = self.content.place_element(pyelement.PyTextlabel(self.content, "live_channels"), row=2)
@@ -171,7 +174,8 @@ class TwitchPlayer(pywindow.PyWindow):
 		self.content.place_frame(AutoRefreshOption(self.content, self), row=2, column=1, columnspan=2)
 		bt = self.content.place_element(pyelement.PyButton(self.content, "refresh_btn"), row=3, column=1, columnspan=2)
 		bt.text = "Refresh"
-		bt.command = self.update_livestreams
+		@bt.event_handler.InteractEvent
+		def _do_refresh(): self.update_livestreams()
 
 		self._live_content = pycontainer.PyScrollableFrame(self.content)
 		self.content.place_frame(self._live_content, row=4, columnspan=3)
@@ -222,8 +226,10 @@ class TwitchPlayer(pywindow.PyWindow):
 
 			try:
 				self.content["status_label"].text = "Signed in as {}".format(self._usermeta["display_name"])
-				self.content["login_action"].text = "Sign out"
-				self.content["login_action"].command = self._do_signout
+				bt = self.content["login_action"]
+				bt.text = "Sign out"
+				@bt.event_handler.InteractEvent
+				def _do_signout(): self._do_signout()
 			except Exception as e: print("ERROR", "Updating profile state:", e)
 
 	def _process_request(self, get_url):
