@@ -78,7 +78,7 @@ class Interpreter(Thread):
 		print("INFO", "Interpreter thread started")
 		while True:
 			event, *args = self._queue.get()
-			print("INFO", f"Processing event '{event}' with data:", args)
+			print("VERBOSE", f"Processing event '{event}' with data:", args)
 			if event is False:
 				self._notify_event("destroy")
 				return
@@ -104,7 +104,7 @@ class Interpreter(Thread):
 		""" Terminate the interpreter, any commands already queued will still be handled but commands added after this call are ignored
 			Once the interpreter has finished the 'on_destroy' method is called that cleans up all loaded modules before it is destroyed
 		 	This operation uses a multiprocessing.queue and therefore is thread-safe and uses the 'put' operation without wait and therefore will not block """
-		print("INFO", "Received end event, terminating interpreter...")
+		print("VERBOSE", "Received end event, terminating interpreter...")
 		self._queue.put_nowait((False,))
 
 
@@ -113,7 +113,7 @@ class Interpreter(Thread):
 			* If the callback was already registered, this call has no effect
 			* This object does not increase the reference counter for the callback; if the callback container is destroyed the callback is no longer called
 			Returns the callback registered to manually increase the reference count if needed """
-		print("INFO", f"Registering callback '{callback.__name__}' for event '{event_id}'")
+		print("VERBOSE", f"Registering callback '{callback.__name__}' for event '{event_id}'")
 		if not callable(callback): raise TypeError(f"Event callback for '{event_id}' must be callable!")
 		if event_id not in self._events: self._events[event_id] = WeakSet()
 		self._events[event_id].add(callback)
@@ -122,7 +122,7 @@ class Interpreter(Thread):
 	def unregister_event(self, event_id, callback):
 		""" Remove listener from specified event id, this call has no effect if the event id doesn't exist or the callback was not registered
 		 	Returns True if the callback was found and removed, or False otherwise """
-		print("INFO", f"Unregistering callback '{callback.__name__}' for event '{event_id}'")
+		print("VERBOSE", f"Unregistering callback '{callback.__name__}' for event '{event_id}'")
 		event_list = self._events.get(event_id)
 		if event_list:
 			try:
@@ -132,7 +132,7 @@ class Interpreter(Thread):
 		return False
 
 	def _notify_event(self, event_id, *args, **kwargs):
-		print("INFO", f"Notifying listeners for the '{event_id}' event")
+		print("VERBOSE", f"Notifying listeners for the '{event_id}' event")
 		event_list = self._events.get(event_id)
 		if event_list is None: return print("ERROR", "Unknown event id '{}', event ignored...")
 
@@ -163,7 +163,7 @@ class Interpreter(Thread):
 					op = messagetypes.Error(TypeError(f"Expected a 'messagetype' object, not a '{type(res).__name__}'"), "Invalid response from command")
 				else: op = res
 
-			print("INFO", "Got command result:", op)
+			print("VERBOSE", "Got command result:", op)
 			if not isinstance(op, messagetypes.Empty): op = messagetypes.Reply("No answer :(")
 			self.print_additional_debug()
 			self._client.on_reply(*op.get_contents())
@@ -172,7 +172,7 @@ class Interpreter(Thread):
 			self._client.on_reply(*messagetypes.Error(e, "Error processing command").get_contents())
 
 	def _process_command(self, command):
-		print("INFO", f"Processing command '{' '.join(command)}'...")
+		print("VERBOSE", f"Processing command '{' '.join(command)}'...")
 		for md in self._modules:
 			try: cl = md.commands
 			except AttributeError:
@@ -195,7 +195,7 @@ class Interpreter(Thread):
 		if not md.startswith("modules."): md = "modules." + md
 		if md in [n.__name__ for n in self._modules]: raise RuntimeError(f"Another module with name '{md}' was already registered!")
 		try:
-			print("INFO", f"Loading '{md}'...")
+			print("VERBOSE", f"Loading '{md}'...")
 			m = importlib.import_module(md)
 			m.interpreter = self
 			m.client = self._client
