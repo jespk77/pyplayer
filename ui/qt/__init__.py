@@ -1,5 +1,8 @@
 __all__ = ["pywindow", "pyelement"]
 
+# pyqt documentation:
+# https://doc.qt.io/qtforpython/modules.html
+
 block_action = 0xBEEF
 
 def log_exception(e):

@@ -1,4 +1,4 @@
-import PyQt5.QtWidgets as qt
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from . import pywindow, log_exception
 
@@ -14,9 +14,38 @@ class PyElement:
 
     @property
     def element_id(self): return self._element_id
+    widget_id = element_id
+
+    # todo: element configuration
+    @property
+    def configuration(self): return None
+    def load_configuration(self):
+        pass
+
+    # todo: element event handler
+    @property
+    def event_handler(self): return None
 
     @property
     def accept_input(self): return True
+
+    # todo: element width getter/setter
+    @property
+    def width(self): return None
+    @width.setter
+    def width(self, value): pass
+    def with_width(self, value):
+        self.width = value
+        return self
+
+    # todo: element height getter/setter
+    @property
+    def height(self): return None
+    @height.setter
+    def height(self, value): pass
+    def with_height(self, value):
+        self.height = value
+        return self
 
     def add_element(self, element_id, element=None, element_class=None): raise TypeError(f"Adding child elements not supported for '{__name__}'")
     def get_element(self, element_id): raise TypeError(f"Child elements not supported for '{__name__}")
@@ -32,13 +61,13 @@ class PyElement:
 class PyFrame(PyElement):
     def __init__(self, parent, id):
         PyElement.__init__(self, parent, id)
-        self._qt = qt.QWidget(parent._qt)
+        self._qt = QtWidgets.QWidget(parent._qt)
 
 class PyTextLabel(PyElement):
     """ Element for displaying a line of text """
     def __init__(self, parent, id):
         PyElement.__init__(self, parent, id)
-        self._qt = qt.QLabel(parent._qt)
+        self._qt = QtWidgets.QLabel(parent._qt)
 
     @property
     def display_text(self): return self._qt.text()
@@ -67,12 +96,20 @@ class PyTextInput(PyElement):
     """ Element for entering one line data """
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
-        self._qt = qt.QLineEdit(parent._qt)
+        self._qt = QtWidgets.QLineEdit(parent._qt)
         self._input_cb = None
         self._qt.textEdited.connect(self._on_edit)
 
     def _on_edit(self):
         if self._input_cb: self._input_cb()
+
+    @property
+    def accept_input(self): return self._qt.isReadOnly()
+    @accept_input.setter
+    def accept_input(self, value): self._qt.setReadOnly(value)
+    def with_accept_input(self, value):
+        self.accept_input = value
+        return self
 
     @property
     def format_str(self): return self._qt.inputMask()
@@ -97,6 +134,7 @@ class PyTextInput(PyElement):
     def with_value(self, val):
         self.value = val
         return self
+    display_text = text = value
 
     @property
     def max_length(self): return self._qt.maxLength()
@@ -109,7 +147,7 @@ class PyTextInput(PyElement):
 class PyCheckbox(PyElement):
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
-        self._qt = qt.QCheckBox(parent._qt)
+        self._qt = QtWidgets.QCheckBox(parent._qt)
         self._input_cb = None
         self._qt.clicked.connect(self._on_press)
 
@@ -147,8 +185,7 @@ class PyCheckbox(PyElement):
     @property
     def command(self): return self._input_cb is not None
     @command.setter
-    def command(self, cb):
-        self._input_cb = cb
+    def command(self, cb): self._input_cb = cb
     def with_command(self, cb):
         self.command = cb
         return self
@@ -157,7 +194,7 @@ class PyButton(PyElement):
     """ Clickable button element """
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
-        self._qt = qt.QPushButton(parent._qt)
+        self._qt = QtWidgets.QPushButton(parent._qt)
         self._qt.clicked.connect(self._on_press)
         self._click_cb = None
 
@@ -201,7 +238,7 @@ class PyTextField(PyElement):
     """ Element for entering multi line text """
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
-        self._qt = qt.QTextEdit(parent._qt)
+        self._qt = QtWidgets.QTextEdit(parent._qt)
         self.undo = False
 
     @property
@@ -231,14 +268,44 @@ class PyTextField(PyElement):
 class PyProgessbar(PyElement):
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
-        self._qt = qt.QProgressBar(parent._qt)
+        self._qt = QtWidgets.QProgressBar(parent._qt)
+        self._qt.setTextVisible(False)
+
+    @property
+    def progress(self): return self._qt.value()
+    @progress.setter
+    def progress(self, value): self._qt.setValue(value)
+
+    @property
+    def horizontal(self): return self._qt.orientation() == QtCore.Qt.Horizontal
+    @horizontal.setter
+    def horizontal(self, value): self._qt.setOrientation(QtCore.Qt.Horizontal if value else QtCore.Qt.Vertical)
+
+    @property
+    def minimum(self): return self._qt.minimum()
+    @minimum.setter
+    def minimum(self, value): self._qt.setMinimum(value)
+    def with_minimum(self, value):
+        self.minimum = value
+        return self
+
+    @property
+    def maximum(self): return self._qt.maximum()
+    @maximum.setter
+    def maximum(self, value): self._qt.setMaximum(value)
+    def with_maximum(self, value):
+        self.maximum = value
+        return self
 
 class PyScrollbar(PyElement):
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
-        self._qt = qt.QScrollBar(parent._qt)
+        self._qt = QtWidgets.QScrollBar(parent._qt)
 
 class PyItemlist(PyElement):
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
-        self._qt = qt.QListView(parent._qt)
+        self._qt = QtWidgets.QListView(parent._qt)
+        self._qt.setUniformItemSizes(True)
+        self._qt.setViewMode(QtWidgets.QListView.ListMode)
+        self._qt.setFlow(QtWidgets.QListView.TopToBottom)

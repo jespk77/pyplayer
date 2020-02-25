@@ -4,6 +4,10 @@ from tkinter import font, ttk
 from ui import pyconfiguration
 from ui.tk_legacy import pyevents, pycontainer
 
+def warn_deprecation(msg=None):
+	import warnings
+	warnings.warn(f"{msg} is unsupported in the new qt variant" if msg else "Unsupported feature in the new qt variant", DeprecationWarning, stacklevel=2)
+
 def scroll_event():
 	import sys
 	return "<MouseWheel>" if "win" in sys.platform else "<Button-4>&&<Button-5>"
@@ -59,9 +63,15 @@ class PyElement:
 		self.height = value
 		return self
 
-	def set_focus(self): self._tk.focus_set()
-	def move_focus_up(self): self._tk.tk_focusPrev()
-	def move_focus_down(self): self._tk.tk_focusNext()
+	def set_focus(self):
+		warn_deprecation("'set_focus'")
+		self._tk.focus_set()
+	def move_focus_up(self):
+		warn_deprecation("'move_focus_up'")
+		self._tk.tk_focusPrev()
+	def move_focus_down(self):
+		warn_deprecation("'move_focus_down'")
+		self._tk.tk_focusNext()
 
 	def load_configuration(self):
 		""" Set configuration options stored in configuration file """
@@ -69,6 +79,7 @@ class PyElement:
 		except Exception as e: print("ERROR", "Loading configuration for element '{}':".format(self.widget_id), e)
 
 	def __getitem__(self, item):
+		warn_deprecation("getting configuration items directly")
 		return self._tk.cget(item)
 
 element_cfg = { "background": background_color, "foreground": foreground_color }
@@ -507,9 +518,12 @@ class PyProgressbar(PyElement):
 	def determinate(self):
 		""" If determinate is true, the bar is set to the current value
 		 	If determinate is false, the bar is moving back and forth """
+		warn_deprecation("determinate mode")
 		return self._tk.cget("mode") == "determinate"
 	@determinate.setter
-	def determinate(self, value): self._tk.configure(mode="determinate" if value else "indeterminate")
+	def determinate(self, value):
+		warn_deprecation("determinate mode")
+		self._tk.configure(mode="determinate" if value else "indeterminate")
 	def with_determinate(self, value):
 		self.determinate = value
 		return self
