@@ -1,4 +1,4 @@
-from ui import pywindow, pyelement
+from ui.tk_legacy import pywindow, pyelement
 
 initial_cfg = { "foreground": "white", "background": "gray5" }
 

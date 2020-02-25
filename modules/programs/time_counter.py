@@ -1,4 +1,4 @@
-from ui import pywindow, pyelement, pyimage
+from ui.tk_legacy import pyimage, pywindow, pyelement
 
 initial_cfg = {"foreground": "white", "background": "gray25", "highlight_color": "cyan", "highlight_delay": 0, "command": "effect deer"}
 class TimeCount(pywindow.PyWindow):
@@ -19,7 +19,8 @@ class TimeCount(pywindow.PyWindow):
 
 		lbl = self.content.place_element(pyelement.PyTextlabel(self.content, "label", initial_cfg={"background": background_color, "foreground": foreground_color}))
 		lbl.text = "initializing..."
-		ubt = self.content.place_element(pyelement.PyButton(self.content, "update_button", initial_cfg={"background": background_color}), row=1)
+		ubt = self.content.place_element(
+            pyelement.PyButton(self.content, "update_button", initial_cfg={"background": background_color}), row=1)
 		@ubt.event_handler_InteractEvent
 		def _noise_click(): self.on_noise_click()
 		try: ubt.image = pyimage.PyImage(file=self.icon)

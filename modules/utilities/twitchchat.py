@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from multiprocessing import Queue
 
-from ui import pyelement
+from ui.tk_legacy import pyelement
 from utilities import history
 
 import re, threading, time, datetime

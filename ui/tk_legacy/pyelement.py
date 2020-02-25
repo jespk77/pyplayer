@@ -1,7 +1,8 @@
 import tkinter
 from tkinter import font, ttk
 
-from ui import pyconfiguration, pycontainer, pyevents
+from ui import pyconfiguration
+from ui.tk_legacy import pyevents, pycontainer
 
 def scroll_event():
 	import sys
@@ -70,7 +71,6 @@ class PyElement:
 	def __getitem__(self, item):
 		return self._tk.cget(item)
 
-
 element_cfg = { "background": background_color, "foreground": foreground_color }
 # === ELEMENT ITEMS ===
 class PyTextlabel(PyElement):
@@ -112,7 +112,6 @@ class PyTextlabel(PyElement):
 		@self.event_handler.ElementResize
 		def _on_resize(width):
 			if self._do_wrapping: self._tk.configure(wraplength=width)
-
 
 input_cfg = { "insertbackground": foreground_color, "selectforeground": sel_foreground_color, "selectbackground": sel_background_color }
 input_cfg.update(element_cfg)
@@ -187,7 +186,6 @@ class PyTextInput(PyElement):
 
 	def _on_input_key(self, entry): return self._input_length == 0 or (len(entry) <= self._input_length and (not self._format_str or not self._format_str.search(entry)))
 
-
 checkbox_cfg = { "activebackground": background_color, "activeforeground": foreground_color, "selectcolor": background_color }
 checkbox_cfg.update(element_cfg)
 class PyCheckbox(PyElement):
@@ -216,7 +214,7 @@ class PyCheckbox(PyElement):
 		return self._img
 	@image.setter
 	def image(self, ig):
-		from ui import pyimage
+		from ui.tk_legacy import pyimage
 		if ig and not isinstance(ig, pyimage.PyImage): raise TypeError("Image must be a PyImage, not {.__name__}".format(type(ig)))
 		self._tk.configure(image=ig)
 		self._img = ig
@@ -249,7 +247,6 @@ class PyCheckbox(PyElement):
 	def with_command(self, value):
 		self.command()
 		return self
-
 
 button_cfg = { "activebackground": background_color, "activeforeground": foreground_color }
 button_cfg.update(element_cfg)
@@ -284,7 +281,7 @@ class PyButton(PyElement):
 	@image.setter
 	def image(self, vl):
 		""" Set the image displayed on this button """
-		from ui import pyimage
+		from ui.tk_legacy import pyimage
 		if isinstance(vl, pyimage.ImageData): img = vl.images[0]
 		elif isinstance(vl, pyimage.PyImage): img = vl._image.images[0]
 		else: raise ValueError("Unknown image type '{.__name__}'".format(type(vl)))
@@ -299,7 +296,6 @@ class PyButton(PyElement):
 	def with_command(self, value):
 		self.command()
 		return self
-
 
 class PyTextfield(PyElement):
 	front = "0.0"
@@ -396,7 +392,7 @@ class PyTextfield(PyElement):
 		if not self.accept_input: self._tk.configure(state="disabled")
 
 	def place_image(self, index, img):
-		from ui import pyimage
+		from ui.tk_legacy import pyimage
 		if isinstance(img, pyimage.ImageData): self._tk.image_create(index, image=img.images[0])
 		elif isinstance(img, pyimage.PyImage):
 			self._tk.window_create(index, window=img._tk)
@@ -471,7 +467,6 @@ class PyTextfield(PyElement):
 			else:
 				try: self._tk.configure(**{key[0]:value})
 				except Exception as e: print("ERROR", "Setting configuration value for element '{}':".format(self.widget_id), e)
-
 
 progress_cfg = { "background": "green", "troughcolor": background_color }
 class PyProgressbar(PyElement):
@@ -554,7 +549,6 @@ class PyScrollbar(PyElement):
 		elif self.orientation == "vertical":
 			self._tk.configure(command=scrollable._tk.yview)
 			scrollable._tk.configure(yscrollcommand=self._tk.set)
-
 
 list_cfg = { "selectbackground": background_color, "selectforeground": highlight_color }
 list_cfg.update(element_cfg)

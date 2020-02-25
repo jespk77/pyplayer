@@ -1,7 +1,7 @@
 import datetime, humanize
 
 from console import TextConsole
-from ui import pywindow, pyelement
+from ui.tk_legacy import pywindow, pyelement
 
 import enum
 class PyPlayerCloseReason(enum.Enum):

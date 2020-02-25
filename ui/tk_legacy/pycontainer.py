@@ -1,4 +1,5 @@
-from ui import pyelement, pyconfiguration, pyevents
+from ui import pyconfiguration
+from ui.tk_legacy import pyevents, pyelement
 import tkinter
 
 class BaseWidgetContainer:
@@ -88,13 +89,11 @@ class BaseWidgetContainer:
 	def __setitem__(self, key, value): raise TypeError("Cannot set or replace elements directly, use 'place_element' instead!")
 	def __delitem__(self, key): raise TypeError("Cannot delete elements directly, use 'remove_element' instead!")
 
-
 frame_cfg = { "background": "black" }
 class PyFrame(BaseWidgetContainer):
 	""" Base element container """
 	def __init__(self, parent, configuration=None):
 		BaseWidgetContainer.__init__(self, parent, tkinter.Frame(parent._tk, **frame_cfg), configuration)
-
 
 label_cfg = { "foreground": "white" }
 label_cfg.update(frame_cfg)
@@ -107,7 +106,6 @@ class PyLabelFrame(BaseWidgetContainer):
 	def label(self): return self._tk.cget("text")
 	@label.setter
 	def label(self, lbl): self._tk.configure(text=lbl)
-
 
 canvas_cfg = { "highlightthickness": 0 }
 canvas_cfg.update(frame_cfg)
@@ -145,7 +143,6 @@ class PyCanvas(BaseWidgetContainer):
 		""" Get the size (in pixels) of the element with the given tag
 		 	If no tag specified the bounding box of the complete element is returned """
 		return self._tk.bbox(tag)
-
 
 class PyScrollableFrame(PyFrame):
 	""" Element container with fixed grid that can be larger than the window size, view can be adjusted with mouse scrolling and/or scrollbars """
@@ -235,7 +232,6 @@ class PyScrollableFrame(PyFrame):
 	def place_frame(self, frame, row=0, column=0, rowspan=1, columnspan=1, sticky="news"): return self._content.place_frame(frame, row, column, rowspan, columnspan, sticky)
 	def remove_element(self, id): return self._content.remove_element(id)
 	def __getitem__(self, item): return self._content[item]
-
 
 class PyItemBrowser(PyLabelFrame):
 	""" Similar to a frame except there is no static grid, instead elements are stored in a list and automatically organized so they fit the window width """

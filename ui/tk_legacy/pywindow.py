@@ -1,4 +1,5 @@
-from ui import pyconfiguration, pycontainer, pyevents, pyimage
+from ui import pyconfiguration
+from ui.tk_legacy import pyimage, pyevents, pycontainer
 
 cfg_folder = ".cfg"
 class _ScheduledTask:
@@ -28,7 +29,6 @@ class _ScheduledTask:
 		except Exception as e:
 			print("INFO", "During processing of scheduled task '{}', it won't be rescheduled!".format(self._cb.__name__))
 			print("ERROR", "While calling scheduled task '{}':".format(self._cb.__name__), e)
-
 
 class PyWindow:
 	""" Framework class for windows, they have to be created with a valid root """
@@ -286,7 +286,6 @@ class PyWindow:
 			task.cancel(self._tk)
 			del self._scheduled_tasks[task_id]
 		else: raise KeyError("Unknown task id '{}'".format(task_id))
-
 
 	def window_tick(self, date):
 		""" Called every second with the current date on all windows, can be used to update elements inside it

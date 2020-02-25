@@ -1,4 +1,4 @@
-from ui import pywindow, pycontainer, pyelement
+from ui.tk_legacy import pywindow, pyelement, pycontainer
 
 from modules.twitch.twitch_window import CLIENT_ID
 emoteset_url = "https://api.twitch.tv/kraken/chat/emoticon_images?emotesets={}"

@@ -1,4 +1,4 @@
-from ui import pywindow, pyelement, pyimage, pycontainer
+from ui.tk_legacy import pyimage, pywindow, pyelement, pycontainer
 
 CLIENT_ID = "6adynlxibzw3ug8udhyzy6w3yt70pw"
 # all requests done using new twitch API: https://dev.twitch.tv/docs/api/reference/

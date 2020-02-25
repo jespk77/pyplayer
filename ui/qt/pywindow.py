@@ -120,7 +120,6 @@ class PyWindow:
         """ Closes this window along with any open child windows """
         self._qt.close()
 
-
 class RootPyWindow(PyWindow):
     default_title = "RootPyWindow"
 

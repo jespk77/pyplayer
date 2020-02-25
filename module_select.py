@@ -1,6 +1,5 @@
 import sys
-
-from ui import pywindow, pyelement, pycontainer
+from ui.tk_legacy import pywindow, pyelement, pycontainer
 
 frame_width = 100
 class ModuleSelector(pywindow.PyWindow):

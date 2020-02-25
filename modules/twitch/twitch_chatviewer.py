@@ -1,5 +1,5 @@
 from modules.twitch.twitch_window import CLIENT_ID
-from ui import pyelement, pyimage, pywindow
+from ui.tk_legacy import pyimage, pywindow, pyelement
 
 global_badge_url = "https://badges.twitch.tv/v1/badges/global/display"
 channel_badge_url = "https://badges.twitch.tv/v1/badges/channels/{channel_id}/display"

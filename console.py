@@ -1,4 +1,4 @@
-from ui import pyelement
+from ui.tk_legacy import pyelement
 from utilities import history
 
 input_mark = "mark_input"

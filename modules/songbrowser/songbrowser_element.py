@@ -1,5 +1,5 @@
 from collections import Counter
-from ui import pyelement
+from ui.tk_legacy import pyelement
 import os
 
 def get_songlist(path): return [os.path.splitext(entry.name)[0] for entry in os.scandir(path) if entry.is_file()]

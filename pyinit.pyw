@@ -1,6 +1,6 @@
 import datetime, sys
 
-from ui import pywindow, pyelement, pyimage
+from ui.tk_legacy import pyimage, pywindow, pyelement
 from utilities import commands
 
 resolution = 350, 200

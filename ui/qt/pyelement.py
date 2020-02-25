@@ -1,4 +1,4 @@
-import PyQt5.QtWidgets as qt, PyQt5.QtCore as qtcore
+import PyQt5.QtWidgets as qt
 
 from . import pywindow, log_exception
 

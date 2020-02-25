@@ -1,4 +1,3 @@
-
 # --- DEBUG options ---
 debug_image_bbox = False
 # ---------------------
@@ -48,8 +47,7 @@ class ImageData:
 	@property
 	def image_count(self): return len(self._images)
 
-
-from ui import pyelement
+from ui.tk_legacy import pyelement
 class PyImage(pyelement.PyTextlabel):
 	PLAYBACK_RATE_MS = 30
 
@@ -92,7 +90,6 @@ class PyImage(pyelement.PyTextlabel):
 			if debug_image_bbox: print("INFO", "Image '{}' out of bounds, stopping animation".format(self.widget_id))
 			self.stop()
 		return self._active
-
 
 import os
 if not os.path.isdir(".cache"): os.mkdir(".cache")

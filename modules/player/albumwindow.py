@@ -1,6 +1,6 @@
 import json
 
-from ui import pywindow, pyelement, pyimage
+from ui.tk_legacy import pyimage, pywindow, pyelement
 
 album_folder = "albums"
 album_format = album_folder + "/{}.{}"
