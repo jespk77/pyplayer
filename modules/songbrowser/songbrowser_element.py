@@ -8,9 +8,8 @@ class SongBrowser(pyelement.PyItemlist):
 	""" Can list all items (songs) from a directory in a specified order
 		possible orderings: frequency(counter), creation time, name
 	"""
-	def __init__(self, client):
-		pyelement.PyItemlist.__init__(self, client)
-		self.configure(activestyle="none", highlightthickness=0)
+	def __init__(self, client, id):
+		pyelement.PyItemlist.__init__(self, client, id)
 		self._path = None
 		self.path_valid = False
 
@@ -27,21 +26,19 @@ class SongBrowser(pyelement.PyItemlist):
 		else: self._path = None
 
 		self.path_valid = self._path is not None and os.path.isdir(self._path[1])
-		if not self.path_valid: self.insert(0, "Invalid path selected: " + str(self._path))
+		if not self.path_valid: self.itemlist = [(0, "Invalid path selected: " + str(self._path))]
 
-	def select_song(self, song=None):
-		if song is None: song = self.window.title_song
-
+	def select_song(self, song):
 		index = -1
 		found = False
 		for s in self.itemlist:
 			if s == song: index = max(0, index + 1); found = True; break
 			else: index += 1
 
-		self.selection_clear(0, "end")
 		if found:
-			self.selection_set(index)
-			self.see(index)
+			self.set_selection(index)
+			self.move_to(index)
+		else: self.clear_selection()
 
 	def create_list_from_frequency(self, path, songcounter):
 		self.path = path
@@ -81,8 +78,8 @@ class SongBrowser(pyelement.PyItemlist):
 			import random; random.shuffle(sl)
 			self.itemlist = sl
 
-	def get_song_from_event(self, event):
-		return self.itemlist[self.nearest(event.y)].replace(" - ", " ") if self.path_valid else None
+	def get_nearest_song(self, y):
+		return self.get_nearest_item(y).replace(" - ", " ") if self.path_valid else None
 
 	def add_count(self, song, add=1):
 		if self.path_valid:
@@ -95,4 +92,4 @@ class SongBrowser(pyelement.PyItemlist):
 
 	def on_destroy(self):
 		print("INFO", "Songbrowser destroyed")
-		self.destroy()
+		#self.destroy()

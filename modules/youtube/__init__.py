@@ -21,9 +21,10 @@ def ensure_yt():
 	if yt is None:
 		import youtube_dl, os
 		try:
-			dir = client["directory"]["youtube"]["path"]
+			dir = client.configuration["directory"]["youtube"]["path"]
 			download_options["outtmpl"] = os.path.join(dir, download_options["outtmpl"])
-		except KeyError: print("WARNING", "")
+		except KeyError: print("WARNING", "No valid 'youtube' path detected, current directory will be used instead")
+		except Exception as e: print("ERROR", "Something went wrong detting youtube download options (defaults are used instead):", e)
 		yt = youtube_dl.YoutubeDL(download_options)
 
 def _check_link(tag):
@@ -70,12 +71,12 @@ def convert(url, filename=None):
 def process_path(narg, nargc, **data):
 	if nargc == 1:
 		argn = " ".join(narg)
-		path = client["directory"].get(argn)
+		path = client.configuration["directory"].get(argn)
 		if path is not None: return process_song(**data, path=path)
 		else: return messagetypes.Reply("Unknown path '{}'".format(argn))
 
 def process_song(arg, argc, url=None, path=None):
-	if path is None: return messagetypes.Question("Where should it be saved to?", process_path, arg=arg, argc=argc, text=client["default_path"], url=url)
+	if path is None: return messagetypes.Question("Where should it be saved to?", process_path, arg=arg, argc=argc, text=client.configuration["default_path"], url=url)
 	arg = " ".join(arg)
 
 	try: path = path["path"]

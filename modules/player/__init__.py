@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from multiprocessing import Queue
 
-from modules.utilities.mediaplayer import MediaPlayer
+from modules.player.mediaplayer import MediaPlayer
 from utilities import messagetypes, song_tracker, history
 
 # DEFAULT MODULE VARIABLES
@@ -26,21 +26,8 @@ autoplay = Autoplay.OFF
 autoplay_ignore = False
 
 # ===== HELPER OPERATIONS =====
-def update_cfg():
-	print("INFO", "Found old directory configuration, trying to update it automatically")
-	dir = client["directory"]
-	priority = 1
-	pdir = {"directory": {}}
-	for key, vl in dir.items():
-		if key != "default":
-			pdir["directory"][key] = {"priority": priority, "path": vl}
-			priority += 1
-		else: client["default_path"] = vl
-	client.update_configuration(pdir)
-	client["version"] = 1
-
 def get_song(arg):
-	dir = client["directory"]
+	dir = client.configuration["directory"]
 	if len(arg) > 0:
 		path = dir.get(arg[0])
 		if path is not None:
@@ -105,13 +92,13 @@ def set_autoplay_ignore(ignore):
 	autoplay_ignore = bool(ignore)
 
 def get_songmatches(path, keyword):
-	if not path: path = client["default_path"]
-	ls = media_player.find_song(path=client["directory"].get(path)["path"], keyword=keyword.split(" "))
+	if not path: path = client.configuration["default_path"]
+	ls = media_player.find_song(path=client.configuration["directory"].get(path)["path"], keyword=keyword.split(" "))
 	if len(ls) == 1: return ls[0]
 	else: return None
 
 def album_list(keyword):
-	from modules.utilities import albumwindow
+	from modules.player import albumwindow
 	try:
 		with os.scandir(albumwindow.album_folder) as dir:
 			return [(os.path.splitext(f.name)[0], f.name) for f in dir if f.is_file() and keyword in f.name]
@@ -123,27 +110,27 @@ def album_process(type, songs):
 # ===== MAIN COMMANDS =====
 def command_album(arg, argc):
 	if argc > 0:
-		from modules.utilities import albumwindow
-		try: aw = albumwindow.AlbumWindow(client.window, album_process, "_".join(arg))
+		from modules.player import albumwindow
+		try: aw = albumwindow.AlbumWindow(client, album_process, "_".join(arg))
 		except FileNotFoundError: return messagetypes.Reply("Unknown album")
 
 		client.open_window("albumviewer", aw)
 		return messagetypes.Reply("Album opened")
 
 def command_album_add(arg, argc, display=None, album=None):
-	from modules.utilities import albumwindow
+	from modules.player import albumwindow
 	if argc > 0 and display is album is None:
 		albums = album_list(" ".join(arg))
 		if albums: return messagetypes.Select("Multiple albums found", lambda d,a: command_album_add(arg, argc, display=d, album=a), albums)
 		else: return messagetypes.Reply("No albums found")
 
-	client.open_window("albumimput", albumwindow.AlbumWindowInput(client.window, file=album, autocomplete_callback=get_songmatches))
+	client.open_window("albuminput", albumwindow.AlbumWindowInput(client, file=album, autocomplete_callback=get_songmatches))
 	return messagetypes.Reply("Album editor for '{}' opened".format(display) if display else "Album creator opened")
 
 def command_album_remove(arg, argc):
 	if argc > 0:
 		import os
-		from modules.utilities import albumwindow
+		from modules.player import albumwindow
 		filename = albumwindow.album_format.format("_".join(arg), "json")
 		try: os.remove(filename)
 		except FileNotFoundError: return messagetypes.Reply("Unknown album")
@@ -197,21 +184,21 @@ def command_autoplay_next(arg, argc):
 # - configure random song filter
 def command_filter_clear(arg, argc):
 	if argc == 0:
-		dir = client["directory"]
+		dir = client.configuration["directory"]
 		if isinstance(dir, dict):
-			media_player.update_filter(path=dir.get(client["default_path"], {}).get("path", ""), keyword="")
+			media_player.update_filter(path=dir.get(client.configuration["default_path"], {}).get("path", ""), keyword="")
 			return messagetypes.Reply("Filter cleared")
 		else: return invalid_cfg
 
 def command_filter(arg, argc):
 	if argc > 0:
-		dirs = client["directory"]
+		dirs = client.configuration["directory"]
 		if isinstance(dirs, dict):
 			if arg[0] in dirs:
 				displaypath = arg.pop(0)
 				path = dirs[displaypath]
 			else:
-				displaypath = client["default_path"]
+				displaypath = client.configuration["default_path"]
 				path = dirs.get(displaypath)
 
 			if path is not None:
@@ -310,7 +297,7 @@ def command_queue(arg, argc):
 		else: return unknown_song
 
 def command_random(arg, argc):
-	dirs = client["directory"]
+	dirs = client.configuration["directory"]
 	path = ""
 	if argc > 0:
 		try:
@@ -342,7 +329,7 @@ def command_rss(arg, argc):
 		argc -= 1
 
 	if argc == 0:
-		url = client.get_or_create("rss_url", "")
+		url = client.configuration.get_or_create("rss_url", "")
 		if url:
 			import feedparser
 			fp = feedparser.parse(url)
@@ -401,8 +388,7 @@ commands = {
 }
 
 def initialize():
-	if client["version"] == 0: update_cfg()
-	media_player.update_blacklist(client.get_or_create("artist_blacklist", []).value)
+	media_player.update_blacklist(client.configuration.get_or_create("artist_blacklist", []))
 	media_player.attach_event("media_changed", on_media_change)
 	media_player.attach_event("pos_changed", on_pos_change)
 	media_player.attach_event("player_updated", on_player_update)
@@ -410,8 +396,8 @@ def initialize():
 	media_player.attach_event("stopped", on_stopped)
 	if not song_tracker.is_loaded(): song_tracker.load_tracker()
 
-	client.get_or_create("directory", {})
-	client.get_or_create("default_directory", "")
+	client.configuration.get_or_create("directory", {})
+	client.configuration.get_or_create("default_directory", "")
 	command_filter_clear(None, 0)
 
 def on_destroy():
@@ -419,21 +405,21 @@ def on_destroy():
 
 def on_media_change(event, player):
 	color = None
-	for key, options in client["directory"].items():
+	for key, options in client.configuration["directory"].items():
 		if media_player.current_media.path == options["path"]:
 			color = options.get("color")
 			break
-	client.after(.1, client.update_title_media, media_player.current_media, color)
+	interpreter.put_event("media_update", media_player.current_media, color)
 
 def on_pos_change(event, player):
-	client.after(.1, client.update_progressbar, event.u.new_position)
+	client.schedule(func=client.update_progressbar, progress=event.u.new_position)
 
 def on_stopped(event, player):
-	client.after(.1, client.update_progressbar, 0)
+	client.schedule(func=client.update_progressbar, progress=0)
 
 def on_player_update(event, player):
 	md = event.data
-	default_directory = client["directory"].get(client["default_path"])
+	default_directory = client.configuration["directory"].get(client.configuration["default_path"])
 
 	if default_directory is not None and md.path == default_directory["path"]:
 		song_tracker.add(md.display_name)

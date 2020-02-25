@@ -67,7 +67,7 @@ class SoundEffectPlayer:
 				self._media = None
 				return
 
-		sound_path = client["directory"].get("sounds", {}).get("path")
+		sound_path = client.configuration["directory"].get("sounds", {}).get("path")
 		if sound_path is None or not os.path.isdir(sound_path):
 			print("ERROR", "Invalid sound folder:", sound_path)
 			return

@@ -1,422 +1,330 @@
-import os
-import sys
-import tkinter
-import weakref
+from ui import pyconfiguration, pycontainer, pyevents, pyimage
 
-from ui import pyelement, pyconfiguration
+cfg_folder = ".cfg"
+class _ScheduledTask:
+	def __init__(self, func, delay, loop):
+		self._cb = func
+		self._delay = delay
+		self._loop = loop
+		self._cb_ptr = None
+
+	@property
+	def is_scheduled(self): return self._cb_ptr is not None
+
+	def schedule(self, tk, kwargs, delay=0):
+		if delay > 0: self._delay = delay
+		self._cb_ptr = tk.after(self._delay, self._execute, tk, kwargs)
+
+	def cancel(self, tk):
+		if self.is_scheduled:
+			tk.after_cancel(self._cb_ptr)
+			self._cb_ptr = None
+
+	def _execute(self, tk, kwargs):
+		self._cb_ptr = None
+		try:
+			rs = self._cb(**kwargs)
+			if self._loop and rs is not False: self.schedule(tk, kwargs)
+		except Exception as e:
+			print("INFO", "During processing of scheduled task '{}', it won't be rescheduled!".format(self._cb.__name__))
+			print("ERROR", "While calling scheduled task '{}':".format(self._cb.__name__), e)
 
 
-class BaseWindow:
-	""" Framework class for PyWindow and RootPyWindow, should not be created on its own """
-	default_title = "PyWindow"
-	invalid_cfg_keys = ["geometry", "height", "width"]
+class PyWindow:
+	""" Framework class for windows, they have to be created with a valid root """
+	def __init__(self, parent, id, initial_cfg=None, cfg_file=None):
+		import tkinter, weakref
+		if parent is not None:
+			if not isinstance(parent, PyWindow): raise ValueError("Parent window must be a PyWindow, not '{.__name__}'".format(type(parent)))
+			self._tk = tkinter.Toplevel(parent._tk)
+		else: self._tk = tkinter.Tk()
 
-	def __init__(self, id, initial_cfg=None, cfg_file=None):
-		self._windowid = id
-		if cfg_file is None: cfg_file = ".cfg/" + self._windowid.lower()
-		elif not cfg_file.startswith(".cfg/"): cfg_file = ".cfg/" + cfg_file
-
-		self._elements = {}
 		self._children = weakref.WeakValueDictionary()
-		self._dirty = False
-		self._autosave = 0
+		self._event_handler = pyevents.PyWindowEvents(self)
+		self.hidden = True
+		self._windowid = id
+		self.title = "PyWindow - " + self._windowid
+		self.icon = ""
 
-		self.last_position = -1
-		self.last_size = -1
-		self._configuration = pyconfiguration.Configuration(initial_value=initial_cfg, filepath=cfg_file)
-		self.load_configuration()
-		self._cfg_listen = {}
+		import os
+		if not os.path.isdir(cfg_folder): os.mkdir(cfg_folder)
+		if cfg_file is None: cfg_file = cfg_folder + "/" + self._windowid.lower()
+		elif not cfg_file.startswith(cfg_folder): cfg_file = cfg_folder + cfg_file
+		self._configuration = pyconfiguration.ConfigurationFile(filepath=cfg_file, cfg_values=initial_cfg)
+		self._content = pycontainer.PyFrame(self, self._configuration.get_or_create("content", {}))
+		self._content.show()
+		self.create_widgets()
+		self._scheduled_tasks = {}
 
+		@self.event_handler.WindowDestroy
+		def _window_close(): self._configuration.save()
+
+	def create_widgets(self):
+		""" Can be used in subclasses to separate widget creation and placement from the rest of the program,
+			this method is called after the main window is created and configuration files have been loaded """
+		pass
+
+	# ===== Window Properties =====
 	@property
 	def window_id(self):
 		""" The (unique) identifier for this window, this cannot change once the window is created """
 		return self._windowid
 	@property
-	def cfg_filename(self):
-		""" The filepath of the configuration file (created using window identifier)"""
-		return self._configuration._filepath
+	def content(self):
+		""" Get the container for this window that all elements are placed in """
+		return self._content
 	@property
-	def widgets(self):
-		""" All elements that are present inside this window """
-		return self._elements
+	def event_handler(self):
+		""" Get the event handler for this window, this can be used to bind callbacks to various events """
+		return self._event_handler
 	@property
-	def children(self):
-		""" All windows that are active and have this window as parent """
-		return self._children
-	def load_configuration(self): pass
+	def configuration(self):
+		""" Get the configuration object for this window (this also has access to all configuration objects in this window's child elements """
+		return self._configuration
 
-	@property
-	def dirty(self):
-		""" Returns true if configuration has changed since last save """
-		if self._dirty: return True
-
-		for id, wd in self.widgets.items():
-			if wd.dirty: return True
-		return False
-
-	@property
-	def geometry(self): return None
-	@property
-	def title(self): return None
-	@property
-	def icon(self): return None
-	@property
-	def always_on_top(self): return False
-
-	@property
-	def resizable_height(self): return self.window.resizable()[0]
-	@resizable_height.setter
-	def resizable_height(self, value): self.window.resizable(value, self.resizable_width)
-	@property
-	def resizable_width(self): return self.window.resizable()[1]
-	@resizable_width.setter
-	def resizable_width(self, value): self.window.resizable(self.resizable_height, value)
-
-	def mark_dirty(self, event=None):
-		""" Mark this window as dirty, event parameter only used for tkinter event handling """
-		if event is not None:
-			if event.widget is self.window:
-				if self.last_position != -1 and self.last_size != -1: self._dirty = self._dirty or self.last_position != (event.x * event.y) or self.last_size != (event.height * event.width)
-				self.last_position = event.x * event.y
-				self.last_size = event.height * event.width
-		else: self._dirty = True
-
-	def write_configuration(self):
-		""" Write window configuration to file (if dirty) """
-		if self._configuration.error: print("INFO", "Skipping configuration writing since there was an error loading it")
-		elif self.dirty:
-			for id, wd in self.widgets.items():
-				if wd.has_master_configuration: self._configuration[id] = wd.configuration
-				wd._dirty = False
-
-			print("INFO", "Window is dirty, writing configuration to '{}'".format(self.cfg_filename))
-			try:
-				self._configuration["geometry"] = self.geometry
-				self._configuration.write_configuration()
-				self._dirty = False
-			except Exception as e: print("ERROR", "Error writing configuration file for '{}':".format(self.window_id), e)
-
-	def cfg_register_listener(self, option, callback):
-		""" Register callback to be called whenever the given configuration option is updated
-		 	The callback must be callable and take one parameter which is the new value """
-		ls = self._cfg_listen.get(option)
-		if ls is None: self._cfg_listen[option] = []
-		self._cfg_listen[option].append(callback)
-
-	def set_widget(self, id, widget, initial_cfg=None, row=0, column=0, rowspan=1, columnspan=1, sticky="news"):
-		""" Add given widget to this window, location for the widget on this window can be customized with the various parameters
-			If there is no widget specified, the widget bound to given id will be destroyed. Otherwise the new widget will be replace the old onw """
-		id = id.lower()
-		wd = self.widgets.get(id)
-		if wd is not None:
-			print("INFO", "Removing existing widget bound to id")
-			self.after(.1, wd.destroy)
-			del self.widgets[id]
-		if widget is None: return None
-		elif not isinstance(widget, pyelement.PyElement): raise TypeError("Can only create widgets from 'PyElement' instances, not from '{}'".format(type(widget).__name__))
-
-		if widget is None: return widget
-		self.widgets[id] = widget
-		widget.id = id
-		widget.window = self
-		if initial_cfg is None: initial_cfg = {}
-
-		cfg = self._configuration.get(id)
-		if cfg is not None: initial_cfg.update(cfg.to_dict())
-		self.widgets[id].configuration = initial_cfg
-		self.widgets[id].grid(row=row, column=column, rowspan=rowspan, columnspan=columnspan, sticky=sticky)
-		return self.widgets[id]
-
-	def open_window(self, id, window):
-		""" Adds new child window to this window using passed (unique) identifier
-		 	(any window already assigned to this identifier will be destroyed)
-		 	Returns the bound window if successful, False otherwise """
-		id = id.lower()
-		if not isinstance(window, BaseWindow):
-			print("ERROR", "Tried to create window with id '{}' but it is not a valid widget: {}".format(id, window))
-			return False
-
-		success = self.close_window(id)
-		if not success: raise RuntimeError("Cannot close previously bound window with id '{}'".format(id))
-
-		window.id = id
-		self._children[id] = window
-		return self.children[id]
-
-	def close_window(self, id):
-		""" Destroy and remove window assigned to passed identifier (has no effect if identifier was not bound) """
-		id = id.lower()
-		wd = self.children.get(id)
-		if self._children is not None and wd is not None:
-			try:
-				wd.destroy()
-				del self._children[id]
-			except Exception as e: print("ERROR", "Couldn't destroy window '{}' properly: ".format(id), e); return False
-		return True
-
-	def get_or_create(self, item, default=None):
-		""" Get configuration option if it is currently set,
-				- when this option is not set and a 'default' is given, this will be used as value for this option """
-		i = self._configuration.get(item)
-		if i is None and default is not None: self._configuration[item] = default
-		return self._configuration.get(item)
-
-	def update_configuration(self, dt):
-		self._configuration.update_dict(dt)
-		self.mark_dirty()
-
-	def __getitem__(self, item):
-		""" Get configuration option for this window/widget in this window or None if no such value was stored
-		 	For a nested search in configuration seperate keys with '::' """
-		vl = self._configuration[item]
-		try: return vl.to_dict()
-		except AttributeError: return vl.value
-
-	def __setitem__(self, key, value):
-		""" Set configuration option for this window/widget in this window, the change will be updated in the configuration file """
-		if not self._configuration.error:
-			if key in BaseWindow.invalid_cfg_keys: raise ValueError("Tried to set option '{}' which should not be changed manually".format(key))
-			self._configuration[key] = value
-			cbs = self._cfg_listen.get(key)
-			if cbs is not None:
-				for c in cbs:
-					try: c(value)
-					except Exception as e: print("WARNING", "Exception occured while handling:", e)
-
-			key = key.split("::", maxsplit=1)
-			if len(key) > 1 and key[0] in self.widgets:
-				try: self.widgets[key[0]][key[1]] = value
-				except Exception as e: print("ERROR", "Error configuring option '{}': ".format(key), e)
-			self.mark_dirty()
-		else: print("WARNING", "Configuration was not loaded properly therefore any configuration updates are ignored")
-
-	def __delitem__(self, key):
-		""" Delete the configuration option for this window/widget in this window from the configuration file
-		 	(the change will only be visible next time the window is created) """
-		self.__setitem__(key, None)
-
-class PyWindow(BaseWindow):
-	""" Separate window that can be created on top of another window
-		(it has its own configuration file separate from root configuration) """
-	def __init__(self, master, id, initial_cfg=None, cfg_file=None):
-		self.window = tkinter.Toplevel(master)
-		BaseWindow.__init__(self, id, initial_cfg, cfg_file)
-		self.title = id
-		self._tick_operations = {}
-
-	@property
-	def block_action(self):
-		""" Return this in event handlers to stop an event from getting processed further """
-		return "break"
-	@property
-	def frame(self):
-		""" The base frame of this window, this is where all root elements should be added to """
-		return self.window
 	@property
 	def is_alive(self):
 		""" Returns true when this window has not been closed """
-		return self.window.winfo_exists()
-
+		return self._tk.winfo_exists()
 	@property
-	def transient(self): return None
-	@transient.setter
-	def transient(self, value):
-		""" Sets this window to be transient, connected to its parent and is minimized when the parent is minimized
-		 	(Cannot be set on root window, also cannot be disabled once set) """
+	def floating(self): return None
+	@floating.setter
+	def floating(self, value):
+		""" Sets this window to be floating: it's connected to its parent and its behavior is mirrored from the parent
+		 	* update: this was renamed from the 'transient' parameter in the previous version """
 		if value:
-			if not isinstance(self.window, tkinter.Toplevel): raise TypeError("Can only set transient on regular window")
-			try: self.window.transient(self.window.master)
-			except Exception as e: print("ERROR", "Cannot set window to transient:", e)
-
-	@property
-	def hidden(self): return self.window.state() == "withdrawn"
-	@hidden.setter
-	def hidden(self, value):
-		if value: self.window.withdraw()
-		else: self.window.deiconify()
-	def toggle_hidden(self): self.hidden = not self.hidden
-
-	def _check_valid(self):
-		if not hasattr(self, "id"):
-			print("INFO", "Window '{}' might not be assigned to a parent window".format(self.window_id))
-			return False
-		else: return True
-
-	def load_configuration(self):
-		""" (Re)load configuration from file """
-		self.geometry = self._configuration.get("geometry", "")
-		self.autosave_delay = int(self._configuration["autosave_delay"])
-		self.window.bind("<Configure>", self.mark_dirty)
-		self.window.bind("<Destroy>", self.try_autosave)
-		root_cfg = self._configuration.get("root")
-		if root_cfg is not None: self.window.configure(**root_cfg.to_dict())
-
-	def bind(self, sequence, callback=None, add=True):
-		self._check_valid()
-		sequence = sequence.split("&&")
-		for s in sequence: self.window.bind(s, callback, add)
-		return self
-
-	def unbind(self, sequence, funcid=None):
-		sequence = sequence.split("&&")
-		for s in sequence: self.window.unbind(s, funcid)
-		return self
-
-	@property
-	def autosave_delay(self):
-		""" Time interval (in minutes) between automatic save of window configuration to file, returns 0 if disabled """
-		try: return int(self._autosave_delay / 60000)
-		except AttributeError: return 0
-	@autosave_delay.setter
-	def autosave_delay(self, value):
-		""" Set time interval (in minutes) between autosaves (if dirty), set to 0 to disable """
-		if self.autosave_delay != value:
-			self._autosave_delay = max(0, value * 60000)
-			try: self.window.after_cancel(self._autosave)
-			except ValueError: pass
-			except Exception as e: print("WARNING", "Error canceling autosave task:", e)
-
-			if value > 0: self._autosave = self.window.after(self._autosave_delay, self.try_autosave)
-			else: self._autosave = None
-
-	@property
-	def geometry(self):
-		""" Get window geometry string, returned as '{width}x{height}+{x_pos}+{y_pos}' where {width} and {height} are positive and {x_pos} and {y_pos} may be negative """
-		return self.window.geometry()
-	@geometry.setter
-	def geometry(self, value):
-		""" Update geometry for this window (use geometry format defined for this property) """
-		self.window.geometry(value)
-
-	@property
-	def screen_height(self): return self.window.winfo_screenheight()
-	@property
-	def screen_width(self): return self.window.winfo_screenwidth()
-	@property
-	def width(self): return self.window.winfo_width()
-	@width.setter
-	def width(self, vl): self.window.configure(width=vl)
-	@property
-	def height(self): return self.window.winfo_height()
-	@height.setter
-	def height(self, vl): self.window.configure(height=vl)
+			try: self._tk.wm_transient(self._tk.master)
+			except Exception as e: print("ERROR", "Failed to set window as transient, caused by:", e)
 
 	@property
 	def decorator(self):
-		""" Set true to prevent the window from being decorated; it won't have an icon or title """
-		return self.window.overrideredirect()
+		""" Set true to prevent the window from being decorated; only the content will be visible
+		 	Useful for making custom window decorators """
+		return self._tk.wm_overrideredirect()
 	@decorator.setter
-	def decorator(self, vl): self.window.overrideredirect(not vl)
+	def decorator(self, vl):
+		self._tk.wm_overrideredirect(not vl)
 
-	def column_options(self, index, **kwargs):
-		""" Set whether the column at the given index is allowed to change size when the window gets wider/smaller
-		 	By default this is not allowed """
-		return self.window.grid_columnconfigure(index, **kwargs)
-	def row_options(self, index, **kwargs):
-		""" Set whether the row at the given index is allowed to change size when the windows gets taller/shorter
-		 	By default this is not allowed """
-		return self.window.grid_rowconfigure(index, **kwargs)
+	@property
+	def hidden(self):
+		""" Returns True if the window is currently hidden """
+		return self._tk.wm_state() == "withdrawn"
+	@hidden.setter
+	def hidden(self, value):
+		""" Hide/unhide the window, if the window is hidden all traces are removed. Can only be unhidden by updating this property """
+		if value: self._tk.wm_withdraw()
+		else: self._tk.wm_deiconify()
+	def toggle_hidden(self): self.hidden = not self.hidden
+
+	@property
+	def screen_height(self):
+		""" Get the height in pixels for the display the window is on """
+		return self._tk.winfo_screenheight()
+	@property
+	def screen_width(self):
+		""" Get the width in pixels for the display the window is on """
+		return self._tk.winfo_screenwidth()
+	@property
+	def width(self):
+		""" Get the width of this window in pixels """
+		return self._tk.winfo_width()
+	@width.setter
+	def width(self, vl):
+		""" Customize the width of this window, in most cases this value does not need to be set:
+				it automatically updates to fit all widgets and the previously set value (when resized)
+			* update: width clamped between 0 and screen_width """
+		self._tk.configure(width=max(0, min(vl, self.screen_width)))
+	def with_width(self, wd):
+		self.width = wd
+		return self
+
+	@property
+	def height(self):
+		""" Get the height of this window in pixels """
+		return self._tk.winfo_height()
+	@height.setter
+	def height(self, vl):
+		""" Customize the height of this window, in most cases this value does not need to be set:
+				it automatically updates to fit all widgets and the previously set value (when resized)
+		 	* update: height clamped between 0 and screen_height """
+		self._tk.configure(height=max(0, min(vl, self.screen_height)))
+	def with_height(self, ht):
+		self.height = ht
+		return self
 
 	@property
 	def title(self):
 		""" Get current window title """
-		return self.window.title()
+		return self._tk.wm_title()
 	@title.setter
 	def title(self, value):
 		""" Update current window title """
-		self.window.title(value)
+		self._tk.wm_title(value)
+	def with_title(self, title):
+		self.title = title
+		return self
 
 	@property
 	def icon(self):
 		""" Get current window icon """
-		return self.window.iconbitmap()
+		return self._tk.wm_iconbitmap()
 	@icon.setter
 	def icon(self, value):
-		""" Set window icon """
+		""" Set window icon, this must be a valid path to an image
+			(file extension may be omitted, it is automatically selected based on platform: .iso (Windows), .png (Linux))
+		 	* update: errors are no longer raised, instead they are only written to log (aside from also not being updated) """
 		if not value: value = "assets/blank"
 
 		try:
+			import sys, os
 			if "linux" in sys.platform:
 				path = os.path.dirname(os.path.realpath(__file__))
-				self.window.tk.call("wm", "iconphoto", self.window._w, pyelement.PyImage(file=os.path.join(path, os.pardir, value + ".png")))
-			elif "win" in sys.platform: self.window.iconbitmap(value + ".ico")
-		except Exception as e: print("ERROR", "Setting icon bitmap {}".format(e)); raise
+				self._tk.tk.call("wm", "iconphoto", self._tk._w, pyimage.ImageData(file=os.path.join(path, os.pardir, value + ".png")))
+			elif "win" in sys.platform: self._tk.iconbitmap(value + ".ico")
+		except Exception as e: print("ERROR", "Setting icon bitmap {}".format(e))
+	def with_icon(self, icon):
+		self.icon = icon
+		return self
+
+	# ===== Base Operations =====
+	def load_configuration(self):
+		""" (Re)load configuration from file """
+		self._configuration.load()
+		self._tk.wm_geometry(self._configuration.get("geometry"))
+
+	def write_configuration(self):
+		""" Write window configuration to file (if dirty) """
+		self._configuration["geometry"] = self._tk.wm_geometry()
+		self._configuration.save()
+
+	def open_window(self, id, window):
+		""" Adds new child window to this window using passed (unique) identifier
+		 	(any window already assigned to this identifier will be destroyed)
+		 	Returns the bound window if successful, None otherwise
+		 	* update: it is no longer an error if a previously open window cannot be closed
+		 	* update: returns None if not successful instead of False """
+		id = id.lower()
+		self.close_window(id)
+		window.id = id
+		self._children[id] = window
+		window.content.show()
+		window.hidden = False
+		return self._children.get(id)
+
+	def close_window(self, id):
+		""" Destroy and remove window assigned to passed identifier (has no effect if identifier was not bound)
+		 	Returns True if call was successful, False otherwise """
+		id = id.lower()
+		wd = self._children.get(id)
+		if self._children is not None and wd is not None:
+			try: wd.destroy()
+			except Exception as e: print("ERROR", "Couldn't destroy window '{}' properly:".format(id), e); return False
+		return True
+
+	def get_window(self, id):
+		""" Get the child window that was bound to given id, returns None if the id wasn't bound """
+		id = id.lower()
+		wd = self._children.get(id)
+		return wd if wd is not None and wd.is_alive else None
 
 	@property
 	def always_on_top(self):
 		""" If true this window will always display be displayed above others """
-		return bool(self.window.wm_attributes("-topmost"))
+		return bool(self._tk.wm_attributes("-topmost"))
 	@always_on_top.setter
 	def always_on_top(self, value):
 		""" Set this window to be always above others """
-		self.window.wm_attributes("-topmost", "1" if value else "0")
+		self._tk.wm_attributes("-topmost", "1" if value else "0")
 
 	def focus_followsmouse(self):
-		""" The widget under mouse will get focus, cannot be disabled! """
-		self.window.tk_focusFollowsMouse()
+		""" The widget under mouse will get focus, cannot be disabled once set """
+		self._tk.tk_focusFollowsMouse()
 
 	def center_window(self, width, height):
-		self.geometry = "{}x{}+{}+{}".format(width, height, (self.screen_width // 2) - (width // 2), (self.screen_height // 2) - (height // 2))
+		""" Center this widget on screen, any previously set geometry is overwritten """
+		self._tk.wm_geometry("{}x{}+{}+{}".format(width, height, (self.screen_width // 2) - (width // 2), (self.screen_height // 2) - (height // 2)))
 
-	def destroy(self):
-		""" Close window """
-		self.window.destroy()
-
-	def after(self, s, *args):
-		self._check_valid()
-		self.window.after(int(s * 1000) if s < 1000 else s, *args)
-
-	def schedule(self, min=0, sec=0, ms=0, func=None, loop=False, **kwargs):
+	def schedule(self, min=0, sec=0, ms=0, func=None, loop=False, task_id=None, **kwargs):
 		""" Schedule an operation to be executed at least after the given time, all registered callbacks will stop when the window is closed
 		 	 -	Amount of time to wait can be specified with minutes (keyword 'min'), seconds (keyword 'sec') and/or milliseconds (keyword 'ms')
 		 	 -	The argument passed to func must be callable and accept the extra arguments passed to this function
-		 	 -	The function can be called repeatedly by setting 'loop' to true;
-		 	 		in this case it will be called repeatedly after the given time until an error occurs or the callback returns False """
-		if not callable(func): raise ValueError("'func' argument must be callable!")
+		 	 -	The function can be executed repeatedly by setting 'loop' to True;
+		 	 		in this case it will be executed repeatedly after the given time either until the window is destroyed, an error occurs, or the callback returns False
+
+			* update: delay is allowed to be 0, in this case the callback is executed as soon as possible; however 'loop' must not be True in this case
+			* update: added 'task_id' option to save scheduled tasks with a certain id, they can be rescheduled (optionally with a different delay) without needing to pass the original function again
+			 			note: if task with given id is set to looping, the task must be canceled or deleted before this function is called """
 		delay = (min * 60000) + (sec * 1000) + ms
-		if delay <= 0: raise ValueError("Must specify a positive delay using either 's' or 'ms' keywords!")
-		self._check_valid()
-		if loop:
-			self._tick_operations[func.__name__] = delay, func
-			self.window.after(delay, self._run_tickoperation, func.__name__, kwargs)
-		else: self.window.after(delay, func, *kwargs.values())
 
-	def _run_tickoperation(self, name, kwargs):
-		operation = self._tick_operations.get(name)
-		if operation:
-			delay, func = operation
-			try:
-				res = func(**kwargs)
-				if res is not False: self.after(delay, self._run_tickoperation, name, kwargs)
-				else: print("INFO", "Callback '{}' returned False, it will not be rescheduled")
-			except Exception as e:
-				print("ERROR", "Calling scheduled operation '{}', it will not be rescheduled\n".format(name), e)
-				del self._tick_operations[name]
-		else: print("WARNING", "Got operation callback for '{}', but no callback was found!".format(name))
+		if task_id:
+			tsk: _ScheduledTask = self._scheduled_tasks.get(task_id)
+			if tsk:
+				if not tsk.is_scheduled:
+					tsk.schedule(self._tk, kwargs, delay)
+					return
+				else: raise NameError("A scheduled task with id '{}' already exists and is active, make sure to cancel it first".format(task_id))
 
-	def try_autosave(self, event=None):
-		""" Autosave configuration to file (if dirty) """
-		try: self.write_configuration()
-		except Exception as e: print("ERROR", "writing configuration during autosave:", e)
+		if delay < 0: raise ValueError("Delay cannot be smaller than 0")
+		elif delay == 0 and loop: raise ValueError("Looping without delay is not allowed")
+		if not callable(func): raise ValueError("'func' argument must be callable")
 
-		if event is None:
-			self.autosave_delay = int(self._configuration["autosave_delay"])
+		task = _ScheduledTask(func, delay, loop)
+		if task_id: self._scheduled_tasks[task_id] = task
+		task.schedule(self._tk, kwargs)
 
-			if self.autosave_delay > 0: self._autosave = self.window.after(self._autosave_delay, self.try_autosave)
-			else: self._autosave = None
+	def cancel_scheduled_task(self, task_id):
+		""" Cancel a previously scheduled task with given id, the id must be previously registered with 'scedule'
+		 	Has no effect if task is not looping and was previously executed """
+		task: _ScheduledTask = self._scheduled_tasks.get(task_id)
+		if task: task.cancel(self._tk)
 
-class RootPyWindow(PyWindow):
+	def delete_scheduled_task(self, task_id):
+		""" Cancel and remove scheduled task with given id, the id must be previously registered with 'schedule'
+		  	The task is no longer executed if still waiting during this call, but could still be running if previously activated """
+		task: _ScheduledTask = self._scheduled_tasks.get(task_id)
+		if task:
+			task.cancel(self._tk)
+			del self._scheduled_tasks[task_id]
+		else: raise KeyError("Unknown task id '{}'".format(task_id))
+
+
+	def window_tick(self, date):
+		""" Called every second with the current date on all windows, can be used to update elements inside it
+		 	Note: make sure to call the super method as well if you want the call to propagate! """
+		if self.is_alive:
+			for c in self._children.values(): c.window_tick(date)
+
+	def destroy(self):
+		""" Close (destroy) this window and all its children """
+		for cd in self._children.values():
+			if cd.is_alive: cd.destroy()
+		self._tk.destroy()
+	close = destroy
+
+	def force_update(self):
+		""" Forces background updates that would normally only happen when the program is idle """
+		self._tk.update_idletasks()
+
+import datetime
+class PyTkRoot(PyWindow):
 	""" Root window for this application (should be the first created window and should only be created once, for additional windows use 'PyWindow' instead) """
-	def __init__(self, id="root", initial_cfg=None):
-		self.window = tkinter.Tk()
-		BaseWindow.__init__(self, id, initial_cfg)
-		self.title = BaseWindow.default_title
+	def __init__(self, name="pyroot"):
+		PyWindow.__init__(self, parent=None, id=name)
+		self.decorator = False
+		self.hidden = False
+		self.schedule(sec=1, func=self._tick, loop=True)
 
-	def _check_valid(self): return True
+	def _tick(self):
+		self.window_tick(datetime.datetime.today())
+
+	def open_window(self, id, window):
+		""" Open connected window, after this is called the root window will automatically be set to hidden """
+		PyWindow.open_window(self, id, window)
+		self.hidden = True
 
 	def start(self):
 		""" Initialize and start GUI """
-		try: self.window.mainloop()
+		try: self._tk.mainloop()
 		except KeyboardInterrupt:
 			print("INFO", "Received keyboard interrupt, closing program...")
-			self.destroy()
+			self._tk.destroy()

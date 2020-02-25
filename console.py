@@ -5,110 +5,82 @@ input_mark = "mark_input"
 class TextConsole(pyelement.PyTextfield):
 	current_end = "end lineend-1c"
 
-	_prefixes = ["> ", " - "]
-
-	def __init__(self, master, command_callback=print):
-		pyelement.PyTextfield.__init__(self, master.frame)
+	def __init__(self, container, initial_cfg=None):
+		pyelement.PyTextfield.__init__(self, container, "console", initial_cfg)
+		self.accept_input = False
 		self._cmdhistory = history.History()
 		self._cmd_cache = ""
-		self._cmd_callback = command_callback
-		self._cmd_state = 0
-		self._parsers = [self.on_command, self.on_command_answer]
 		self._question = None
 
-		self.bind("<Key>", self.on_key_press).bind("<Button-1>", self.block_action).bind("<B1-Motion>", self.block_action)
-		self.bind("<Left>", self.on_left_key).bind("<Up>", lambda event: self.on_set_command_from_history(event, previous=True))
-		self.bind("<Down>", lambda event: self.on_set_command_from_history(event, previous=False))
-		self.bind("<BackSpace>", self.on_backspace_key).bind("<Return>", self.on_command_confirm)
-		self.bind("<Escape>", self.clear_input_line).bind("<Home>", self.on_home_key)
-		self.set_prefix()
-		self.configure(height=10)
+		@self.event_handler.KeyEvent("all")
+		def on_key_press(char):
+			if not self.accept_input and char != "":
+				self._cmd_cache += char
 
-	def clear_input_line(self, event=None):
-		self.current_pos = self.back
-		self.delete(input_mark, self.current_end)
-		return self.block_action
+		@self.event_handler.MouseClickEvent("left")
+		def _block_action(): return self.event_handler.block
 
-	def set_current_line(self, text):
-		self.clear_input_line()
-		self.insert(input_mark, text)
+		@self.event_handler.KeyEvent("left")
+		def on_left_key():
+			if self.position("insert") == self.position(input_mark):
+				self.clear_selection()
+				return self.event_handler.block
 
-	def get_focused(self, event=None):
-		self.focus_set()
-		return self.block_action
+		@self.event_handler.KeyEvent("backspace")
+		def on_backspace_key():
+			if self.position("insert") == self.position(input_mark):
+				try: self.position("sel.first"), self.position("sel.last")
+				except: return self.event_handler.block
 
-	def on_command_confirm(self, event=None):
-		self.last_action = "send"
-		cmd = self.get(input_mark, self.current_end)
-		if len(cmd) > 0 or self._cmd_state == 1:
-			self._parsers[self._cmd_state](cmd)
-			self.insert(self.back, "\n")
-			self.configure(state="disabled")
-			self._cmd_state = 0
-		return self.block_action
+		@self.event_handler.KeyEvent("home")
+		def on_home_key():
+			self.cursor = input_mark
+			return self.event_handler.block
 
-	def on_command(self, cmd):
-		self._cmdhistory.add(cmd)
-		if self._cmd_callback is not None: self._cmd_callback(cmd)
+		@self.event_handler.KeyEvent("escape")
+		def _on_escape_key():
+			self.set_current_line("")
+			return self.event_handler.block
 
-	def on_command_answer(self, text):
-		if self._question is not None and self._cmd_callback is not None:
-			self._cmd_callback(text, self._question)
-			self._question = None
-		else: self.on_command(text)
+		@self.event_handler.KeyEvent("enter")
+		def _on_enter_key():
+			cmd = self.get_current_line()
+			if len(cmd) > 0:
+				self.insert(self.back, "\n")
+				self._cmdhistory.add(cmd)
+				self.accept_input = False
+		self.add_reply(" -PyPlayer ready-", tags=("reply",))
 
-	def on_set_command_from_history(self, event, previous=False):
-		if self._cmd_state == 0:
-			self.clear_input_line(event)
-			try: self.insert(self.back, self._cmdhistory.get_previous(self._cmdhistory.head) if previous else self._cmdhistory.get_next(""))
-			except: pass
-			self.mark_set("insert", "end")
-		return self.block_action
+		@self.event_handler.KeyEvent("up")
+		def _on_previous_history():
+			self.set_current_line(self._cmdhistory.get_previous())
+			return self.event_handler.block
 
-	def set_prefix(self):
-		prefix = self._prefixes[self._cmd_state]
-		self.mark_set("insert", self.back)
-		self.insert(self.back, prefix)
-		self.mark_set(input_mark, "insert")
-		self.mark_gravity(input_mark, "left")
+		@self.event_handler.KeyEvent("down")
+		def _on_next_history():
+			self.set_current_line(self._cmdhistory.get_next(""))
+			return self.event_handler.block
 
-	def set_reply(self, msg=None, tags=(), cmd=None):
-		if not self.can_user_interact():
-			if msg is not None: self.insert("end", msg + "\n", tags)
+	def get_current_line(self):
+		""" Get the text on the current line """
+		return self.get_text(input_mark, self.current_end)
+	def set_current_line(self, text=""):
+		""" Update the text on the current line, has no effect if called with none """
+		if text is not None:
+			self.current_pos = self.back
+			self.delete(input_mark, self.current_end)
+			if text: self.insert(input_mark, text)
 
-			if cmd is None:
-				self.set_prefix()
-				self.insert(self.back, self._cmd_cache)
-				self._cmd_cache = ""
-			else:
-				self._cmd_state = 1
-				self.set_prefix()
-				self.insert(self.back, cmd.text)
-				self._question = cmd
+	def add_reply(self, reply, tags=(), prefix=None, text=None):
+		if not self.accept_input:
+			if not prefix: prefix = "> "
+			self.insert(self.back, "{}\n".format(reply), tags)
+			self.cursor = self.back
+			self.insert(self.back, prefix)
+			self.place_mark(input_mark, self.cursor, gravity="left")
+			if text: self.insert(self.back, text)
+			self.accept_input = True
+			self.show(self.back)
 
-			self.see(self.back)
-			self.mark_set("insert", self.back)
-			self.tag_remove("sel", self.front, self.back)
-
-	def set_notification(self, msg, tags=()):
-		self.insert("end-1l linestart", msg + "\n", tags)
-
-	def on_left_key(self, event=None):
-		if self.index("insert") == self.index(input_mark):
-			try: self.tag_remove("sel", self.front, self.back)
-			except: pass
-			return self.block_action
-
-	def on_backspace_key(self, event=None):
-		if self.index("insert") == self.index(input_mark):
-			try: self.index("sel.first"), self.index("sel.last")
-			except: return self.block_action
-
-	def on_home_key(self, event=None):
-		self.mark_set("insert", input_mark)
-		return self.block_action
-
-	def on_key_press(self, event):
-		self.focus_set()
-		if not self.accept_input and event.char != "":
-			self._cmd_cache += event.char
+	def add_notification(self, message, tags=()):
+		self.insert("end-1l linestart", "{}\n".format(message), tags)

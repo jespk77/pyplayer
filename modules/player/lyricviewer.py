@@ -14,12 +14,10 @@ class LyricViewer(pywindow.PyWindow):
 		self.transient = True
 		self.icon = "assets/blank"
 
-		lyric = pyelement.PyTextfield(self.frame)
+		lyric = pyelement.PyTextfield(self.content, "lyrics", initial_cfg=initial_cfg)
 		lyric.accept_input = False
-		lyric.configure(cursor="arrow")
-		self.set_widget("lyrics", lyric, initial_cfg=initial_cfg)
-		self.row_options(0, weight=1)
-		self.column_options(0, weight=1)
+		self.content.place_element(lyric)
+		self.content.row(0, weight=1).column(0, weight=1)
 
 	def load_lyrics(self, artist, title):
 		import requests, re
@@ -45,4 +43,4 @@ class LyricViewer(pywindow.PyWindow):
 		else: return self.update_lyrics("Error: HTTP request code {}".format(rq.status_code))
 
 	def update_lyrics(self, lyrics):
-		self.widgets["lyrics"].text = lyrics
+		self.content["lyrics"].text = lyrics

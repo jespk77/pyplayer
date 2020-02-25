@@ -1,228 +1,161 @@
-import json, os
+separator = "::"
+def create_entry(value, read_only=False):
+	if isinstance(value, dict): return Configuration(value, read_only)
+	else: return ConfigurationItem(value, read_only)
 
-arg_keys = { "true": True, "false": False, "none": None	}
-def parse_arg(arg):
-	if not isinstance(arg, str): return arg
-	try: return int(arg)
-	except: pass
-
-	id = arg.lower()
-	if id in arg_keys: return arg_keys[id]
-	else: return arg
 
 class ConfigurationItem:
-	""" Interface for different types of configuration items. Ensures that errors are thrown in certain cases, that otherwise would result in undefined behavior """
+	""" Stores a specific value for a configuration setting """
+	def __init__(self, value=None, read_only=False):
+		self._value = value
+		self._readonly = read_only
 	@property
-	def value(self): raise TypeError("This configuration item does not support values!")
+	def is_set(self): return self._value is not None
+	@property
+	def read_only(self): return self._readonly
+	@property
+	def value(self): return self._value
 	@value.setter
-	def value(self, val): self.value()
-	def __iter__(self): raise TypeError("This configuration item is not an iterator!")
+	def value(self, val):
+		if self.read_only: raise RuntimeError("This attribute was marked as read only and cannot be updated!")
+		self._value = val
 
-
-class ConfigurationEntry(ConfigurationItem):
-	""" Helper class for configuration that represents an entry in a file (everything that isn't a dictionary)
-		When no value set, it represents None but can be used as other types representing default values
-	 	Ensures that once the value is set, this value can only be updated to value of the same type or None to mark as deleted """
-	def __init__(self, value=None):
-		self._vl = parse_arg(value)
-		self._tp = type(self._vl)
-
-	@property
-	def value_type(self): return self._tp
-
-	@property
-	def value(self): return self._vl
-	@value.setter
-	def value(self, v):
-		if isinstance(v, Configuration): raise TypeError("Cannot set a configuration entry to a configuration!")
-
-		if v is None: self._vl = None
-		elif self._vl is None or self._tp == type(v): self._vl = v
-		else: raise TypeError("Cannot assign value with type " + type(v).__name__ + " to entry type " + self._tp.__name__)
-		self._tp = type(self._vl)
-	@value.deleter
-	def value(self): self._vl = None
-
-	def __int__(self):
-		try: return int(self._vl)
-		except (TypeError, ValueError): return 0
-
-	def __iter__(self): return iter(self._vl) if self._vl is not None else iter([])
-	def __str__(self): return str(self._vl) if self._vl is not None else "{empty}"
-	def __bool__(self): return bool(self._vl)
-	def __descstr__(self): return "ConfigurationEntry(value={}, type={})".format(self._vl, self._tp.__name__)
-
-
-class ConfigurationList(ConfigurationItem):
-	""" Containter class for an option represented by a list of values
-		Ensures all items in the list have the same (sub)type """
-	def __init__(self, initial_value=None):
-		self._items = []
-		self._itemtype = None
-		if isinstance(initial_value, list):
-			for i in initial_value:
-				if i is None: continue
-				tp = type(i)
-				if self._itemtype is None: self._itemtype = tp
-				elif tp != self._itemtype: raise TypeError("All items in 'initial_value' must have the same type: '{.__name__}' is not the same as '{.__name__}'".format(tp,self._itemtype))
-				self._items.append(i)
-		elif initial_value is not None: raise TypeError("'initial_value' must either be a list or None, not '{.__name__}'".format(type(initial_value)))
-
-	@property
-	def value_type(self):
-		""" Get the type for all items in the list, all items in it should have the same type
-		 	Returns 'None' when the list is empty """
-		return self._itemtype
-	@property
-	def value(self): return self._items
-	@value.setter
-	def value(self, vl): self.append(vl)
-
-	def __str__(self): return self.__descstr__()
-	def __descstr__(self): return "ConfigurationList({})".format(','.join(["'{}'".format(s) for s in self._items]))
-
-	def __getitem__(self, item):
-		try: return self._items[item]
-		except IndexError: return None
-	def __iter__(self): return iter(self._items)
-
-	def _verify_type(self, value):
-		tp = type(value)
-		if self._itemtype is None: self._itemtype = tp
-		elif self._itemtype != tp: raise TypeError("Expected a value of type '{.__name__}' and '{.__name__}' is not the same type".format(self._itemtype, tp))
-
-	def append(self, item):
-		""" Add new item to the list, if the list is not empty the type of 'item' must match the other items
-		 	Has no effect if the item was already in the list; it cannot contain duplicates """
-		self._verify_type(item)
-		if not item in self._items: self._items.append(item)
-
-	def remove(self, item):
-		""" Remove item from the list, has no effect if the list does not contain this item """
-		try: self._items.remove(item)
-		except ValueError: return False
-		if len(self._items) == 0: self._itemtype = None
-		return True
+	def __len__(self):
+		try: return len(self.value)
+		except TypeError: return 1 if self.value is not None else 0
+	def _getitem(self, key): self.__getitem__(key)
+	def __getitem__(self, item): raise AttributeError("ConfigurationItem is not a valid container!")
+	def __setitem__(self, key, value): self.__getitem__(key)
+	def __delitem__(self, key): self.__getitem__(key)
+	def __str__(self): return "ConfigurationItem({!s})".format(self._value)
 
 
 class Configuration(ConfigurationItem):
-	def __init__(self, initial_value=None, filepath=None):
-		self._cfg = {}
-		self._error = False
-		self._filepath = filepath
-		self._file = None
-		self._cfgvalue = None
+	""" Object that stores a number of configuration items and/or sub-configuration objects
+	 	Each item is bound to a keyword, similar to a dictionary, and getting/setting values is done through higher levels recursively """
+	def __init__(self, cfg_values=None, read_only=False):
+		if cfg_values: ConfigurationItem.__init__(self, value={ key: create_entry(value, read_only) for key, value in cfg_values.items() })
+		else: ConfigurationItem.__init__(self, value={})
+		self._dirty = False
 
-		if initial_value is not None:
-			if not isinstance(initial_value, dict):
-				raise TypeError("'initial_value' must be dict or None, not " + type(initial_value).__name__)
-			else: self.update_dict(initial_value)
 
-		if self._filepath is not None:
-			if not os.path.isdir(".cfg"): os.mkdir(".cfg")
+	def _getitem(self, key):
+		if not isinstance(key, str): raise ValueError("Getting keys must be given as string")
 
-			try:
-				self._file = open(self._filepath, "r+")
-				try: self.update_dict(json.load(self._file))
-				except json.JSONDecodeError as e:
-					print("ERROR", "Error parsing configuration file:", e)
-					self._file.close()
-					self._file = None
-					self._error = True
-			except FileNotFoundError: pass
+		key = key.split(separator, maxsplit=1)
+		if len(key) > 1: return self._value.__getitem__(key[0])._getitem(key[1])
+		else: return self._value[key[0]]
 
-	@property
-	def cfg_file(self): return self._file is not None
-	@property
-	def error(self): return self._error
-	@property
-	def value(self): return self.to_dict()
-	@value.setter
-	def value(self, val):
-		if not isinstance(val, dict): raise TypeError
+	def _createitem(self, key, add_value):
+		try: return self._getitem(key)
+		except KeyError:
+			self[key] = add_value
+			return self._getitem(key)
 
-	def update_dict(self, dt):
-		self._cfgvalue = None
-		if isinstance(dt, dict):
-			for key, value in dt.items():
-				if value is not None:
-					entry_type = type_class.get(type(value), type_class[None])
-					self._cfg[key] = entry_type(value)
-
-	def __str__(self): return self.__descstr__()
-	def __descstr__(self): return "Configuration({})".format(", ".join(["'{}': {}".format(key, value.__descstr__()) for key, value in self._cfg.items()]))
 
 	def __getitem__(self, key):
-		key = str(key).split("::", maxsplit=1)
-		if len(key) == 2:
-			arg = self._cfg.get(key.pop(0))
-			if arg is not None:
-				try: return arg[key[0]]
-				except AttributeError: return arg
-			return ConfigurationEntry()
-		else: return self._cfg.get(key[0], ConfigurationEntry())
-
-	def get(self, key, default=None):
-		vl = self[key]
-		if isinstance(vl, ConfigurationEntry): return vl.value if vl.value is not None else default
-		else: return vl
+		return self._getitem(key).value
 
 	def __setitem__(self, key, value):
-		value = parse_arg(value)
-		key = key.split("::", maxsplit=1)
-		self._cfgvalue = None
-		if len(key) == 2:
-			try:
-				self._cfg.get(key[0], ConfigurationEntry())[key[1]] = value
-				return
-			except TypeError: raise TypeError("Key '{}' does not correspond to a configuration, therefore subkeys for this key cannot be set. Update this key on its own instead".format(key[0]))
+		if self.read_only: raise RuntimeError("Cannot update this configuration since it was set to read-only!")
+		elif not isinstance(key, str): raise ValueError("Getting keys must be given as string!")
 
-		arg = self._cfg.get(key[0])
-		if arg is not None:
-			try: self._cfg[key[0]].value = value
-			except TypeError: raise TypeError("Key '{}' corresponds to a configuration, therefore it cannot be directly to another value. Append '::(subkey)' to the index to set subkeys".format(key[0]))
+		key = key.split(separator, maxsplit=1)
+		if len(key) == 1:
+			try: cval = self._getitem(key[0])
+			except KeyError: cval = None
+			nval = create_entry(value, self.read_only)
+			tc, tn = type(cval), type(nval)
+			if cval and tc is not tn: raise TypeError("Incompatible types: '{.__name__}' and '{.__name__}'!".format(tc, tn))
+			self._value[key[0]] = nval
 		else:
-			tp = type_class.get(type(value))
-			if tp is not None: self._cfg[key[0]] = tp(initial_value=value)
-			else: self._cfg[key[0]] = ConfigurationEntry(value)
-
-	def to_dict(self, force_remake=False):
-		if self._cfgvalue is not None:
-			if not force_remake: return self._cfgvalue
-			self._cfgvalue.clear()
-		else: self._cfgvalue = {}
-
-		for key, value in self._cfg.items():
-			vl = None
-			try: vl = value.to_dict()
-			except AttributeError: vl = value.value
-			except Exception as e: print("ERROR", "Cannot get value for key '{}':", e)
-
-			if vl is None: continue
-			if isinstance(vl, ConfigurationItem): print("ERROR", "Invalid value for key '{}':".format(key), vl)
-			else: self._cfgvalue[key] = vl
-		return self._cfgvalue
-
-	def write_configuration(self, sort_keys=True):
-		if self._filepath is not None and self._file is None:
-			try: self._file = open(self._filepath, "w+")
-			except Exception as e: print("ERROR", "Cannot create configuration file '{}':".format(self._filepath), e)
-
-		if self._file is not None:
-			self._file.seek(0)
-			self._file.truncate()
-			json.dump(self.to_dict(force_remake=True), self._file, indent=5, sort_keys=sort_keys)
-			self._file.flush()
-			os.fsync(self._file.fileno())
+			if key[0] not in self._value: self._value[key[0]] = Configuration()
+			self._value[key[0]][key[1]] = value
+		self._dirty = True
 
 	def __delitem__(self, key):
-		self[key] = None
+		if self.read_only: raise RuntimeError("Cannot delete elements from a read-only configuration!")
 
-	def __del__(self):
-		if self._file is not None: self._file.close()
+		key = key.split(separator, maxsplit=1)
+		if len(key) > 1: del self._value[key[0]][key[1]]
+		else: del self._value[key[0]]
+		self._dirty = True
 
-type_class = {
-	dict: Configuration,
-	list: ConfigurationList,
-	None: ConfigurationEntry
-}
+	def __len__(self): return len(self.value)
+	def __str__(self): return "Configuration({!s})".format(self._value)
+
+
+	def get(self, key, default=None):
+		""" Get the value bound to given key, returns 'default' argument if nothing bound """
+		try: return self[key]
+		except KeyError: return default
+
+	def get_or_create(self, key, create_value=None):
+		""" Same as get, but when a key wasn't found the second argument (if not None) is bound to that key """
+		if self.get(key) is None and create_value is not None: self[key] = create_value
+		return self.get(key)
+
+
+	def keys(self):
+		""" Get iterator with all configured keys (return type is equal to dictionary 'keys') """
+		return self.value.keys()
+	def values(self):
+		""" Get iterator with all configured values (return type is equal to dictionary 'values')  """
+		return self.value.values()
+	def items(self):
+		""" Get iterator with all configured key-value pairs (return type is equal to dictionary 'items') """
+		return self.value.items()
+
+	@property
+	def is_set(self): return len(self._value) > 0
+	@property
+	def value(self): return { k: v.value for k,v in self._value.items() if v.is_set }
+	@property
+	def dirty(self): return self._dirty
+
+
+class ConfigurationFile(Configuration):
+	""" Same as a Configuration, but adds the ability read from/write to file """
+	cfg_version = "1b"
+	def __init__(self, filepath, cfg_values=None, readonly=False):
+		self._file = filepath
+		Configuration.__init__(self, cfg_values=cfg_values, read_only=readonly)
+		self._initialvalues = self._value
+		self._file_exists = False
+		self.load()
+
+	def load(self):
+		""" (Re)load configuration from disk """
+		if self._initialvalues: self._value = self._initialvalues
+		fl = self._read_file()
+		if fl:
+			for key, option in fl.items(): self[key] = option
+		self._dirty = False
+
+	@property
+	def filename(self): return self._file
+
+	def _read_file(self):
+		print("INFO", "Reading configuration file data from '{}'".format(self.filename))
+		try:
+			with open(self._file, "r") as file:
+				self._file_exists = True
+				import json
+				try: return json.load(file)
+				except json.JSONDecodeError as e:
+					print("ERROR", "Parsing configuration file '{}':".format(self._file), e)
+				raise ValueError("JSON parsing error:" + str(e))
+		except FileNotFoundError: print("INFO", "Configuration file '{}' not found".format(self._file))
+
+	def save(self):
+		if self.read_only: raise PermissionError("Cannot write configuration file when it is set to read only")
+
+		print("INFO", "Trying to save file '{}'".format(self._file))
+		if self.dirty or not self._file_exists:
+			with open(self._file, "w") as file:
+				print("INFO", "Writing configuration to file '{}'".format(self._file))
+				self["_version"] = self.cfg_version
+				import json
+				json.dump(self.value, file, indent=5)
+				file.flush()
+				self._dirty = False
