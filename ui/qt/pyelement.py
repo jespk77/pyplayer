@@ -29,20 +29,18 @@ class PyElement:
     @property
     def accept_input(self): return True
 
-    # todo: element width getter/setter
     @property
-    def width(self): return None
+    def width(self): return self._qt.width()
     @width.setter
-    def width(self, value): pass
+    def width(self, value): self._qt.setFixedWidth(value)
     def with_width(self, value):
         self.width = value
         return self
 
-    # todo: element height getter/setter
     @property
-    def height(self): return None
+    def height(self): return self._qt.height()
     @height.setter
-    def height(self, value): pass
+    def height(self, value): self._qt.setFixedHeight(value)
     def with_height(self, value):
         self.height = value
         return self
@@ -54,7 +52,7 @@ class PyElement:
 
     def grid(self, row=0, column=1, rowspan=1, columnspan=1):
         layout = self._container._qt.layout()
-        if not isinstance(layout, qt.QGridLayout): raise ValueError("Cannot grid element in a non grid layout")
+        if not isinstance(layout, QtWidgets.QGridLayout): raise ValueError("Cannot grid element in a non grid layout")
         layout.addWidget(self._qt, row, column, rowspan, columnspan)
         return self
 
@@ -242,9 +240,12 @@ class PyTextField(PyElement):
         self.undo = False
 
     @property
-    def accept_input(self): return self._qt.isEnabled()
+    def accept_input(self): return self._qt.isReadOnly()
     @accept_input.setter
-    def accept_input(self, inpt): self._qt.setEnabled(inpt)
+    def accept_input(self, value): self._qt.setReadOnly(not value)
+    def with_accept_input(self, value):
+        self.accept_input = value
+        return self
 
     @property
     def undo(self): return self._qt.isUndoRedoEnabled()
@@ -252,18 +253,65 @@ class PyTextField(PyElement):
     def undo(self, do): self._qt.setUndoRedoEnabled(do)
 
     @property
-    def current_pos(self): return self._qt.textCursor()
-    @current_pos.setter
-    def current_pos(self, pos): self._qt.cursorForPosition(pos)
-
-    @property
     def display_text(self): return self._qt.toPlainText()
     @display_text.setter
-    def display_text(self, txt): self._qt.setText(txt)
+    def display_text(self, txt): self._qt.setPlainText(txt)
     def with_text(self, txt):
         self.display_text = txt
         return self
     text = display_text
+
+    @property
+    def cursor(self): return self._qt.textCursor().position()
+    @cursor.setter
+    def cursor(self, value):
+        cursor = self._qt.textCursor()
+        cursor.setPosition(value)
+        self._qt.setTextCursor(cursor)
+
+    def insert(self, index, text):
+        """ Insert text into the given position (ignores 'accept_input' property) """
+        revert = not self.accept_input
+        if revert: self.accept_input = True
+        cursor = self._qt.textCursor()
+        cursor.setPosition(index)
+        cursor.insertText(text)
+        self._qt.setTextCursor(cursor)
+        if revert: self.accept_input = False
+
+    # todo: insert image into text field
+    def insert_image(self, index, img):
+        pass
+    place_image = insert_image
+
+    def delete(self, index1, index2=None):
+        """ Delete text between the given positions (ignores 'accept_input' property) """
+        revert = not self.accept_input
+        if revert: self.accept_input = True
+        cursor = self._qt.textCursor()
+        cursor.setPosition(index1)
+
+        diff = index2 - index1 if index2 else 1
+        for _ in range(diff): cursor.deleteChar()
+
+        self._qt.setTextCursor(cursor)
+        if revert: self.accept_input = False
+
+    def position(self, search_text):
+        """ Get the exact coordinates in this text field, or emtpy string if nothing found """
+        return self._qt.find(search_text)
+
+    def show(self, position):
+        """ Make sure that the given line is visible on screen """
+        cursor = self._qt.textCursor()
+        cursor.setPosition(position)
+        self._qt.setTextCursor(cursor)
+
+    def clear_selection(self):
+        """ Remove selection in this text field (has no effect if nothing was selected) """
+        cursor = self._qt.textCursor()
+        cursor.clearSelection()
+        self._qt.setTextCursor(cursor)
 
 class PyProgessbar(PyElement):
     def __init__(self, parent, element_id):

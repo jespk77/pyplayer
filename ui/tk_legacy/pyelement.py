@@ -4,9 +4,11 @@ from tkinter import font, ttk
 from ui import pyconfiguration
 from ui.tk_legacy import pyevents, pycontainer
 
-def warn_deprecation(msg=None):
+def warn_deprecation(msg=None, alternative=None):
 	import warnings
-	warnings.warn(f"{msg} is unsupported in the new qt variant" if msg else "Unsupported feature in the new qt variant", DeprecationWarning, stacklevel=2)
+	warnings.warn(f"{msg} is unsupported in the new qt variant" if msg else "Unsupported feature in the new qt variant" +
+					(f", use {alternative} instead" if alternative else "")
+				  , DeprecationWarning, stacklevel=2)
 
 def scroll_event():
 	import sys
@@ -338,9 +340,13 @@ class PyTextfield(PyElement):
 		return self
 
 	@property
-	def current_pos(self): return "current"
+	def current_pos(self):
+		warn_deprecation("'current_pos'", "'cursor'")
+		return "current"
 	@current_pos.setter
-	def current_pos(self, value): self._tk.mark_set("current", value)
+	def current_pos(self, value):
+		warn_deprecation("'current_pos'", "'cursor'")
+		self._tk.mark_set("current", value)
 
 	@property
 	def text(self): return self._tk.get(self.front, self.back).rstrip("\n")
@@ -388,7 +394,9 @@ class PyTextfield(PyElement):
 			self._bold_font.configure(weight="bold")
 		return self._bold_font
 
-	def can_interact(self): return self._tk.cget("state") == "normal"
+	def can_interact(self):
+		warn_deprecation("'can_interact'", "'accept_input'")
+		return self._tk.cget("state") == "normal"
 	def insert(self, index, chars, *args):
 		""" Insert text into the given position (ignores 'accept_input' property) """
 		if not self.accept_input: self._tk.configure(state="normal")
@@ -425,30 +433,36 @@ class PyTextfield(PyElement):
 
 	def place_mark(self, mark, position, gravity="right"):
 		""" Place mark at specified location """
+		warn_deprecation("Textfield marks")
 		self._tk.mark_set(mark, position)
 		self._tk.mark_gravity(mark, gravity)
 
 	def place_tag(self, tag_name, start_index, stop_index=None):
 		""" Place tag from start_index to stop_index or for one character if stop_index not defined """
+		warn_deprecation("Textfield tags")
 		self._tk.tag_add(tag_name, start_index, stop_index)
 
 	def tag_lower(self, tag_name, below=None):
 		""" Lower the tag with specified name in the rendering/evaluation ordering,
 			set below to another tag to set it below that one or nothing to place at the bottom """
+		warn_deprecation("Textfield tags")
 		self._tk.tag_lower(tag_name, below)
 	def tag_raise(self, tag_name, above=None):
 		""" Raise the specified tag in the rendering/evaluation ordering,
 		 	set above to another tag to set it just above it or nothing to place it on top """
+		warn_deprecation("Textfield tags")
 		self._tk.tag_raise(tag_name, above)
 
 	def get_tag_option(self, tag, option):
 		""" Get configuration set for given tag, raises KeyError if there's no tag with that name set """
+		warn_deprecation("Textfield tags")
 		try: return self._tk.tag_cget(tag, option)
 		except tkinter.TclError: pass
 		raise KeyError(tag)
 
 	def set_tag_option(self, tag, **options):
 		""" Update tag option, will create new tag if it doesn't exist """
+		warn_deprecation("Textfield tags")
 		self._tk.tag_configure(tag, **options)
 
 	def clear_selection(self):
@@ -457,6 +471,7 @@ class PyTextfield(PyElement):
 		except: pass
 
 	def with_option(self, **options):
+		warn_deprecation("'with_option'")
 		self._tk.configure(**options)
 		return self
 
