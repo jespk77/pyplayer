@@ -1,9 +1,45 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from . import pywindow, log_exception
+from . import pywindow, pyevents
+from . import log_exception
 
 def valid_check(element):
     if not isinstance(element, PyElement) and not isinstance(element, pywindow.PyWindow): raise ValueError("Parent must be an instance of PyElement or PyWindow")
+
+# === Event definitions ===
+_event_handler = pyevents.EventHandler()
+def EventLeftClick(cb):
+    """
+     Event that fires when an element is left clicked
+        - keywords:
+            * x: the x position of the cursor
+            * y: the y position of the cursor
+        - not cancellable
+    """
+    _event_handler.register_event("left_click", cb)
+    return cb
+
+def EventRightClick(cb):
+    """
+     Event that fires when an element is right clicked
+        - keywords:
+            * x: the x position of the cursor
+            * y: the y position of the cursor
+        - not cancellable
+    """
+    _event_handler.register_event("right_click", cb)
+    return cb
+
+def EventInteract(cb):
+    """
+     Event that fires when an element is interacted with
+     Details on this interaction vary per element
+        - keywords: varied, see documentation for each element
+        - not cancellable
+    """
+    _event_handler.register_event("interact", cb)
+    return cb
+# =========================
 
 class PyElement:
     def __init__(self, container, element_id):
@@ -22,9 +58,8 @@ class PyElement:
     def load_configuration(self):
         pass
 
-    # todo: element event handler
     @property
-    def event_handler(self): return None
+    def layout(self): raise TypeError(f"Layout elements not supported for '{__name__}'")
 
     @property
     def accept_input(self): return True
@@ -45,24 +80,25 @@ class PyElement:
         self.height = value
         return self
 
-    def add_element(self, element_id, element=None, element_class=None): raise TypeError(f"Adding child elements not supported for '{__name__}'")
-    def get_element(self, element_id): raise TypeError(f"Child elements not supported for '{__name__}")
+    def add_element(self, element_id, element=None, element_class=None, **layout_kwargs): self.get_element(element_id)
+    def get_element(self, element_id): raise TypeError(f"Element hiarchy not supported for '{__name__}'")
     def find_element(self, element_id): self.get_element(element_id)
     def remove_element(self, element_id): self.get_element(element_id)
 
-    def grid(self, row=0, column=1, rowspan=1, columnspan=1):
-        layout = self._container._qt.layout()
-        if not isinstance(layout, QtWidgets.QGridLayout): raise ValueError("Cannot grid element in a non grid layout")
-        layout.addWidget(self._qt, row, column, rowspan, columnspan)
-        return self
-
 class PyFrame(PyElement):
+    """
+     General element class that can contain child widgets
+     No interaction event
+    """
     def __init__(self, parent, id):
         PyElement.__init__(self, parent, id)
         self._qt = QtWidgets.QWidget(parent._qt)
 
 class PyTextLabel(PyElement):
-    """ Element for displaying a line of text """
+    """
+     Element for displaying a line of text
+     No interaction event
+    """
     def __init__(self, parent, id):
         PyElement.__init__(self, parent, id)
         self._qt = QtWidgets.QLabel(parent._qt)
@@ -91,12 +127,16 @@ class PyTextLabel(PyElement):
     def wrapping(self, wrap): self._qt.setWordWrap(wrap)
 
 class PyTextInput(PyElement):
-    """ Element for entering one line data """
+    """
+     Element for entering a single line of data
+     Interaction event fires when the enter is pressed while this element has focus, no keywords
+    """
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QLineEdit(parent._qt)
         self._input_cb = None
         self._qt.textEdited.connect(self._on_edit)
+        self._qt.returnPressed.connect(lambda : _event_handler.call_event("interact", self))
 
     def _on_edit(self):
         if self._input_cb: self._input_cb()
@@ -143,6 +183,10 @@ class PyTextInput(PyElement):
         return self
 
 class PyCheckbox(PyElement):
+    """
+     Adds a simple checkable box
+     Interaction event fires when the element is toggled, no keywords
+    """
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QCheckBox(parent._qt)
@@ -189,7 +233,10 @@ class PyCheckbox(PyElement):
         return self
 
 class PyButton(PyElement):
-    """ Clickable button element """
+    """
+     Clickable button element, can be customized with text and/or an image
+     Interaction event fires when the button is pressed, no keywords
+    """
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QPushButton(parent._qt)
@@ -233,7 +280,10 @@ class PyButton(PyElement):
         return self
 
 class PyTextField(PyElement):
-    """ Element for entering multi line text """
+    """
+     Element for displaying and/or entering multiple lines of text
+     No interaction event
+    """
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QTextEdit(parent._qt)
@@ -314,6 +364,10 @@ class PyTextField(PyElement):
         self._qt.setTextCursor(cursor)
 
 class PyProgessbar(PyElement):
+    """
+     Display the progress of a certain action on screen
+     No interaction event
+    """
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QProgressBar(parent._qt)
@@ -346,11 +400,20 @@ class PyProgessbar(PyElement):
         return self
 
 class PyScrollbar(PyElement):
+    """
+     Adds a scrollbar to an element that is larger than the window
+     Generally this element does not need to be created on its own, elements that support it will create them automatically when needed
+     No interaction event
+    """
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QScrollBar(parent._qt)
 
 class PyItemlist(PyElement):
+    """
+     Show a list of items the user can select
+     Interaction event fires when the item selection changes, no keywords
+    """
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QListView(parent._qt)

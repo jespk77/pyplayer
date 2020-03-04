@@ -1,39 +1,103 @@
-import PyQt5.QtWidgets as qt
+from PyQt5 import QtWidgets
 import sys, weakref
 
-from . import pyelement, block_action, log_exception
+from . import pyelement, pyevents, pylayout, log_exception
 
-class MainWindowQt(qt.QWidget):
+# === Event definitions ===
+_event_handler = pyevents.EventHandler()
+def EventWindowOpen(cb):
+    """
+     Event that fires whenever the window is shown on screen for the first time
+        - no callback keywords
+        - not cancellable
+    """
+    _event_handler.register_event("window_open", cb)
+    return cb
+
+def EventWindowDestroy(cb):
+    """
+     Event that fires before the window gets destroyed, should be used to clean up variables and/or close open handles
+     Note: this event is not equal to the 'WindowClosed' event, this one fires when the window is in the process of being destroyed and is therefore not cancellable
+        - no callback keywords
+        - not cancellable
+    """
+    _event_handler.register_event("window_destroy", cb)
+    return cb
+
+def EventWindowClose(cb):
+    """
+     Event fires when the user is trying to close the window, if the event is canceled the window won't close
+     Note: this event is not equal to the 'WindowDestroy' event, this one is fired if the user is trying to close it, the window might not actually get destroyed
+        - no callback keywords
+        - cancellable
+    """
+    _event_handler.register_event("window_close", cb)
+    return cb
+
+def EventWindowResize(cb):
+    """ Fired when the window has been resized
+        - callback keywords:
+            * width: the new width of the window (in pixels)
+            * height: the new height of the window (in pixels)
+        - not cancellable
+    """
+    _event_handler.register_event("window_resize", cb)
+    return cb
+# ============================
+
+class _MainWindowQt(QtWidgets.QWidget):
     def __init__(self):
-        qt.QWidget.__init__(self)
-        self._close_cb = None
-
-    @property
-    def _close_callback(self): return self._close_cb
-    @_close_callback.setter
-    def _close_callback(self, cb): self._close_cb = cb
+        QtWidgets.QWidget.__init__(self)
+        self.resize_cb = None
+        self.close_cb = self.destroy_cb = None
 
     def closeEvent(self, event):
         try:
-            if self._close_cb:
-                res = self._close_cb()
-                if res == block_action: return event.ignore()
-                self._close_cb = None
-            else: qt.QWidget.closeEvent(self, event)
+            if self.close_cb and self.close_cb(): return event.ignore()
+
+            if self.destroy_cb:
+                self.destroy_cb()
+                self.close_cb = self.destroy_cb = None
+            QtWidgets.QWidget.closeEvent(self, event)
+        except Exception as e: log_exception(e)
+
+    def resizeEvent(self, event):
+        try:
+            if self.resize_cb:
+                new_size = event.size()
+                self.resize_cb(new_size.width(), new_size.height())
+            QtWidgets.QWidget.resizeEvent(self, event)
         except Exception as e: log_exception(e)
 
 class PyWindow:
-    default_title = "PyWindow"
-
-    def __init__(self):
-        self._qt = MainWindowQt()
-        self._qt.setWindowTitle(self.default_title)
+    def __init__(self, layout="grid"):
+        self._qt = _MainWindowQt()
         self._elements = {}
         self._children = weakref.WeakValueDictionary()
-        self._qt._close_callback = self._on_window_close
-        self._qt.setLayout(qt.QGridLayout())
 
-    def block_action(self): return block_action
+        self._qt.destroy_cb = self._on_window_destroy
+        self._qt.close_cb = lambda : _event_handler.call_event("window_close", self)
+        self._qt.resize_cb = lambda width, height: _event_handler.call_event("window_resize", self, width=width, height=height)
+
+        try: self._layout = pylayout.layouts[layout](self._qt)
+        except KeyError: self._layout = None
+        if not self._layout: raise ValueError(f"Unknown layout: '{layout}'")
+        self._qt.setLayout(self._layout.qt_layout)
+
+        self.title = "PyWindow"
+        try:
+            self.create_widgets()
+            _event_handler.call_event("window_open", self)
+        except Exception as e:
+            print("ERROR", "Encountered error while creating widgets:")
+            log_exception(e)
+
+    def create_widgets(self):
+        """ Utility method for adding initial elements to this window, ensures everything is initialized in the correct order """
+        pass
+
+    @property
+    def layout(self): return self._layout
 
     @property
     def title(self): return self._qt.windowTitle()
@@ -45,11 +109,16 @@ class PyWindow:
     @icon.setter
     def icon(self, icon): pass
 
-    def _on_window_close(self):
-        for c in self._children.values(): c.destroy()
-        print("window close", self._qt.windowTitle())
+    def center_window(self, size_x, size_y):
+        """ Center this window around given resolution """
+        center = QtWidgets.QDesktopWidget().availableGeometry().center()
+        self._qt.frameGeometry().moveTo(center.x() - (.5 * size_x), center.y() - (.5 * size_y))
 
-    def add_element(self, element_id, element=None, element_class=None) -> pyelement.PyElement:
+    def _on_window_destroy(self):
+        for c in self._children.values(): c.destroy()
+        _event_handler.call_event("window_destroy", self)
+
+    def add_element(self, element_id, element=None, element_class=None, **layout_kwargs) -> pyelement.PyElement:
         """ Add new element to this window, closes previously opened element with the same id (if open) """
         element_id = element_id.lower()
         self.remove_element(element_id)
@@ -60,8 +129,10 @@ class PyWindow:
             element = element_class(self, id)
         elif not isinstance(element, pyelement.PyElement): raise TypeError("'element' parameter must be a PyElement instance")
 
+        self._layout.insert_element(element, **layout_kwargs)
         self._elements[element_id] = element
         return self._elements[element_id]
+    __setitem__ = add_element
 
     def get_element(self, element_id) -> pyelement.PyElement:
         """ Get element assigned to given id, raises KeyError if no element found
@@ -75,7 +146,7 @@ class PyWindow:
 
     def remove_element(self, element_id) -> bool:
         """ Remove element with given id from this window, has no effect if no elements with that id were found
-            Returns true if an element was found and closed """
+            Returns true if an element was found and destroyed """
         element_id = element_id.lower()
         element = self.find_element(element_id)
         if element:
@@ -83,6 +154,7 @@ class PyWindow:
             del self._elements[element_id]
             return True
         return False
+    __delitem__ = remove_element
 
     def add_window(self, window_id, window=None, window_class=None):
         """ Open new window with given id, closes previously opened window with this id if any was open
@@ -121,11 +193,10 @@ class PyWindow:
         self._qt.close()
 
 class RootPyWindow(PyWindow):
-    default_title = "RootPyWindow"
-
-    def __init__(self):
-        self._app = qt.QApplication(sys.argv)
-        PyWindow.__init__(self)
+    def __init__(self, layout="grid"):
+        self._app = QtWidgets.QApplication(sys.argv)
+        PyWindow.__init__(self, layout)
+        self.title = "RootPyWindow"
 
     def start(self):
         """ Run the application, this method will keep running until the root window is closed """
