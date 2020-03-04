@@ -1,4 +1,4 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtWidgets
 
 class PyLayout:
     layout_name = "undefined"
@@ -32,7 +32,7 @@ class PyGridLayout(PyLayout):
         return self
 
     def insert_element(self, element, row=0, column=0, rowspan=1, columnspan=1):
-        self._qt.addWidget(element, row, column, rowSpan=rowspan, columnSpan=columnspan)
+        self._qt.addWidget(element._qt, row, column, rowspan, columnspan)
         return self
 
 layouts = {
