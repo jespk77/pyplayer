@@ -1,49 +1,7 @@
 from PyQt5 import QtWidgets
 import sys, weakref
 
-from . import pyelement, pyevents, pylayout, log_exception
-
-# === Event definitions ===
-_event_handler = pyevents.EventHandler()
-def EventWindowOpen(cb):
-    """
-     Event that fires whenever the window is shown on screen for the first time
-        - no callback keywords
-        - not cancellable
-    """
-    _event_handler.register_event("window_open", cb)
-    return cb
-
-def EventWindowDestroy(cb):
-    """
-     Event that fires before the window gets destroyed, should be used to clean up variables and/or close open handles
-     Note: this event is not equal to the 'WindowClosed' event, this one fires when the window is in the process of being destroyed and is therefore not cancellable
-        - no callback keywords
-        - not cancellable
-    """
-    _event_handler.register_event("window_destroy", cb)
-    return cb
-
-def EventWindowClose(cb):
-    """
-     Event fires when the user is trying to close the window, if the event is canceled the window won't close
-     Note: this event is not equal to the 'WindowDestroy' event, this one is fired if the user is trying to close it, the window might not actually get destroyed
-        - no callback keywords
-        - cancellable
-    """
-    _event_handler.register_event("window_close", cb)
-    return cb
-
-def EventWindowResize(cb):
-    """ Fired when the window has been resized
-        - callback keywords:
-            * width: the new width of the window (in pixels)
-            * height: the new height of the window (in pixels)
-        - not cancellable
-    """
-    _event_handler.register_event("window_resize", cb)
-    return cb
-# ============================
+from . import pyelement, pyevents, pylayout, pynetwork, log_exception
 
 class _MainWindowQt(QtWidgets.QWidget):
     def __init__(self):
@@ -70,14 +28,16 @@ class _MainWindowQt(QtWidgets.QWidget):
         except Exception as e: log_exception(e)
 
 class PyWindow:
-    def __init__(self, layout="grid"):
+    def __init__(self, parent, layout="grid"):
+        self._parent = parent
         self._qt = _MainWindowQt()
         self._elements = {}
         self._children = weakref.WeakValueDictionary()
+        self._event_handler = pyevents.PyWindowEvents()
 
         self._qt.destroy_cb = self._on_window_destroy
-        self._qt.close_cb = lambda : _event_handler.call_event("window_close", self)
-        self._qt.resize_cb = lambda width, height: _event_handler.call_event("window_resize", self, width=width, height=height)
+        self._qt.close_cb = lambda : self.events.call_event("window_close")
+        self._qt.resize_cb = lambda width, height: self.events.call_event("window_resize", width=width, height=height)
 
         try: self._layout = pylayout.layouts[layout](self._qt)
         except KeyError: self._layout = None
@@ -87,7 +47,7 @@ class PyWindow:
         self.title = "PyWindow"
         try:
             self.create_widgets()
-            _event_handler.call_event("window_open", self)
+            self.events.call_event("window_open")
         except Exception as e:
             print("ERROR", "Encountered error while creating widgets:")
             log_exception(e)
@@ -98,6 +58,10 @@ class PyWindow:
 
     @property
     def layout(self): return self._layout
+    @property
+    def events(self): return self._event_handler
+    @property
+    def network_manager(self) -> pynetwork.NetworkManager: return self._parent.network_manager
 
     @property
     def title(self): return self._qt.windowTitle()
@@ -112,11 +76,13 @@ class PyWindow:
     def center_window(self, size_x, size_y):
         """ Center this window around given resolution """
         center = QtWidgets.QDesktopWidget().availableGeometry().center()
-        self._qt.frameGeometry().moveTo(center.x() - (.5 * size_x), center.y() - (.5 * size_y))
+        geometry = self._qt.frameGeometry()
+        geometry.moveTo(center.x() - (.5 * size_x), center.y() - (.5 * size_y))
+        self._qt.setGeometry(geometry)
 
     def _on_window_destroy(self):
         for c in self._children.values(): c.destroy()
-        _event_handler.call_event("window_destroy", self)
+        self.events.call_event("window_destroy")
 
     def add_element(self, element_id, element=None, element_class=None, **layout_kwargs) -> pyelement.PyElement:
         """ Add new element to this window, closes previously opened element with the same id (if open) """
@@ -167,7 +133,7 @@ class PyWindow:
         if not window:
             if not window_class: window_class = PyWindow
             elif not issubclass(window_class, PyWindow): raise TypeError("'window_class' parameter must be a PyWindow class")
-            window = window_class()
+            window = window_class(self)
         elif not isinstance(window, PyWindow): raise TypeError("'window' parameter must be a PyWindow instance")
 
         self._children[window_id] = window
@@ -195,8 +161,14 @@ class PyWindow:
 class RootPyWindow(PyWindow):
     def __init__(self, layout="grid"):
         self._app = QtWidgets.QApplication(sys.argv)
+        self._network_manager = None
         PyWindow.__init__(self, layout)
         self.title = "RootPyWindow"
+
+    @property
+    def network_manager(self) -> pynetwork.NetworkManager:
+        if not self._network_manager: self._network_manager = pynetwork.NetworkManager(self._qt)
+        return self._network_manager
 
     def start(self):
         """ Run the application, this method will keep running until the root window is closed """

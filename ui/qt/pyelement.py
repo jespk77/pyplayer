@@ -1,45 +1,9 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from . import pywindow, pyevents
-from . import log_exception
+from . import pywindow, pyevents, pyimage
 
 def valid_check(element):
     if not isinstance(element, PyElement) and not isinstance(element, pywindow.PyWindow): raise ValueError("Parent must be an instance of PyElement or PyWindow")
-
-# === Event definitions ===
-_event_handler = pyevents.EventHandler()
-def EventLeftClick(cb):
-    """
-     Event that fires when an element is left clicked
-        - keywords:
-            * x: the x position of the cursor
-            * y: the y position of the cursor
-        - not cancellable
-    """
-    _event_handler.register_event("left_click", cb)
-    return cb
-
-def EventRightClick(cb):
-    """
-     Event that fires when an element is right clicked
-        - keywords:
-            * x: the x position of the cursor
-            * y: the y position of the cursor
-        - not cancellable
-    """
-    _event_handler.register_event("right_click", cb)
-    return cb
-
-def EventInteract(cb):
-    """
-     Event that fires when an element is interacted with
-     Details on this interaction vary per element
-        - keywords: varied, see documentation for each element
-        - not cancellable
-    """
-    _event_handler.register_event("interact", cb)
-    return cb
-# =========================
 
 class PyElement:
     def __init__(self, container, element_id):
@@ -47,6 +11,7 @@ class PyElement:
         self._container: pywindow.PyWindow = container
         self._element_id = element_id
         self._qt = None
+        self._event_handler = pyevents.PyElementEvents()
 
     @property
     def element_id(self): return self._element_id
@@ -60,6 +25,8 @@ class PyElement:
 
     @property
     def layout(self): raise TypeError(f"Layout elements not supported for '{__name__}'")
+    @property
+    def events(self): return self._event_handler
 
     @property
     def accept_input(self): return True
@@ -94,9 +61,10 @@ class PyFrame(PyElement):
         PyElement.__init__(self, parent, id)
         self._qt = QtWidgets.QWidget(parent._qt)
 
+import time
 class PyTextLabel(PyElement):
     """
-     Element for displaying a line of text
+     Element for displaying a line of text and/or an image
      No interaction event
     """
     def __init__(self, parent, id):
@@ -113,9 +81,21 @@ class PyTextLabel(PyElement):
     text = display_text
 
     @property
-    def display_image(self): return None
+    def display_image(self): return self._qt.pixmap() is not None or self._qt.movie() is not None
     @display_image.setter
-    def display_image(self, img): pass
+    def display_image(self, img):
+        if not isinstance(img, pyimage.PyImage): raise ValueError("'display_image' must be a valid image")
+        while not img.is_ready:
+            print("not ready")
+            time.sleep(1)
+
+        if img.is_ready:
+            if img.animated:
+                data = img.data
+                self._qt.setMovie(data)
+                data.start()
+            else: self._qt.setPixmap(img.data)
+        else: print("WARNING", "Image not ready")
     def with_image(self, img):
         self.display_image = img
         return self
@@ -134,12 +114,7 @@ class PyTextInput(PyElement):
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QLineEdit(parent._qt)
-        self._input_cb = None
-        self._qt.textEdited.connect(self._on_edit)
-        self._qt.returnPressed.connect(lambda : _event_handler.call_event("interact", self))
-
-    def _on_edit(self):
-        if self._input_cb: self._input_cb()
+        self._qt.returnPressed.connect(lambda : self.events.call_event("interact"))
 
     @property
     def accept_input(self): return self._qt.isReadOnly()
@@ -155,14 +130,6 @@ class PyTextInput(PyElement):
     def format_str(self, rex): self._qt.setInputMask(rex if rex is not None else "")
     def with_format_str(self, rex):
         self.format_str = rex
-        return self
-
-    @property
-    def command(self): return self._input_cb is not None
-    @command.setter
-    def command(self, cb): self._input_cb = cb
-    def with_command(self, cb):
-        self.command = cb
         return self
 
     @property
@@ -190,11 +157,7 @@ class PyCheckbox(PyElement):
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QCheckBox(parent._qt)
-        self._input_cb = None
-        self._qt.clicked.connect(self._on_press)
-
-    def _on_press(self):
-        if self._input_cb: self._input_cb()
+        self._qt.clicked().connect(lambda :self.events.call_event("interact"))
 
     @property
     def display_text(self): return self._qt.text()
@@ -206,15 +169,6 @@ class PyCheckbox(PyElement):
     text = display_text
 
     @property
-    def display_image(self): return None
-    @display_image.setter
-    def display_image(self, img): pass
-    def with_image(self, img):
-        self.display_image = img
-        return self
-    image = display_image
-
-    @property
     def checked(self): return self._qt.isChecked()
     @checked.setter
     def checked(self, checked): self._qt.setChecked(checked)
@@ -224,14 +178,6 @@ class PyCheckbox(PyElement):
     @accept_input.setter
     def accept_input(self, check): self._qt.setCheckable(check)
 
-    @property
-    def command(self): return self._input_cb is not None
-    @command.setter
-    def command(self, cb): self._input_cb = cb
-    def with_command(self, cb):
-        self.command = cb
-        return self
-
 class PyButton(PyElement):
     """
      Clickable button element, can be customized with text and/or an image
@@ -240,13 +186,8 @@ class PyButton(PyElement):
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QPushButton(parent._qt)
-        self._qt.clicked.connect(self._on_press)
+        self._qt.clicked.connect(lambda : self.events.call_event("interact"))
         self._click_cb = None
-
-    def _on_press(self):
-        try:
-            if self._click_cb: self._click_cb()
-        except Exception as e: log_exception(e)
 
     @property
     def accept_input(self): return self._qt.isEnabled()
@@ -263,21 +204,18 @@ class PyButton(PyElement):
     text = display_text
 
     @property
-    def display_image(self): return None
+    def display_image(self): return self._qt.icon() is not None
     @display_image.setter
-    def display_image(self, img): pass
+    def display_image(self, img):
+        if not isinstance(img, pyimage.PyImage): raise ValueError("'display_image' must be a valid PyImage")
+        if img.animated: print("WARNING", "Animated image not supported on PyButton")
+
+        if img.is_ready: self._qt.setIcon(img.data)
+        else: print("WARNING", "Image not ready!")
     def with_image(self, img):
         self.display_image = img
         return self
     image = display_image
-
-    @property
-    def command(self): return self._click_cb is not None
-    @command.setter
-    def command(self, cb): self._click_cb = cb
-    def with_command(self, cb):
-        self.command = cb
-        return self
 
 class PyTextField(PyElement):
     """
