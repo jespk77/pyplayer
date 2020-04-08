@@ -1,4 +1,4 @@
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, Qt, QtCore
 import sys, weakref
 
 from . import pyelement, pyevents, pylayout, pynetwork, log_exception
@@ -56,6 +56,10 @@ class PyWindow:
         """ Utility method for adding initial elements to this window, ensures everything is initialized in the correct order """
         pass
 
+    def make_borderless(self):
+        """ Makes this window borderless, if set the user cannot move or resize the window via the window system """
+        self._qt.setWindowFlags(QtCore.Qt.FramelessWindowHint)
+
     @property
     def layout(self): return self._layout
     @property
@@ -92,7 +96,7 @@ class PyWindow:
         for c in self._children.values(): c.destroy()
         self.events.call_event("window_destroy")
 
-    def add_element(self, element_id, element=None, element_class=None, **layout_kwargs) -> pyelement.PyElement:
+    def add_element(self, element_id, element=None, element_class=None, **layout_kwargs):
         """ Add new element to this window, closes previously opened element with the same id (if open) """
         element_id = element_id.lower()
         self.remove_element(element_id)
