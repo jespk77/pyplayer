@@ -73,8 +73,16 @@ class PyWindow:
     @icon.setter
     def icon(self, icon): pass
 
-    def center_window(self, size_x, size_y):
-        """ Center this window around given resolution """
+    def center_window(self, size_x=None, size_y=None, fit_to_size=False):
+        """
+            Center this window around given resolution, leave values blank to use the current resolution
+            If 'fit_to_size' is True, the window will be fixed to given resolution (only if 'size_x' or 'size_y' are not empty)
+        """
+        if size_x is None: size_x = self._qt.height()
+        elif fit_to_size: self._qt.setFixedHeight(size_x)
+        if size_y is None: size_y = self._qt.width()
+        elif fit_to_size: self._qt.setFixedWidth(size_y)
+
         center = QtWidgets.QDesktopWidget().availableGeometry().center()
         geometry = self._qt.frameGeometry()
         geometry.moveTo(center.x() - (.5 * size_x), center.y() - (.5 * size_y))
