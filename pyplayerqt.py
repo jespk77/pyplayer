@@ -1,13 +1,11 @@
 from ui.qt import pywindow, pyelement
+from utilities.history import History
 
 import enum
 class PyPlayerCloseReason(enum.Enum):
     NONE = 0,
     RESTART = 1,
     MODULE_CONFIGURE = 2
-
-class PyConsole(pyelement.PyTextField):
-    pass
 
 class PyPlayer(pywindow.PyWindow):
     def __init__(self, root):
@@ -18,6 +16,8 @@ class PyPlayer(pywindow.PyWindow):
         self.title = "PyPlayer"
         self._title_song = ""
         self.icon = "assets/icon.png"
+
+        self._command_history = History()
 
     def create_widgets(self):
         pywindow.PyWindow.create_widgets(self)
@@ -33,14 +33,24 @@ class PyPlayer(pywindow.PyWindow):
         progressbar: pyelement.PyProgessbar = self.add_element("progress_bar", element_class=pyelement.PyProgessbar, row=1, columnspan=3)
         progressbar.minimum, progressbar.maximum = 0, 100
 
-        console = self.add_element("console", element_class=PyConsole, row=3, columnspan=3)
+        console = self.add_element("console", element_class=pyelement.PyTextField, row=3, columnspan=3)
         console.accept_input = False
         console.text = "Hello there"
+
         input: pyelement.PyTextInput = self.add_element("console_input", element_class=pyelement.PyTextInput, row=4, columnspan=3)
         @input.events.EventInteract
         def _on_input_enter():
             console.text += "\n" + input.value
+            self._command_history.add(input.value)
             input.value = ""
+
+        @input.events.EventHistory
+        def _set_history(direction):
+            if direction > 0: input.value = self._command_history.get_next("")
+            elif direction < 0:
+                hist = self._command_history.get_previous()
+                if hist is not None: input.value = hist
+            return input.events.block_action
 
     def update_title(self, title, checks=None):
         prefix = " ".join(f"[{c}]" for c in (checks if checks is not None else []))
