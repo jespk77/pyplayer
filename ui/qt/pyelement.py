@@ -61,7 +61,7 @@ class PyFrame(PyElement):
         PyElement.__init__(self, parent, id)
         self._qt = QtWidgets.QWidget(parent._qt)
 
-import time
+
 class PyTextLabel(PyElement):
     """
      Element for displaying a line of text and/or an image
@@ -70,6 +70,7 @@ class PyTextLabel(PyElement):
     def __init__(self, parent, id):
         PyElement.__init__(self, parent, id)
         self._qt = QtWidgets.QLabel(parent._qt)
+        self._img = None
 
     @property
     def display_text(self): return self._qt.text()
@@ -83,28 +84,28 @@ class PyTextLabel(PyElement):
     @property
     def display_image(self): return self._qt.pixmap() is not None or self._qt.movie() is not None
     @display_image.setter
-    def display_image(self, img):
-        if not isinstance(img, pyimage.PyImage): raise ValueError("'display_image' must be a valid image")
-        while not img.is_ready:
-            print("not ready")
-            time.sleep(1)
-
-        if img.is_ready:
-            if img.animated:
-                data = img.data
-                self._qt.setMovie(data)
-                data.start()
-            else: self._qt.setPixmap(img.data)
-        else: print("WARNING", "Image not ready")
-    def with_image(self, img):
-        self.display_image = img
+    def display_image(self, image): pyimage.PyImage(self, file=image)
+    def with_image(self, *args):
+        pyimage.PyImage(self, *args)
         return self
-    image = display_image
+
+    def set_image(self, img):
+        self._img = img
+        if img.animated:
+            self._qt.setMovie(img.data)
+            img.start()
+        else: self._qt.setPixmap(img.data)
 
     @property
     def wrapping(self): return self._qt.wordWrap()
     @wrapping.setter
     def wrapping(self, wrap): self._qt.setWordWrap(wrap)
+
+    _alignments = {"left": QtCore.Qt.AlignLeft, "center": QtCore.Qt.AlignHCenter, "right": QtCore.Qt.AlignRight}
+    def set_alignment(self, align):
+        """ Set alignment for this label, must be either 'left', 'center' or 'right' """
+        self._qt.setAlignment(self._alignments[align])
+
 
 class PyTextInput(PyElement):
     """
@@ -149,6 +150,7 @@ class PyTextInput(PyElement):
         self.max_length = ln
         return self
 
+
 class PyCheckbox(PyElement):
     """
      Adds a simple checkable box
@@ -178,6 +180,7 @@ class PyCheckbox(PyElement):
     @accept_input.setter
     def accept_input(self, check): self._qt.setCheckable(check)
 
+
 class PyButton(PyElement):
     """
      Clickable button element, can be customized with text and/or an image
@@ -187,7 +190,7 @@ class PyButton(PyElement):
         PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QPushButton(parent._qt)
         self._qt.clicked.connect(lambda : self.events.call_event("interact"))
-        self._click_cb = None
+        self._click_cb = self._img = None
 
     @property
     def accept_input(self): return self._qt.isEnabled()
@@ -206,16 +209,15 @@ class PyButton(PyElement):
     @property
     def display_image(self): return self._qt.icon() is not None
     @display_image.setter
-    def display_image(self, img):
-        if not isinstance(img, pyimage.PyImage): raise ValueError("'display_image' must be a valid PyImage")
-        if img.animated: print("WARNING", "Animated image not supported on PyButton")
-
-        if img.is_ready: self._qt.setIcon(img.data)
-        else: print("WARNING", "Image not ready!")
-    def with_image(self, img):
-        self.display_image = img
+    def display_image(self, image): pyimage.PyImage(self, file=image)
+    def with_image(self, *args):
+        pyimage.PyImage(self, *args)
         return self
-    image = display_image
+
+    def set_image(self, img):
+        self._img = QtGui.QIcon(img.data)
+        self._qt.setIcon(self._img)
+
 
 class PyTextField(PyElement):
     """
