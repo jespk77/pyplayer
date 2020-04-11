@@ -71,6 +71,7 @@ class PyTextLabel(PyElement):
         PyElement.__init__(self, parent, id)
         self._qt = QtWidgets.QLabel(parent._qt)
         self._img = None
+        self._qt.setAlignment(QtCore.Qt.AlignLeft)
 
     @property
     def display_text(self): return self._qt.text()
