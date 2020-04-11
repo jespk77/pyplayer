@@ -1,2 +1,2 @@
 #!/bin/bash
-python3 pyinit.pyw
+python3 pyinit.py
