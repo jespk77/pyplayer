@@ -40,4 +40,6 @@ class PySplashWindow(pywindow.RootPyWindow):
         def _on_close(): self.schedule_task(sec=1, func=self.destroy)
 
 if __name__ == "__main__":
+    import pylogging
+    pylogging.get_logger()
     PySplashWindow().start()
