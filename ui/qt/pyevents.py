@@ -1,4 +1,6 @@
 class EventHandler:
+    block_action = 0xBEEF
+
     def __init__(self):
         self._events = {}
 
@@ -93,4 +95,16 @@ class PyElementEvents(EventHandler):
             - not cancellable
         """
         self.register_event("interact", cb)
+        return cb
+
+class PyElementInputEvent(PyElementEvents):
+    def EventHistory(self, cb):
+        """
+         Event that fires when the user presses the up or down key
+         Can be used to go back and forth between previous entered lines
+            - keywords:
+                * direction: which direction to go (-1 for backward, 1 for forward)
+            - cancellable: if cancelled the key press will not be forwarded to the element
+        """
+        self.register_event("history", cb)
         return cb

@@ -11,7 +11,7 @@ class PyElement:
         self._container: pywindow.PyWindow = container
         self._element_id = element_id
         self._qt = None
-        self._event_handler = pyevents.PyElementEvents()
+        if not hasattr(self, "_event_handler"): self._event_handler = pyevents.PyElementEvents()
 
     @property
     def element_id(self): return self._element_id
@@ -114,8 +114,10 @@ class PyTextInput(PyElement):
      Interaction event fires when the enter is pressed while this element has focus, no keywords
     """
     def __init__(self, parent, element_id):
+        self._event_handler = pyevents.PyElementInputEvent()
         PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QLineEdit(parent._qt)
+        self._qt.keyPressEvent = self._on_key_press
         self._qt.returnPressed.connect(lambda : self.events.call_event("interact"))
 
     @property
@@ -150,6 +152,17 @@ class PyTextInput(PyElement):
     def with_max_length(self, ln):
         self.max_length = ln
         return self
+
+    # QLineEdit.keyPressEvent override
+    def _on_key_press(self, key):
+        key_code = key.key()
+        if key_code == QtCore.Qt.Key_Up:
+            res = self._event_handler.call_event("history", direction=-1)
+            if res == pyevents.EventHandler.block_action: return
+        elif key_code == QtCore.Qt.Key_Down:
+            res = self._event_handler.call_event("history", direction=1)
+            if res == pyevents.EventHandler.block_action: return
+        QtWidgets.QLineEdit.keyPressEvent(self._qt, key)
 
 
 class PyCheckbox(PyElement):
@@ -226,6 +239,7 @@ class PyTextField(PyElement):
      No interaction event
     """
     def __init__(self, parent, element_id):
+        self._event_handler = pyevents.PyElementInputEvent()
         PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QTextEdit(parent._qt)
         self.undo = False
