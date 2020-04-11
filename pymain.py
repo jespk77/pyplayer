@@ -15,6 +15,7 @@ class PySplashWindow(pywindow.RootPyWindow):
 
         self.make_borderless()
         self.center_window(*resolution, fit_to_size=True)
+        self.schedule_task(sec=1, func=self._load_program)
 
     def create_widgets(self):
         pywindow.RootPyWindow.create_widgets(self)
@@ -28,6 +29,15 @@ class PySplashWindow(pywindow.RootPyWindow):
         status_bar = self.add_element("status_bar", element_class=pyelement.PyTextLabel, row=2, columnspan=2)
         status_bar.set_alignment("center")
         status_bar.text, status_bar.wrapping = "Initializing...", True
+
+    def _load_program(self):
+        from pyplayerqt import PyPlayer
+        client = self.add_window("client", window_class=PyPlayer)
+
+        client.hidden = False
+        self.hidden = True
+        @client.events.EventWindowDestroy
+        def _on_close(): self.schedule_task(sec=1, func=self.destroy)
 
 if __name__ == "__main__":
     PySplashWindow().start()
