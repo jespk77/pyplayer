@@ -64,8 +64,6 @@ class PyWindow:
     def layout(self): return self._layout
     @property
     def events(self): return self._event_handler
-    @property
-    def network_manager(self) -> pynetwork.NetworkManager: return self._parent.network_manager
 
     @property
     def title(self): return self._qt.windowTitle()
@@ -173,14 +171,8 @@ class PyWindow:
 class RootPyWindow(PyWindow):
     def __init__(self, layout="grid"):
         self._app = QtWidgets.QApplication(sys.argv)
-        self._network_manager = None
         PyWindow.__init__(self, layout)
         self.title = "RootPyWindow"
-
-    @property
-    def network_manager(self) -> pynetwork.NetworkManager:
-        if not self._network_manager: self._network_manager = pynetwork.NetworkManager(self._qt)
-        return self._network_manager
 
     def start(self):
         """ Run the application, this method will keep running until the root window is closed """
