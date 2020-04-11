@@ -8,4 +8,5 @@ def log_exception(e):
     traceback.print_exception(type(e), e, e.__traceback__)
     print("")
 
-from . import pywindow, pyelement
+from . import pywindow, pyelement, pynetwork
+network_manager = pynetwork.NetworkManager()
