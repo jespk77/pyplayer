@@ -1,7 +1,32 @@
-from PyQt5 import QtWidgets, Qt, QtCore
+from PyQt5 import QtWidgets, QtCore, QtGui
 import sys, weakref
 
 from . import pyelement, pyevents, pylayout, pynetwork, log_exception
+
+class _ScheduledTask:
+    def __init__(self, func):
+        self._cb = func
+        self._kwargs = {}
+
+        self._timer = QtCore.QTimer()
+        self._timer.timeout.connect(self)
+
+    @property
+    def is_scheduled(self): return self._timer.isActive()
+
+    def schedule(self, delay, loop, kwargs=None):
+        self.cancel()
+        self._timer.setSingleShot(not loop)
+        if kwargs: self._kwargs.update(kwargs)
+        self._timer.start(delay)
+
+    def cancel(self):
+        self._timer.stop()
+
+    def __call__(self):
+        try: return self._cb(**self._kwargs)
+        except Exception as e: log_exception(e)
+
 
 class _MainWindowQt(QtWidgets.QWidget):
     def __init__(self):
@@ -32,6 +57,7 @@ class PyWindow:
         self._parent = parent
         self._qt = _MainWindowQt()
         self._elements = {}
+        self._scheduled_tasks = {}
         self._children = weakref.WeakValueDictionary()
         self._event_handler = pyevents.PyWindowEvents()
 
@@ -71,9 +97,14 @@ class PyWindow:
     def title(self, value): self._qt.setWindowTitle(value)
 
     @property
-    def icon(self): return None
+    def icon(self): return self._qt.windowIcon() is not None
     @icon.setter
-    def icon(self, icon): pass
+    def icon(self, icon): self._qt.setWindowIcon(QtGui.QIcon(icon))
+
+    @property
+    def hidden(self): return self._qt.isHidden()
+    @hidden.setter
+    def hidden(self, hide): self._qt.setHidden(hide)
 
     def center_window(self, size_x=None, size_y=None, fit_to_size=False):
         """
@@ -167,6 +198,63 @@ class PyWindow:
     def destroy(self):
         """ Closes this window along with any open child windows """
         self._qt.close()
+
+    def has_task(self, task_id, running=False):
+        """
+         Returns whether current task id is known, that is, it can be changed or canceled using just this id
+         If running is true, this call will only return true if the task is also running, otherwise it returns true if it exists
+        """
+        task = self._scheduled_tasks.get(task_id)
+        if task: return running == task.is_scheduled if running else True
+        return False
+
+    def schedule_task(self, min=0, sec=0, ms=0, func=None, loop=False, task_id=None, **kwargs):
+        """
+        Schedule an operation to be executed at least after the given time, all registered callbacks will stop when the window is closed
+        	- Amount of time to wait can be specified with minutes (keyword 'min'), seconds (keyword 'sec') and/or milliseconds (keyword 'ms')
+        	- The argument passed to func must be callable and accept all extra keywords passed to this function
+        	- The function can be executed repeatedly by setting 'loop' to True;
+        	     in this case it will be executed repeatedly after the given time either until the window is destroyed, an error occurs, or the callback returns False
+        	  Note: If looping is set, the delay must be at least 100 milliseconds
+            - The 'task_id' argument (if proviced) must be a string is used to later cancel, postpone or change the previously scheduled function
+               Note: scheduled tasks without a task_id cannot be looping and cannot be changed once scheduled
+        """
+        delay = min * 60000 + sec * 1000 + ms
+        if delay < 0: raise ValueError("Delay must be positive")
+        elif delay < 100 and loop: raise ValueError("Looping task must have some delay")
+
+        task: _ScheduledTask = self._scheduled_tasks.get(task_id)
+        if task and not func:
+            task.schedule(delay, loop, kwargs)
+            return
+
+        if not callable(func): raise ValueError("Newly scheduled tasks must have a valid callback")
+
+        if task_id:
+            task = _ScheduledTask(func)
+            task.schedule(delay, loop, kwargs)
+            self._scheduled_tasks[task_id] = task
+        else:
+            def _execute_task():
+                try: func(**kwargs)
+                except Exception as e: log_exception(e)
+            QtCore.QTimer.singleShot(delay, _execute_task)
+
+    def cancel_task(self, task_id):
+        """
+         Cancel previously scheduled task with given id, the id must have been added with 'schedule_task'
+         Has no effect if the task is not currently scheduled
+        """
+        self._scheduled_tasks[task_id].cancel()
+
+    def delete_task(self, task_id):
+        """
+         Cancel and remove scheduled task with given id, the id must have been added with 'schedule_task'
+         Once this call completes the given id is cleared and cannot be used without readding it as a new task
+        """
+        task = self._scheduled_tasks[task_id]
+        task.cancel()
+        del self._scheduled_tasks[task_id]
 
 class RootPyWindow(PyWindow):
     def __init__(self, layout="grid"):
