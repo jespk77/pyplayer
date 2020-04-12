@@ -2,6 +2,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 import sys, weakref
 
 from . import pyelement, pyevents, pylayout, pynetwork, log_exception
+from .. import pyconfiguration
 
 class _ScheduledTask(QtCore.QTimer):
     _schedule_signal = QtCore.pyqtSignal(int, bool, dict)
@@ -50,9 +51,11 @@ class _MainWindowQt(QtWidgets.QWidget):
             QtWidgets.QWidget.resizeEvent(self, event)
         except Exception as e: log_exception(e)
 
+
 class PyWindow:
-    def __init__(self, parent, layout="grid"):
+    def __init__(self, parent, window_id, layout="grid"):
         self._parent = parent
+        self._window_id = window_id.lower()
         self._qt = _MainWindowQt()
         self._elements = {}
         self._scheduled_tasks = {}
@@ -84,6 +87,8 @@ class PyWindow:
         """ Makes this window borderless, if set the user cannot move or resize the window via the window system """
         self._qt.setWindowFlags(QtCore.Qt.FramelessWindowHint)
 
+    @property
+    def window_id(self): return self._window_id
     @property
     def layout(self): return self._layout
     @property
@@ -161,19 +166,19 @@ class PyWindow:
         return False
     __delitem__ = remove_element
 
-    def add_window(self, window_id, window=None, window_class=None):
+    def add_window(self, window_id=None, window=None, window_class=None):
         """ Open new window with given id, closes previously opened window with this id if any was open
             use 'window' for attaching a previously created PyWindow instance
             'window_class' must be a subclass of PyWindow, creates an instance of PyWindow if left out
             Returns the newly created window """
-        window_id = window_id.lower()
-        self.close_window(window_id)
-
         if not window:
+            if not window_id: raise ValueError("Must specify a window_id")
+            window_id = window_id.lower()
             if not window_class: window_class = PyWindow
             elif not issubclass(window_class, PyWindow): raise TypeError("'window_class' parameter must be a PyWindow class")
-            window = window_class(self)
-        elif not isinstance(window, PyWindow): raise TypeError("'window' parameter must be a PyWindow instance")
+            window = window_class(self, window_id)
+        elif isinstance(window, PyWindow): window_id = window.window_id
+        else: raise TypeError("'window' parameter must be a PyWindow instance")
 
         self._children[window_id] = window
         self._children[window_id]._qt.show()
@@ -255,9 +260,9 @@ class PyWindow:
         del self._scheduled_tasks[task_id]
 
 class RootPyWindow(PyWindow):
-    def __init__(self, layout="grid"):
+    def __init__(self, window_id, layout="grid"):
         self._app = QtWidgets.QApplication(sys.argv)
-        PyWindow.__init__(self, layout)
+        PyWindow.__init__(self, None, window_id=window_id, layout=layout)
         self.title = "RootPyWindow"
 
     def start(self):
