@@ -1,5 +1,6 @@
 from ui.qt import pywindow, pyelement
 from utilities.history import History
+from interpreter import Interpreter
 
 import enum
 class PyPlayerCloseReason(enum.Enum):
@@ -18,6 +19,14 @@ class PyPlayer(pywindow.PyWindow):
         self.icon = "assets/icon.png"
 
         self._command_history = History()
+        self._interp = Interpreter(self)
+        self._cmd = None
+        self.schedule_task(func=self._insert_reply, task_id="reply_task", reply="= Hello there =")
+
+        @self.events.EventWindowDestroy
+        def _on_destroy():
+            self._interp.stop()
+            root.destroy()
 
     def create_widgets(self):
         pywindow.PyWindow.create_widgets(self)
@@ -35,13 +44,11 @@ class PyPlayer(pywindow.PyWindow):
 
         console = self.add_element("console", element_class=pyelement.PyTextField, row=3, columnspan=3)
         console.accept_input = False
-        console.text = "Hello there"
 
         input: pyelement.PyTextInput = self.add_element("console_input", element_class=pyelement.PyTextInput, row=4, columnspan=3)
         @input.events.EventInteract
         def _on_input_enter():
-            console.text += "\n" + input.value
-            self._command_history.add(input.value)
+            self._on_command_enter(input.value)
             input.value = ""
 
         @input.events.EventHistory
@@ -51,6 +58,21 @@ class PyPlayer(pywindow.PyWindow):
                 hist = self._command_history.get_previous()
                 if hist is not None: input.value = hist
             return input.events.block_action
+
+    def _on_command_enter(self, cmd):
+        self["console"].text += f"{cmd}\n"
+        self._command_history.add(cmd)
+        self["console_input"].accept_input = False
+        self._interp.put_command(cmd)
+
+    def _insert_reply(self, reply, tags=None, prefix=None, text=None):
+        if not prefix: prefix = "> "
+        self["console"].text += f"{reply}\n{prefix}"
+        self["console_input"].accept_input = True
+
+    def on_reply(self, reply, tags=None, cmd=None, prefix='', text=''):
+        self._cmd = cmd
+        self.schedule_task(task_id="reply_task", reply=reply, tags=tags, prefix=prefix, text=text)
 
     def update_title(self, title, checks=None):
         prefix = " ".join(f"[{c}]" for c in (checks if checks is not None else []))

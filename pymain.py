@@ -36,10 +36,8 @@ class PySplashWindow(pywindow.RootPyWindow):
 
         client.hidden = False
         self.hidden = True
-        @client.events.EventWindowDestroy
-        def _on_close(): self.schedule_task(sec=1, func=self.destroy)
 
 if __name__ == "__main__":
     import pylogging
-    pylogging.get_logger()
+    pylogging.get_logger().log_level = "verbose"
     PySplashWindow().start()

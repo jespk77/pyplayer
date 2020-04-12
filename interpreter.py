@@ -2,12 +2,13 @@ import importlib, sys
 
 from multiprocessing import Queue
 from threading import Thread
+from PyQt5 import QtCore
 from weakref import WeakSet
 
 from utilities import messagetypes
 
 
-class Interpreter(Thread):
+class Interpreter(QtCore.QThread):
 	""" Process commands from modules defined in the modules package
 		Each module contains:
 			'interpreter': a reference to this instance (only for reading/command queue access)
@@ -24,7 +25,7 @@ class Interpreter(Thread):
 					- after processing a command the module must return an instance of 'messagetypes', if nothing is returned the interpreter assumes the command was ignored and will continue processing the command further
 	"""
 	def __init__(self, client, modules=None):
-		super().__init__(name="PyInterpreterThread")
+		QtCore.QThread.__init__(self)
 		self._client = client
 		self._queue = Queue()
 		self._configuration = None
