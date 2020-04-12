@@ -3,27 +3,25 @@ import sys, weakref
 
 from . import pyelement, pyevents, pylayout, pynetwork, log_exception
 
-class _ScheduledTask:
+class _ScheduledTask(QtCore.QTimer):
+    _schedule_signal = QtCore.pyqtSignal(int, bool, dict)
+
     def __init__(self, func):
+        QtCore.QTimer.__init__(self)
         self._cb = func
         self._kwargs = {}
+        self._schedule_signal.connect(self._schedule)
+        self.timeout.connect(self._run_task)
 
-        self._timer = QtCore.QTimer()
-        self._timer.timeout.connect(self)
+    def schedule(self, delay, loop, kwargs=None): self._schedule_signal.emit(delay, loop, kwargs)
 
-    @property
-    def is_scheduled(self): return self._timer.isActive()
-
-    def schedule(self, delay, loop, kwargs=None):
-        self.cancel()
-        self._timer.setSingleShot(not loop)
+    def _schedule(self, delay, loop, kwargs=None):
+        self.setInterval(delay)
+        self.setSingleShot(not loop)
         if kwargs: self._kwargs.update(kwargs)
-        self._timer.start(delay)
+        self.start()
 
-    def cancel(self):
-        self._timer.stop()
-
-    def __call__(self):
+    def _run_task(self):
         try: return self._cb(**self._kwargs)
         except Exception as e: log_exception(e)
 
@@ -205,7 +203,7 @@ class PyWindow:
          If running is true, this call will only return true if the task is also running, otherwise it returns true if it exists
         """
         task = self._scheduled_tasks.get(task_id)
-        if task: return running == task.is_scheduled if running else True
+        if task: return running == task.isActive() if running else True
         return False
 
     def schedule_task(self, min=0, sec=0, ms=0, func=None, loop=False, task_id=None, **kwargs):
