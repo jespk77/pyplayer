@@ -54,7 +54,7 @@ class PyLog:
 
 	def __del__(self):
 		self.on_destroy()
-		builtins.print = self._prev_print
+		if builtins: builtins.print = self._prev_print
 
 	@property
 	def log_level(self): return self._level
