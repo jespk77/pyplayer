@@ -14,18 +14,18 @@ class PyPlayer(pywindow.PyWindow):
         self.layout.column(1, minsize=30, weight=1)
         self.layout.row(3, minsize=100, weight=1)
 
-        self.title = "PyPlayer"
+        self.title = "PyPlayerQt"
         self._title_song = ""
         self.icon = "assets/icon.png"
 
         self._command_history = History()
-        self._interp = Interpreter(self)
+        self._interp = None
         self._cmd = None
         self.schedule_task(func=self._insert_reply, task_id="reply_task", reply="= Hello there =")
 
         @self.events.EventWindowDestroy
         def _on_destroy():
-            self._interp.stop()
+            if self._interp: self._interp.stop()
             root.destroy()
 
     def create_widgets(self):
@@ -56,6 +56,9 @@ class PyPlayer(pywindow.PyWindow):
                 if hist is not None: input.value = hist
             return input.events.block_action
 
+    def start_interpreter(self, module_cfg):
+        self._interp = Interpreter(self, module_cfg)
+
     def _on_command_enter(self, cmd):
         if cmd:
             self["console"].text += f"{cmd}\n"
@@ -73,6 +76,7 @@ class PyPlayer(pywindow.PyWindow):
         self.schedule_task(task_id="reply_task", reply=reply, tags=tags, prefix=prefix, text=text)
 
     def update_title(self, title, checks=None):
+        if not title: title = self.title
         prefix = " ".join(f"[{c}]" for c in (checks if checks is not None else []))
         self._title_song = title
         self.title = prefix + " " + title
