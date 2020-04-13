@@ -3,117 +3,120 @@ def create_entry(value, read_only=False):
 	if isinstance(value, dict): return Configuration(value, read_only)
 	else: return ConfigurationItem(value, read_only)
 
-
 class ConfigurationItem:
-	""" Stores a specific value for a configuration setting """
 	def __init__(self, value=None, read_only=False):
 		self._value = value
-		self._readonly = read_only
+		self._read_only = read_only is True
+		self._dirty = False
+
 	@property
-	def is_set(self): return self._value is not None
+	def dirty(self): return self._dirty
 	@property
-	def read_only(self): return self._readonly
+	def is_set(self): return self.value is not None
+	@property
+	def read_only(self): return self._read_only
+
 	@property
 	def value(self): return self._value
 	@value.setter
-	def value(self, val):
-		if self.read_only: raise PermissionError("This attribute was marked as read only and cannot be updated!")
-		self._value = val
+	def value(self, value):
+		if self._read_only: raise ValueError("Cannot set read only configuration value")
+		self._value = value
+		self.mark_dirty()
 
-	def __len__(self):
-		try: return len(self.value)
-		except TypeError: return 1 if self.value is not None else 0
-	def _getitem(self, key): self.__getitem__(key)
-	def __getitem__(self, item): raise AttributeError("ConfigurationItem is not a valid container!")
+	def mark_dirty(self): self._dirty = True
+
+	def __getitem__(self, item): raise TypeError("This item does not support subkeys")
 	def __setitem__(self, key, value): self.__getitem__(key)
 	def __delitem__(self, key): self.__getitem__(key)
-	def __str__(self): return f"ConfigurationItem({self.value})"
+
+	def update(self, other): self.__getitem__("")
+	def keys(self): self.__getitem__("")
+	def values(self): self.__getitem__("")
+	def items(self): self.__getitem__("")
+
+	def get(self, key, default=None): self.__getitem__(key)
+	def get_or_create(self, key, create_value=None): self.__getitem__(key)
+
+	def _to_json(self): return self.value
+	def __len__(self): return len(self.value) if self.is_set else 0
+	def __str__(self): return f"ConfigurationItem(read_only={self._read_only}, value={str(self.value)})"
 
 
 class Configuration(ConfigurationItem):
-	""" Object that stores a number of configuration items and/or sub-configuration objects
-	 	Each item is bound to a keyword, similar to a dictionary, and getting/setting values is done through higher levels recursively """
-	def __init__(self, cfg_values=None, read_only=False):
-		if cfg_values: ConfigurationItem.__init__(self, value={ key: create_entry(value, read_only) for key, value in cfg_values.items() })
-		else: ConfigurationItem.__init__(self, value={})
-		self._dirty = False
+	def __init__(self, value=None, read_only=False):
+		ConfigurationItem.__init__(self, {}, read_only)
+		if value:
+			if isinstance(value, dict): self.update(value)
+			else: raise ValueError("Configuration value must be a dict")
 
-
-	def _getitem(self, key):
-		if not isinstance(key, str): raise ValueError("Keys must be strings")
-
-		key = key.split(separator, maxsplit=1)
-		if len(key) > 1: return self._value.__getitem__(key[0])._getitem(key[1])
-		else: return self._value[key[0]]
-
-	def _createitem(self, key, add_value):
-		try: return self._getitem(key)
-		except KeyError:
-			self[key] = add_value
-			return self._getitem(key)
-
-
-	def __getitem__(self, key):
-		return self._getitem(key).value
+	def __getitem__(self, item):
+		if isinstance(item, str):
+			item = item.split(separator, maxsplit=1)
+			if len(item) == 1: return self.value[item[0]]#._to_json()
+			else: return self[item[0]][item[1]]
+		else: raise ValueError("Keys must be string")
 
 	def __setitem__(self, key, value):
-		if self.read_only: raise RuntimeError("Cannot update this configuration since it was set to read-only!")
-		elif not isinstance(key, str): raise ValueError("Keys must be strings")
+		if self.read_only: raise ValueError("Cannot set read only configuration value")
 
-		key = key.split(separator, maxsplit=1)
-		if len(key) == 1:
-			try: cval = self._getitem(key[0])
-			except KeyError: cval = None
-			nval = create_entry(value, self.read_only)
-			tc, tn = type(cval), type(nval)
-			if cval and tc is not tn: raise TypeError("Incompatible types: '{.__name__}' and '{.__name__}'!".format(tc, tn))
-			self._value[key[0]] = nval
-		else:
-			if key[0] not in self._value: self._value[key[0]] = Configuration()
-			self._value[key[0]][key[1]] = value
-		self._dirty = True
+		if isinstance(key, str):
+			key = key.split(separator, maxsplit=1)
+			if len(key) == 1:
+				key = key[0]
+				self._value[key] = create_entry(value)
+			else:
+				res = self.get(key[0])
+				if res is None: self[key[0]] = {}
+				self[key[0]][key[1]] = value
+			self.mark_dirty()
+		else: raise ValueError("Keys must be string")
 
 	def __delitem__(self, key):
-		if self.read_only: raise RuntimeError("Cannot delete elements from a read-only configuration!")
+		if self.read_only: raise ValueError("Cannot delete read only configuration value")
 
-		key = key.split(separator, maxsplit=1)
-		if len(key) > 1: del self._value[key[0]][key[1]]
-		else: del self._value[key[0]]
-		self._dirty = True
+		if isinstance(key, str):
+			key = key.split(separator, maxsplit=1)
+			if len(key) == 1:
+				key = key[0]
+				del self._value[key]
+			else: del self[key[0]][key[1]]
+			self.mark_dirty()
+		else: raise ValueError("Keys must be string")
 
-	def __len__(self): return len(self.value)
-	def __str__(self): return f"Configuration({str(self._value)})"
-
-
-	def get(self, key, default=None):
-		""" Get the value bound to given key, returns 'default' argument if nothing bound """
-		try: return self[key]
-		except KeyError: return default
-
-	def get_or_create(self, key, create_value=None):
-		""" Same as get, but when a key wasn't found the second argument (if not None) is bound to that key """
-		res = self.get(key)
-		if res is None:
-			if create_value is not None: self[key] = create_value
-			return self.get(key)
-		else: return res
+	def update(self, other):
+		""" Updates the keys from given dictionary or object
+			(it must have an 'items' method that works similar as the dictionary method) """
+		for k, v in other.items(): self[k] = v
 
 	def keys(self):
 		""" Get iterator with all configured keys (return type is equal to dictionary 'keys') """
 		return self.value.keys()
+
 	def values(self):
 		""" Get iterator with all configured values (return type is equal to dictionary 'values')  """
 		return self.value.values()
+
 	def items(self):
 		""" Get iterator with all configured key-value pairs (return type is equal to dictionary 'items') """
 		return self.value.items()
 
-	@property
-	def is_set(self): return len(self._value) > 0
-	@property
-	def value(self): return { k: v.value for k,v in self._value.items() if v.is_set }
-	@property
-	def dirty(self): return self._dirty
+	def get(self, key, default=None):
+		""" Safe alternative for getting a key, returns 'default' when the key wasn't found instead of raising an error """
+		try: return self[key]
+		except KeyError: return default
+
+	def get_or_create(self, key, create_value=None):
+		""" Same as get, but when a key wasn't found the 'create_value' (if given) is set to that value """
+		res = self.get(key)
+		if res is None:
+			self[key] = create_value
+			return self.get(key)
+		else: return res
+
+	def _to_json(self): return {k: v._to_json() for k, v in self.items()}
+	def __len__(self): return len(self.value)
+	def __str__(self): return f"Configuration(read_only={self.read_only}, value=[{', '.join([f'{k}: {str(v)}' for k, v in self.items()])}]"
 
 
 class ConfigurationFile(Configuration):
@@ -121,7 +124,7 @@ class ConfigurationFile(Configuration):
 	cfg_version = "1b"
 	def __init__(self, filepath, cfg_values=None, readonly=False):
 		self._file = filepath
-		Configuration.__init__(self, cfg_values=cfg_values, read_only=readonly)
+		Configuration.__init__(self, value=cfg_values, read_only=readonly)
 		self._initialvalues = self._value
 		self._file_exists = False
 		self.load()
@@ -130,8 +133,7 @@ class ConfigurationFile(Configuration):
 		""" (Re)load configuration from disk """
 		if self._initialvalues: self._value = self._initialvalues
 		fl = self._read_file()
-		if fl:
-			for key, option in fl.items(): self[key] = option
+		if fl: self.update(fl)
 		self._dirty = False
 
 	@property
@@ -146,11 +148,11 @@ class ConfigurationFile(Configuration):
 				try: return json.load(file)
 				except json.JSONDecodeError as e:
 					print("ERROR", "Parsing configuration file '{}':".format(self._file), e)
-				raise ValueError("JSON parsing error:" + str(e))
+					raise ValueError("JSON parsing error:" + str(e))
 		except FileNotFoundError: print("VERBOSE", "Configuration file '{}' not found".format(self._file))
 
 	def save(self):
-		if self.read_only: raise PermissionError("Cannot write configuration file when it is set to read only")
+		if self.read_only: raise PermissionError("Cannot write a read only configuration")
 
 		print("VERBOSE", "Trying to save file '{}'".format(self._file))
 		if self.dirty or not self._file_exists:
@@ -158,6 +160,7 @@ class ConfigurationFile(Configuration):
 				print("VERBOSE", "Writing configuration to file '{}'".format(self._file))
 				self["_version"] = self.cfg_version
 				import json
-				json.dump(self.value, file, indent=5)
+				json.dump(self._to_json(), file, indent=5)
 				file.flush()
+				self._file_exists = True
 				self._dirty = False
