@@ -1,6 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from . import pywindow, pyevents, pyimage
+from . import pywindow, pyevents, pyimage, pylayout
 
 def valid_check(element):
     if not isinstance(element, PyElement) and not isinstance(element, pywindow.PyWindow): raise ValueError("Parent must be an instance of PyElement or PyWindow")
@@ -10,9 +10,12 @@ class PyElement:
         valid_check(container)
         self._container: pywindow.PyWindow = container
         self._element_id = element_id
-        self._qt = None
+        if not hasattr(self, "_qt"): self._qt = None
         self._cfg = container.configuration.get_or_create(f"children::{element_id}", {})
         if not hasattr(self, "_event_handler"): self._event_handler = pyevents.PyElementEvents()
+
+    @property
+    def qt_element(self): return self._qt
 
     @property
     def element_id(self): return self._element_id
@@ -31,17 +34,17 @@ class PyElement:
     def accept_input(self): return True
 
     @property
-    def width(self): return self._qt.width()
+    def width(self): return self.qt_element.width()
     @width.setter
-    def width(self, value): self._qt.setFixedWidth(value)
+    def width(self, value): self.qt_element.setFixedWidth(value)
     def with_width(self, value):
         self.width = value
         return self
 
     @property
-    def height(self): return self._qt.height()
+    def height(self): return self.qt_element.height()
     @height.setter
-    def height(self, value): self._qt.setFixedHeight(value)
+    def height(self, value): self.qt_element.setFixedHeight(value)
     def with_height(self, value):
         self.height = value
         return self
@@ -56,9 +59,69 @@ class PyFrame(PyElement):
      General element class that can contain child widgets
      No interaction event
     """
-    def __init__(self, parent, element_id):
+    def __init__(self, parent, element_id, layout="grid"):
         PyElement.__init__(self, parent, element_id)
-        self._qt = QtWidgets.QWidget(parent._qt)
+        if not hasattr(self, "_qt") or self._qt is None: self._qt = QtWidgets.QWidget(parent._qt)
+        self._children = {}
+        try: self._layout = pylayout.layouts[layout](self.qt_element)
+        except KeyError: self._layout = None
+        if not self._layout: raise ValueError("Must specify a valid layout type")
+        self.qt_element.setLayout(self._layout.qt_layout)
+
+    @property
+    def layout(self): return self._layout
+
+    def add_element(self, element_id=None, element=None, element_class=None, **layout_kwargs):
+        if element is None:
+            if not element_id: raise ValueError("Must specify an element id")
+            elif not element_class: raise ValueError("Must specify an element class or element instance")
+            else: element = element_class(self, element_id)
+        else: element_id = element.element_id
+
+        self.remove_element(element_id)
+        self._layout.insert_element(element, **layout_kwargs)
+        self._children[element_id] = element
+        return self._children[element_id]
+    __setitem__ = add_element
+
+    def get_element(self, element_id) -> PyElement:
+        return self._children[element_id]
+    __getitem__ = get_element
+
+    def find_element(self, element_id) -> PyElement:
+        return self._children.get(element_id)
+
+    def remove_element(self, element_id) -> bool:
+        element_id = element_id.lower()
+        element = self.find_element(element_id)
+        if element:
+            element.qt_element.close()
+            del self._children[element_id]
+            return True
+        else: return False
+
+class PyScrollableFrame(PyFrame):
+    def __init__(self, parent, element_id, layout="grid"):
+        self._qt = QtWidgets.QScrollArea(parent.qt_element)
+        self._content = QtWidgets.QWidget()
+        PyFrame.__init__(self, parent, element_id, layout)
+        self._qt.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
+        self._qt.setWidgetResizable(True)
+        self._qt.setWidget(self._content)
+
+    @property
+    def qt_element(self): return self._content
+
+class PyLabelFrame(PyFrame):
+    def __init__(self, parent, element_id, layout="grid"):
+        self._qt = QtWidgets.QGroupBox(parent.qt_element)
+        PyFrame.__init__(self, parent, element_id, layout)
+        pass
+
+    @property
+    def label(self): return self._qt.title()
+    @label.setter
+    def label(self, txt): self._qt.setTitle(txt)
 
 
 class PyTextLabel(PyElement):
@@ -67,23 +130,22 @@ class PyTextLabel(PyElement):
      No interaction event
     """
     def __init__(self, parent, element_id):
-        print(parent, element_id)
         PyElement.__init__(self, parent, element_id)
-        self._qt = QtWidgets.QLabel(parent._qt)
+        self._qt = QtWidgets.QLabel(parent.qt_element)
         self._img = None
-        self._qt.setAlignment(QtCore.Qt.AlignLeft)
+        self.qt_element.setAlignment(QtCore.Qt.AlignLeft)
 
     @property
-    def display_text(self): return self._qt.text()
+    def display_text(self): return self.qt_element.text()
     @display_text.setter
-    def display_text(self, txt): self._qt.setText(txt)
+    def display_text(self, txt): self.qt_element.setText(txt)
     def with_text(self, txt):
         self.display_text = txt
         return self
     text = display_text
 
     @property
-    def display_image(self): return self._qt.pixmap() is not None or self._qt.movie() is not None
+    def display_image(self): return self.qt_element.pixmap() is not None or self.qt_element.movie() is not None
     @display_image.setter
     def display_image(self, image): pyimage.PyImage(self, file=image)
     def with_image(self, *args):
@@ -93,19 +155,19 @@ class PyTextLabel(PyElement):
     def set_image(self, img):
         self._img = img
         if img.animated:
-            self._qt.setMovie(img.data)
+            self.qt_element.setMovie(img.data)
             img.start()
-        else: self._qt.setPixmap(img.data)
+        else: self.qt_element.setPixmap(img.data)
 
     @property
-    def wrapping(self): return self._qt.wordWrap()
+    def wrapping(self): return self.qt_element.wordWrap()
     @wrapping.setter
-    def wrapping(self, wrap): self._qt.setWordWrap(wrap)
+    def wrapping(self, wrap): self.qt_element.setWordWrap(wrap)
 
     _alignments = {"left": QtCore.Qt.AlignLeft, "center": QtCore.Qt.AlignHCenter, "right": QtCore.Qt.AlignRight}
     def set_alignment(self, align):
         """ Set alignment for this label, must be either 'left', 'center' or 'right' """
-        self._qt.setAlignment(self._alignments[align])
+        self.qt_element.setAlignment(self._alignments[align])
 
 
 class PyTextInput(PyElement):
@@ -116,39 +178,39 @@ class PyTextInput(PyElement):
     def __init__(self, parent, element_id):
         self._event_handler = pyevents.PyElementInputEvent()
         PyElement.__init__(self, parent, element_id)
-        self._qt = QtWidgets.QLineEdit(parent._qt)
-        self._qt.keyPressEvent = self._on_key_press
-        self._qt.returnPressed.connect(lambda : self.events.call_event("interact"))
+        self._qt = QtWidgets.QLineEdit(parent.qt_element)
+        self.qt_element.keyPressEvent = self._on_key_press
+        self.qt_element.returnPressed.connect(lambda : self.events.call_event("interact"))
 
     @property
-    def accept_input(self): return self._qt.isReadOnly()
+    def accept_input(self): return self.qt_element.isReadOnly()
     @accept_input.setter
-    def accept_input(self, value): self._qt.setReadOnly(not value)
+    def accept_input(self, value): self.qt_element.setReadOnly(not value)
     def with_accept_input(self, value):
         self.accept_input = not value
         return self
 
     @property
-    def format_str(self): return self._qt.inputMask()
+    def format_str(self): return self.qt_element.inputMask()
     @format_str.setter
-    def format_str(self, rex): self._qt.setInputMask(rex if rex is not None else "")
+    def format_str(self, rex): self.qt_element.setInputMask(rex if rex is not None else "")
     def with_format_str(self, rex):
         self.format_str = rex
         return self
 
     @property
-    def value(self): return self._qt.text()
+    def value(self): return self.qt_element.text()
     @value.setter
-    def value(self, val): self._qt.setText(val)
+    def value(self, val): self.qt_element.setText(val)
     def with_value(self, val):
         self.value = val
         return self
     display_text = text = value
 
     @property
-    def max_length(self): return self._qt.maxLength()
+    def max_length(self): return self.qt_element.maxLength()
     @max_length.setter
-    def max_length(self, ln): self._qt.setMaxLength(ln)
+    def max_length(self, ln): self.qt_element.setMaxLength(ln)
     def with_max_length(self, ln):
         self.max_length = ln
         return self
@@ -162,7 +224,7 @@ class PyTextInput(PyElement):
         elif key_code == QtCore.Qt.Key_Down:
             res = self._event_handler.call_event("history", direction=1)
             if res == pyevents.EventHandler.block_action: return
-        QtWidgets.QLineEdit.keyPressEvent(self._qt, key)
+        QtWidgets.QLineEdit.keyPressEvent(self.qt_element, key)
 
 
 class PyCheckbox(PyElement):
@@ -172,27 +234,27 @@ class PyCheckbox(PyElement):
     """
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
-        self._qt = QtWidgets.QCheckBox(parent._qt)
-        self._qt.clicked().connect(lambda :self.events.call_event("interact"))
+        self._qt = QtWidgets.QCheckBox(parent.qt_element)
+        self.qt_element.clicked.connect(lambda :self.events.call_event("interact"))
 
     @property
-    def display_text(self): return self._qt.text()
+    def display_text(self): return self.qt_element.text()
     @display_text.setter
-    def display_text(self, txt): self._qt.setText(txt)
+    def display_text(self, txt): self.qt_element.setText(txt)
     def with_text(self, txt):
         self.display_text = txt
         return self
     text = display_text
 
     @property
-    def checked(self): return self._qt.isChecked()
+    def checked(self): return self.qt_element.isChecked()
     @checked.setter
-    def checked(self, checked): self._qt.setChecked(checked)
+    def checked(self, checked): self.qt_element.setChecked(checked)
 
     @property
-    def accept_input(self): return self._qt.isCheckable()
+    def accept_input(self): return self.qt_element.isCheckable()
     @accept_input.setter
-    def accept_input(self, check): self._qt.setCheckable(check)
+    def accept_input(self, check): self.qt_element.setCheckable(check)
 
 
 class PyButton(PyElement):
@@ -202,26 +264,26 @@ class PyButton(PyElement):
     """
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
-        self._qt = QtWidgets.QPushButton(parent._qt)
-        self._qt.clicked.connect(lambda : self.events.call_event("interact"))
+        self._qt = QtWidgets.QPushButton(parent.qt_element)
+        self.qt_element.clicked.connect(lambda : self.events.call_event("interact"))
         self._click_cb = self._img = None
 
     @property
-    def accept_input(self): return self._qt.isEnabled()
+    def accept_input(self): return self.qt_element.isEnabled()
     @accept_input.setter
-    def accept_input(self, inpt): self._qt.setEnabled(inpt)
+    def accept_input(self, inpt): self.qt_element.setEnabled(inpt)
 
     @property
-    def display_text(self): return self._qt.text()
+    def display_text(self): return self.qt_element.text()
     @display_text.setter
-    def display_text(self, txt): self._qt.setText(txt)
+    def display_text(self, txt): self.qt_element.setText(txt)
     def with_text(self, txt):
         self.display_text = txt
         return self
     text = display_text
 
     @property
-    def display_image(self): return self._qt.icon() is not None
+    def display_image(self): return self.qt_element.icon() is not None
     @display_image.setter
     def display_image(self, image): pyimage.PyImage(self, file=image)
     def with_image(self, *args):
@@ -230,7 +292,7 @@ class PyButton(PyElement):
 
     def set_image(self, img):
         self._img = QtGui.QIcon(img.data)
-        self._qt.setIcon(self._img)
+        self.qt_element.setIcon(self._img)
 
 
 class PyTextField(PyElement):
@@ -241,48 +303,48 @@ class PyTextField(PyElement):
     def __init__(self, parent, element_id):
         self._event_handler = pyevents.PyElementInputEvent()
         PyElement.__init__(self, parent, element_id)
-        self._qt = QtWidgets.QTextEdit(parent._qt)
-        self._qt.keyPressEvent = self._on_key_press
+        self._qt = QtWidgets.QTextEdit(parent.qt_element)
+        self.qt_element.keyPressEvent = self._on_key_press
         self.undo = False
 
     @property
-    def accept_input(self): return self._qt.isReadOnly()
+    def accept_input(self): return self.qt_element.isReadOnly()
     @accept_input.setter
-    def accept_input(self, value): self._qt.setReadOnly(not value)
+    def accept_input(self, value): self.qt_element.setReadOnly(not value)
     def with_accept_input(self, value):
         self.accept_input = value
         return self
 
     @property
-    def undo(self): return self._qt.isUndoRedoEnabled()
+    def undo(self): return self.qt_element.isUndoRedoEnabled()
     @undo.setter
-    def undo(self, do): self._qt.setUndoRedoEnabled(do)
+    def undo(self, do): self.qt_element.setUndoRedoEnabled(do)
 
     @property
-    def display_text(self): return self._qt.toPlainText()
+    def display_text(self): return self.qt_element.toPlainText()
     @display_text.setter
-    def display_text(self, txt): self._qt.setPlainText(txt)
+    def display_text(self, txt): self.qt_element.setPlainText(txt)
     def with_text(self, txt):
         self.display_text = txt
         return self
     text = display_text
 
     @property
-    def cursor(self): return self._qt.textCursor().position()
+    def cursor(self): return self.qt_element.textCursor().position()
     @cursor.setter
     def cursor(self, value):
-        cursor = self._qt.textCursor()
+        cursor = self.qt_element.textCursor()
         cursor.setPosition(value)
-        self._qt.setTextCursor(cursor)
+        self.qt_element.setTextCursor(cursor)
 
     def insert(self, index, text):
         """ Insert text into the given position (ignores 'accept_input' property) """
         revert = not self.accept_input
         if revert: self.accept_input = True
-        cursor = self._qt.textCursor()
+        cursor = self.qt_element.textCursor()
         cursor.setPosition(index)
         cursor.insertText(text)
-        self._qt.setTextCursor(cursor)
+        self.qt_element.setTextCursor(cursor)
         if revert: self.accept_input = False
 
     # todo: insert image into text field
@@ -294,30 +356,30 @@ class PyTextField(PyElement):
         """ Delete text between the given positions (ignores 'accept_input' property) """
         revert = not self.accept_input
         if revert: self.accept_input = True
-        cursor = self._qt.textCursor()
+        cursor = self.qt_element.textCursor()
         cursor.setPosition(index1)
 
         diff = index2 - index1 if index2 else 1
         for _ in range(diff): cursor.deleteChar()
 
-        self._qt.setTextCursor(cursor)
+        self.qt_element.setTextCursor(cursor)
         if revert: self.accept_input = False
 
     def position(self, search_text):
         """ Get the exact coordinates in this text field, or emtpy string if nothing found """
-        return self._qt.find(search_text)
+        return self.qt_element.find(search_text)
 
     def show(self, position):
         """ Make sure that the given line is visible on screen """
-        cursor = self._qt.textCursor()
+        cursor = self.qt_element.textCursor()
         cursor.setPosition(position)
-        self._qt.setTextCursor(cursor)
+        self.qt_element.setTextCursor(cursor)
 
     def clear_selection(self):
         """ Remove selection in this text field (has no effect if nothing was selected) """
-        cursor = self._qt.textCursor()
+        cursor = self.qt_element.textCursor()
         cursor.clearSelection()
-        self._qt.setTextCursor(cursor)
+        self.qt_element.setTextCursor(cursor)
 
     # QTextEdit.keyPressEvent override
     def _on_key_press(self, key):
@@ -328,7 +390,7 @@ class PyTextField(PyElement):
         elif key_code == QtCore.Qt.Key_Down:
             res = self._event_handler.call_event("history", direction=1)
             if res == self._event_handler.block_action: return
-        QtWidgets.QTextEdit.keyPressEvent(self._qt, key)
+        QtWidgets.QTextEdit.keyPressEvent(self.qt_element, key)
 
 class PyProgessbar(PyElement):
     """
@@ -337,31 +399,31 @@ class PyProgessbar(PyElement):
     """
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
-        self._qt = QtWidgets.QProgressBar(parent._qt)
-        self._qt.setTextVisible(False)
+        self._qt = QtWidgets.QProgressBar(parent.qt_element)
+        self.qt_element.setTextVisible(False)
 
     @property
-    def progress(self): return self._qt.value()
+    def progress(self): return self.qt_element.value()
     @progress.setter
-    def progress(self, value): self._qt.setValue(value)
+    def progress(self, value): self.qt_element.setValue(value)
 
     @property
-    def horizontal(self): return self._qt.orientation() == QtCore.Qt.Horizontal
+    def horizontal(self): return self.qt_element.orientation() == QtCore.Qt.Horizontal
     @horizontal.setter
-    def horizontal(self, value): self._qt.setOrientation(QtCore.Qt.Horizontal if value else QtCore.Qt.Vertical)
+    def horizontal(self, value): self.qt_element.setOrientation(QtCore.Qt.Horizontal if value else QtCore.Qt.Vertical)
 
     @property
-    def minimum(self): return self._qt.minimum()
+    def minimum(self): return self.qt_element.minimum()
     @minimum.setter
-    def minimum(self, value): self._qt.setMinimum(value)
+    def minimum(self, value): self.qt_element.setMinimum(value)
     def with_minimum(self, value):
         self.minimum = value
         return self
 
     @property
-    def maximum(self): return self._qt.maximum()
+    def maximum(self): return self.qt_element.maximum()
     @maximum.setter
-    def maximum(self, value): self._qt.setMaximum(value)
+    def maximum(self, value): self.qt_element.setMaximum(value)
     def with_maximum(self, value):
         self.maximum = value
         return self
@@ -374,7 +436,7 @@ class PyScrollbar(PyElement):
     """
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
-        self._qt = QtWidgets.QScrollBar(parent._qt)
+        self._qt = QtWidgets.QScrollBar(parent.qt_element)
 
 class PyItemlist(PyElement):
     """
@@ -383,7 +445,7 @@ class PyItemlist(PyElement):
     """
     def __init__(self, parent, element_id):
         PyElement.__init__(self, parent, element_id)
-        self._qt = QtWidgets.QListView(parent._qt)
-        self._qt.setUniformItemSizes(True)
-        self._qt.setViewMode(QtWidgets.QListView.ListMode)
-        self._qt.setFlow(QtWidgets.QListView.TopToBottom)
+        self._qt = QtWidgets.QListView(parent.qt_element)
+        self.qt_element.setUniformItemSizes(True)
+        self.qt_element.setViewMode(QtWidgets.QListView.ListMode)
+        self.qt_element.setFlow(QtWidgets.QListView.TopToBottom)

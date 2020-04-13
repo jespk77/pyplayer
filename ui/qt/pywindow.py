@@ -57,20 +57,21 @@ class PyWindow:
         self._parent = parent
         self._window_id = window_id.lower()
         self._qt = _MainWindowQt()
+        self.hidden = True
         self._elements = {}
         self._scheduled_tasks = {}
         self._children = weakref.WeakValueDictionary()
         self._event_handler = pyevents.PyWindowEvents()
         self._cfg = pyconfiguration.ConfigurationFile(f".cfg/{window_id}")
 
-        self._qt.destroy_cb = self._on_window_destroy
-        self._qt.close_cb = lambda : self.events.call_event("window_close")
-        self._qt.resize_cb = lambda width, height: self.events.call_event("window_resize", width=width, height=height)
+        self.qt_element.destroy_cb = self._on_window_destroy
+        self.qt_element.close_cb = lambda : self.events.call_event("window_close")
+        self.qt_element.resize_cb = lambda width, height: self.events.call_event("window_resize", width=width, height=height)
 
-        try: self._layout = pylayout.layouts[layout](self._qt)
+        try: self._layout = pylayout.layouts[layout](self.qt_element)
         except KeyError: self._layout = None
         if not self._layout: raise ValueError(f"Unknown layout: '{layout}'")
-        self._qt.setLayout(self._layout.qt_layout)
+        self.qt_element.setLayout(self._layout.qt_layout)
 
         self.title = "PyWindow"
         try:
@@ -86,8 +87,10 @@ class PyWindow:
 
     def make_borderless(self):
         """ Makes this window borderless, if set the user cannot move or resize the window via the window system """
-        self._qt.setWindowFlags(QtCore.Qt.FramelessWindowHint)
+        self.qt_element.setWindowFlags(QtCore.Qt.FramelessWindowHint)
 
+    @property
+    def qt_element(self): return self._qt
     @property
     def window_id(self): return self._window_id
     @property
@@ -99,50 +102,50 @@ class PyWindow:
     cfg = configuration
 
     @property
-    def title(self): return self._qt.windowTitle()
+    def title(self): return self.qt_element.windowTitle()
     @title.setter
-    def title(self, value): self._qt.setWindowTitle(value)
+    def title(self, value): self.qt_element.setWindowTitle(value)
 
     @property
-    def icon(self): return self._qt.windowIcon() is not None
+    def icon(self): return self.qt_element.windowIcon() is not None
     @icon.setter
-    def icon(self, icon): self._qt.setWindowIcon(QtGui.QIcon(icon))
+    def icon(self, icon): self.qt_element.setWindowIcon(QtGui.QIcon(icon))
 
     @property
-    def hidden(self): return self._qt.isHidden()
+    def hidden(self): return self.qt_element.isHidden()
     @hidden.setter
-    def hidden(self, hide): self._qt.setHidden(hide)
+    def hidden(self, hide): self.qt_element.setHidden(hide)
 
     def center_window(self, size_x=None, size_y=None, fit_to_size=False):
         """
             Center this window around given resolution, leave values blank to use the current resolution
             If 'fit_to_size' is True, the window will be fixed to given resolution (only if 'size_x' or 'size_y' are not empty)
         """
-        if size_x is None: size_x = self._qt.height()
-        elif fit_to_size: self._qt.setFixedHeight(size_x)
-        if size_y is None: size_y = self._qt.width()
-        elif fit_to_size: self._qt.setFixedWidth(size_y)
+        if size_x is None: size_x = self.qt_element.height()
+        elif fit_to_size: self.qt_element.setFixedHeight(size_x)
+        if size_y is None: size_y = self.qt_element.width()
+        elif fit_to_size: self.qt_element.setFixedWidth(size_y)
 
         center = QtWidgets.QDesktopWidget().availableGeometry().center()
-        geometry = self._qt.frameGeometry()
+        geometry = self.qt_element.frameGeometry()
         geometry.moveTo(center.x() - (.5 * size_x), center.y() - (.5 * size_y))
-        self._qt.setGeometry(geometry)
+        self.qt_element.setGeometry(geometry)
 
     def _on_window_destroy(self):
         for c in self._children.values(): c.destroy()
         self.events.call_event("window_destroy")
 
-    def add_element(self, element_id, element=None, element_class=None, **layout_kwargs):
+    def add_element(self, element_id=None, element=None, element_class=None, **layout_kwargs):
         """ Add new element to this window, closes previously opened element with the same id (if open) """
-        element_id = element_id.lower()
-        self.remove_element(element_id)
-
         if not element:
             if not element_class: raise ValueError("Must specify an element type")
+            elif not element_id: raise ValueError("Must specify an element id")
             elif not issubclass(element_class, pyelement.PyElement): raise TypeError("'element_class' must be a PyElement class")
             element = element_class(self, element_id)
-        elif not isinstance(element, pyelement.PyElement): raise TypeError("'element' parameter must be a PyElement instance")
+        elif isinstance(element, pyelement.PyElement): element_id = element.element_id
+        else: raise TypeError("'element' parameter must be a PyElement instance")
 
+        self.remove_element(element_id)
         self._layout.insert_element(element, **layout_kwargs)
         self._elements[element_id] = element
         return self._elements[element_id]
@@ -164,7 +167,7 @@ class PyWindow:
         element_id = element_id.lower()
         element = self.find_element(element_id)
         if element:
-            element._qt.close()
+            element.qt_element.close()
             del self._elements[element_id]
             return True
         return False
@@ -178,14 +181,17 @@ class PyWindow:
         if not window:
             if not window_id: raise ValueError("Must specify a window_id")
             window_id = window_id.lower()
+            self.close_window(window_id)
             if not window_class: window_class = PyWindow
             elif not issubclass(window_class, PyWindow): raise TypeError("'window_class' parameter must be a PyWindow class")
             window = window_class(self, window_id)
-        elif isinstance(window, PyWindow): window_id = window.window_id
+        elif isinstance(window, PyWindow):
+            window_id = window.window_id
+            self.close_window(window_id)
         else: raise TypeError("'window' parameter must be a PyWindow instance")
 
         self._children[window_id] = window
-        self._children[window_id]._qt.show()
+        self._children[window_id].qt_element.show()
         return self._children[window_id]
 
     def get_window(self, window_id):
@@ -204,7 +210,7 @@ class PyWindow:
 
     def destroy(self):
         """ Closes this window along with any open child windows """
-        self._qt.close()
+        self.qt_element.close()
 
     def has_task(self, task_id, running=False):
         """
@@ -271,5 +277,5 @@ class RootPyWindow(PyWindow):
 
     def start(self):
         """ Run the application, this method will keep running until the root window is closed """
-        self._qt.show()
+        self.qt_element.show()
         self._app.exec()
