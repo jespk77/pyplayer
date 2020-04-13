@@ -17,7 +17,7 @@ class ConfigurationItem:
 	def value(self): return self._value
 	@value.setter
 	def value(self, val):
-		if self.read_only: raise RuntimeError("This attribute was marked as read only and cannot be updated!")
+		if self.read_only: raise PermissionError("This attribute was marked as read only and cannot be updated!")
 		self._value = val
 
 	def __len__(self):
@@ -27,7 +27,7 @@ class ConfigurationItem:
 	def __getitem__(self, item): raise AttributeError("ConfigurationItem is not a valid container!")
 	def __setitem__(self, key, value): self.__getitem__(key)
 	def __delitem__(self, key): self.__getitem__(key)
-	def __str__(self): return "ConfigurationItem({!s})".format(self._value)
+	def __str__(self): return f"ConfigurationItem({self.value})"
 
 
 class Configuration(ConfigurationItem):
@@ -40,7 +40,7 @@ class Configuration(ConfigurationItem):
 
 
 	def _getitem(self, key):
-		if not isinstance(key, str): raise ValueError("Getting keys must be given as string")
+		if not isinstance(key, str): raise ValueError("Keys must be strings")
 
 		key = key.split(separator, maxsplit=1)
 		if len(key) > 1: return self._value.__getitem__(key[0])._getitem(key[1])
@@ -58,7 +58,7 @@ class Configuration(ConfigurationItem):
 
 	def __setitem__(self, key, value):
 		if self.read_only: raise RuntimeError("Cannot update this configuration since it was set to read-only!")
-		elif not isinstance(key, str): raise ValueError("Getting keys must be given as string!")
+		elif not isinstance(key, str): raise ValueError("Keys must be strings")
 
 		key = key.split(separator, maxsplit=1)
 		if len(key) == 1:
@@ -82,7 +82,7 @@ class Configuration(ConfigurationItem):
 		self._dirty = True
 
 	def __len__(self): return len(self.value)
-	def __str__(self): return "Configuration({!s})".format(self._value)
+	def __str__(self): return f"Configuration({str(self._value)})"
 
 
 	def get(self, key, default=None):
@@ -95,7 +95,6 @@ class Configuration(ConfigurationItem):
 		res = self.get(key)
 		if res is None:
 			if create_value is not None: self[key] = create_value
-			else: self[key] = Configuration()
 			return self.get(key)
 		else: return res
 
