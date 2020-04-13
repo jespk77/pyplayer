@@ -1,12 +1,11 @@
 from ui.qt import pyelement, pywindow, pylauncher
-import sys
 
 resolution = 225, 325
 process_command = pylauncher.process_command
 
 class PySplashWindow(pywindow.RootPyWindow):
     def __init__(self):
-        pywindow.RootPyWindow.__init__(self)
+        pywindow.RootPyWindow.__init__(self, "splash")
         self._cfg = None
 
         self.title = "Initializing PyPlayer"

@@ -9,8 +9,8 @@ class PyPlayerCloseReason(enum.Enum):
     MODULE_CONFIGURE = 2
 
 class PyPlayer(pywindow.PyWindow):
-    def __init__(self, root):
-        pywindow.PyWindow.__init__(self, root)
+    def __init__(self, root, window_id):
+        pywindow.PyWindow.__init__(self, root, window_id)
         self.layout.column(1, minsize=30, weight=1)
         self.layout.row(3, minsize=100, weight=1)
 
@@ -39,9 +39,6 @@ class PyPlayer(pywindow.PyWindow):
         header_center.set_alignment("center")
         header_right.text = "right"
 
-        progressbar: pyelement.PyProgessbar = self.add_element("progress_bar", element_class=pyelement.PyProgessbar, row=1, columnspan=3)
-        progressbar.minimum, progressbar.maximum = 0, 100
-
         console = self.add_element("console", element_class=pyelement.PyTextField, row=3, columnspan=3)
         console.accept_input = False
 
@@ -60,10 +57,11 @@ class PyPlayer(pywindow.PyWindow):
             return input.events.block_action
 
     def _on_command_enter(self, cmd):
-        self["console"].text += f"{cmd}\n"
-        self._command_history.add(cmd)
-        self["console_input"].accept_input = False
-        self._interp.put_command(cmd)
+        if cmd:
+            self["console"].text += f"{cmd}\n"
+            self._command_history.add(cmd)
+            self["console_input"].accept_input = False
+            self._interp.put_command(cmd)
 
     def _insert_reply(self, reply, tags=None, prefix=None, text=None):
         if not prefix: prefix = "> "
