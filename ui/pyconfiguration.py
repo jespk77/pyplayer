@@ -138,7 +138,7 @@ class ConfigurationFile(Configuration):
 	def filename(self): return self._file
 
 	def _read_file(self):
-		print("INFO", "Reading configuration file data from '{}'".format(self.filename))
+		print("VERBOSE", "Reading configuration file data from '{}'".format(self.filename))
 		try:
 			with open(self._file, "r") as file:
 				self._file_exists = True
@@ -147,15 +147,15 @@ class ConfigurationFile(Configuration):
 				except json.JSONDecodeError as e:
 					print("ERROR", "Parsing configuration file '{}':".format(self._file), e)
 				raise ValueError("JSON parsing error:" + str(e))
-		except FileNotFoundError: print("INFO", "Configuration file '{}' not found".format(self._file))
+		except FileNotFoundError: print("VERBOSE", "Configuration file '{}' not found".format(self._file))
 
 	def save(self):
 		if self.read_only: raise PermissionError("Cannot write configuration file when it is set to read only")
 
-		print("INFO", "Trying to save file '{}'".format(self._file))
+		print("VERBOSE", "Trying to save file '{}'".format(self._file))
 		if self.dirty or not self._file_exists:
 			with open(self._file, "w") as file:
-				print("INFO", "Writing configuration to file '{}'".format(self._file))
+				print("VERBOSE", "Writing configuration to file '{}'".format(self._file))
 				self["_version"] = self.cfg_version
 				import json
 				json.dump(self.value, file, indent=5)
