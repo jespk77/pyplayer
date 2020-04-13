@@ -201,7 +201,7 @@ class PyTextInput(PyElement):
     @property
     def value(self): return self.qt_element.text()
     @value.setter
-    def value(self, val): self.qt_element.setText(val)
+    def value(self, val): self.qt_element.setText(str(val))
     def with_value(self, val):
         self.value = val
         return self
@@ -252,9 +252,9 @@ class PyCheckbox(PyElement):
     def checked(self, checked): self.qt_element.setChecked(checked)
 
     @property
-    def accept_input(self): return self.qt_element.isCheckable()
+    def accept_input(self): return self.qt_element.enabled()
     @accept_input.setter
-    def accept_input(self, check): self.qt_element.setCheckable(check)
+    def accept_input(self, check): self.qt_element.setEnabled(check)
 
 
 class PyButton(PyElement):
