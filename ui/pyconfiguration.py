@@ -92,9 +92,12 @@ class Configuration(ConfigurationItem):
 
 	def get_or_create(self, key, create_value=None):
 		""" Same as get, but when a key wasn't found the second argument (if not None) is bound to that key """
-		if self.get(key) is None and create_value is not None: self[key] = create_value
-		return self.get(key)
-
+		res = self.get(key)
+		if res is None:
+			if create_value is not None: self[key] = create_value
+			else: self[key] = Configuration()
+			return self.get(key)
+		else: return res
 
 	def keys(self):
 		""" Get iterator with all configured keys (return type is equal to dictionary 'keys') """

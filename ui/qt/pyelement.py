@@ -11,17 +11,16 @@ class PyElement:
         self._container: pywindow.PyWindow = container
         self._element_id = element_id
         self._qt = None
+        self._cfg = container.configuration.get_or_create(f"children::{element_id}")
         if not hasattr(self, "_event_handler"): self._event_handler = pyevents.PyElementEvents()
 
     @property
     def element_id(self): return self._element_id
     widget_id = element_id
 
-    # todo: element configuration
     @property
-    def configuration(self): return None
-    def load_configuration(self):
-        pass
+    def configuration(self): return self._cfg
+    cfg = configuration
 
     @property
     def layout(self): raise TypeError(f"Layout elements not supported for '{__name__}'")
@@ -57,8 +56,8 @@ class PyFrame(PyElement):
      General element class that can contain child widgets
      No interaction event
     """
-    def __init__(self, parent, id):
-        PyElement.__init__(self, parent, id)
+    def __init__(self, parent, element_id):
+        PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QWidget(parent._qt)
 
 
@@ -67,8 +66,9 @@ class PyTextLabel(PyElement):
      Element for displaying a line of text and/or an image
      No interaction event
     """
-    def __init__(self, parent, id):
-        PyElement.__init__(self, parent, id)
+    def __init__(self, parent, element_id):
+        print(parent, element_id)
+        PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QLabel(parent._qt)
         self._img = None
         self._qt.setAlignment(QtCore.Qt.AlignLeft)
@@ -123,9 +123,9 @@ class PyTextInput(PyElement):
     @property
     def accept_input(self): return self._qt.isReadOnly()
     @accept_input.setter
-    def accept_input(self, value): self._qt.setReadOnly(value)
+    def accept_input(self, value): self._qt.setReadOnly(not value)
     def with_accept_input(self, value):
-        self.accept_input = value
+        self.accept_input = not value
         return self
 
     @property
@@ -242,6 +242,7 @@ class PyTextField(PyElement):
         self._event_handler = pyevents.PyElementInputEvent()
         PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QTextEdit(parent._qt)
+        self._qt.keyPressEvent = self._on_key_press
         self.undo = False
 
     @property
@@ -317,6 +318,17 @@ class PyTextField(PyElement):
         cursor = self._qt.textCursor()
         cursor.clearSelection()
         self._qt.setTextCursor(cursor)
+
+    # QTextEdit.keyPressEvent override
+    def _on_key_press(self, key):
+        key_code = key.key()
+        if key_code == QtCore.Qt.Key_Up:
+            res = self._event_handler.call_event("history", direction=-1)
+            if res == self._event_handler.block_action: return
+        elif key_code == QtCore.Qt.Key_Down:
+            res = self._event_handler.call_event("history", direction=1)
+            if res == self._event_handler.block_action: return
+        QtWidgets.QTextEdit.keyPressEvent(self._qt, key)
 
 class PyProgessbar(PyElement):
     """

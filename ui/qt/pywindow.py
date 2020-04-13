@@ -1,7 +1,7 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 import sys, weakref
 
-from . import pyelement, pyevents, pylayout, pynetwork, log_exception
+from . import pyelement, pyevents, pylayout, log_exception
 from .. import pyconfiguration
 
 class _ScheduledTask(QtCore.QTimer):
@@ -61,6 +61,7 @@ class PyWindow:
         self._scheduled_tasks = {}
         self._children = weakref.WeakValueDictionary()
         self._event_handler = pyevents.PyWindowEvents()
+        self._cfg = pyconfiguration.ConfigurationFile(f".cfg/{window_id}")
 
         self._qt.destroy_cb = self._on_window_destroy
         self._qt.close_cb = lambda : self.events.call_event("window_close")
@@ -93,6 +94,9 @@ class PyWindow:
     def layout(self): return self._layout
     @property
     def events(self): return self._event_handler
+    @property
+    def configuration(self): return self._cfg
+    cfg = configuration
 
     @property
     def title(self): return self._qt.windowTitle()
@@ -136,7 +140,7 @@ class PyWindow:
         if not element:
             if not element_class: raise ValueError("Must specify an element type")
             elif not issubclass(element_class, pyelement.PyElement): raise TypeError("'element_class' must be a PyElement class")
-            element = element_class(self, id)
+            element = element_class(self, element_id)
         elif not isinstance(element, pyelement.PyElement): raise TypeError("'element' parameter must be a PyElement instance")
 
         self._layout.insert_element(element, **layout_kwargs)
