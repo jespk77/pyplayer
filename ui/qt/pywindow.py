@@ -116,6 +116,28 @@ class PyWindow:
     @hidden.setter
     def hidden(self, hide): self.qt_element.setHidden(hide)
 
+    @property
+    def geometry_string(self):
+        """
+         Returns the geometry of this window using the legacy string format
+         Note: Don't use this if not familiar with the format
+        """
+        geo = self.qt_element.geometry()
+        return f"{geo.width()}x{geo.height()}+{geo.x()}+{geo.y()}"
+
+    def set_geometry(self, x=None, y=None, width=None, height=None, geometry=None):
+        """ Update the geometry of this window using properties or with a legacy style geometry string """
+        if geometry is not None:
+            if not isinstance(geometry, str): raise ValueError("Geometry string must be string")
+            import re
+            res = re.findall("\d+", geometry)
+            if len(res) == 4: self.qt_element.setGeometry(res[2], res[3], res[0], res[1])
+            else: raise ValueError("Invalid geometry string")
+            return
+
+        if x is None or y is None or width is None or height is None: raise ValueError("Missing arguments")
+        self.qt_element.setGeometry(x, y, width, height)
+
     def center_window(self, size_x=None, size_y=None, fit_to_size=False):
         """
             Center this window around given resolution, leave values blank to use the current resolution
