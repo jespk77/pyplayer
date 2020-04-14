@@ -1,5 +1,5 @@
 class EventHandler:
-    block_action = 0xBEEF
+    block = block_action = 0xBEEF
 
     def __init__(self):
         self._events = {}

@@ -27,46 +27,20 @@ class _ScheduledTask(QtCore.QTimer):
         except Exception as e: log_exception(e)
 
 
-class _MainWindowQt(QtWidgets.QWidget):
-    def __init__(self):
-        QtWidgets.QWidget.__init__(self)
-        self.resize_cb = None
-        self.close_cb = self.destroy_cb = None
-
-    def closeEvent(self, event):
-        try:
-            if self.close_cb and self.close_cb(): return event.ignore()
-
-            if self.destroy_cb:
-                self.destroy_cb()
-                self.close_cb = self.destroy_cb = None
-            QtWidgets.QWidget.closeEvent(self, event)
-        except Exception as e: log_exception(e)
-
-    def resizeEvent(self, event):
-        try:
-            if self.resize_cb:
-                new_size = event.size()
-                self.resize_cb(new_size.width(), new_size.height())
-            QtWidgets.QWidget.resizeEvent(self, event)
-        except Exception as e: log_exception(e)
-
-
 class PyWindow:
     def __init__(self, parent, window_id, layout="grid"):
         self._parent = parent
         self._window_id = window_id.lower()
-        self._qt = _MainWindowQt()
+        self._qt = QtWidgets.QWidget()
+        self._qt.resizeEvent = self._on_window_resize
+        self._qt.closeEvent = self._on_window_close
+
         self.hidden = True
         self._elements = {}
         self._scheduled_tasks = {}
         self._children = weakref.WeakValueDictionary()
         self._event_handler = pyevents.PyWindowEvents()
         self._cfg = pyconfiguration.ConfigurationFile(f".cfg/{window_id}")
-
-        self.qt_element.destroy_cb = self._on_window_destroy
-        self.qt_element.close_cb = lambda : self.events.call_event("window_close")
-        self.qt_element.resize_cb = lambda width, height: self.events.call_event("window_resize", width=width, height=height)
 
         try: self._layout = pylayout.layouts[layout](self.qt_element)
         except KeyError: self._layout = None
@@ -152,10 +126,6 @@ class PyWindow:
         geometry = self.qt_element.frameGeometry()
         geometry.moveTo(center.x() - (.5 * size_x), center.y() - (.5 * size_y))
         self.qt_element.setGeometry(geometry)
-
-    def _on_window_destroy(self):
-        for c in self._children.values(): c.destroy()
-        self.events.call_event("window_destroy")
 
     def add_element(self, element_id=None, element=None, element_class=None, **layout_kwargs):
         """ Add new element to this window, closes previously opened element with the same id (if open) """
@@ -290,6 +260,23 @@ class PyWindow:
         task = self._scheduled_tasks[task_id]
         task.cancel()
         del self._scheduled_tasks[task_id]
+
+    # QWidget.resizeEvent override
+    def _on_window_resize(self, event):
+        try:
+            new_size = event.size()
+            self.events.call_event("window_resize", width=new_size.width(), height=new_size.height())
+        except Exception as e: log_exception(e)
+        QtWidgets.QWidget.resizeEvent(self.qt_element, event)
+
+    # QWidget.closeEvent override
+    def _on_window_close(self, event):
+        try:
+            if self.events.call_event("window_close") == self.events.block: return event.ignore()
+            for c in self._children.values(): c.destroy()
+            self.events.call_event("window_destroy")
+        except Exception as e: log_exception(e)
+        QtWidgets.QWidget.closeEvent(self.qt_element, event)
 
 class RootPyWindow(PyWindow):
     def __init__(self, window_id, layout="grid"):
