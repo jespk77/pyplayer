@@ -91,15 +91,15 @@ class Configuration(ConfigurationItem):
 
 	def keys(self):
 		""" Get iterator with all configured keys (return type is equal to dictionary 'keys') """
-		return self.value.keys()
+		return self._value.keys()
 
 	def values(self):
 		""" Get iterator with all configured values (return type is equal to dictionary 'values')  """
-		return self.value.values()
+		return self._value.values()
 
 	def items(self):
 		""" Get iterator with all configured key-value pairs (return type is equal to dictionary 'items') """
-		return self.value.items()
+		return self._value.items()
 
 	def get(self, key, default=None):
 		""" Safe alternative for getting a key, returns 'default' when the key wasn't found instead of raising an error """
@@ -115,6 +115,8 @@ class Configuration(ConfigurationItem):
 		else: return res
 
 	def _to_json(self): return {k: v._to_json() for k, v in self.items()}
+	to_dict = _to_json
+
 	def __len__(self): return len(self.value)
 	def __str__(self): return f"Configuration(read_only={self.read_only}, value=[{', '.join([f'{k}: {str(v)}' for k, v in self.items()])}]"
 
@@ -160,7 +162,7 @@ class ConfigurationFile(Configuration):
 				print("VERBOSE", "Writing configuration to file '{}'".format(self._file))
 				self["_version"] = self.cfg_version
 				import json
-				json.dump(self._to_json(), file, indent=5)
+				json.dump(self.value, file, indent=5)
 				file.flush()
 				self._file_exists = True
 				self._dirty = False
