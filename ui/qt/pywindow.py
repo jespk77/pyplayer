@@ -271,6 +271,13 @@ class PyWindow:
         task.cancel()
         del self._scheduled_tasks[task_id]
 
+    def save_configuration(self):
+        """
+         Save current configuration options to file (if changed)
+         Note: configuration is automatically saved when the window closes, this only needs to be called if changes need to be written beforehand
+        """
+        self._cfg.save()
+
     # QWidget.resizeEvent override
     def _on_window_resize(self, event):
         try:
@@ -283,6 +290,8 @@ class PyWindow:
     def _on_window_close(self, event):
         try:
             if self.events.call_event("window_close") == self.events.block: return event.ignore()
+
+            self.save_configuration()
             for c in self._children.values(): c.destroy()
             self.events.call_event("window_destroy")
         except Exception as e: log_exception(e)
