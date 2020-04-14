@@ -6,6 +6,7 @@ class ModuleConfiguration(pyelement.PyLabelFrame):
         pyelement.PyLabelFrame.__init__(self, parent, f"module.{module_id}")
         self.label = f"Module: {module_id}"
         self._id, self._data = module_id, module_data
+        self._update_cb = update_cb
 
         required = self._data.get("required", False)
         if required: self.add_element("req_label", element_class=pyelement.PyTextLabel, columnspan=2).text = "Required module"
@@ -15,14 +16,12 @@ class ModuleConfiguration(pyelement.PyLabelFrame):
         platform_label.text = "Platform: " + (",".join(platform) if isinstance(platform, list) else platform if platform else "any")
 
         check_enabled = self.add_element("check_enabled", element_class=pyelement.PyCheckbox, row=2, columnspan=2)
-        check_enabled.checked = self._data.get("enabled", False) if not required else True if not invalid_platform else False
-        check_enabled.text = "Enabled" if check_enabled.checked else "Disabled"
+        check_enabled.checked = (self._data.get("enabled", False) if not required else True) if not invalid_platform else False
+        self._update_labels()
         if required or invalid_platform: check_enabled.accept_input = False
         @check_enabled.events.EventInteract
         def _on_toggle():
-            check_enabled.text = "Enabled" if check_enabled.checked else "Disabled"
-            self._data["enabled"] = check_enabled.checked
-            if callable(update_cb): update_cb(self._id, self._data)
+            self.set_enabled(check_enabled.checked)
 
         priority_label = self.add_element("priority_label", element_class=pyelement.PyTextLabel, row=3)
         priority_label.text = "Priority:"
@@ -36,8 +35,19 @@ class ModuleConfiguration(pyelement.PyLabelFrame):
         @priority.events.EventInteract
         def _on_update():
             self._data["priority"] = priority.value
-            if callable(update_cb): update_cb(self._id, self._data)
+            if callable(self._update_cb): self._update_cb(self._id, self._data)
 
+    def _update_labels(self):
+        check_enabled = self["check_enabled"]
+        check_enabled.text = "Enabled" if check_enabled.checked else "Disabled"
+
+    def set_enabled(self, enabled):
+        check_enabled = self["check_enabled"]
+        if check_enabled.accept_input:
+            check_enabled.checked = enabled
+            self._data["enabled"] = enabled
+            self._update_labels()
+            if callable(self._update_cb): self._update_cb(self._id, self._data)
 
 class PyModuleConfigurator(pywindow.PyWindow):
     def __init__(self, root, module_list=None):
@@ -76,12 +86,14 @@ class PyModuleConfigurator(pywindow.PyWindow):
         @b_enable_all.events.EventInteract
         def _enable_all():
             print("VERBOSE", "Enabling all modules")
+            for cg in modules.children: cg.set_enabled(True)
 
         b_enable_none = self.add_element("button_none", element_class=pyelement.PyButton, row=1, column=1)
         b_enable_none.text = "Disable all"
         @b_enable_none.events.EventInteract
         def _disable_all():
             print("VERBOSE", "Disabling all modules")
+            for cg in modules.children: cg.set_enabled(False)
 
         b_cancel = self.add_element("button_cancel", element_class=pyelement.PyButton, row=2, column=0)
         b_cancel.text = "Cancel"
