@@ -16,16 +16,15 @@ class PyPlayer(pywindow.PyWindow):
         self.title = "PyPlayerQt"
         self._title_song = ""
         self.icon = "assets/icon.png"
+        self.flags = PyPlayerCloseReason.NONE
 
         self._command_history = History()
         self._interp = None
         self._cmd = None
         self.schedule_task(func=self._insert_reply, task_id="reply_task", reply="= Hello there =")
-
-        @self.events.EventWindowDestroy
-        def _on_destroy():
-            if self._interp: self._interp.stop()
-            root.destroy()
+        self.add_task(task_id="shutdown", func=self.destroy)
+        @self.events.EventWindowClose
+        def _on_close(): self.stop_interpreter()
 
     def create_widgets(self):
         pywindow.PyWindow.create_widgets(self)
@@ -58,6 +57,19 @@ class PyPlayer(pywindow.PyWindow):
 
     def start_interpreter(self, module_cfg):
         self._interp = Interpreter(self, module_cfg)
+
+    def stop_interpreter(self):
+        if self._interp:
+            self._interp.stop()
+            self._interp = None
+
+    def close_with_reason(self, reason):
+        try:
+            self.flags = PyPlayerCloseReason[reason.upper()]
+            print("INFO", "Closing application with reason", self.flags)
+            return self.schedule_task(sec=1, task_id="shutdown")
+        except KeyError: pass
+        raise ValueError(f"Unknown reason '{reason}'")
 
     def _on_command_enter(self, cmd):
         if cmd:

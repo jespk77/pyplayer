@@ -12,6 +12,9 @@ class PySplashWindow(pywindow.RootPyWindow):
         self.layout.row(1, weight=1)
 
         self._dependency_check = False
+        self._actions = {}
+        self._force_configure = False
+
         self.make_borderless()
         self.center_window(*resolution, fit_to_size=True)
         self.schedule_task(sec=1, func=self._load_modules if "no_update" in sys.argv else self._update_program)
@@ -64,7 +67,7 @@ class PySplashWindow(pywindow.RootPyWindow):
         self["status_bar"].text = "Loading modules..."
         modules = [(md.name, md.path) for md in os.scandir("modules") if md.is_dir()]
         module_cfg = self.configuration.get_or_create("modules", {})
-        if list(module_cfg.keys()) != [m[0] for m in modules]:
+        if self._force_configure or list(module_cfg.keys()) != [m[0] for m in modules]:
             print("INFO", "Module list has changed, opening module configuration")
             import pymodules
             self.add_window(window=pymodules.PyModuleConfigurator(self, modules))
@@ -76,10 +79,12 @@ class PySplashWindow(pywindow.RootPyWindow):
         self.configuration["modules"] = module_data
         self.hidden = False
         self._dependency_check = True
-        self.schedule_task(func=self._load_dependencies)
+        self.save_configuration()
+        self.schedule_task(func=self._load_dependencies if not self._force_configure else self._do_restart)
 
     # STEP 3: Check module dependencies
     def _load_dependencies(self):
+        self.close_window("module_select")
         if self._dependency_check:
             self["status_bar"].text = "Checking dependencies..."
             module_data = self.configuration["modules"]
@@ -101,12 +106,35 @@ class PySplashWindow(pywindow.RootPyWindow):
 
     # STEP 4: Load main program
     def _load_program(self):
-        from pyplayerqt import PyPlayer
-        client = self.add_window("client", window_class=PyPlayer)
+        import pyplayerqt
+        self._actions[pyplayerqt.PyPlayerCloseReason.RESTART] = self._do_restart
+        self._actions[pyplayerqt.PyPlayerCloseReason.MODULE_CONFIGURE] = self._do_module_configure
+
+        client = self.add_window("client", window_class=pyplayerqt.PyPlayer)
         client.start_interpreter({name: value for name, value in self.configuration.get("modules").items() if value.get("enabled")})
+        client.events.EventWindowDestroy(lambda : self._on_close(client))
 
         client.hidden = False
         self.hidden = True
+
+    def _on_close(self, client):
+        print("INFO", "PyPlayer closed with reason:", client.flags)
+        close_cb = self._actions.get(client.flags)
+        self.close_window("client")
+        if close_cb: close_cb()
+        else: self.destroy()
+
+    def _do_restart(self):
+        print("INFO", "Restarting PyPlayer")
+        import os
+        os.execl(sys.executable, sys.executable, *sys.argv)
+
+    def _do_module_configure(self):
+        print("INFO", "Opening module configurator")
+        self.hidden = False
+        self["status_bar"].text = "Opening module configuration..."
+        self._force_configure = True
+        self.schedule_task(sec=1, func=self._load_modules)
 
 if __name__ == "__main__":
     import pylogging
