@@ -1,12 +1,10 @@
 import importlib, sys
 
 from multiprocessing import Queue
-from threading import Thread
 from PyQt5 import QtCore
 from weakref import WeakSet
 
 from utilities import messagetypes
-
 
 class Interpreter(QtCore.QThread):
 	""" Process commands from modules defined in the modules package
@@ -61,7 +59,7 @@ class Interpreter(QtCore.QThread):
 				self.mem_tracker.print_diff()
 				self._checks.append("MemoryLog")
 			except Exception as e: print("ERROR", "Cannot load memory tracker:", e)
-		self._notify_event("title_update", "PyPlayerTk", self._checks)
+		self._notify_event("title_update", None, self._checks)
 
 
 	@property

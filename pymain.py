@@ -1,5 +1,5 @@
 from ui.qt import pyelement, pywindow, pylauncher
-import os, json
+import os, sys
 
 resolution = 225, 325
 process_command = pylauncher.process_command
@@ -11,9 +11,10 @@ class PySplashWindow(pywindow.RootPyWindow):
         self.icon = "assets/icon.png"
         self.layout.row(1, weight=1)
 
+        self._dependency_check = False
         self.make_borderless()
         self.center_window(*resolution, fit_to_size=True)
-        self.schedule_task(sec=1, func=self._load_modules)
+        self.schedule_task(sec=1, func=self._load_modules if "no_update" in sys.argv else self._update_program)
 
     def create_widgets(self):
         pywindow.RootPyWindow.create_widgets(self)
@@ -28,38 +29,87 @@ class PySplashWindow(pywindow.RootPyWindow):
         status_bar.set_alignment("center")
         status_bar.text, status_bar.wrapping = "Initializing...", True
 
+    # STEP 1: Check for updates
+    def _update_program(self):
+        print("INFO", "Checking for updates")
+        self["status_bar"].text = "Checking for updates..."
+        pc = process_command("git pull -s recursive -Xtheirs", stdout=self._git_status)
+
+        if pc.returncode:
+            self["status_bar"].text = "Failed to update, continuing in 5 seconds..."
+            return self.schedule_task(sec=1, func=self._load_modules)
+        process_command("git rev-parse HEAD", stdout=self._git_hash)
+
+    # STEP 1a: Display git update status
+    def _git_status(self, out):
+        out = out.split("\n")
+        if len(out) > 1:
+            for o in out:
+                if o.startswith("Updating"): self["status_bar"].text = o; break
+        elif len(out) == 1: self["status_bar"].text = out[0]
+
+    # STEP 1b: Checking git hash
+    def _git_hash(self, out):
+        hash = self.configuration.get("hash")
+        out = out.rstrip("\m")
+        print("VERBOSE", "Comparing current hash", out, "with previous hash", hash)
+        if hash != out:
+            print("INFO", "Git hash updated, checking depencies")
+            self.configuration["hash"] = out
+            self._dependency_check = True
+        self.schedule_task(sec=1, func=self._load_modules)
+
+    # STEP 2: Check modules
     def _load_modules(self):
         self["status_bar"].text = "Loading modules..."
         modules = [(md.name, md.path) for md in os.scandir("modules") if md.is_dir()]
         module_cfg = self.configuration.get_or_create("modules", {})
         if list(module_cfg.keys()) != [m[0] for m in modules]:
             print("INFO", "Module list has changed, opening module configuration")
-            #todo: forward to module configurator
-            for module_id, module_path in modules:
-                try:
-                    with open(os.path.join(module_path, "package.json")) as file:
-                        print("INFO", f"Loading module '{module_id}'")
-                        module_data = json.load(file)
-                        self.configuration[f"modules::{module_id}"] = module_data
-                except FileNotFoundError:
-                    print("WARNING", f"Skipping invalid module '{module_id}': package.json not found")
-                    continue
-                except Exception as e:
-                    self["status_bar"].text = f"Failed to load module '{module_id}, shutting down in 5 seconds"
-                    print("ERROR", "Loading module", module_id, "->", e)
-                    return self.schedule_task(sec=5, func=self.destroy)
+            import pymodules
+            self.add_window(window=pymodules.PyModuleConfigurator(self, modules))
+            self.hidden = True
+        else: self.schedule_task(sec=1, func=self._load_dependencies)
+
+    def set_module_data(self, module_data):
+        print("INFO", "Module data updated")
+        self.configuration["modules"] = module_data
+        self.hidden = False
+        self._dependency_check = True
+        self.schedule_task(func=self._load_dependencies)
+
+    # STEP 3: Check module dependencies
+    def _load_dependencies(self):
+        if self._dependency_check:
+            self["status_bar"].text = "Checking dependencies..."
+            module_data = self.configuration["modules"].to_dict()
+            dependencies = set()
+            for mod_id, mod_data in [(i,d) for i,d in module_data.items() if d.get("enabled")]:
+                deps = mod_data.get("dependencies")
+                if deps: dependencies.update(deps)
+
+            print("INFO", "Found dependencies:", dependencies)
+            self["status_bar"].text = f"Verifying {len(dependencies)} dependencies..."
+            pip_install = "{} -m pip install {}"
+            if sys.platform == "linux": pip_install += "--user"
+            for d in dependencies:
+                self["status_bar"].text = f"Installing '{d}'"
+                process_command(pip_install.format(sys.executable, d))
+            self["status_bar"].text = "Dependency check complete"
+        else: self["status_bar"].text = "Loading PyPlayer..."
         self.schedule_task(sec=1, func=self._load_program)
 
+    # STEP 4: Load main program
     def _load_program(self):
         from pyplayerqt import PyPlayer
         client = self.add_window("client", window_class=PyPlayer)
-        client.start_interpreter(self.configuration["modules"])
+        client.start_interpreter({name: value for name, value in self.configuration.get("modules").to_dict().items() if value.get("enabled")})
 
         client.hidden = False
         self.hidden = True
 
 if __name__ == "__main__":
-    import pylogging, sys
+    import pylogging
     log = pylogging.get_logger()
     if "dev" in sys.argv: log.log_level = "verbose"
     PySplashWindow().start()

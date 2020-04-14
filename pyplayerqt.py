@@ -11,8 +11,7 @@ class PyPlayerCloseReason(enum.Enum):
 class PyPlayer(pywindow.PyWindow):
     def __init__(self, root, window_id):
         pywindow.PyWindow.__init__(self, root, window_id)
-        self.layout.column(1, minsize=30, weight=1)
-        self.layout.row(3, minsize=100, weight=1)
+        self.layout.column(1, minsize=30, weight=1).row(3, minsize=100, weight=1)
 
         self.title = "PyPlayerQt"
         self._title_song = ""
@@ -30,31 +29,32 @@ class PyPlayer(pywindow.PyWindow):
 
     def create_widgets(self):
         pywindow.PyWindow.create_widgets(self)
-        header_left: pyelement.PyTextLabel = self.add_element("header_left", element_class=pyelement.PyTextLabel, row=0, column=0)
-        header_center: pyelement.PyTextLabel = self.add_element("header_center", element_class=pyelement.PyTextLabel, row=0, column=1)
-        header_right: pyelement.PyTextLabel = self.add_element("header_right", element_class=pyelement.PyTextLabel, row=0, column=2)
+        header_left = self.add_element("header_left", element_class=pyelement.PyTextLabel, row=0, column=0)
+        header_center = self.add_element("header_center", element_class=pyelement.PyTextLabel, row=0, column=1)
+        header_right = self.add_element("header_right", element_class=pyelement.PyTextLabel, row=0, column=2)
 
         header_left.text = "left"
         header_center.text = "center"
-        header_center.set_alignment("center")
+        header_center.set_alignment("centerH")
         header_right.text = "right"
 
         console = self.add_element("console", element_class=pyelement.PyTextField, row=3, columnspan=3)
         console.accept_input = False
 
-        input: pyelement.PyTextInput = self.add_element("console_input", element_class=pyelement.PyTextInput, row=4, columnspan=3)
-        @input.events.EventInteract
+        inpt: pyelement.PyTextInput = pyelement.PyTextInput(self, "console_input", True)
+        self.add_element(element=inpt, row=4, columnspan=3)
+        @inpt.events.EventInteract
         def _on_input_enter():
-            self._on_command_enter(input.value)
-            input.value = ""
+            self._on_command_enter(inpt.value)
+            inpt.value = ""
 
-        @input.events.EventHistory
+        @inpt.events.EventHistory
         def _set_history(direction):
-            if direction > 0: input.value = self._command_history.get_next("")
+            if direction > 0: inpt.value = self._command_history.get_next("")
             elif direction < 0:
                 hist = self._command_history.get_previous()
-                if hist is not None: input.value = hist
-            return input.events.block_action
+                if hist is not None: inpt.value = hist
+            return inpt.events.block_action
 
     def start_interpreter(self, module_cfg):
         self._interp = Interpreter(self, module_cfg)
@@ -73,7 +73,11 @@ class PyPlayer(pywindow.PyWindow):
 
     def on_reply(self, reply, tags=None, cmd=None, prefix='', text=''):
         self._cmd = cmd
-        self.schedule_task(task_id="reply_task", reply=reply, tags=tags, prefix=prefix, text=text)
+        if not self["console_input"].accept_input:
+            self.schedule_task(task_id="reply_task", reply=reply, tags=tags, prefix=prefix, text=text)
+
+    def on_notification(self, message, tags=None):
+        self.schedule_task(task_id="reply_task", reply=message, tags=tags)
 
     def update_title(self, title, checks=None):
         if not title: title = self.title
