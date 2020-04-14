@@ -183,15 +183,13 @@ class PyWindow:
         if not window:
             if not window_id: raise ValueError("Must specify a window_id")
             window_id = window_id.lower()
-            self.close_window(window_id)
             if not window_class: window_class = PyWindow
             elif not issubclass(window_class, PyWindow): raise TypeError("'window_class' parameter must be a PyWindow class")
             window = window_class(self, window_id)
-        elif isinstance(window, PyWindow):
-            window_id = window.window_id
-            self.close_window(window_id)
+        elif isinstance(window, PyWindow): window_id = window.window_id
         else: raise TypeError("'window' parameter must be a PyWindow instance")
 
+        self.close_window(window_id)
         self._children[window_id] = window
         self._children[window_id].qt_element.show()
         return self._children[window_id]
@@ -214,6 +212,11 @@ class PyWindow:
         """ Closes this window along with any open child windows """
         self.qt_element.close()
 
+    def add_task(self, task_id, func):
+        """ Bind a function to a task id without scheduling it """
+        if not self.has_task(task_id):
+            self._scheduled_tasks[task_id] = _ScheduledTask(func)
+
     def has_task(self, task_id, running=False):
         """
          Returns whether current task id is known, that is, it can be changed or canceled using just this id
@@ -223,6 +226,7 @@ class PyWindow:
         if task: return running == task.isActive() if running else True
         return False
 
+    # todo: scheduling tasks from another thread only work if the task was added previously
     def schedule_task(self, min=0, sec=0, ms=0, func=None, loop=False, task_id=None, **kwargs):
         """
         Schedule an operation to be executed at least after the given time, all registered callbacks will stop when the window is closed
