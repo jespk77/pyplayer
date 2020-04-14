@@ -50,10 +50,11 @@ class ModuleConfiguration(pyelement.PyLabelFrame):
             if callable(self._update_cb): self._update_cb(self._id, self._data)
 
 class PyModuleConfigurator(pywindow.PyWindow):
-    def __init__(self, root, module_list=None):
+    def __init__(self, root, module_list=None, module_data=None):
         self._root = root
         self._modules = module_list if module_list else [(md.name, md.path) for md in os.scandir("modules") if md.is_dir()]
         self._module_data = {}
+        self._current_data = module_data
         pywindow.PyWindow.__init__(self, root, "module_select")
 
         self.title = "PyPlayer Module Configuration"
@@ -66,6 +67,10 @@ class PyModuleConfigurator(pywindow.PyWindow):
                     print("INFO", f"Loading module '{module_id}'")
                     module_data = json.load(file)
                     self._module_data[module_id] = module_data
+                    current = self._current_data.get(module_id)
+                    if current:
+                        self._module_data[module_id]["enabled"] = current["enabled"]
+                        self._module_data[module_id]["priority"] = current["priority"]
             except FileNotFoundError:
                 print("WARNING", f"Skipping invalid module '{module_id}': package.json not found")
                 continue

@@ -70,7 +70,7 @@ class PySplashWindow(pywindow.RootPyWindow):
         if self._force_configure or list(module_cfg.keys()) != [m[0] for m in modules]:
             print("INFO", "Module list has changed, opening module configuration")
             import pymodules
-            self.add_window(window=pymodules.PyModuleConfigurator(self, modules))
+            self.add_window(window=pymodules.PyModuleConfigurator(self, modules, module_cfg))
             self.hidden = True
         else: self.schedule_task(sec=1, func=self._load_dependencies)
 
