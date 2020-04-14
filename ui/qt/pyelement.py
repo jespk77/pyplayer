@@ -164,28 +164,30 @@ class PyTextLabel(PyElement):
     @wrapping.setter
     def wrapping(self, wrap): self.qt_element.setWordWrap(wrap)
 
-    _alignments = {"left": QtCore.Qt.AlignLeft, "center": QtCore.Qt.AlignHCenter, "right": QtCore.Qt.AlignRight}
+    _alignments = {"left": QtCore.Qt.AlignLeft, "centerH": QtCore.Qt.AlignHCenter, "right": QtCore.Qt.AlignRight,
+                   "center": QtCore.Qt.AlignCenter, "centerV": QtCore.Qt.AlignVCenter, "justify": QtCore.Qt.AlignJustify}
     def set_alignment(self, align):
-        """ Set alignment for this label, must be either 'left', 'center' or 'right' """
+        """ Set alignment for this label, must be one of ['left', 'centerH', 'right', 'center', 'centerV', 'justify'] """
         self.qt_element.setAlignment(self._alignments[align])
 
 
 class PyTextInput(PyElement):
     """
      Element for entering a single line of data
-     Interaction event fires when the enter is pressed while this element has focus, no keywords
+     Interaction event fires when the enter key is pressed or if this element loses focus, no keywords
+     If 'return_only' is set to true, interaction event only fires if the enter key is pressed
     """
-    def __init__(self, parent, element_id):
+    def __init__(self, parent, element_id, return_only=False):
         self._event_handler = pyevents.PyElementInputEvent()
         PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QLineEdit(parent.qt_element)
         self.qt_element.keyPressEvent = self._on_key_press
-        self.qt_element.returnPressed.connect(lambda : self.events.call_event("interact"))
+        (self.qt_element.returnPressed if return_only else self.qt_element.editingFinished).connect(lambda : self.events.call_event("interact"))
 
     @property
-    def accept_input(self): return self.qt_element.isReadOnly()
+    def accept_input(self): return self._qt.isEnabled()
     @accept_input.setter
-    def accept_input(self, value): self.qt_element.setReadOnly(not value)
+    def accept_input(self, value): self.qt_element.setEnabled(value)
     def with_accept_input(self, value):
         self.accept_input = not value
         return self
@@ -252,7 +254,7 @@ class PyCheckbox(PyElement):
     def checked(self, checked): self.qt_element.setChecked(checked)
 
     @property
-    def accept_input(self): return self.qt_element.enabled()
+    def accept_input(self): return self.qt_element.isEnabled()
     @accept_input.setter
     def accept_input(self, check): self.qt_element.setEnabled(check)
 
