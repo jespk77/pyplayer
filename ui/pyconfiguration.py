@@ -65,7 +65,8 @@ class Configuration(ConfigurationItem):
 				key = key[0]
 				current = self._value.get(key)
 				new = create_entry(value)
-				if current is not None and isinstance(current, Configuration) and len(current) and isinstance(new, ConfigurationItem): raise ValueError("Cannot set a whole configuration to a single value")
+				if current is not None and type(current) is Configuration and len(current) and type(new) is ConfigurationItem:
+					raise ValueError(f"Cannot set a whole configuration to a single value for key '{key}'")
 				else: self._value[key] = new
 			else:
 				res = self.get(key[0])
