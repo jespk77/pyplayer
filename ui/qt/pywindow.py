@@ -64,6 +64,16 @@ class PyWindow:
         self.qt_element.setWindowFlags(QtCore.Qt.FramelessWindowHint)
 
     @property
+    def children(self):
+        """ Returns an iterator with all contained child element """
+        return self._elements.values()
+
+    @property
+    def windows(self):
+        """ Returns an iterator with all open child windows """
+        return self._children.values()
+
+    @property
     def qt_element(self): return self._qt
     @property
     def window_id(self): return self._window_id

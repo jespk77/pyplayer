@@ -54,6 +54,9 @@ class PyElement:
     def find_element(self, element_id): self.get_element(element_id)
     def remove_element(self, element_id): self.get_element(element_id)
 
+    @property
+    def children(self): return self.get_element(None)
+
 class PyFrame(PyElement):
     """
      General element class that can contain child widgets
@@ -67,6 +70,9 @@ class PyFrame(PyElement):
         except KeyError: self._layout = None
         if not self._layout: raise ValueError("Must specify a valid layout type")
         self.qt_element.setLayout(self._layout.qt_layout)
+
+    @property
+    def children(self): return self._children.values()
 
     @property
     def layout(self): return self._layout
