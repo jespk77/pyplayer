@@ -38,7 +38,6 @@ class ConfigurationItem:
 	def get(self, key, default=None): self.__getitem__(key)
 	def get_or_create(self, key, create_value=None): self.__getitem__(key)
 
-	def _to_json(self): return self.value
 	def __len__(self): return len(self.value) if self.is_set else 0
 	def __str__(self): return f"ConfigurationItem(read_only={self._read_only}, value={str(self.value)})"
 
@@ -53,8 +52,8 @@ class Configuration(ConfigurationItem):
 	def __getitem__(self, item):
 		if isinstance(item, str):
 			item = item.split(separator, maxsplit=1)
-			if len(item) == 1: return self.value[item[0]]#._to_json()
-			else: return self[item[0]][item[1]]
+			if len(item) == 1: return self._value[item[0]].value
+			else: return self._value[item[0]][item[1]]
 		else: raise ValueError("Keys must be string")
 
 	def __setitem__(self, key, value):
@@ -64,11 +63,14 @@ class Configuration(ConfigurationItem):
 			key = key.split(separator, maxsplit=1)
 			if len(key) == 1:
 				key = key[0]
-				self._value[key] = create_entry(value)
+				current = self._value.get(key)
+				new = create_entry(value)
+				if current is not None and isinstance(current, Configuration) and len(current) and isinstance(new, ConfigurationItem): raise ValueError("Cannot set a whole configuration to a single value")
+				else: self._value[key] = new
 			else:
 				res = self.get(key[0])
 				if res is None: self[key[0]] = {}
-				self[key[0]][key[1]] = value
+				self._value[key[0]][key[1]] = value
 			self.mark_dirty()
 		else: raise ValueError("Keys must be string")
 
@@ -80,7 +82,7 @@ class Configuration(ConfigurationItem):
 			if len(key) == 1:
 				key = key[0]
 				del self._value[key]
-			else: del self[key[0]][key[1]]
+			else: del self._value[key[0]][key[1]]
 			self.mark_dirty()
 		else: raise ValueError("Keys must be string")
 
@@ -109,13 +111,27 @@ class Configuration(ConfigurationItem):
 	def get_or_create(self, key, create_value=None):
 		""" Same as get, but when a key wasn't found the 'create_value' (if given) is set to that value """
 		res = self.get(key)
-		if res is None:
+		if res is None and create_value is not None:
 			self[key] = create_value
 			return self.get(key)
-		else: return res
+		return res
 
-	def _to_json(self): return {k: v._to_json() for k, v in self.items()}
-	to_dict = _to_json
+	def _get_item(self, key):
+		key = key.split(separator, maxsplit=1)
+		if len(key) == 1: return self._value[key[0]]
+		else: return self._value[key[0]]._get_item(key[1])
+
+	def get_or_create_configuration(self, key, create_value=None):
+		""" Same as 'get_or_create' but returns a configuration object instead of a value """
+		try: res = self._get_item(key)
+		except KeyError: res = None
+		if res is None and create_value is not None:
+			self[key] = create_value
+			return self._get_item(key)
+		return res
+
+	@property
+	def value(self): return {k: v.value for k, v in self.items()}
 
 	def __len__(self): return len(self.value)
 	def __str__(self): return f"Configuration(read_only={self.read_only}, value=[{', '.join([f'{k}: {str(v)}' for k, v in self.items()])}]"

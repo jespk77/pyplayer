@@ -11,7 +11,7 @@ class PyElement:
         self._container: pywindow.PyWindow = container
         self._element_id = element_id
         if not hasattr(self, "_qt"): self._qt = None
-        self._cfg = container.configuration.get_or_create(f"children::{element_id}", {})
+        self._cfg = container.configuration.get_or_create_configuration(f"children::{element_id}", {})
         if not hasattr(self, "_event_handler"): self._event_handler = pyevents.PyElementEvents()
 
     @property

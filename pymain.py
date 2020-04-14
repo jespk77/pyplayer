@@ -82,7 +82,7 @@ class PySplashWindow(pywindow.RootPyWindow):
     def _load_dependencies(self):
         if self._dependency_check:
             self["status_bar"].text = "Checking dependencies..."
-            module_data = self.configuration["modules"].to_dict()
+            module_data = self.configuration["modules"]
             dependencies = set()
             for mod_id, mod_data in [(i,d) for i,d in module_data.items() if d.get("enabled")]:
                 deps = mod_data.get("dependencies")
@@ -103,7 +103,7 @@ class PySplashWindow(pywindow.RootPyWindow):
     def _load_program(self):
         from pyplayerqt import PyPlayer
         client = self.add_window("client", window_class=PyPlayer)
-        client.start_interpreter({name: value for name, value in self.configuration.get("modules").to_dict().items() if value.get("enabled")})
+        client.start_interpreter({name: value for name, value in self.configuration.get("modules").items() if value.get("enabled")})
 
         client.hidden = False
         self.hidden = True
