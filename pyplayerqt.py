@@ -40,6 +40,7 @@ class PyPlayer(pywindow.PyWindow):
         console = self.add_element("console", element_class=pyelement.PyTextField, row=3, columnspan=3)
         console.accept_input = False
 
+
         inpt: pyelement.PyTextInput = pyelement.PyTextInput(self, "console_input", True)
         self.add_element(element=inpt, row=4, columnspan=3)
         @inpt.events.EventInteract
@@ -54,6 +55,15 @@ class PyPlayer(pywindow.PyWindow):
                 hist = self._command_history.get_previous()
                 if hist is not None: inpt.value = hist
             return inpt.events.block_action
+
+        @console.events.EventKeyDown("all")
+        def _on_key_down(key, modifiers):
+            try:
+                key = chr(key)
+                if "shift" not in modifiers: key = key.lower()
+                inpt.get_focus()
+                inpt.text += key
+            except ValueError: pass
 
     def start_interpreter(self, module_cfg):
         self._interp = Interpreter(self, module_cfg)
