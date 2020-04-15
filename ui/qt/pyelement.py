@@ -10,12 +10,14 @@ class PyElement:
         valid_check(container)
         self._container: pywindow.PyWindow = container
         self._element_id = element_id
-        if not hasattr(self, "_qt"): self._qt = None
+        if not hasattr(self, "_qt"): self._qt = QtWidgets.QWidget(container)
+        self.qt_element.keyPressEvent = self._on_key_press
         self._cfg = container.configuration.get_or_create_configuration(f"children::{element_id}", {})
-        if not hasattr(self, "_event_handler"): self._event_handler = pyevents.PyElementEvents()
+        self._key_cb = {}
+        if not hasattr(self, "_event_handler"): self._event_handler = pyevents.PyElementEvents(self)
 
     @property
-    def qt_element(self): return self._qt
+    def qt_element(self) -> None: return self._qt
 
     @property
     def element_id(self): return self._element_id
@@ -29,6 +31,7 @@ class PyElement:
     def layout(self): raise TypeError(f"Layout elements not supported for '{__name__}'")
     @property
     def events(self): return self._event_handler
+    event_handler = events
 
     @property
     def accept_input(self): return True
@@ -57,14 +60,36 @@ class PyElement:
     @property
     def children(self): return self.get_element(None)
 
+    def has_focus(self): return self.qt_element.hasFocus()
+    def get_focus(self): self.qt_element.setFocus(QtCore.Qt.OtherFocusReason)
+
+    def get_key(self, key):
+        """ Returns keycode associated with given description, returns None if the description was not found """
+        return QtCore.Qt.__dict__.get(f"Key_{key}")
+
+    _key_modifiers = {QtCore.Qt.NoModifier: None, QtCore.Qt.ShiftModifier: "shift", QtCore.Qt.ControlModifier: "ctrl", QtCore.Qt.AltModifier: "alt"}
+    def _on_key_press(self, key):
+        cb = self._key_cb.get(key.key())
+        if not cb: cb = self._key_cb.get('*')
+
+        if cb:
+            kwargs = {"key": key.key(), "modifiers": [self._key_modifiers[k] for k in self._key_modifiers.keys() if key.modifiers() & k]}
+            args = cb.__code__.co_varnames
+            try: return cb(**{key: value for key, value in kwargs.items() if key in args})
+            except Exception as e:
+                import traceback
+                print("ERROR", f"Error processing event 'key_down':")
+                traceback.print_exception(type(e), e, e.__traceback__)
+        type(self.qt_element).keyPressEvent(self.qt_element, key)
+
 class PyFrame(PyElement):
     """
      General element class that can contain child widgets
      No interaction event
     """
     def __init__(self, parent, element_id, layout="grid"):
+        self._qt = QtWidgets.QWidget(parent._qt)
         PyElement.__init__(self, parent, element_id)
-        if not hasattr(self, "_qt") or self._qt is None: self._qt = QtWidgets.QWidget(parent._qt)
         self._children = {}
         try: self._layout = pylayout.layouts[layout](self.qt_element)
         except KeyError: self._layout = None
@@ -136,8 +161,8 @@ class PyTextLabel(PyElement):
      No interaction event
     """
     def __init__(self, parent, element_id):
-        PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QLabel(parent.qt_element)
+        PyElement.__init__(self, parent, element_id)
         self._img = None
         self.qt_element.setAlignment(QtCore.Qt.AlignLeft)
 
@@ -184,10 +209,9 @@ class PyTextInput(PyElement):
      If 'return_only' is set to true, interaction event only fires if the enter key is pressed
     """
     def __init__(self, parent, element_id, return_only=False):
-        self._event_handler = pyevents.PyElementInputEvent()
-        PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QLineEdit(parent.qt_element)
-        self.qt_element.keyPressEvent = self._on_key_press
+        self._event_handler = pyevents.PyElementInputEvent(self)
+        PyElement.__init__(self, parent, element_id)
         (self.qt_element.returnPressed if return_only else self.qt_element.editingFinished).connect(lambda : self.events.call_event("interact"))
 
     @property
@@ -232,7 +256,7 @@ class PyTextInput(PyElement):
         elif key_code == QtCore.Qt.Key_Down:
             res = self._event_handler.call_event("history", direction=1)
             if res == pyevents.EventHandler.block_action: return
-        QtWidgets.QLineEdit.keyPressEvent(self.qt_element, key)
+        PyElement._on_key_press(self, key)
 
 
 class PyCheckbox(PyElement):
@@ -241,8 +265,8 @@ class PyCheckbox(PyElement):
      Interaction event fires when the element is toggled, no keywords
     """
     def __init__(self, parent, element_id):
-        PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QCheckBox(parent.qt_element)
+        PyElement.__init__(self, parent, element_id)
         self.qt_element.clicked.connect(lambda :self.events.call_event("interact"))
 
     @property
@@ -271,8 +295,8 @@ class PyButton(PyElement):
      Interaction event fires when the button is pressed, no keywords
     """
     def __init__(self, parent, element_id):
-        PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QPushButton(parent.qt_element)
+        PyElement.__init__(self, parent, element_id)
         self.qt_element.clicked.connect(lambda : self.events.call_event("interact"))
         self._click_cb = self._img = None
 
@@ -309,9 +333,9 @@ class PyTextField(PyElement):
      No interaction event
     """
     def __init__(self, parent, element_id):
-        self._event_handler = pyevents.PyElementInputEvent()
-        PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QTextEdit(parent.qt_element)
+        self._event_handler = pyevents.PyElementInputEvent(self)
+        PyElement.__init__(self, parent, element_id)
         self.qt_element.keyPressEvent = self._on_key_press
         self.undo = False
 
@@ -398,7 +422,7 @@ class PyTextField(PyElement):
         elif key_code == QtCore.Qt.Key_Down:
             res = self._event_handler.call_event("history", direction=1)
             if res == self._event_handler.block_action: return
-        QtWidgets.QTextEdit.keyPressEvent(self.qt_element, key)
+        PyElement._on_key_press(self, key)
 
 class PyProgessbar(PyElement):
     """
@@ -406,8 +430,8 @@ class PyProgessbar(PyElement):
      No interaction event
     """
     def __init__(self, parent, element_id):
-        PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QProgressBar(parent.qt_element)
+        PyElement.__init__(self, parent, element_id)
         self.qt_element.setTextVisible(False)
 
     @property
@@ -443,8 +467,8 @@ class PyScrollbar(PyElement):
      No interaction event
     """
     def __init__(self, parent, element_id):
-        PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QScrollBar(parent.qt_element)
+        PyElement.__init__(self, parent, element_id)
 
 class PyItemlist(PyElement):
     """
@@ -452,8 +476,8 @@ class PyItemlist(PyElement):
      Interaction event fires when the item selection changes, no keywords
     """
     def __init__(self, parent, element_id):
-        PyElement.__init__(self, parent, element_id)
         self._qt = QtWidgets.QListView(parent.qt_element)
+        PyElement.__init__(self, parent, element_id)
         self.qt_element.setUniformItemSizes(True)
         self.qt_element.setViewMode(QtWidgets.QListView.ListMode)
         self.qt_element.setFlow(QtWidgets.QListView.TopToBottom)

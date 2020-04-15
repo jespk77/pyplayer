@@ -62,8 +62,9 @@ class PyWindowEvents(EventHandler):
         return cb
 
 class PyElementEvents(EventHandler):
-    def __init__(self):
+    def __init__(self, element):
         EventHandler.__init__(self)
+        self._element = element
 
     def EventLeftClick(self, cb):
         """
@@ -96,6 +97,27 @@ class PyElementEvents(EventHandler):
         """
         self.register_event("interact", cb)
         return cb
+
+    def EventKeyDown(self, key):
+        """
+         Event that fires when a key is pressed, or 'all' to capture all keys
+         Note: This event is only fired for the closest match, therefore the 'all' event is only fired if there's nothing bound to the specfic key that was pressed
+            - keywords:
+                * key: the key code of the key that was pressed
+                * modifier: the modifier key that was held, or None if no modifier was held
+            - not cancellable
+        """
+        from PyQt5.QtCore import Qt
+        if key != "all":
+            key_code = Qt.__dict__.get("Key_"+key)
+            if not key_code: raise ValueError(f"Unknown key '{key}")
+        else: key_code = "*"
+
+        def wrapped(cb):
+            self._element._key_cb[key_code] = cb
+            return cb
+        return wrapped
+
 
 class PyElementInputEvent(PyElementEvents):
     def EventHistory(self, cb):
