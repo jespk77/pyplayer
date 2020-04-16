@@ -65,15 +65,15 @@ def command_log_open(arg, argc):
 
 def command_log_clear(arg, argc, all=False):
 	if argc == 0:
-		import os
-		logs = [file for file in os.listdir("logs") if file.endswith(".log")]
+		import os, pylogging
+		logs = [file for file in os.listdir(pylogging.log_folder) if file.endswith(".log")]
 		try:
 			if all: logs.pop(0)
 			else: logs = logs[10:]
 
 			import shutil
 			for f in logs:
-				try: os.remove("logs\{}".format(f))
+				try: os.remove(os.path.join(pylogging.log_folder, f))
 				except Exception as e: print("ERROR", "Trying to remove '{}':".format(f), e)
 		except IndexError: pass
 		return messagetypes.Reply("Cleared all log files (except for the current)" if all else "Cleaned up log files except for the last 10")
@@ -88,12 +88,30 @@ def command_restart(arg, argc):
 		client.close_with_reason("restart")
 		return messagetypes.Reply("Restarting Pyplayer...")
 
+import datetime
+timer = None
+one_second = datetime.timedelta(seconds=1)
+
 def command_timer(arg, argc):
 	if argc == 1:
 		time = get_time_from_string(arg[0])
 		if time is not None:
 			try:
-				client.set_timer(*time)
+				global timer
+				timer = datetime.timedelta(hours=time[0], minutes=time[1], seconds=time[2])
+				@client.update_left_header
+				def _timer_update(date):
+					global timer
+					if timer.total_seconds() > 0:
+						client["header_left"].text = "\u23f0 {!s}".format(timer)
+						timer -= one_second
+					else:
+						timer = None
+						client["header_left"].text = ""
+						client.update_left_header(None)
+						interpreter.put_command(client.configuration.get_or_create("timer_command", ""))
+
+				client["header_left"].text = "\u23f0 {!s}".format(timer)
 				return messagetypes.Reply("Timer set")
 			except ValueError as e: return messagetypes.Reply(str(e))
 		else: return messagetypes.Reply("Cannot decode time syntax, try again...")
@@ -117,9 +135,18 @@ def command_version(arg, argc):
 			print("ERROR", "Processing git version command:", e)
 			return messagetypes.Reply("Unable to get version number")
 
+import psutil, humanize
+process = psutil.Process()
+boot_time = datetime.datetime.fromtimestamp(psutil.boot_time())
+
 def initialize():
 	cmds = client.configuration.get_or_create("startup_commands", [])
 	for c in cmds: interpreter.put_command(c)
+
+	@client.update_right_header
+	def _right_header(date):
+		global process, boot_time
+		client["header_right"].text = f"{str(date - boot_time).split('.')[0]} / {humanize.naturalsize(process.memory_info().rss)}"
 
 commands = {
 	"cfg": command_cfg,

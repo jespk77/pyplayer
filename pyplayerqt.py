@@ -2,12 +2,13 @@ from ui.qt import pywindow, pyelement
 from utilities.history import History
 from interpreter import Interpreter
 
-import enum
+import enum, datetime
 class PyPlayerCloseReason(enum.Enum):
     NONE = 0,
     RESTART = 1,
     MODULE_CONFIGURE = 2
 
+initial_cfg = { "header_format": "PyPlayer - %a %b %d, %Y %I:%M %p -", "loglevel": "info" }
 class PyPlayer(pywindow.PyWindow):
     def __init__(self, root, window_id):
         pywindow.PyWindow.__init__(self, root, window_id)
@@ -17,29 +18,33 @@ class PyPlayer(pywindow.PyWindow):
         self._title_song = ""
         self.icon = "assets/icon.png"
         self.flags = PyPlayerCloseReason.NONE
+        self.configuration.set_defaults(initial_cfg)
 
         self._command_history = History()
-        self._interp = None
-        self._cmd = None
+        self._interp = self._cmd = None
+        self._left_head_update = self._right_head_update = None
+
         self.schedule_task(func=self._insert_reply, task_id="reply_task", reply="= Hello there =")
+        self.schedule_task(sec=1, loop=True, func=self._window_tick, task_id="window_tick")
         self.add_task(task_id="shutdown", func=self.destroy)
+
+        import pylogging
+        pylogging.get_logger().log_level = self.configuration["loglevel"]
+        self._window_tick()
+
         @self.events.EventWindowClose
         def _on_close(): self.stop_interpreter()
 
     def create_widgets(self):
         pywindow.PyWindow.create_widgets(self)
-        header_left = self.add_element("header_left", element_class=pyelement.PyTextLabel, row=0, column=0)
+        self.add_element("header_left", element_class=pyelement.PyTextLabel, row=0, column=0)
         header_center = self.add_element("header_center", element_class=pyelement.PyTextLabel, row=0, column=1)
-        header_right = self.add_element("header_right", element_class=pyelement.PyTextLabel, row=0, column=2)
-
-        header_left.text = "left"
-        header_center.text = "center"
+        self.add_element("header_right", element_class=pyelement.PyTextLabel, row=0, column=2)
+        header_center.text = "PyPlayer"
         header_center.set_alignment("centerH")
-        header_right.text = "right"
 
         console = self.add_element("console", element_class=pyelement.PyTextField, row=3, columnspan=3)
         console.accept_input = False
-
 
         inpt: pyelement.PyTextInput = pyelement.PyTextInput(self, "console_input", True)
         self.add_element(element=inpt, row=4, columnspan=3)
@@ -92,6 +97,15 @@ class PyPlayer(pywindow.PyWindow):
         if not prefix: prefix = "> "
         self["console"].text += f"{reply}\n{prefix}"
         self["console_input"].accept_input = True
+
+    def _window_tick(self):
+        date = datetime.datetime.today()
+        self["header_center"].text = date.strftime(self.configuration["header_format"])
+        if self._left_head_update: self._left_head_update(date)
+        if self._right_head_update: self._right_head_update(date)
+
+    def update_left_header(self, cb): self._left_head_update = cb
+    def update_right_header(self, cb): self._right_head_update = cb
 
     def on_reply(self, reply, tags=None, cmd=None, prefix='', text=''):
         self._cmd = cmd
