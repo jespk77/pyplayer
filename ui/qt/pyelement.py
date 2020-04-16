@@ -152,7 +152,7 @@ class PyLabelFrame(PyFrame):
     @property
     def label(self): return self._qt.title()
     @label.setter
-    def label(self, txt): self._qt.setTitle(txt)
+    def label(self, txt): self._qt.setTitle(str(txt))
 
 
 class PyTextLabel(PyElement):
@@ -169,7 +169,7 @@ class PyTextLabel(PyElement):
     @property
     def display_text(self): return self.qt_element.text()
     @display_text.setter
-    def display_text(self, txt): self.qt_element.setText(txt)
+    def display_text(self, txt): self.qt_element.setText(str(txt))
     def with_text(self, txt):
         self.display_text = txt
         return self
@@ -272,7 +272,7 @@ class PyCheckbox(PyElement):
     @property
     def display_text(self): return self.qt_element.text()
     @display_text.setter
-    def display_text(self, txt): self.qt_element.setText(txt)
+    def display_text(self, txt): self.qt_element.setText(str(txt))
     def with_text(self, txt):
         self.display_text = txt
         return self
@@ -308,7 +308,7 @@ class PyButton(PyElement):
     @property
     def display_text(self): return self.qt_element.text()
     @display_text.setter
-    def display_text(self, txt): self.qt_element.setText(txt)
+    def display_text(self, txt): self.qt_element.setText(str(txt))
     def with_text(self, txt):
         self.display_text = txt
         return self
@@ -355,7 +355,7 @@ class PyTextField(PyElement):
     @property
     def display_text(self): return self.qt_element.toPlainText()
     @display_text.setter
-    def display_text(self, txt): self.qt_element.setPlainText(txt)
+    def display_text(self, txt): self.qt_element.setPlainText(str(txt))
     def with_text(self, txt):
         self.display_text = txt
         return self
