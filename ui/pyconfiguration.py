@@ -131,6 +131,11 @@ class Configuration(ConfigurationItem):
 			return self._get_item(key)
 		return res
 
+	def set_defaults(self, value):
+		""" Sets all non-existent key-value pairs from given dictionary, when a key already exists the currently set value is kept """
+		for key, value in value.items():
+			self.get_or_create(key, value)
+
 	@property
 	def value(self): return {k: v.value for k, v in self.items()}
 
