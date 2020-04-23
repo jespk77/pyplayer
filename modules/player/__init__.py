@@ -342,6 +342,13 @@ def command_rss(arg, argc):
 				except: return messagetypes.Reply("Invalid data returned")
 		else: return messagetypes.Reply("What url? Enter one using key 'rss_url'")
 
+def command_browser(arg, argc):
+	sorting = client.configuration.get_or_create(browser_command.default_sort_key, "name")
+	if isinstance(sorting, str) and len(sorting) > 0:
+		try: return commands["browser"][sorting](arg, argc)
+		except KeyError: return messagetypes.Reply(f"Invalid default sorting set in configuration '{sorting}'")
+	return messagetypes.Reply(f"No default sorting set '{browser_command.default_sort_key}' and none or invalid one specified")
+
 def command_stop(arg, argc):
 	if argc == 0:
 		media_player.stop_player()
@@ -387,7 +394,7 @@ commands = {
 		"next": command_queue_next
 	}, "rss": command_rss,
 	"browser": {
-		"": browser_command.command_browser,
+		"": command_browser,
 		"none": browser_command.command_browser_remove,
 		"name": browser_command.command_browser_name,
 		"played-month": browser_command.command_browser_played_month,
@@ -417,10 +424,8 @@ def initialize():
 
 	client.add_task(task_id="player_progress_update", func=_set_client_progress)
 	client.add_task(task_id="player_title_update", func=_set_client_title)
-	client.add_task(task_id="songbrowser_update", func=browser_command.set_songbrowser)
-	command_filter_clear(None, 0)
-
 	browser_command.initialize(interpreter, client)
+	command_filter_clear(None, 0)
 
 def on_destroy():
 	media_player.on_destroy()
