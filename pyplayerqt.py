@@ -91,7 +91,7 @@ class PyPlayer(pywindow.PyWindow):
             self["console"].text += f"{cmd}\n"
             self._command_history.add(cmd)
             self["console_input"].accept_input = False
-            self._interp.put_command(cmd)
+            self._interp.put_command(cmd, self._cmd)
 
     def _insert_reply(self, reply, tags=None, prefix=None, text=None):
         if not prefix: prefix = "> "
