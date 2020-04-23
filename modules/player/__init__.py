@@ -1,10 +1,10 @@
-import enum
-import os
+import enum, os
 from datetime import datetime
 from multiprocessing import Queue
 
-from modules.player.mediaplayer import MediaPlayer
+from .mediaplayer import MediaPlayer
 from utilities import messagetypes, song_tracker, history
+from ui.qt import pyelement
 
 # DEFAULT MODULE VARIABLES
 interpreter = client = None
@@ -396,8 +396,12 @@ def initialize():
 	media_player.attach_event("stopped", on_stopped)
 	if not song_tracker.is_loaded(): song_tracker.load_tracker()
 
+	progress = client.add_element("progress_bar", element_class=pyelement.PyProgessbar, row=1, columnspan=3)
+	progress.minimum, progress.maximum = 0, 100
+	progress.progress = 0
 	client.configuration.get_or_create("directory", {})
 	client.configuration.get_or_create("default_directory", "")
+	client.add_task(task_id="player_progress_update", func=_set_client_progress)
 	command_filter_clear(None, 0)
 
 def on_destroy():
@@ -412,14 +416,14 @@ def on_media_change(event, player):
 	interpreter.put_event("media_update", media_player.current_media, color)
 
 def on_pos_change(event, player):
-	client.schedule(func=client.update_progressbar, progress=event.u.new_position)
+	client.schedule_task(task_id="player_progress_update", progress=event.u.new_position)
 
 def on_stopped(event, player):
-	client.schedule(func=client.update_progressbar, progress=0)
+	client.schedule_task(task_id="player_progress_update", progress=0)
 
 def on_player_update(event, player):
 	md = event.data
-	default_directory = client.configuration["directory"].get(client.configuration["default_path"])
+	default_directory = client.configuration["directory"].get(client.configuration["default_directory"])
 
 	if default_directory is not None and md.path == default_directory["path"]:
 		song_tracker.add(md.display_name)
@@ -429,3 +433,7 @@ def on_player_update(event, player):
 
 def on_end_reached(event, player):
 	interpreter.put_command("autoplay next")
+
+def _set_client_progress(progress):
+	progress = round(progress * 100)
+	client["progress_bar"].progress = progress
