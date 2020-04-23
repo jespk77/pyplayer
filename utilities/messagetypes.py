@@ -86,7 +86,7 @@ class Error(Empty):
 
 	def get_prefix(self): return "! "
 	def get_contents(self):
-		try: print("ERROR", "\n".join(format_exception(None, self._error, self._error.__traceback__)))
+		try: print("ERROR", "".join(format_exception(None, self._error, self._error.__traceback__)))
 		except: print(self._error, self._message)
 
 		if len(self._message) > 0: return (self.get_prefix() + self._message + ", see log for details"), ("error",)

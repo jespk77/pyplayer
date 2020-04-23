@@ -164,7 +164,7 @@ class Interpreter(QtCore.QThread):
 			self.print_additional_debug()
 			self._client.on_reply(*op.get_contents())
 		except Exception as e:
-			print("ERROR", f"Error processing command '{command}':", e)
+			print("ERROR", f"Error processing command '{' '.join(command)}'")
 			self._client.on_reply(*messagetypes.Error(e, "Error processing command").get_contents())
 
 	def _process_command(self, command):
