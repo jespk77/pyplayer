@@ -1,6 +1,5 @@
 import datetime
 
-from modules.programs import time_counter
 from utilities import messagetypes
 
 # DEFAULT MODULE VARIABLES
@@ -8,27 +7,6 @@ interpreter = client = None
 
 # MODULE SPECIFIC VARIABLES
 last_joke = None
-
-def on_noise_timer(cmd):
-	interpreter.put_command(cmd)
-
-def start_timer(arg, argc):
-	delay = -1
-	if argc > 0:
-		try: delay = int(arg[0])
-		except ValueError: print("INFO", "Cannot parse argument into a number")
-
-	counter = time_counter.TimeCount(client, "Timer", count_time=delay if delay >= 0 else None, timer_callback=on_noise_timer)
-	counter.always_on_top = True
-	client.open_window("counter", counter)
-	return messagetypes.Reply("Counter started")
-
-def start_catching_noises(arg, argc):
-	if argc == 0:
-		counter = time_counter.TimeCount(client, "Catching noises", "assets/noise", timer_callback=on_noise_timer)
-		counter.always_on_top = True
-		client.open_window("counter", counter)
-		return messagetypes.Reply("The noises will be caught")
 
 def tell_joke(arg, argc):
 	if argc == 0:
@@ -50,8 +28,6 @@ def get_random_number(arg, argc):
 	else: return messagetypes.Reply("Your random number between 0 and {} is {}".format(value, random.choice(range(value))))
 
 commands = {
-	"counter": start_timer,
 	"joke": tell_joke,
-	"noise": start_catching_noises,
 	"number": get_random_number
 }
