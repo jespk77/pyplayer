@@ -34,8 +34,6 @@ class Interpreter(QtCore.QThread):
 		self._handlers = []
 		self._handlers.append(self.register_event("parse_command", self._parse_command))
 		self._handlers.append(self.register_event("destroy", self._on_destroy))
-		self._handlers.append(self.register_event("title_update", self._client.update_title))
-		self._handlers.append(self.register_event("media_update", self._client.update_title_media))
 		self._set_sys_arg()
 
 		self._modules = []
@@ -59,7 +57,6 @@ class Interpreter(QtCore.QThread):
 				self.mem_tracker.print_diff()
 				self._checks.append("MemoryLog")
 			except Exception as e: print("ERROR", "Cannot load memory tracker:", e)
-		self._notify_event("title_update", None, self._checks)
 
 
 	@property

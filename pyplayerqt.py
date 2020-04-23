@@ -72,6 +72,7 @@ class PyPlayer(pywindow.PyWindow):
 
     def start_interpreter(self, module_cfg):
         self._interp = Interpreter(self, module_cfg)
+        self.update_title("PyPlayerQt")
 
     def stop_interpreter(self):
         if self._interp:
@@ -115,12 +116,8 @@ class PyPlayer(pywindow.PyWindow):
     def on_notification(self, message, tags=None):
         self.schedule_task(task_id="reply_task", reply=message, tags=tags)
 
-    def update_title(self, title, checks=None):
+    def update_title(self, title):
         if not title: title = self.title
-        prefix = " ".join(f"[{c}]" for c in (checks if checks is not None else []))
+        prefix = " ".join(f"[{c}]" for c in self._interp.arguments)
         self._title_song = title
         self.title = prefix + " " + title
-
-    def update_title_media(self, media_data):
-        self.update_title(media_data.display_name)
-        self["progress_bar"].progress = 0
