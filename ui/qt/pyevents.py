@@ -89,7 +89,7 @@ class PyElementEvents(EventHandler):
                 * screen_y: the y postition of the cursor on the screen
             - not cancellable
         """
-        self.register_event("double_left_click", cb)
+        self.register_event("double_click_left", cb)
         return cb
 
     def EventRightClick(self, cb):
@@ -115,7 +115,7 @@ class PyElementEvents(EventHandler):
                 * screen_y: the y postition of the cursor on the screen
             - not cancellable
         """
-        self.register_event("double_right_click", cb)
+        self.register_event("double_click_right", cb)
         return cb
 
     def EventInteract(self, cb):
