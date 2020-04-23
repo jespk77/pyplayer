@@ -35,7 +35,7 @@ class PyWindowEvents(EventHandler):
         """
          Event that fires before the window gets destroyed, should be used to clean up variables and/or close open handles
          Note: this event is not equal to the 'WindowClosed' event, this one fires when the window is in the process of being destroyed and is therefore not cancellable
-            - no callback keywords
+            - no keywords
             - not cancellable
         """
         self.register_event("window_destroy", cb)
@@ -45,7 +45,7 @@ class PyWindowEvents(EventHandler):
         """
          Event fires when the user is trying to close the window, if the event is canceled the window won't close
          Note: this event is not equal to the 'WindowDestroy' event, this one is fired if the user is trying to close it, the window might not actually get destroyed
-            - no callback keywords
+            - no keywords
             - cancellable
         """
         self.register_event("window_close", cb)
@@ -53,7 +53,7 @@ class PyWindowEvents(EventHandler):
 
     def EventWindowResize(self, cb):
         """ Fired when the window has been resized
-            - callback keywords:
+            - available keywords:
                 * width: the new width of the window (in pixels)
                 * height: the new height of the window (in pixels)
             - not cancellable
@@ -69,30 +69,60 @@ class PyElementEvents(EventHandler):
     def EventLeftClick(self, cb):
         """
          Event that fires when an element is left clicked
-            - keywords:
-                * x: the x position of the cursor
-                * y: the y position of the cursor
+            - available keywords:
+                * x: the x position of the cursor, relative to the element's size
+                * screen_x: the x position of the cursor on the screen
+                * y: the y position of the cursor, relative to the element's size
+                * screen_y: the y postition of the cursor on the screen
             - not cancellable
         """
         self.register_event("left_click", cb)
         return cb
 
+    def EventDoubleClick(self, cb):
+        """
+         Event that fires when an element is double clicked
+            - available keywords:
+                * x: the x position of the cursor, relative to the element's size
+                * screen_x: the x position of the cursor on the screen
+                * y: the y position of the cursor, relative to the element's size
+                * screen_y: the y postition of the cursor on the screen
+            - not cancellable
+        """
+        self.register_event("double_left_click", cb)
+        return cb
+
     def EventRightClick(self, cb):
         """
          Event that fires when an element is right clicked
-            - keywords:
-                * x: the x position of the cursor
-                * y: the y position of the cursor
+            - available keywords:
+                * x: the x position of the cursor, relative to the element's size
+                * screen_x: the x position of the cursor on the screen
+                * y: the y position of the cursor, relative to the element's size
+                * screen_y: the y postition of the cursor on the screen
             - not cancellable
         """
         self.register_event("right_click", cb)
+        return cb
+
+    def EventDoubleClickRight(self, cb):
+        """
+         Event that fires when an element is double clicked with the right mouse button
+            - available keywords:
+                * x: the x position of the cursor, relative to the element's size
+                * screen_x: the x position of the cursor on the screen
+                * y: the y position of the cursor, relative to the element's size
+                * screen_y: the y postition of the cursor on the screen
+            - not cancellable
+        """
+        self.register_event("double_right_click", cb)
         return cb
 
     def EventInteract(self, cb):
         """
          Event that fires when an element is interacted with
          Details on this interaction vary per element
-            - keywords: varied, see documentation for each element
+            - available keywords: varied, see documentation for each element
             - not cancellable
         """
         self.register_event("interact", cb)
@@ -102,7 +132,7 @@ class PyElementEvents(EventHandler):
         """
          Event that fires when a key is pressed, or 'all' to capture all keys
          Note: This event is only fired for the closest match, therefore the 'all' event is only fired if there's nothing bound to the specfic key that was pressed
-            - keywords:
+            - available keywords:
                 * key: the key code of the key that was pressed
                 * modifier: the modifier key that was held, or None if no modifier was held
             - not cancellable
@@ -124,7 +154,7 @@ class PyElementInputEvent(PyElementEvents):
         """
          Event that fires when the user presses the up or down key
          Can be used to go back and forth between previous entered lines
-            - keywords:
+            - available keywords:
                 * direction: which direction to go (-1 for backward, 1 for forward)
             - cancellable: if cancelled the key press will not be forwarded to the element
         """

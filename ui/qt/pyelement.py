@@ -11,9 +11,12 @@ class PyElement:
         self._container: pywindow.PyWindow = container
         self._element_id = element_id
         if not hasattr(self, "_qt"): self._qt = QtWidgets.QWidget(container)
+        self.qt_element.mousePressEvent = self._on_mouse_press
         self.qt_element.keyPressEvent = self._on_key_press
+        self.qt_element.mouseDoubleClickEvent = self._on_mouse_doubleclick
         self._cfg = container.configuration.get_or_create_configuration(f"children::{element_id}", {})
         self._key_cb = {}
+        self._double_clicked = False
         if not hasattr(self, "_event_handler"): self._event_handler = pyevents.PyElementEvents(self)
 
     @property
@@ -68,19 +71,32 @@ class PyElement:
         return QtCore.Qt.__dict__.get(f"Key_{key}")
 
     _key_modifiers = {QtCore.Qt.NoModifier: None, QtCore.Qt.ShiftModifier: "shift", QtCore.Qt.ControlModifier: "ctrl", QtCore.Qt.AltModifier: "alt"}
-    def _on_key_press(self, key):
-        cb = self._key_cb.get(key.key())
+    # QWidget.keyPressEvent override
+    def _on_key_press(self, event):
+        cb = self._key_cb.get(event.key())
         if not cb: cb = self._key_cb.get('*')
 
         if cb:
-            kwargs = {"key": key.key(), "modifiers": [self._key_modifiers[k] for k in self._key_modifiers.keys() if key.modifiers() & k]}
+            kwargs = {"key": event.key(), "modifiers": [self._key_modifiers[k] for k in self._key_modifiers.keys() if event.modifiers() & k]}
             args = cb.__code__.co_varnames
             try: return cb(**{key: value for key, value in kwargs.items() if key in args})
             except Exception as e:
                 import traceback
                 print("ERROR", f"Error processing event 'key_down':")
                 traceback.print_exception(type(e), e, e.__traceback__)
-        type(self.qt_element).keyPressEvent(self.qt_element, key)
+        type(self.qt_element).keyPressEvent(self.qt_element, event)
+
+    # QWidget.mousePressEvent override
+    def _on_mouse_press(self, event):
+        if not self._double_clicked: self.events.call_event("left_click" if event.button() == QtCore.Qt.LeftButton else "right_click", x=event.x(), screen_x=event.globalX(), y=event.y(), screen_y=event.globalY())
+        else: self._double_clicked = False
+        type(self.qt_element).mousePressEvent(self.qt_element, event)
+
+    # QWidget.mouseDoubleClickEvent override
+    def _on_mouse_doubleclick(self, event):
+        self._double_clicked = True
+        self.events.call_event("double_click_left" if event.button() == QtCore.Qt.LeftButton else "double_click_right", x=event.x(), screen_x=event.globalX(), y=event.y(), screen_y=event.globalY())
+        type(self.qt_element).mouseDoubleClickEvent(self.qt_element, event)
 
 class PyFrame(PyElement):
     """
@@ -413,16 +429,16 @@ class PyTextField(PyElement):
         cursor.clearSelection()
         self.qt_element.setTextCursor(cursor)
 
-    # QTextEdit.keyPressEvent override
-    def _on_key_press(self, key):
-        key_code = key.key()
+    def _on_key_press(self, event):
+        key_code = event.key()
         if key_code == QtCore.Qt.Key_Up:
             res = self._event_handler.call_event("history", direction=-1)
             if res == self._event_handler.block_action: return
         elif key_code == QtCore.Qt.Key_Down:
             res = self._event_handler.call_event("history", direction=1)
             if res == self._event_handler.block_action: return
-        PyElement._on_key_press(self, key)
+        PyElement._on_key_press(self, event)
+
 
 class PyProgessbar(PyElement):
     """
@@ -437,7 +453,6 @@ class PyProgessbar(PyElement):
         self._qt = QtWidgets.QProgressBar(parent.qt_element)
         PyElement.__init__(self, parent, element_id)
         self.qt_element.setTextVisible(False)
-        self._qt.mousePressEvent = self._on_mouse_click
 
     @property
     def progress(self): return self.qt_element.value()
@@ -465,11 +480,11 @@ class PyProgessbar(PyElement):
         self.maximum = value
         return self
 
-    # QProgressBar.mousePressEvent override
-    def _on_mouse_click(self, event):
+    def _on_mouse_press(self, event):
         x, y = event.x(), event.y()
         self.events.call_event("interact", x=x, y=y, position=x/self.qt_element.width())
-        QtWidgets.QProgressBar.mousePressEvent(self._qt, event)
+        PyElement._on_mouse_press(self, event)
+
 
 class PyScrollbar(PyElement):
     """
@@ -480,6 +495,7 @@ class PyScrollbar(PyElement):
     def __init__(self, parent, element_id):
         self._qt = QtWidgets.QScrollBar(parent.qt_element)
         PyElement.__init__(self, parent, element_id)
+
 
 class PyItemlist(PyElement):
     """
