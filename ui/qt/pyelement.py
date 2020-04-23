@@ -17,7 +17,7 @@ class PyElement:
         if not hasattr(self, "_event_handler"): self._event_handler = pyevents.PyElementEvents(self)
 
     @property
-    def qt_element(self) -> None: return self._qt
+    def qt_element(self) -> QtWidgets.QWidget: return self._qt
 
     @property
     def element_id(self): return self._element_id
@@ -88,7 +88,7 @@ class PyFrame(PyElement):
      No interaction event
     """
     def __init__(self, parent, element_id, layout="grid"):
-        self._qt = QtWidgets.QWidget(parent._qt)
+        if not hasattr(self, "_qt"): self._qt = QtWidgets.QWidget(parent._qt)
         PyElement.__init__(self, parent, element_id)
         self._children = {}
         try: self._layout = pylayout.layouts[layout](self.qt_element)
