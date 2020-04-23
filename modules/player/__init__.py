@@ -399,6 +399,9 @@ def initialize():
 	progress = client.add_element("progress_bar", element_class=pyelement.PyProgessbar, row=1, columnspan=3)
 	progress.minimum, progress.maximum = 0, 10000
 	progress.progress = 0
+	@progress.events.EventInteract
+	def _on_click(position): interpreter.put_command(f"player position {position}")
+
 	client.configuration.get_or_create("directory", {})
 	client.configuration.get_or_create("default_directory", "")
 
