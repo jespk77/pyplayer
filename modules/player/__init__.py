@@ -401,7 +401,9 @@ def initialize():
 	progress.progress = 0
 	client.configuration.get_or_create("directory", {})
 	client.configuration.get_or_create("default_directory", "")
+
 	client.add_task(task_id="player_progress_update", func=_set_client_progress)
+	client.add_task(task_id="player_title_update", func=_set_client_title)
 	command_filter_clear(None, 0)
 
 def on_destroy():
@@ -413,7 +415,7 @@ def on_media_change(event, player):
 		if media_player.current_media.path == options["path"]:
 			color = options.get("color")
 			break
-	interpreter.put_event("media_update", media_player.current_media, color)
+	client.schedule_task(task_id="player_title_update", media=media_player.current_media, color=color)
 
 def on_pos_change(event, player):
 	client.schedule_task(task_id="player_progress_update", progress=event.u.new_position)
@@ -427,7 +429,7 @@ def on_player_update(event, player):
 
 	if default_directory is not None and md.path == default_directory["path"]:
 		song_tracker.add(md.display_name)
-		try: client.widgets["songbrowser"].add_count(md.display_name)
+		try: client["songbrowser"].add_count(md.display_name)
 		except KeyError: pass
 	song_history.add((md.path, md.song))
 
@@ -437,3 +439,6 @@ def on_end_reached(event, player):
 def _set_client_progress(progress):
 	progress = round(progress * 10000)
 	client["progress_bar"].progress = progress
+
+def _set_client_title(media, color):
+	client.update_title(media.display_name)
