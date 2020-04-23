@@ -427,12 +427,17 @@ class PyTextField(PyElement):
 class PyProgessbar(PyElement):
     """
      Display the progress of a certain action on screen
-     No interaction event
+     Interaction event called when the mouse is clicked over the widget
+     Available keywords:
+        * x: the x coordinate of the element the mouse clicked on
+        * y: the y coordinate of the element the mouse clicked on
+        * position: the progress value it was clicked on, relative to the element's width
     """
     def __init__(self, parent, element_id):
         self._qt = QtWidgets.QProgressBar(parent.qt_element)
         PyElement.__init__(self, parent, element_id)
         self.qt_element.setTextVisible(False)
+        self._qt.mousePressEvent = self._on_mouse_click
 
     @property
     def progress(self): return self.qt_element.value()
@@ -459,6 +464,12 @@ class PyProgessbar(PyElement):
     def with_maximum(self, value):
         self.maximum = value
         return self
+
+    # QProgressBar.mousePressEvent override
+    def _on_mouse_click(self, event):
+        x, y = event.x(), event.y()
+        self.events.call_event("interact", x=x, y=y, position=x/self.qt_element.width())
+        QtWidgets.QProgressBar.mousePressEvent(self._qt, event)
 
 class PyScrollbar(PyElement):
     """
