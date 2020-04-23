@@ -15,7 +15,7 @@ class PyPlayer(pywindow.PyWindow):
         self.layout.column(1, minsize=30, weight=1).row(3, minsize=100, weight=1)
 
         self.title = "PyPlayerQt"
-        self._title_song = ""
+        self.title_song = ""
         self.icon = "assets/icon.png"
         self.flags = PyPlayerCloseReason.NONE
         self.configuration.set_defaults(initial_cfg)
@@ -119,5 +119,5 @@ class PyPlayer(pywindow.PyWindow):
     def update_title(self, title):
         if not title: title = self.title
         prefix = " ".join(f"[{c}]" for c in self._interp.arguments)
-        self._title_song = title
+        self.title_song = title
         self.title = prefix + " " + title

@@ -249,7 +249,7 @@ def command_position(arg, argc):
 	if argc == 1:
 		try: ps = float(arg[0])
 		except ValueError: return messagetypes.Reply("Cannot figure out what that number is")
-		if 0 < ps < 1: return messagetypes.Reply("Position updated" if media_player.set_position(ps) else "Position cannot be updated, try restarting the song")
+		if 0 <= ps <= 1: return messagetypes.Reply("Position updated" if media_player.set_position(ps) else "Position cannot be updated, try restarting the song")
 		else: return messagetypes.Reply("Set position must be between 0.0 and 1.0")
 
 def command_play(arg, argc):
@@ -347,6 +347,7 @@ def command_stop(arg, argc):
 		media_player.stop_player()
 		return messagetypes.Empty()
 
+from . import songbrowser_commands as browser_command
 commands = {
 	"album": {
 		"": command_album,
@@ -384,7 +385,16 @@ commands = {
 		"": command_queue,
 		"clear": command_queue_clear,
 		"next": command_queue_next
-	}, "rss": command_rss
+	}, "rss": command_rss,
+	"browser": {
+		"": browser_command.command_browser,
+		"none": browser_command.command_browser_remove,
+		"name": browser_command.command_browser_name,
+		"played-month": browser_command.command_browser_played_month,
+		"played": browser_command.command_browser_played_all,
+		"recent": browser_command.command_browser_recent,
+		"shuffle": browser_command.command_browser_shuffle
+	}
 }
 
 def initialize():
@@ -407,7 +417,10 @@ def initialize():
 
 	client.add_task(task_id="player_progress_update", func=_set_client_progress)
 	client.add_task(task_id="player_title_update", func=_set_client_title)
+	client.add_task(task_id="songbrowser_update", func=browser_command.set_songbrowser)
 	command_filter_clear(None, 0)
+
+	browser_command.initialize(interpreter, client)
 
 def on_destroy():
 	media_player.on_destroy()
@@ -445,3 +458,4 @@ def _set_client_progress(progress):
 
 def _set_client_title(media, color):
 	client.update_title(media.display_name)
+	browser_command.title_update(media, color)

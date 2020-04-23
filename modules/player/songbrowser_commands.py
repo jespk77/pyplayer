@@ -1,42 +1,51 @@
-from modules.songbrowser.songbrowser_element import SongBrowser
+from modules.player.songbrowser import SongBrowser
 from utilities import messagetypes, song_tracker
 
 # DEFAULT MODULE VARIABLES
 interpreter = client = None
 
 # VARIABLES SPECIFIC TO THIS MODULE
-default_path_key = "default_path"
+default_path_key = "default_directory"
 default_sort_key = "songbrowser_sorting"
-element_id = "songbrowser"
 
 # ===== HELPER OPERATIONS ===== #
 def parse_path(arg, argc):
 	dir = client.configuration["directory"]
 	if argc > 0:
-		try: return (arg[0], dir[arg[0]]["path"])
-		except KeyError: return "No directory with name: '{}'".format(arg[0]),
+		try: return arg[0], dir[arg[0]]["path"]
+		except KeyError: return f"No directory with name: '{arg[0]}'",
 	else:
 		path = client.configuration[default_path_key]
 		if path:
 			try: return path, dir[path]["path"]
-			except KeyError: return "Invalid default directory '{}' set".format(path),
-		else: return "No default directory set, set one using key '{}'".format(default_path_key),
+			except KeyError: return f"Invalid default directory '{path}' set",
+		else: return f"No default directory set, set one using key '{default_path_key}'",
 
 def bind_events():
-	browser = client.content[element_id]
+	browser = client["songbrowser"]
 	if browser:
-		@browser.event_handler.MouseClickEvent("left", doubleclick=True)
-		def _browser_doubleclick(y): interpreter.put_command("player {path} {song}.".format(path=client.content["songbrowser"].path[0], song=client.content["songbrowser"].get_nearest_song(y)))
+		@browser.events.EventDoubleClick
+		def _browser_doubleclick():
+			browser.selected_index = browser.current_index
+			interpreter.put_command(f"player {browser.path[0]} {browser.selected_item}.")
 
-		@browser.event_handler.MouseClickEvent("right")
-		def _browser_rightclick(y): interpreter.put_command("queue {path} {song}.".format(path=client.widgets["songbrowser"].path[0], song=client.widgets["songbrowser"].get_nearest_song(y)))
-
-		interpreter.register_event("media_update", title_update)
+		@browser.events.EventRightClick
+		def _browser_rightclick():
+			song = browser.itemlist[browser.current_index]
+			interpreter.put_command(f"queue {browser.path[0]} {song}.")
 		browser.select_song(client.title_song)
 
-def unbind_events(): interpreter.unregister_event("media_update", title_update)
-def title_update(data, color): client.content[element_id].select_song(data.display_name)
+def title_update(data, color): client["songbrowser"].select_song(data.display_name)
 def unsupported_path(): print("INFO", "Tried to open songbrowser sorted on plays with unsupported path, using name sorting instead...")
+
+def set_songbrowser(browser):
+	if browser:
+		client.add_element(element=browser, row=2, columnspan=3)
+		client.layout.row(2, weight=1, minsize=250).row(3, weight=0)
+		bind_events()
+	else:
+		client.remove_element("songbrowser")
+		client.layout.row(2, weight=0, minsize=0).row(3, weight=1)
 
 # ===== MAIN COMMANDS =====
 # - browser configure
@@ -44,14 +53,13 @@ def command_browser_played_month(arg, argc):
 	if argc <= 2:
 		path = parse_path(arg, argc)
 		if len(path) == 2:
-			if path[0] != client[default_path_key]:
+			if path[0] != client.configuration[default_path_key]:
 				unsupported_path()
 				return command_browser_name(arg, argc)
 
-			browser = SongBrowser(client.content, element_id)
+			browser = SongBrowser(client)
 			browser.create_list_from_frequency(path, song_tracker.get_songlist(alltime=False))
-			client.set_songbrowser(browser)
-			bind_events()
+			client.schedule_task(task_id="songbrowser_update", browser=browser)
 			return messagetypes.Reply("Browser enabled on plays per month in '{}'".format(path[0]))
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
@@ -63,49 +71,45 @@ def command_browser_played_all(arg, argc):
 				unsupported_path()
 				return command_browser_name(arg, argc)
 
-			browser = SongBrowser(client.content, element_id)
+			browser = SongBrowser(client)
 			browser.create_list_from_frequency(path, song_tracker.get_songlist(alltime=True))
-			client.set_songbrowser(browser)
-			bind_events()
-			return messagetypes.Reply("Browser sorted on all time plays in '{}'".format(path[0]))
+			client.schedule_task(task_id="songbrowser_update", browser=browser)
+			return messagetypes.Reply(f"Browser sorted on all time plays in '{path[0]}'")
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
 def command_browser_recent(arg, argc):
 	if argc <= 2:
 		path = parse_path(arg, argc)
 		if len(path) == 2:
-			browser = SongBrowser(client.content, element_id)
+			browser = SongBrowser(client)
 			browser.create_list_from_recent(path)
-			client.set_songbrowser(browser)
-			bind_events()
-			return messagetypes.Reply("Browser sorted on recent songs in '{}'".format(path[0]))
+			client.schedule_task(task_id="songbrowser_update", browser=browser)
+			return messagetypes.Reply(f"Browser sorted on recent songs in '{path[0]}'")
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
 def command_browser_shuffle(arg, argc):
 	if argc < 1:
 		path = parse_path(arg, argc)
 		if len(path) == 2:
-			browser = SongBrowser(client.content, element_id)
+			browser = SongBrowser(client)
 			browser.create_list_random(path)
-			client.set_songbrowser(browser)
-			bind_events()
-			return messagetypes.Reply("Browser enabled for shuffled songs in '{}'".format(path[0]))
+			client.schedule_task(task_id="songbrowser_update", browser=browser)
+			return messagetypes.Reply(f"Browser enabled for shuffled songs in '{path[0]}'")
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
 def command_browser_name(arg, argc):
 	if argc <= 2:
 		path = parse_path(arg, argc)
 		if len(path) == 2:
-			browser = SongBrowser(client.content, element_id)
+			browser = SongBrowser(client)
 			browser.create_list_from_name(path)
-			client.set_songbrowser(browser)
-			bind_events()
-			return messagetypes.Reply("Browser enabled for songs in '{}'".format(path[0]))
+			client.schedule_task(task_id="songbrowser_update", browser=browser)
+			return messagetypes.Reply(f"Browser enabled for songs in '{path[0]}'")
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
 def command_browser_remove(arg, argc):
 	if argc == 0:
-		client.set_songbrowser(None)
+		client.schedule_task(task_id="songbrowser_update", browser=None)
 		return messagetypes.Reply("Browser closed")
 
 def command_browser(arg, argc):
@@ -115,14 +119,6 @@ def command_browser(arg, argc):
 		except KeyError: return messagetypes.Reply("Invalid default sorting set in configuration '{}'".format(sorting))
 	return messagetypes.Reply("No default sorting set '{}' and none or invalid one specified".format(default_sort_key))
 
-commands = {
-	"browser": {
-		"": command_browser,
-		"none": command_browser_remove,
-		"name": command_browser_name,
-		"played-month": command_browser_played_month,
-		"played": command_browser_played_all,
-		"recent": command_browser_recent,
-		"shuffle": command_browser_shuffle
-	}
-}
+def initialize(interp, cl):
+	global interpreter, client
+	interpreter, client = interp, cl

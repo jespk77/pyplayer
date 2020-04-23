@@ -1,8 +1,0 @@
-{
-  "id": "songbrowser",
-  "enabled": true,
-  "dependencies": [],
-  "platform": null,
-  "priority": 3,
-  "required": false
-}
