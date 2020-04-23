@@ -397,7 +397,7 @@ def initialize():
 	if not song_tracker.is_loaded(): song_tracker.load_tracker()
 
 	progress = client.add_element("progress_bar", element_class=pyelement.PyProgessbar, row=1, columnspan=3)
-	progress.minimum, progress.maximum = 0, 100
+	progress.minimum, progress.maximum = 0, 10000
 	progress.progress = 0
 	client.configuration.get_or_create("directory", {})
 	client.configuration.get_or_create("default_directory", "")
@@ -435,5 +435,5 @@ def on_end_reached(event, player):
 	interpreter.put_command("autoplay next")
 
 def _set_client_progress(progress):
-	progress = round(progress * 100)
+	progress = round(progress * 10000)
 	client["progress_bar"].progress = progress
