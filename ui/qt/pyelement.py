@@ -486,25 +486,80 @@ class PyProgessbar(PyElement):
         PyElement._on_mouse_press(self, event)
 
 
-class PyScrollbar(PyElement):
-    """
-     Adds a scrollbar to an element that is larger than the window
-     Generally this element does not need to be created on its own, elements that support it will create them automatically when needed
-     No interaction event
-    """
-    def __init__(self, parent, element_id):
-        self._qt = QtWidgets.QScrollBar(parent.qt_element)
-        PyElement.__init__(self, parent, element_id)
-
-
 class PyItemlist(PyElement):
     """
      Show a list of items the user can select
-     Interaction event fires when the item selection changes, no keywords
+     Interaction event fires when an item is left clicked, updating the selection
+     No keywords
     """
     def __init__(self, parent, element_id):
         self._qt = QtWidgets.QListView(parent.qt_element)
         PyElement.__init__(self, parent, element_id)
         self.qt_element.setUniformItemSizes(True)
+        self.qt_element.setSelectionMode(QtWidgets.QListView.SingleSelection)
         self.qt_element.setViewMode(QtWidgets.QListView.ListMode)
         self.qt_element.setFlow(QtWidgets.QListView.TopToBottom)
+        self.qt_element.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.qt_element.setEditTriggers(QtWidgets.QListView.NoEditTriggers)
+        self._items = QtCore.QStringListModel()
+
+    @property
+    def itemlist(self): return self._items.stringList()
+    @itemlist.setter
+    def itemlist(self, items):
+        self._items.setStringList(items)
+        self.qt_element.setModel(self._items)
+
+    @property
+    def auto_select(self): return self.qt_element.selectionMode() == QtWidgets.QListView.SingleSelection
+    @auto_select.setter
+    def auto_select(self, select): self.qt_element.setSelectionMode(QtWidgets.QListView.SingleSelection if select else QtWidgets.QListView.NoSelection)
+
+    @property
+    def selected_index(self):
+        """ Returns the index of the currently selected item, or -1 if nothing was selected """
+        try: return self.qt_element.selectedIndexes()[0].row()
+        except IndexError: return -1
+    @selected_index.setter
+    def selected_index(self, index):
+        """ Set the current selection to given index, clears the selection if the given index is less than 0 """
+        self.clear_selection()
+        if index >= 0: self.qt_element.setSelection(self._qt.visualRect(self._items.index(index)), QtCore.QItemSelectionModel.Select)
+
+    def clear_selection(self):
+        """ Removes any selected item """
+        self.qt_element.clearSelection()
+
+    def set_selection(self, index=None, item=None):
+        """ Set the selection to given index or given item, returns the selected item """
+        if index:
+            self.selected_index = index
+            return self.selected_item
+        if item:
+            self.selected_item = item
+            return self.selected_item
+        raise ValueError("Must specify either an index or an item")
+
+    @property
+    def selected_item(self):
+        """ Returns the string of the currently selected item, or None if nothing was selected """
+        index = self.selected_index
+        try: return self.itemlist[index]
+        except IndexError: return None
+    @selected_item.setter
+    def selected_item(self, item):
+        """ Set the selection to given string, clears the selection if the given string wasn't found """
+        items = self.itemlist
+        try: self.selected_index = items.index(item)
+        except ValueError: self.selected_index = -1
+
+    @property
+    def clicked_index(self):
+        """ Returns the index of the item that was last clicked on """
+        return self.qt_element.currentIndex().row()
+    @clicked_index.setter
+    def clicked_index(self, index): self.qt_element.setCurrentIndex(index)
+
+    def move_to(self, index):
+        """ Make sure given index is visible """
+        self.qt_element.scrollTo(self._items.index(row=index))
