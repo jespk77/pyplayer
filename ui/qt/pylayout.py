@@ -22,13 +22,13 @@ class PyGridLayout(PyLayout):
     def columns(self): return self._qt.columnCount()
 
     def row(self, index, minsize=None, weight=None):
-        if minsize: self._qt.setRowMinimumHeight(index, minsize)
-        if weight: self._qt.setRowStretch(index, weight)
+        if minsize is not None: self._qt.setRowMinimumHeight(index, minsize)
+        if weight is not None: self._qt.setRowStretch(index, weight)
         return self
 
     def column(self, index, minsize=None, weight=None):
-        if minsize: self._qt.setColumnMinimumWidth(index, minsize)
-        if weight: self._qt.setColumnStretch(index, weight)
+        if minsize is not None: self._qt.setColumnMinimumWidth(index, minsize)
+        if weight is not None: self._qt.setColumnStretch(index, weight)
         return self
 
     def insert_element(self, element, row=0, column=0, rowspan=1, columnspan=1):

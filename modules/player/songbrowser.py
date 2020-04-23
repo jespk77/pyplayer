@@ -12,6 +12,7 @@ class SongBrowser(pyelement.PyItemlist):
 		pyelement.PyItemlist.__init__(self, client, "songbrowser")
 		self._path = self._songcounter = None
 		self._path_valid = self._is_dynamic = False
+		self.auto_select = False
 
 	@property
 	def path(self): return self._path
@@ -36,7 +37,7 @@ class SongBrowser(pyelement.PyItemlist):
 			else: index += 1
 
 		if found:
-			self.set_selection(index)
+			self.set_selection(index=index)
 			self.move_to(index)
 		else: self.clear_selection()
 
