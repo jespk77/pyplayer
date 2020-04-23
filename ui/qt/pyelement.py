@@ -571,4 +571,4 @@ class PyItemlist(PyElement):
 
     def move_to(self, index):
         """ Make sure given index is visible """
-        self.qt_element.scrollTo(self._items.index(row=index))
+        self.qt_element.scrollTo(self._items.index(index))
