@@ -40,9 +40,14 @@ class PyElement:
     def accept_input(self): return True
 
     @property
+    def hidden(self): return self.qt_element.isHidden()
+    @hidden.setter
+    def hidden(self, hide): self.qt_element.setHidden(bool(hide))
+
+    @property
     def width(self): return self.qt_element.width()
     @width.setter
-    def width(self, value): self.qt_element.setFixedWidth(value)
+    def width(self, value): self.qt_element.setFixedWidth(int(value))
     def with_width(self, value):
         self.width = value
         return self
@@ -50,7 +55,7 @@ class PyElement:
     @property
     def height(self): return self.qt_element.height()
     @height.setter
-    def height(self, value): self.qt_element.setFixedHeight(value)
+    def height(self, value): self.qt_element.setFixedHeight(int(value))
     def with_height(self, value):
         self.height = value
         return self
@@ -209,13 +214,17 @@ class PyTextLabel(PyElement):
     @property
     def wrapping(self): return self.qt_element.wordWrap()
     @wrapping.setter
-    def wrapping(self, wrap): self.qt_element.setWordWrap(wrap)
+    def wrapping(self, wrap): self.qt_element.setWordWrap(bool(wrap))
 
     _alignments = {"left": QtCore.Qt.AlignLeft, "centerH": QtCore.Qt.AlignHCenter, "right": QtCore.Qt.AlignRight,
                    "center": QtCore.Qt.AlignCenter, "centerV": QtCore.Qt.AlignVCenter, "justify": QtCore.Qt.AlignJustify}
     def set_alignment(self, align):
         """ Set alignment for this label, must be one of ['left', 'centerH', 'right', 'center', 'centerV', 'justify'] """
-        self.qt_element.setAlignment(self._alignments[align])
+        try:
+            self.qt_element.setAlignment(self._alignments[align])
+            return
+        except KeyError: pass
+        raise ValueError(f"Unknown alignment '{align}' specified")
 
 
 class PyTextInput(PyElement):
@@ -233,7 +242,7 @@ class PyTextInput(PyElement):
     @property
     def accept_input(self): return self._qt.isEnabled()
     @accept_input.setter
-    def accept_input(self, value): self.qt_element.setEnabled(value)
+    def accept_input(self, value): self.qt_element.setEnabled(bool(value))
     def with_accept_input(self, value):
         self.accept_input = not value
         return self
@@ -241,7 +250,7 @@ class PyTextInput(PyElement):
     @property
     def format_str(self): return self.qt_element.inputMask()
     @format_str.setter
-    def format_str(self, rex): self.qt_element.setInputMask(rex if rex is not None else "")
+    def format_str(self, rex): self.qt_element.setInputMask(str(rex) if rex is not None else "")
     def with_format_str(self, rex):
         self.format_str = rex
         return self
@@ -258,7 +267,7 @@ class PyTextInput(PyElement):
     @property
     def max_length(self): return self.qt_element.maxLength()
     @max_length.setter
-    def max_length(self, ln): self.qt_element.setMaxLength(ln)
+    def max_length(self, ln): self.qt_element.setMaxLength(int(ln))
     def with_max_length(self, ln):
         self.max_length = ln
         return self
@@ -297,12 +306,12 @@ class PyCheckbox(PyElement):
     @property
     def checked(self): return self.qt_element.isChecked()
     @checked.setter
-    def checked(self, checked): self.qt_element.setChecked(checked)
+    def checked(self, checked): self.qt_element.setChecked(bool(checked))
 
     @property
     def accept_input(self): return self.qt_element.isEnabled()
     @accept_input.setter
-    def accept_input(self, check): self.qt_element.setEnabled(check)
+    def accept_input(self, check): self.qt_element.setEnabled(bool(check))
 
 
 class PyButton(PyElement):
@@ -319,7 +328,7 @@ class PyButton(PyElement):
     @property
     def accept_input(self): return self.qt_element.isEnabled()
     @accept_input.setter
-    def accept_input(self, inpt): self.qt_element.setEnabled(inpt)
+    def accept_input(self, inpt): self.qt_element.setEnabled(bool(inpt))
 
     @property
     def display_text(self): return self.qt_element.text()
@@ -366,7 +375,7 @@ class PyTextField(PyElement):
     @property
     def undo(self): return self.qt_element.isUndoRedoEnabled()
     @undo.setter
-    def undo(self, do): self.qt_element.setUndoRedoEnabled(do)
+    def undo(self, do): self.qt_element.setUndoRedoEnabled(bool(do))
 
     @property
     def display_text(self): return self.qt_element.toPlainText()
@@ -457,7 +466,7 @@ class PyProgessbar(PyElement):
     @property
     def progress(self): return self.qt_element.value()
     @progress.setter
-    def progress(self, value): self.qt_element.setValue(value)
+    def progress(self, value): self.qt_element.setValue(int(value))
 
     @property
     def horizontal(self): return self.qt_element.orientation() == QtCore.Qt.Horizontal
@@ -467,7 +476,7 @@ class PyProgessbar(PyElement):
     @property
     def minimum(self): return self.qt_element.minimum()
     @minimum.setter
-    def minimum(self, value): self.qt_element.setMinimum(value)
+    def minimum(self, value): self.qt_element.setMinimum(int(value))
     def with_minimum(self, value):
         self.minimum = value
         return self
@@ -475,7 +484,7 @@ class PyProgessbar(PyElement):
     @property
     def maximum(self): return self.qt_element.maximum()
     @maximum.setter
-    def maximum(self, value): self.qt_element.setMaximum(value)
+    def maximum(self, value): self.qt_element.setMaximum(int(value))
     def with_maximum(self, value):
         self.maximum = value
         return self
