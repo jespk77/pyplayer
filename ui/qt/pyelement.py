@@ -353,6 +353,10 @@ class PyButton(PyElement):
 
 
 class PyTextField(PyElement):
+    start = 0
+    @property
+    def end(self): return len(self.text)
+
     """
      Element for displaying and/or entering multiple lines of text
      No interaction event
@@ -365,7 +369,7 @@ class PyTextField(PyElement):
         self.undo = False
 
     @property
-    def accept_input(self): return self.qt_element.isReadOnly()
+    def accept_input(self): return not self.qt_element.isReadOnly()
     @accept_input.setter
     def accept_input(self, value): self.qt_element.setReadOnly(not value)
     def with_accept_input(self, value):
@@ -396,13 +400,13 @@ class PyTextField(PyElement):
 
     def insert(self, index, text):
         """ Insert text into the given position (ignores 'accept_input' property) """
-        revert = not self.accept_input
-        if revert: self.accept_input = True
+        prev_pos = self.cursor
         cursor = self.qt_element.textCursor()
         cursor.setPosition(index)
-        cursor.insertText(text)
+
+        cursor.insertText(str(text))
+        cursor.setPosition(prev_pos)
         self.qt_element.setTextCursor(cursor)
-        if revert: self.accept_input = False
 
     # todo: insert image into text field
     def insert_image(self, index, img):
@@ -411,20 +415,18 @@ class PyTextField(PyElement):
 
     def delete(self, index1, index2=None):
         """ Delete text between the given positions (ignores 'accept_input' property) """
-        revert = not self.accept_input
-        if revert: self.accept_input = True
         cursor = self.qt_element.textCursor()
         cursor.setPosition(index1)
 
         diff = index2 - index1 if index2 else 1
         for _ in range(diff): cursor.deleteChar()
-
         self.qt_element.setTextCursor(cursor)
-        if revert: self.accept_input = False
 
-    def position(self, search_text):
+    def position(self, index):
         """ Get the exact coordinates in this text field, or emtpy string if nothing found """
-        return self.qt_element.find(search_text)
+        if index == "start": return 0
+        if index == "end": return self.end
+        if index == "insert": return self.cursor
 
     def show(self, position):
         """ Make sure that the given line is visible on screen """
