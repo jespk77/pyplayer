@@ -11,9 +11,13 @@ class PyElement:
         self._container: pywindow.PyWindow = container
         self._element_id = element_id
         if not hasattr(self, "_qt"): self._qt = QtWidgets.QWidget(container)
+
         self.qt_element.mousePressEvent = self._on_mouse_press
         self.qt_element.keyPressEvent = self._on_key_press
         self.qt_element.mouseDoubleClickEvent = self._on_mouse_doubleclick
+        self.qt_element.focusInEvent = self._on_focus
+        self.qt_element.focusOutEvent = self._on_focus_lose
+
         self._cfg = container.configuration.get_or_create_configuration(f"children::{element_id}", {})
         self._key_cb = {}
         self._double_clicked = False
@@ -102,6 +106,16 @@ class PyElement:
         self._double_clicked = True
         self.events.call_event("double_click_left" if event.button() == QtCore.Qt.LeftButton else "double_click_right", x=event.x(), screen_x=event.globalX(), y=event.y(), screen_y=event.globalY())
         type(self.qt_element).mouseDoubleClickEvent(self.qt_element, event)
+
+    # QWidget.focusInEvent override
+    def _on_focus(self, event):
+        self.events.call_event("get_focus")
+        type(self.qt_element).focusInEvent(self.qt_element, event)
+
+    #QWidget.focusOutEvent override
+    def _on_focus_lose(self, event):
+        self.events.call_event("lose_focus")
+        type(self.qt_element).focusOutEvent(self.qt_element, event)
 
 class PyFrame(PyElement):
     """

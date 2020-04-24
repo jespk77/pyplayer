@@ -148,6 +148,24 @@ class PyElementEvents(EventHandler):
             return cb
         return wrapped
 
+    def EventFocusGet(self, cb):
+        """
+         Event that fires when this element receives focus
+            - no keywords
+            - not cancellable
+        """
+        self.register_event("get_focus", cb)
+        return cb
+
+    def EventFocusLost(self):
+        """
+         Event that fires when this element loses focus
+            - no keywords
+            - not cancellable
+        """
+        self.register_event("lose_focus", cb)
+        return cb
+
 
 class PyElementInputEvent(PyElementEvents):
     def EventHistory(self, cb):
