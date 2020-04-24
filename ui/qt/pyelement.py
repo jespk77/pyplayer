@@ -572,3 +572,21 @@ class PyItemlist(PyElement):
     def move_to(self, index):
         """ Make sure given index is visible """
         self.qt_element.scrollTo(self._items.index(index))
+
+
+class PySeparator(PyElement):
+    def __init__(self, parent, element_id):
+        self._qt = QtWidgets.QFrame(parent.qt_element)
+        PyElement.__init__(self, parent, element_id)
+        self.qt_element.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.horizontal = True
+
+    @property
+    def horizontal(self): return self.qt_element.frameShape() == QtWidgets.QFrame.HLine
+    @horizontal.setter
+    def horizontal(self, horizontal): self.qt_element.setFrameShape(QtWidgets.QFrame.HLine if horizontal else QtWidgets.QFrame.VLine)
+
+    @property
+    def vertical(self): return not self.horizontal
+    @vertical.setter
+    def vertical(self, vertical): self.horizontal = not vertical
