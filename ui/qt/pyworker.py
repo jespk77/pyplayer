@@ -39,8 +39,6 @@ class PyWorker:
         self._qt.errored.connect(self.error)
         self._qt.start()
 
-    def __del__(self): print("Task deleted")
-
     @property
     def worker_id(self): return self._id
 
