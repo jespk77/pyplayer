@@ -3,6 +3,8 @@ from datetime import datetime
 from multiprocessing import Queue
 
 from .mediaplayer import MediaPlayer
+from . import songbrowser, lyricviewer
+
 from utilities import messagetypes, song_tracker, history
 from ui.qt import pyelement
 
@@ -57,10 +59,6 @@ def get_addtime(display, song, path):
 
 def get_displayname(song): return os.path.splitext(song)[0]
 
-def get_lyrics(display, song):
-	if client.show_lyrics(display): return messagetypes.Reply("Lyrics for '{}' opened in window".format(display))
-	else: return messagetypes.Reply("Invalid title")
-
 def get_playcount(display, song, alltime):
 	freq = song_tracker.get_freq(song=display, alltime=alltime)
 	if freq > 0:
@@ -79,13 +77,6 @@ def play_song(display, song, path):
 def put_queue(display, song, path):
 	song_queue.put_nowait((path[1], song))
 	return messagetypes.Reply("Song '{}' added to queue".format(display))
-
-def search_youtube(arg, argc, path):
-	if argc > 0:
-		try: from modules import youtube
-		except ImportError: return messagetypes.Reply("Youtube module is not installed")
-		if arg[0]: return youtube.command_youtube_find(arg, argc, path=path)
-	return no_songs
 
 def set_autoplay_ignore(ignore):
 	global autoplay_ignore
@@ -231,8 +222,7 @@ def command_info_reload(arg, argc):
 
 def command_lyrics(arg, argc):
 	path, song = get_song(arg)
-	if path is not None and song is not None: return messagetypes.Select("Multiple songs found", get_lyrics, song)
-	else: return unknown_song
+	return lyricviewer.command_lyrics(path, song)
 
 def command_mute(arg, argc):
 	if argc == 0:
@@ -256,7 +246,6 @@ def command_play(arg, argc):
 	if argc > 0:
 		path, song = get_song(arg)
 		if path and song: return messagetypes.Select("Multiple songs found", play_song, song, path=path)
-		elif len(arg) > 1: return messagetypes.Question("Can't find that song, search for it on youtube?", search_youtube, text=arg, path=path)
 		else: return no_songs
 
 def command_last_random(arg, argc):
@@ -343,18 +332,17 @@ def command_rss(arg, argc):
 		else: return messagetypes.Reply("What url? Enter one using key 'rss_url'")
 
 def command_browser(arg, argc):
-	sorting = client.configuration.get_or_create(browser_command.default_sort_key, "name")
+	sorting = client.configuration.get_or_create(songbrowser.default_sort_key, "name")
 	if isinstance(sorting, str) and len(sorting) > 0:
 		try: return commands["browser"][sorting](arg, argc)
 		except KeyError: return messagetypes.Reply(f"Invalid default sorting set in configuration '{sorting}'")
-	return messagetypes.Reply(f"No default sorting set '{browser_command.default_sort_key}' and none or invalid one specified")
+	return messagetypes.Reply(f"No default sorting set '{songbrowser.default_sort_key}' and none or invalid one specified")
 
 def command_stop(arg, argc):
 	if argc == 0:
 		media_player.stop_player()
 		return messagetypes.Empty()
 
-from . import songbrowser_commands as browser_command
 commands = {
 	"album": {
 		"": command_album,
@@ -395,12 +383,12 @@ commands = {
 	}, "rss": command_rss,
 	"browser": {
 		"": command_browser,
-		"none": browser_command.command_browser_remove,
-		"name": browser_command.command_browser_name,
-		"played-month": browser_command.command_browser_played_month,
-		"played": browser_command.command_browser_played_all,
-		"recent": browser_command.command_browser_recent,
-		"shuffle": browser_command.command_browser_shuffle
+		"none": songbrowser.command_browser_remove,
+		"name": songbrowser.command_browser_name,
+		"played-month": songbrowser.command_browser_played_month,
+		"played": songbrowser.command_browser_played_all,
+		"recent": songbrowser.command_browser_recent,
+		"shuffle": songbrowser.command_browser_shuffle
 	}
 }
 
@@ -424,7 +412,8 @@ def initialize():
 
 	client.add_task(task_id="player_progress_update", func=_set_client_progress)
 	client.add_task(task_id="player_title_update", func=_set_client_title)
-	browser_command.initialize(interpreter, client)
+	songbrowser.initialize(interpreter, client)
+	lyricviewer.initialize(interpreter, client)
 	command_filter_clear(None, 0)
 
 def on_destroy():
@@ -463,4 +452,4 @@ def _set_client_progress(progress):
 
 def _set_client_title(media, color):
 	client.update_title(media.display_name)
-	browser_command.title_update(media, color)
+	songbrowser.title_update(media, color)
