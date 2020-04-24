@@ -61,14 +61,8 @@ class PyPlayer(pywindow.PyWindow):
                 if hist is not None: inpt.value = hist
             return inpt.events.block_action
 
-        @console.events.EventKeyDown("all")
-        def _on_key_down(key, modifiers):
-            try:
-                key = chr(key)
-                if "shift" not in modifiers: key = key.lower()
-                inpt.get_focus()
-                inpt.text += key
-            except ValueError: pass
+        @console.events.EventFocusGet
+        def _on_focus(): inpt.get_focus()
 
     def start_interpreter(self, module_cfg):
         self._interp = Interpreter(self, module_cfg)
@@ -96,8 +90,14 @@ class PyPlayer(pywindow.PyWindow):
 
     def _insert_reply(self, reply, tags=None, prefix=None, text=None):
         if not prefix: prefix = "> "
-        self["console"].text += f"{reply}\n{prefix}"
-        self["console_input"].accept_input = True
+        console = self["console"]
+        console.insert(console.end, f"{reply}\n{prefix}")
+        console.show(console.end)
+
+        console_input = self["console_input"]
+        console_input.accept_input = True
+        if text: console_input.text = text
+        console_input.get_focus()
 
     def _window_tick(self):
         date = datetime.datetime.today()
