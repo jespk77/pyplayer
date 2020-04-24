@@ -261,14 +261,14 @@ class PyWindow:
 
     def cancel_task(self, task_id):
         """
-         Cancel previously scheduled task with given id, the id must have been added with 'schedule_task'
+         Cancel previously scheduled task with given id, the id must have previously been added with 'add_task' or 'schedule_task'
          Has no effect if the task is not currently scheduled
         """
         self._scheduled_tasks[task_id].cancel()
 
     def delete_task(self, task_id):
         """
-         Cancel and remove scheduled task with given id, the id must have been added with 'schedule_task'
+         Cancel and remove scheduled task with given id, the id must have previously been added with 'add_task' or 'schedule_task'
          Once this call completes the given id is cleared and cannot be used without readding it as a new task
         """
         task = self._scheduled_tasks[task_id]
