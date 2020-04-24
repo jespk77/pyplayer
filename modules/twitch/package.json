@@ -1,6 +1,6 @@
 {
   "id": "twitch",
-  "enabled": true,
+  "enabled": false,
   "dependencies": ["requests", "requests-oauthlib"],
   "platform": null,
   "priority": 5,
