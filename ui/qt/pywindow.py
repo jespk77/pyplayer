@@ -35,12 +35,12 @@ class PyWindow:
         self._qt.resizeEvent = self._on_window_resize
         self._qt.closeEvent = self._on_window_close
 
-        self.hidden = True
         self._elements = {}
         self._scheduled_tasks = {}
         self._children = weakref.WeakValueDictionary()
         self._event_handler = pyevents.PyWindowEvents()
         self._cfg = pyconfiguration.ConfigurationFile(f".cfg/{window_id}")
+        self._closed = False
 
         try: self._layout = pylayout.layouts[layout](self.qt_element)
         except KeyError: self._layout = None
@@ -54,6 +54,7 @@ class PyWindow:
         except Exception as e:
             print("ERROR", "Encountered error while creating widgets:")
             log_exception(e)
+        self.hidden = True
 
     def create_widgets(self):
         """ Utility method for adding initial elements to this window, ensures everything is initialized in the correct order """
@@ -72,6 +73,9 @@ class PyWindow:
     def windows(self):
         """ Returns an iterator with all open child windows """
         return self._children.values()
+
+    @property
+    def is_closed(self): return self._closed
 
     @property
     def qt_element(self): return self._qt
@@ -197,11 +201,14 @@ class PyWindow:
     def get_window(self, window_id):
         """ Get open window with given id, raises KeyError when no window with this id is open
             Use find_window instead if this is undesired """
-        return self._children[window_id]
+        window = self._children[window_id]
+        if window.is_closed: raise KeyError(window_id)
+        return window
 
     def find_window(self, window_id):
         """ Safe alternative to get_window, returns None when no open window exists instead """
-        return self._children.get(window_id)
+        window = self._children.get(window_id)
+        return window if window is not None and not window.is_closed else None
 
     def close_window(self, window_id):
         """ CLose window with given id, has no effect if no window with this is is open """
@@ -298,6 +305,7 @@ class PyWindow:
             self.save_configuration()
             for c in self._children.values(): c.destroy()
             self.events.call_event("window_destroy")
+            self._closed = True
         except Exception as e: log_exception(e)
         QtWidgets.QWidget.closeEvent(self.qt_element, event)
 
