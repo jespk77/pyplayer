@@ -74,10 +74,12 @@ class TwitchSigninWorker(pyworker.PyWorker, socketserver.TCPServer):
         with self._state_event:
             if data.get("state") == self._state:
                 print("INFO", "Received account data, scheduling signin completion")
-                self._window.schedule_task(task_id="signin_data", data=data)
+                write_logindata(data)
+                write_metadata(request_metadata())
+                self._window.schedule_task(task_id="signin_data", success=True)
             else:
                 print("ERROR", "Ignoring sign in, received account data in invalid state")
-                self._window.schedule_task(task_id="signin_data", data=None)
+                self._window.schedule_task(task_id="signin_data", success=False)
 
     def stop_server(self):
         print("INFO", "Stopping server")
@@ -106,10 +108,11 @@ def read_logindata():
 def write_logindata(data):
     if not data: return
 
+    login_data = {"Client-ID": CLIENT_ID, "Authorization": f"Bearer {data['access_token']}"}
     try:
         with open(user_logindata, "wb") as file:
             import base64, json
-            file.write(base64.b85encode(json.dumps(data).encode()))
+            file.write(base64.b85encode(json.dumps(login_data).encode()))
     except Exception as e: print("ERROR", "While writing login data:", e)
 
 def invalidate_logindata():
@@ -150,17 +153,14 @@ class TwitchSigninWindow(pywindow.PyWindow):
         self["btn_signin"].accept_input = False
         self._server_worker.create_request(self.auth_url.format(client_id=CLIENT_ID, resp_uri=self.resp_uri, scope="+".join(self.scope)))
 
-    def _on_sign_in(self, data):
-        if data is None:
+    def _on_sign_in(self, success):
+        if success:
+            print("INFO", "Sign in data received, closing window")
+            self.destroy()
+        else:
             print("INFO", "No data received")
             self["header"].text = "Error, try again..."
             self["btn_signin"].accept_input = True
-            return
-
-        print("INFO", "Sign in data received")
-        login_data = {"Client-ID": CLIENT_ID, "Authorization": f"Bearer {data['access_token']}"}
-        write_logindata(login_data)
-        self.destroy()
 
     def _on_close(self):
         print("INFO", "Sign in window closed, terminating server")
@@ -238,8 +238,6 @@ class TwichOverview(pywindow.PyWindow):
         self.layout.row(3, weight=1, minsize=200).column(0, weight=1)
         self.schedule_task(func=self._refresh_status, task_id="refresh_status")
 
-    def __del__(self): print("twitch overview deleted")
-
     def create_widgets(self):
         pywindow.PyWindow.create_widgets(self)
         lbl = self.add_element("status", element_class=pyelement.PyTextLabel)
@@ -267,7 +265,7 @@ class TwichOverview(pywindow.PyWindow):
         self._usermeta = read_metadata()
         if self._userlogin:
             print("INFO", "Currently signed in")
-            self["status"].text = f"Signed in as {self._usermeta['display_name']}"
+            self["status"].text = f"Signed in as {self._usermeta['display_name']}" if self._usermeta["display_name"] else "Signed in"
             btn_signinout = self["button_signinout"]
             btn_signinout.text = "Sign out"
             btn_signinout.events.EventInteract(self.sign_out)
