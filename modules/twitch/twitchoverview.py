@@ -214,6 +214,20 @@ def invalidate_metadata():
     except: pass
 
 
+class TwitchSignOutWorker(pyworker.PyWorker):
+    signout_url = "https://id.twitch.tv/oauth2/revoke?client_id={client_id}&token={token}"
+
+    def run(self):
+        userdata = read_logindata()
+        if userdata:
+            import requests
+            r = requests.post(self.signout_url.format(client_id=userdata["Client-ID"], token=userdata["Authorization"].split(" ", maxsplit=1)[1]))
+            if r.status_code == 200: print("INFO", "Successfully logged out")
+            else: print("WARNING", "Failed to deauthorize token:", f"(status={r.status_code}, message={r.content})")
+            invalidate_metadata()
+            invalidate_logindata()
+
+
 class TwichOverview(pywindow.PyWindow):
     def __init__(self, parent):
         pywindow.PyWindow.__init__(self, parent, "twitch_overview")
@@ -275,8 +289,7 @@ class TwichOverview(pywindow.PyWindow):
 
     def sign_out(self):
         print("INFO", "Signing out of account")
-        invalidate_metadata()
-        invalidate_logindata()
+        TwitchSignOutWorker("twitch_signout")
         self.destroy()
 
 def create_window():
