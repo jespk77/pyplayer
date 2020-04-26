@@ -1,5 +1,5 @@
-from ui.qt import pywindow, pyelement, pyworker
-import socketserver, threading, os
+from ui.qt import pywindow, pyelement, pyworker, pyimage
+import json, requests, socketserver, threading, time, os
 
 client = CLIENT_ID = None
 relative_path = "modules/twitch/"
@@ -29,7 +29,6 @@ class SignInRequestHandler(socketserver.BaseRequestHandler):
                 self.request.send(self.reply_message)
                 self.request.send(html)
             elif method == "POST" and url == "/token":
-                import json
                 try:
                     data = json.loads(header[-1])
                     self.request.send(self.ok_message)
@@ -96,7 +95,7 @@ user_logindata = ".cache/userdata"
 def read_logindata():
     try:
         with open(user_logindata, "r") as file:
-            import base64, json
+            import base64
             return json.loads(base64.b85decode(file.read()))
     except FileNotFoundError: return None
     except Exception as e: print("ERROR", "While reading login data:", e)
@@ -107,7 +106,7 @@ def write_logindata(data):
     login_data = {"Client-ID": CLIENT_ID, "Authorization": f"Bearer {data['access_token']}"}
     try:
         with open(user_logindata, "wb") as file:
-            import base64, json
+            import base64
             file.write(base64.b85encode(json.dumps(login_data).encode()))
     except Exception as e: print("ERROR", "While writing login data:", e)
 
@@ -175,13 +174,17 @@ class TwitchSigninWindow(pywindow.PyWindow):
 
 
 user_metadata = ".cache/usermeta"
+cache_expire = 86400
 def read_metadata(request=False):
     try:
         with open(user_metadata, "rb") as file:
-            import base64, json
+            import base64
             return json.loads(base64.b85decode(file.read()).decode())
     except FileNotFoundError: return request_metadata() if request else None
     except Exception as e: print("ERROR", "While reading user metadata:", e)
+
+def metadata_expired():
+    return not os.path.isfile(user_metadata) or time.time() - os.path.getmtime(user_metadata) > cache_expire
 
 user_info_url = "https://api.twitch.tv/helix/users"
 user_follows_url = "https://api.twitch.tv/helix/users/follows?from_id={user_id}"
@@ -190,7 +193,6 @@ def request_metadata():
     if not login: return
 
     try:
-        import requests
         r = requests.get(user_info_url, headers=login)
         if r.status_code != 200:
             print("ERROR", "Received invalid status code:", r.status_code, "\n ->", r.json())
@@ -212,7 +214,7 @@ def write_metadata(data):
 
     try:
         with open(user_metadata, "wb") as file:
-            import base64, json
+            import base64
             file.write(base64.b85encode(json.dumps(data).encode()))
     except Exception as e: print("ERROR", "While writing user metadata:", e)
 
@@ -227,7 +229,6 @@ class TwitchSignOutWorker(pyworker.PyWorker):
     def run(self):
         userdata = read_logindata()
         if userdata:
-            import requests
             r = requests.post(self.signout_url.format(client_id=userdata["Client-ID"], token=userdata["Authorization"].split(" ", maxsplit=1)[1]))
             if r.status_code == 200: print("INFO", "Successfully logged out")
             else: print("WARNING", "Failed to deauthorize token:", f"(status={r.status_code}, message={r.content})")
@@ -235,7 +236,106 @@ class TwitchSignOutWorker(pyworker.PyWorker):
             invalidate_logindata()
 
 
+THUMBNAIL_SIZE = 128, 64
+class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
+    followed_stream_url = "https://api.twitch.tv/helix/streams?user_id={ids}"
+    followed_game_url = "https://api.twitch.tv/helix/games?id={ids}"
+    def __init__(self, window):
+        pyworker.PyWorker.__init__(self, "twitch_refresh_follows")
+        self._window = window
+        self._data = self._error = None
+        self._logindata = read_logindata()
+
+    def run(self):
+        res = self.fetch_data()
+        if res: self._window.schedule_task(task_id="twitch_channel_data", data=self._data)
+        else: self._window.schedule_task(task_id="twitch_channel_data", error=self._error)
+
+    def fetch_data(self):
+        if metadata_expired():
+            print("INFO", "User meta cache expired, requesting")
+            metadata = request_metadata()
+            write_metadata(metadata)
+        else: metadata = read_metadata()
+
+        followed_channels = [c["to_id"] for c in metadata["followed"]]
+        req = requests.get(self.followed_stream_url.format(ids="&user_id=".join(followed_channels)), headers=self._logindata)
+        if req.status_code != 200:
+            print("ERROR", "Got status code", req.status_code, "while requesting followed channels")
+            self._error = req.content
+            print("ERROR", "->", req.content)
+            return False
+
+        try: followed_channels = json.loads(req.content)["data"]
+        except (json.JSONDecodeError, KeyError) as e:
+            print("ERROR", "Processing reply:", e)
+            self._error = e.msg
+            return False
+
+        followed_games = set([channel["game_id"] for channel in followed_channels])
+        req = requests.get(self.followed_game_url.format(ids="&id=".join(followed_games)), headers=self._logindata)
+        if req.status_code != 200:
+            print("ERROR", "Got status code", req.status_code, "while requesting followed games")
+            self._error = req.content
+            print("ERROR", "->", req.content)
+            return False
+
+        try: followed_games = {game["id"]: game["name"] for game in json.loads(req.content)["data"]}
+        except (json.JSONDecodeError, KeyError) as e:
+            print("ERROR", "Processing followed games respone:", e)
+            self._error = e.msg
+            return False
+
+        for channel in followed_channels:
+            game_name = followed_games.get(channel["game_id"])
+            if game_name: channel["game_id"] = game_name
+            else: del channel["game_id"]
+
+            thumbnail_url = channel["thumbnail_url"]
+            req = requests.get(thumbnail_url.format(width=THUMBNAIL_SIZE[0], height=THUMBNAIL_SIZE[1]))
+            if req.status_code == 200: channel["thumbnail"] = req.content
+            else: print("INFO", "Failed to get thumbnail:", f"(status={req.status_code}, message={req.content}")
+
+        self._data = followed_channels
+        return True
+
+
+class StreamEntryFrame(pyelement.PyLabelFrame):
+    def __init__(self, parent, data):
+        pyelement.PyLabelFrame.__init__(self, parent, f"entry_{data['id']}")
+        self._data = data
+
+        thumbnail = self.add_element("thumbnail", element_class=pyelement.PyTextLabel, rowspan=3)
+        thumbnail_img = data.get("thumbnail")
+        if thumbnail_img:
+            pyimage.PyImage(thumbnail, data=thumbnail_img)
+            thumbnail.width, thumbnail.height = THUMBNAIL_SIZE
+
+        lbl1 = self.add_element("user_lbl", element_class=pyelement.PyTextLabel, row=0, column=1)
+        lbl1.text = data.get('user_name', "(No username set)")
+        lbl1.set_alignment("center")
+        lbl1.wrapping = True
+        lbl2 = self.add_element("title_lbl", element_class=pyelement.PyTextLabel, row=1, column=1)
+        lbl2.text = data.get('title', "(No title set)")
+        lbl2.set_alignment("center")
+        lbl2.wrapping = True
+        lbl3 = self.add_element("game_lbl", element_class=pyelement.PyTextLabel, row=2, column=1)
+        lbl3.text = data.get("game_id", "(No game set)")
+        lbl3.set_alignment("center")
+        lbl3.wrapping = True
+
+        btn = self.add_element("btn_visit", element_class=pyelement.PyButton, rowspan=3, column=2)
+        btn.text = "Open"
+        btn.events.EventInteract(self._open_stream)
+        self.layout.column(1, weight=1, minsize=100)
+
+    def _open_stream(self):
+        print("INFO", "Opening stream to", self._data['user_name'])
+
+
 class TwichOverview(pywindow.PyWindow):
+    follow_channel_text = "Followed live channels\n"
+
     def __init__(self, parent):
         pywindow.PyWindow.__init__(self, parent, "twitch_overview")
         self.title = "TwitchViewer: Overview"
@@ -244,6 +344,7 @@ class TwichOverview(pywindow.PyWindow):
 
         self.layout.row(3, weight=1, minsize=200).column(0, weight=1)
         self.schedule_task(func=self._refresh_status, task_id="refresh_status")
+        self.add_task(task_id="twitch_channel_data", func=self._fill_channel_data)
 
     def create_widgets(self):
         pywindow.PyWindow.create_widgets(self)
@@ -254,16 +355,22 @@ class TwichOverview(pywindow.PyWindow):
         self.add_element("sep1", element_class=pyelement.PySeparator, row=1, columnspan=2)
 
         lbl = self.add_element("followed_label", element_class=pyelement.PyTextLabel, row=2)
-        lbl.text = "Followed live channels"
+        lbl.text = self.follow_channel_text
         lbl.set_alignment("center")
         btn = self.add_element("followed_refresh", element_class=pyelement.PyButton, row=2, column=1)
         btn.text = "Refresh"
         btn.accept_input = False
+        @btn.events.EventInteract
+        def _on_refresh():
+            TwitchRefeshLiveChannelsWorker(self)
+            lbl.text = self.follow_channel_text + "Updating..."
+            btn.accept_input = False
+
         self.add_element("followed_content", element_class=pyelement.PyScrollableFrame, row=3, columnspan=2)
         self.add_element("sep2", element_class=pyelement.PySeparator, row=4, columnspan=2)
 
-        lbl = self.add_element("custom_label", element_class=pyelement.PyTextLabel, row=5)
-        lbl.text = "Join another channel"
+        lbl2 = self.add_element("custom_label", element_class=pyelement.PyTextLabel, row=5)
+        lbl2.text = "Join another channel"
         custom_inpt = self.add_element("custom_channel", element_class=pyelement.PyTextInput, row=5, column=1)
         custom_inpt.accept_input = False
 
@@ -296,6 +403,29 @@ class TwichOverview(pywindow.PyWindow):
         print("INFO", "Signing out of account")
         TwitchSignOutWorker("twitch_signout")
         self.destroy()
+
+    def _fill_channel_data(self, data=None, error=None):
+        if data:
+            print("INFO", "Got updated live channel data")
+            import datetime
+            self["followed_label"].text = self.follow_channel_text + datetime.datetime.today().strftime("Last update: %b %d, %Y - %I:%M %p")
+            content = self["followed_content"]
+            for c in content.children: content.remove_element(c)
+
+            index = 0
+            for channel in data:
+                content.add_element(element=StreamEntryFrame(content, channel), row=index)
+                index += 1
+            self.schedule_task(min=1, func=self._enable_refresh)
+
+        elif error:
+            print("INFO", "Failed to get updated live channel data")
+            self["followed_label"].text = self.follow_channel_text + "An error occured"
+            self._enable_refresh()
+
+        else: raise ValueError("Missing 'data' or 'error' keyword")
+
+    def _enable_refresh(self): self["followed_refresh"].accept_input = True
 
 def create_window():
     if not os.path.isfile(user_metadata): write_metadata(request_metadata())
