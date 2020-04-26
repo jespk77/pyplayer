@@ -1,5 +1,6 @@
 from utilities import messagetypes, song_tracker
 from ui.qt import pyelement
+from collections import Counter
 import os
 
 # DEFAULT MODULE VARIABLES
