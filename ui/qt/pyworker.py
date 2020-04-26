@@ -21,26 +21,30 @@ class _Task(QtCore.QThread):
         except Exception as e:
             print("ERROR", f"During execution of worker '{self._task.worker_id}':", e)
             self.errored.emit(e)
-            self._task = None
-            return
-
-        try: self._task.complete()
-        except Exception as e:
-            print("ERROR", f"On completion of worker '{self._task.worker_id}':", e)
-            self.errored.emit(e)
-
+        finally:
+            try: self._task.complete()
+            except Exception as e:
+                print("ERROR", f"On completion of worker '{self._task.worker_id}':", e)
+                self.errored.emit(e)
         self._task = None
 
 
 class PyWorker:
-    def __init__(self, worker_id):
+    def __init__(self, worker_id, auto_activate=True):
         self._id = worker_id
         self._qt = _Task(self)
         self._qt.errored.connect(self.error)
-        self._qt.start()
+        if auto_activate: self.activate()
+
+    def activate(self): self._qt.start()
 
     @property
     def worker_id(self): return self._id
+    @property
+    def running(self): return self._qt.isRunning()
+
+    def sleep(self, secs):
+        QtCore.QThread.sleep(secs)
 
     def start(self):
         """ Executed before the worker is started """
