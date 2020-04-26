@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Collecting account information</title>
+    <!--<link rel="icon" href="data:;base64,iVBORw0KGgo=">-->
+    <script>
+        const url = "localhost:6767"
+
+        function process_data(data){
+            console.log("received data: " + JSON.stringify(data))
+            const req = new XMLHttpRequest()
+            req.open("POST", "/token", false)
+            req.setRequestHeader("Content-Type", "application/json")
+            req.send(JSON.stringify(data))
+            document.location.replace("complete")
+        }
+
+        function get_data(){
+            const hash = document.location.hash.substr(1).split("&")
+            var data = {}
+            for(var i = 0; i < hash.length; i++){
+                const item = hash[i].split("=")
+                data[item[0]] = item[1]
+            } process_data(data)
+        }
+    </script>
+</head>
+<body onload="get_data()">
+<noscript> Error collecting account info: Javascript not enabled<br/>You can enter the access token manually in the sign in window </noscript>
+</body>
+</html>

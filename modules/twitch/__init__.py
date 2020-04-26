@@ -1,39 +1,23 @@
 from utilities import messagetypes
+from . import twitchoverview
+import os
+
+if not os.path.isdir(".cache"): os.mkdir(".cache")
 
 # DEFAULT MODULE VARIABLES
 interpreter = client = None
 
-window_id = "twitch_viewer"
-# MODULE COMMANDS
+CLIENT_ID = "6adynlxibzw3ug8udhyzy6w3yt70pw"
+
 def command_twitch(arg, argc):
-	viewer = client.get_window(window_id)
-	if not viewer:
-		hidden = True
-		from modules.twitch import twitch_window
-		viewer = twitch_window.TwitchPlayer(client)
-		client.open_window(window_id, viewer)
-	else: hidden = viewer.hidden
+    twitchoverview.create_window()
+    return messagetypes.Reply("Openend twitch overview")
 
-	if argc == 1:
-		viewer.hidden = hidden
-		viewer.open_channel(arg[0])
-		return messagetypes.Reply("Twitch viewer for '{}' opened".format(arg[0]))
-
-	elif argc == 0:
-		viewer.hidden = False
-		viewer.schedule(func=viewer.update_livestreams)
-		return messagetypes.Reply("Twitch overview window opened")
-
-def command_twitch_resetcache(arg, argc):
-	pass
-
-def command_twitch_say(arg, argc):
-	pass
+def initialize():
+    twitchoverview.initialize(client, CLIENT_ID)
 
 commands = {
-	"twitch": {
-		"": command_twitch,
-		"reset": command_twitch_resetcache,
-		"say": command_twitch_say
-	}
+    "twitch": {
+        "": command_twitch
+    }
 }
