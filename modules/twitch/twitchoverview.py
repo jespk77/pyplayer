@@ -328,6 +328,7 @@ class StreamEntryFrame(pyelement.PyLabelFrame):
         btn.text = "Open"
         btn.events.EventInteract(self._open_stream)
         self.layout.column(1, weight=1, minsize=100)
+        self.height = 100
 
     def _open_stream(self):
         print("INFO", "Opening stream to", self._data['user_name'])
@@ -410,7 +411,7 @@ class TwichOverview(pywindow.PyWindow):
             import datetime
             self["followed_label"].text = self.follow_channel_text + datetime.datetime.today().strftime("Last update: %b %d, %Y - %I:%M %p")
             content = self["followed_content"]
-            for c in content.children: content.remove_element(c)
+            for c in list(content.children): content.remove_element(c.element_id)
 
             index = 0
             for channel in data:
