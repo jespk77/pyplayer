@@ -18,8 +18,6 @@ class SignInRequestHandler(socketserver.BaseRequestHandler):
     def __init__(self, request, client_address, server):
         socketserver.BaseRequestHandler.__init__(self, request, client_address, server)
 
-    def __del__(self): print("sign in request handler deleted")
-
     def handle(self):
         header = self.request.recv(1024).decode().split("\r\n")
         try:
@@ -52,8 +50,6 @@ class TwitchSigninWorker(pyworker.PyWorker, socketserver.TCPServer):
             "/twitch_auth": "server/token_get.html",
             "/complete": "server/token_complete.html",
         }
-
-    def __del__(self): print("sign in worker deleted")
 
     def get_page(self, url):
         page = self._content.get(url)
@@ -127,7 +123,7 @@ class TwitchSigninWindow(pywindow.PyWindow):
 
     def __init__(self, parent):
         pywindow.PyWindow.__init__(self, parent, "twitch_signin")
-        self.title = "TwitchViewer: Sign in"
+        self.title = "Sign in"
         self.icon = "assets/blank.png"
         self.add_task(task_id="signin_data", func=self._on_sign_in)
 
@@ -135,23 +131,34 @@ class TwitchSigninWindow(pywindow.PyWindow):
         self._server_worker.activate()
         self.events.EventWindowClose(self._on_close)
 
-    def __del__(self): print("sign in window deleted")
-
     def create_widgets(self):
         pywindow.PyWindow.create_widgets(self)
         lbl = self.add_element("header", element_class=pyelement.PyTextLabel)
-        lbl.text = "Sign into twitch account"
+        lbl.text = "Sign into twitch account, either through a browser or by manually submitting a token."
+        lbl.wrapping = True
 
-        btn1 = self.add_element("btn_signin", element_class=pyelement.PyButton, row=1)
-        btn1.text = "Sign in"
-        btn1.events.EventInteract(self._start_sign_in)
-        btn2 = self.add_element("btn_cancel", element_class=pyelement.PyButton, row=2)
-        btn2.text = "Cancel"
-        btn2.events.EventInteract(self.destroy)
+        btn = self.add_element("btn_signin", element_class=pyelement.PyButton, row=1)
+        btn.text = "Sign in with browser"
+        btn.events.EventInteract(self._start_sign_in)
+
+        inpt = self.add_element("input_token", element_class=pyelement.PyTextInput, row=2)
+        inpt.events.EventInteract(self._manual_sign_in)
+        btn = self.add_element("btn_manual_signin", element_class=pyelement.PyButton, row=3)
+        btn.text = "Sign in with token"
+        btn.events.EventInteract(self._manual_sign_in)
+
+        btn = self.add_element("btn_cancel", element_class=pyelement.PyButton, row=4)
+        btn.text = "Cancel"
+        btn.events.EventInteract(self.destroy)
 
     def _start_sign_in(self):
         self["btn_signin"].accept_input = False
         self._server_worker.create_request(self.auth_url.format(client_id=CLIENT_ID, resp_uri=self.resp_uri, scope="+".join(self.scope)))
+
+    def _manual_sign_in(self):
+        print("INFO", "Used manual token submission")
+        write_logindata({"access_token": self["input_token"].value})
+        self._on_sign_in(True)
 
     def _on_sign_in(self, success):
         if success:
@@ -265,7 +272,7 @@ class TwichOverview(pywindow.PyWindow):
         self._usermeta = read_metadata()
         if self._userlogin:
             print("INFO", "Currently signed in")
-            self["status"].text = f"Signed in as {self._usermeta['display_name']}" if self._usermeta["display_name"] else "Signed in"
+            self["status"].text = f"Signed in as {self._usermeta['display_name']}" if self._usermeta else "Signed in"
             btn_signinout = self["button_signinout"]
             btn_signinout.text = "Sign out"
             btn_signinout.events.EventInteract(self.sign_out)
