@@ -173,7 +173,7 @@ def command_browser_played_all(arg, argc):
 	if argc <= 2:
 		path = parse_path(arg, argc)
 		if len(path) == 2:
-			if path[0] != client[default_path_key]:
+			if path[0] != client.configuration[default_path_key]:
 				unsupported_path()
 				return command_browser_name(arg, argc)
 
