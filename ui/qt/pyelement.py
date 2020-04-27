@@ -23,6 +23,8 @@ class PyElement:
         self._double_clicked = False
         if not hasattr(self, "_event_handler"): self._event_handler = pyevents.PyElementEvents(self)
 
+    def __del__(self): print("MEMORY", f"PyElement '{self.element_id}' deleted")
+
     @property
     def qt_element(self) -> QtWidgets.QWidget: return self._qt
 
@@ -174,6 +176,7 @@ class PyScrollableFrame(PyFrame):
         self._qt.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
         self._qt.setWidgetResizable(True)
         self._qt.setWidget(self._content)
+        self._layout.insert_element(PyTextLabel(self, "filler"), row=999)
 
     @property
     def qt_element(self): return self._content

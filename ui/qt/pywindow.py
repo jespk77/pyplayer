@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
-import sys, weakref
+import sys
 
 from . import pyelement, pyevents, pylayout, log_exception
 from .. import pyconfiguration
@@ -29,6 +29,7 @@ class _ScheduledTask(QtCore.QTimer):
 
 class PyWindow:
     def __init__(self, parent, window_id, layout="grid"):
+        if parent is not None and not isinstance(parent, PyWindow): raise ValueError(f"Parent must be a PyWindow instance, not '{type(parent).__name__}'")
         self._parent = parent
         self._window_id = window_id.lower()
         self._qt = QtWidgets.QWidget()
@@ -37,7 +38,7 @@ class PyWindow:
 
         self._elements = {}
         self._scheduled_tasks = {}
-        self._children = weakref.WeakValueDictionary()
+        self._children = {}#weakref.WeakValueDictionary()
         self._event_handler = pyevents.PyWindowEvents()
         self._cfg = pyconfiguration.ConfigurationFile(f".cfg/{window_id}")
         self._closed = False
@@ -56,6 +57,8 @@ class PyWindow:
             log_exception(e)
         self.hidden = True
 
+    def __del__(self): print("MEMORY", f"PyWindow '{self.window_id}' deleted")
+
     def create_widgets(self):
         """ Utility method for adding initial elements to this window, ensures everything is initialized in the correct order """
         pass
@@ -67,12 +70,12 @@ class PyWindow:
     @property
     def children(self):
         """ Returns an iterator with all contained child element """
-        return self._elements.values()
+        return list(self._elements.values())
 
     @property
     def windows(self):
         """ Returns an iterator with all open child windows """
-        return self._children.values()
+        return list(self._children.values())
 
     @property
     def is_closed(self): return self._closed
@@ -202,7 +205,9 @@ class PyWindow:
         """ Get open window with given id, raises KeyError when no window with this id is open
             Use find_window instead if this is undesired """
         window = self._children[window_id]
-        if window.is_closed: raise KeyError(window_id)
+        if window.is_closed:
+            del self._children[window_id]
+            raise KeyError(window_id)
         return window
 
     def find_window(self, window_id):
@@ -299,11 +304,13 @@ class PyWindow:
 
     # QWidget.closeEvent override
     def _on_window_close(self, event):
+        print("VERBOSE", f"Window {self.window_id} closed")
         try:
             if self.events.call_event("window_close") == self.events.block: return event.ignore()
 
             self.save_configuration()
-            for c in self._children.values(): c.destroy()
+            if self._parent: del self._parent._children[self.window_id]
+            for c in list(self._children.values()): c.destroy()
             self.events.call_event("window_destroy")
             self._closed = True
         except Exception as e: log_exception(e)
