@@ -247,7 +247,10 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
         self._logindata = read_logindata()
 
     def run(self):
+        print("INFO", "Fetching currently live channels...")
         res = self.fetch_data()
+
+        print("INFO", "Fetching complete, refreshing data")
         if res: self._window.schedule_task(task_id="twitch_channel_data", data=self._data)
         else: self._window.schedule_task(task_id="twitch_channel_data", error=self._error)
 
