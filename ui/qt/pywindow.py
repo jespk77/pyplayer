@@ -38,7 +38,7 @@ class PyWindow:
 
         self._elements = {}
         self._scheduled_tasks = {}
-        self._children = {}#weakref.WeakValueDictionary()
+        self._children = {}
         self._event_handler = pyevents.PyWindowEvents()
         self._cfg = pyconfiguration.ConfigurationFile(f".cfg/{window_id}")
         self._closed = False
@@ -309,7 +309,10 @@ class PyWindow:
             if self.events.call_event("window_close") == self.events.block: return event.ignore()
 
             self.save_configuration()
-            if self._parent: del self._parent._children[self.window_id]
+            if self._parent:
+                try: del self._parent._children[self.window_id]
+                except KeyError: pass
+
             for c in list(self._children.values()): c.destroy()
             self.events.call_event("window_destroy")
             self._closed = True
