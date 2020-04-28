@@ -317,6 +317,7 @@ class PyWindow:
             self.events.call_event("window_destroy")
             self._closed = True
         except Exception as e: log_exception(e)
+        self._scheduled_tasks = None
         QtWidgets.QWidget.closeEvent(self.qt_element, event)
 
 class RootPyWindow(PyWindow):
