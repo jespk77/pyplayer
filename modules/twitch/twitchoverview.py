@@ -1,8 +1,10 @@
 from ui.qt import pywindow, pyelement, pyworker, pyimage
-import json, requests, socketserver, threading, time, os
+import json, requests, socketserver, threading, os
 
-client = CLIENT_ID = None
+client = None
 relative_path = "modules/twitch/"
+from . import CLIENT_ID, read_logindata, write_logindata, invalidate_logindata
+from . import read_metadata, request_metadata, write_metadata, invalidate_metadata, metadata_expired
 
 STATE_LENGTH = 25
 def generate_state():
@@ -91,33 +93,9 @@ class TwitchSigninWorker(pyworker.PyWorker, socketserver.TCPServer):
         self._window = None
 
 
-user_logindata = ".cache/userdata"
-def read_logindata():
-    try:
-        with open(user_logindata, "r") as file:
-            import base64
-            return json.loads(base64.b85decode(file.read()))
-    except FileNotFoundError: return None
-    except Exception as e: print("ERROR", "While reading login data:", e)
-
-def write_logindata(data):
-    if not data: return
-
-    login_data = {"Client-ID": CLIENT_ID, "Authorization": f"Bearer {data['access_token']}"}
-    try:
-        with open(user_logindata, "wb") as file:
-            import base64
-            file.write(base64.b85encode(json.dumps(login_data).encode()))
-    except Exception as e: print("ERROR", "While writing login data:", e)
-
-def invalidate_logindata():
-    try: os.remove(user_logindata)
-    except: pass
-
-
 class TwitchSigninWindow(pywindow.PyWindow):
     resp_uri = "http://localhost:6767/twitch_auth"
-    scope = ["user:edit", "chat:read", "chat:edit"]
+    scope = ["user:edit", "chat:read", "chat:edit", "channel:moderate", "whispers:read", "whispers:edit"]
     auth_url = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id={client_id}&redirect_uri={resp_uri}&scope={scope}&force_verify=true"
 
     def __init__(self, parent):
@@ -140,17 +118,18 @@ class TwitchSigninWindow(pywindow.PyWindow):
         btn.text = "Sign in with browser"
         btn.events.EventInteract(self._start_sign_in)
 
-        inpt = self.add_element("input_token", element_class=pyelement.PyTextInput, row=2)
+        inpt = self.add_element(element=pyelement.PyTextInput(self, "input_token", True), row=2)
         inpt.events.EventInteract(self._manual_sign_in)
-        btn = self.add_element("btn_manual_signin", element_class=pyelement.PyButton, row=3)
-        btn.text = "Sign in with token"
-        btn.events.EventInteract(self._manual_sign_in)
+        btn2 = self.add_element("btn_manual_signin", element_class=pyelement.PyButton, row=3)
+        btn2.text = "Sign in with token"
+        btn2.events.EventInteract(self._manual_sign_in)
 
-        btn = self.add_element("btn_cancel", element_class=pyelement.PyButton, row=4)
-        btn.text = "Cancel"
-        btn.events.EventInteract(self.destroy)
+        btn3 = self.add_element("btn_cancel", element_class=pyelement.PyButton, row=4)
+        btn3.text = "Cancel"
+        btn3.events.EventInteract(self.destroy)
 
     def _start_sign_in(self):
+        print("INFO", "Started sign in process")
         self["btn_signin"].accept_input = False
         self._server_worker.create_request(self.auth_url.format(client_id=CLIENT_ID, resp_uri=self.resp_uri, scope="+".join(self.scope)))
 
@@ -172,55 +151,6 @@ class TwitchSigninWindow(pywindow.PyWindow):
         print("INFO", "Sign in window closed, terminating server")
         self._server_worker.stop_server()
 
-
-user_metadata = ".cache/usermeta"
-cache_expire = 86400
-def read_metadata(request=False):
-    try:
-        with open(user_metadata, "rb") as file:
-            import base64
-            return json.loads(base64.b85decode(file.read()).decode())
-    except FileNotFoundError: return request_metadata() if request else None
-    except Exception as e: print("ERROR", "While reading user metadata:", e)
-
-def metadata_expired():
-    return not os.path.isfile(user_metadata) or time.time() - os.path.getmtime(user_metadata) > cache_expire
-
-user_info_url = "https://api.twitch.tv/helix/users"
-user_follows_url = "https://api.twitch.tv/helix/users/follows?from_id={user_id}"
-def request_metadata():
-    login = read_logindata()
-    if not login: return
-
-    try:
-        r = requests.get(user_info_url, headers=login)
-        if r.status_code != 200:
-            print("ERROR", "Received invalid status code:", r.status_code, "\n ->", r.json())
-            return None
-
-        data = r.json()["data"][0]
-        r = requests.get(user_follows_url.format(user_id=data['id']), headers=login)
-        if r.status_code != 200:
-            print("ERROR", "Received invalid status code:", r.status_code, "\n ->", r.json())
-            data["followed"] = []
-            return data
-
-        data["followed"] = r.json()["data"]
-        return data
-    except Exception as e: print("ERROR", "While requesting user metadata:", e)
-
-def write_metadata(data):
-    if not data: return
-
-    try:
-        with open(user_metadata, "wb") as file:
-            import base64
-            file.write(base64.b85encode(json.dumps(data).encode()))
-    except Exception as e: print("ERROR", "While writing user metadata:", e)
-
-def invalidate_metadata():
-    try: os.remove(user_metadata)
-    except: pass
 
 
 class TwitchSignOutWorker(pyworker.PyWorker):
@@ -432,15 +362,14 @@ class TwichOverview(pywindow.PyWindow):
     def _enable_refresh(self): self["followed_refresh"].accept_input = True
 
 def create_window():
-    if not os.path.isfile(user_metadata): write_metadata(request_metadata())
+    if not read_metadata(): write_metadata(request_metadata())
     client.schedule_task(task_id="show_twitch_overview", create=True)
 
 def destroy_window(): client.schedule_task(task_id="show_twitch_overview")
 
-def initialize(clt, client_id):
-    global client, CLIENT_ID
+def initialize(clt):
+    global client
     client = clt
-    CLIENT_ID = client_id
     client.add_task(task_id="show_twitch_overview", func=_set_twitch_overview)
 
 def _set_twitch_overview(create=False):
