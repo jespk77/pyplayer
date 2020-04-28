@@ -134,7 +134,7 @@ class PyFrame(PyElement):
         self.qt_element.setLayout(self._layout.qt_layout)
 
     @property
-    def children(self): return self._children.values()
+    def children(self): return list(self._children.values())
 
     @property
     def layout(self): return self._layout
