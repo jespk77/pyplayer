@@ -152,7 +152,6 @@ class TwitchSigninWindow(pywindow.PyWindow):
         self._server_worker.stop_server()
 
 
-
 class TwitchSignOutWorker(pyworker.PyWorker):
     signout_url = "https://id.twitch.tv/oauth2/revoke?client_id={client_id}&token={token}"
 
@@ -183,6 +182,9 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
         print("INFO", "Fetching complete, refreshing data")
         if res: self._window.schedule_task(task_id="twitch_channel_data", data=self._data)
         else: self._window.schedule_task(task_id="twitch_channel_data", error=self._error)
+
+    def error(self, error):
+        self._window.schedule_task(task_id="twitch_channel_data", error=str(error))
 
     def fetch_data(self):
         if metadata_expired():
@@ -269,6 +271,7 @@ class StreamEntryFrame(pyelement.PyLabelFrame):
 
 class TwichOverview(pywindow.PyWindow):
     follow_channel_text = "Followed live channels\n"
+    refresh_cooldown = 30
 
     def __init__(self, parent):
         pywindow.PyWindow.__init__(self, parent, "twitch_overview")
@@ -339,18 +342,18 @@ class TwichOverview(pywindow.PyWindow):
         self.destroy()
 
     def _fill_channel_data(self, data=None, error=None):
-        if data:
+        if data is not None:
             print("INFO", "Got updated live channel data")
             import datetime
             self["followed_label"].text = self.follow_channel_text + datetime.datetime.today().strftime("Last update: %b %d, %Y - %I:%M %p")
             content = self["followed_content"]
-            for c in list(content.children): content.remove_element(c.element_id)
+            for c in content.children: content.remove_element(c.element_id)
 
             index = 0
             for channel in data:
                 content.add_element(element=StreamEntryFrame(content, channel), row=index)
                 index += 1
-            self.schedule_task(min=1, func=self._enable_refresh)
+            self.schedule_task(sec=self.refresh_cooldown, func=self._enable_refresh)
 
         elif error:
             print("INFO", "Failed to get updated live channel data")
