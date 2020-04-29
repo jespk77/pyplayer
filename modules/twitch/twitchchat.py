@@ -1,4 +1,5 @@
 from ui.qt import pywindow, pyelement, pyworker
+from ui import pyconfiguration
 from . import read_logindata, read_metadata
 import collections, multiprocessing, socket
 
@@ -20,6 +21,7 @@ class TwitchIRC(pyworker.PyWorker):
         self._channels = {}
         self._channel_lock = multiprocessing.Lock()
         self._retry_attempts = 0
+        self._worker_state = 0
         pyworker.PyWorker.__init__(self, "twitchIRC")
 
     def _send(self, data): return self._socket.send(bytes(f"{data}\r\n", "UTF-8"))
@@ -75,6 +77,7 @@ class TwitchIRC(pyworker.PyWorker):
         with self._channel_lock:
             if channel not in self._channels:
                 print("INFO", "Joining channel", channel)
+                if self._worker_state == 1: self._send(f"JOIN #{channel}")
                 self._channels[channel] = multiprocessing.Queue()
             else: raise KeyError(f"Already joined {channel}")
 
@@ -130,6 +133,8 @@ class TwitchIRC(pyworker.PyWorker):
 
     def run(self):
         self._connect()
+        self._worker_state = 1
+
         while True:
             try:
                 data = self._recv().split("\r\n")
@@ -156,10 +161,12 @@ class TwitchIRC(pyworker.PyWorker):
             except socket.timeout: pass
             except socket.error as e:
                 print("ERROR", "Socket error:", e)
+                self._worker_state = 2
                 with self._channel_lock:
                     for channel, queue in self._channels.items():
                         queue.put_nowait(ChatMessage(channel=channel, meta=None, content_type="DISCONNECT", content="Disconnected from chat"))
                 if not self._try_reconnect(): return
+                else: self._worker_state = 1
             except Exception as e: print("ERROR", "While processing data:", e)
         self._disconnect()
 
@@ -170,11 +177,14 @@ class TwitchIRC(pyworker.PyWorker):
 
 
 class TwitchChatWindow(pywindow.PyWindow):
+    configuration = pyconfiguration.ConfigurationFile("twitch_chat")
+
     def __init__(self, parent, channel):
         self._channel = channel
-        pywindow.PyWindow.__init__(self, parent, "twitch_chat")
+        pywindow.PyWindow.__init__(self, parent, f"twitch_{channel}")
         self.schedule_task(sec=1, task_id="process_message", func=self._add_message, loop=True)
         self.events.EventWindowDestroy(self._on_destroy)
+        self.title = f"TwitchViewer: {channel}"
 
         global twitch_irc
         if twitch_irc is None: twitch_irc = TwitchIRC()
@@ -186,7 +196,7 @@ class TwitchChatWindow(pywindow.PyWindow):
     def create_widgets(self):
         lbl = self.add_element("channel_lbl", element_class=pyelement.PyTextLabel)
         lbl.set_alignment("center")
-        lbl.text = f"Twitch Chat - {self._channel}"
+        lbl.text = f"Twitch Chat: {self._channel}"
 
         self.add_element("chat_content", element_class=pyelement.PyTextField, row=1).accept_input = False
         send = self.add_element(element=pyelement.PyTextInput(self, "chat_message", True), row=2)
