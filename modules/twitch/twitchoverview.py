@@ -194,6 +194,10 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
         else: metadata = read_metadata()
 
         followed_channels = [c["to_id"] for c in metadata["followed"]]
+        if len(followed_channels) == 0:
+            self._data = []
+            return True
+
         req = requests.get(self.followed_stream_url.format(ids="&user_id=".join(followed_channels)), headers=self._logindata)
         if req.status_code != 200:
             print("ERROR", "Got status code", req.status_code, "while requesting followed channels")
@@ -262,8 +266,7 @@ class StreamEntryFrame(pyelement.PyLabelFrame):
         btn = self.add_element("btn_visit", element_class=pyelement.PyButton, rowspan=3, column=2)
         btn.text = "Open"
         btn.events.EventInteract(self._open_stream)
-        self.layout.column(1, weight=1, minsize=100)
-        self.height = 100
+        self.layout.column(1, weight=1, minsize=150)
 
     def _open_stream(self):
         print("INFO", "Opening stream to", self._data['user_name'])
@@ -353,6 +356,12 @@ class TwichOverview(pywindow.PyWindow):
             for channel in data:
                 content.add_element(element=StreamEntryFrame(content, channel), row=index)
                 index += 1
+            end_label = content.add_element("filler", element_class=pyelement.PyTextLabel,row=index)
+            content.layout.row(index, weight=1)
+
+            if len(data) == 0:
+                end_label.text = "No channels live"
+                end_label.set_alignment("centerH")
             self.schedule_task(sec=self.refresh_cooldown, func=self._enable_refresh)
 
         elif error:
