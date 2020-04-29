@@ -44,13 +44,13 @@ class PyWindow:
         self._scheduled_tasks = {}
         self._children = {}
         self._event_handler = pyevents.PyWindowEvents()
-        self._cfg = pyconfiguration.ConfigurationFile(f".cfg/{window_id}")
+        self._cfg = pyconfiguration.ConfigurationFile(window_id)
         self._closed = False
 
         try: self._layout = pylayout.layouts[layout](self.qt_element)
         except KeyError: self._layout = None
-        if not self._layout: raise ValueError(f"Unknown layout: '{layout}'")
-        self.qt_element.setLayout(self._layout.qt_layout)
+        if not self.layout: raise ValueError(f"Unknown layout: '{layout}'")
+        self.qt_element.setLayout(self.layout.qt_layout)
 
         self.title = "PyWindow"
         try:
@@ -159,7 +159,7 @@ class PyWindow:
         else: raise TypeError("'element' parameter must be a PyElement instance")
 
         self.remove_element(element_id)
-        self._layout.insert_element(element, **layout_kwargs)
+        self.layout.insert_element(element, **layout_kwargs)
         self._elements[element_id] = element
         return self._elements[element_id]
     __setitem__ = add_element
@@ -296,7 +296,7 @@ class PyWindow:
          Save current configuration options to file (if changed)
          Note: configuration is automatically saved when the window closes, this only needs to be called if changes need to be written beforehand
         """
-        self._cfg.save()
+        self.configuration.save()
 
     # QWidget.resizeEvent override
     def _on_window_resize(self, event):

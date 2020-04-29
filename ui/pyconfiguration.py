@@ -146,8 +146,9 @@ class Configuration(ConfigurationItem):
 class ConfigurationFile(Configuration):
 	""" Same as a Configuration, but adds the ability read from/write to file """
 	cfg_version = "1b"
+
 	def __init__(self, filepath, cfg_values=None, readonly=False):
-		self._file = filepath
+		self._file = f".cfg/{filepath}"
 		Configuration.__init__(self, value=cfg_values, read_only=readonly)
 		self._initialvalues = self._value
 		self._file_exists = False
@@ -161,7 +162,7 @@ class ConfigurationFile(Configuration):
 		self._dirty = False
 
 	@property
-	def filename(self): return self._file
+	def filename(self): return self._file.split("/")[-1]
 
 	def _read_file(self):
 		print("VERBOSE", "Reading configuration file data from '{}'".format(self.filename))
