@@ -19,7 +19,6 @@ class TwitchIRC(pyworker.PyWorker):
         self._general_queue = multiprocessing.Queue()
         self._channels = {}
         self._channel_lock = multiprocessing.Lock()
-        self._check_channels = False
         self._retry_attempts = 0
         pyworker.PyWorker.__init__(self, "twitchIRC")
 
@@ -35,10 +34,14 @@ class TwitchIRC(pyworker.PyWorker):
         self._send(f"NICK {self._usermeta['login']}")
         self._send("CAP REQ :twitch.tv/tags")
         self._send("CAP REQ :twitch.tv/commands")
+        self._join_connected_channels()
+
+    def _join_connected_channels(self):
+        with self._channel_lock:
+            for channel in self._channels.keys(): self._send(f"JOIN #{channel}")
 
     def _can_close(self):
         with self._channel_lock:
-            if not self._check_channels: return False
             return len(self._channels) == 0
 
     def _try_reconnect(self):
@@ -51,8 +54,6 @@ class TwitchIRC(pyworker.PyWorker):
             self._retry_attempts += 1
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._connect()
-            with self._channel_lock:
-                for channel in self._channels.keys(): self._send(f"JOIN #{channel}")
             return True
         except:
             if self.retry_amount < 0 or self._retry_attempts < self.retry_amount:
@@ -73,10 +74,8 @@ class TwitchIRC(pyworker.PyWorker):
         channel = channel.lower()
         with self._channel_lock:
             if channel not in self._channels:
-                print("INFO", "Joined channel", channel)
-                self._send(f"JOIN #{channel}")
+                print("INFO", "Joining channel", channel)
                 self._channels[channel] = multiprocessing.Queue()
-                self._check_channels = True
             else: raise KeyError(f"Already joined {channel}")
 
     def leave_channel(self, channel):
@@ -179,7 +178,6 @@ class TwitchChatWindow(pywindow.PyWindow):
 
         global twitch_irc
         if twitch_irc is None: twitch_irc = TwitchIRC()
-        import time; time.sleep(5)
         twitch_irc.join_channel(channel)
 
     def _on_destroy(self):
