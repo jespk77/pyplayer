@@ -83,14 +83,19 @@ def invalidate_metadata():
     except: pass
 
 
-from . import twitchoverview
+from . import twitchoverview, twitchchat
 def command_twitch(arg, argc):
-    twitchoverview.create_window()
-    return messagetypes.Reply("Openend twitch overview")
+    if argc > 0:
+        twitchchat.open_chat_window(arg[0])
+        return messagetypes.Reply(f"Twitch chat for '{arg[0]}' opened")
+    else:
+        twitchoverview.create_window()
+        return messagetypes.Reply("Openend twitch overview")
 
 
 def initialize():
     twitchoverview.initialize(client)
+    twitchchat.initialize(client)
 
 commands = {
     "twitch": {
