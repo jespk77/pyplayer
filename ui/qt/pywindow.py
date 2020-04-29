@@ -6,21 +6,25 @@ from .. import pyconfiguration
 
 class _ScheduledTask(QtCore.QTimer):
     _schedule_signal = QtCore.pyqtSignal(int, bool, dict)
+    _cancel_signal = QtCore.pyqtSignal()
 
     def __init__(self, func):
         QtCore.QTimer.__init__(self)
         self._cb = func
         self._kwargs = {}
         self._schedule_signal.connect(self._schedule)
+        self._cancel_signal.connect(self._cancel)
         self.timeout.connect(self._run_task)
 
     def schedule(self, delay, loop, kwargs=None): self._schedule_signal.emit(delay, loop, kwargs)
-
     def _schedule(self, delay, loop, kwargs=None):
         self.setInterval(delay)
         self.setSingleShot(not loop)
         if kwargs: self._kwargs.update(kwargs)
         self.start()
+
+    def cancel(self): self._cancel_signal.emit()
+    def _cancel(self): self.stop()
 
     def _run_task(self):
         try: return self._cb(**self._kwargs)
