@@ -369,6 +369,10 @@ class PyButton(PyElement):
         self.qt_element.setIcon(self._img)
 
 
+def random_url():
+    import random
+    return "".join(random.choice("abcdefghijklmnopqrstuvwxyz1234567890") for _ in range(20))
+
 class PyTextField(PyElement):
     start = 0
     @property
@@ -415,24 +419,39 @@ class PyTextField(PyElement):
         cursor.setPosition(value)
         self.qt_element.setTextCursor(cursor)
 
-    def insert(self, index, text):
+    @property
+    def style_sheet(self): return self.qt_element.document().defaultStyleSheet()
+    @style_sheet.setter
+    def style_sheet(self, value): self.qt_element.document().setDefaultStyleSheet(str(value))
+
+    def insert(self, index, text, tags=None):
         """ Insert text into the given position (ignores 'accept_input' property) """
+        text = str(text)
         prev_pos = self.cursor
-        cursor = self.qt_element.textCursor()
+        cursor: QtGui.QTextCursor = self.qt_element.textCursor()
         cursor.setPosition(index)
 
-        cursor.insertText(str(text))
+        if tags is not None:
+            text = text.replace("\n", "<br/>")
+            cursor.insertHtml(f"<span class='{' '.join(tags)}'>{text}</span>")
+        else: cursor.insertText(text)
         cursor.setPosition(prev_pos)
         self.qt_element.setTextCursor(cursor)
 
-    # todo: insert image into text field
-    def insert_image(self, index, img):
-        pass
-    place_image = insert_image
+    def insert_image(self, index, img_file):
+        prev_pos = self.cursor
+        cursor: QtGui.QTextCursor = self.qt_element.textCursor()
+        cursor.setPosition(index)
+
+        img = random_url()
+        self.qt_element.document().addResource(QtGui.QTextDocument.ImageResource, img, QtGui.QPixmap(img_file))
+        cursor.insertHtml(f"<img src='{img}'/>")
+        cursor.setPosition(prev_pos)
+        self.qt_element.setTextCursor(cursor)
 
     def delete(self, index1, index2=None):
         """ Delete text between the given positions (ignores 'accept_input' property) """
-        cursor = self.qt_element.textCursor()
+        cursor: QtGui.QTextCursor = self.qt_element.textCursor()
         cursor.setPosition(index1)
 
         diff = index2 - index1 if index2 else 1
