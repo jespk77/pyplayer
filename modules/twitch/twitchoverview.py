@@ -173,7 +173,7 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
         pyworker.PyWorker.__init__(self, "twitch_refresh_follows")
         self._window = window
         self._data = self._error = None
-        self._logindata = read_logindata()
+        self._logindata = None
 
     def run(self):
         print("INFO", "Fetching currently live channels...")
@@ -187,6 +187,7 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
         self._window.schedule_task(task_id="twitch_channel_data", error=str(error))
 
     def fetch_data(self):
+        self._logindata = read_logindata()
         if metadata_expired():
             print("INFO", "User meta cache expired, requesting")
             metadata = request_metadata()
