@@ -157,7 +157,7 @@ class PyElementEvents(EventHandler):
         self.register_event("get_focus", cb)
         return cb
 
-    def EventFocusLost(self):
+    def EventFocusLost(self, cb):
         """
          Event that fires when this element loses focus
             - no keywords
