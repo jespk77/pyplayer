@@ -423,17 +423,35 @@ class PyTextField(PyElement):
     @style_sheet.setter
     def style_sheet(self, value): self.qt_element.document().setDefaultStyleSheet(str(value))
 
-    def insert(self, index, text, tags=None):
-        """ Insert text into the given position (ignores 'accept_input' property) """
-        text = str(text)
+    @staticmethod
+    def _insert(cursor, text, tags, html):
+        span = tags is not None
+        if span: cursor.insertHtml(f"<span class='{' '.join(tags)}'>")
+
+        if html: cursor.insertHtml(text.replace("\n", "<br/>"))
+        else: cursor.insertText(text)
+        if span: cursor.insertHtml("</span>")
+
+    def append(self, text, tags=None, html=False):
+        """ Append text at the end of this field, equivalent to chat.insert(chat.end, ...) """
+        prev_pos = self.cursor
+        cursor: QtGui.QTextCursor = self.qt_element.textCursor()
+        cursor.movePosition(cursor.End)
+        PyTextField._insert(cursor, str(text), tags, html)
+        cursor.setPosition(prev_pos)
+        self.qt_element.setTextCursor(cursor)
+
+    def insert(self, index, text, tags=None, html=False):
+        """
+         Insert given text into the given position (ignores 'accept_input' property)
+         If tags is defined, the inserted text will have attached style classes that can be configured in the style sheet
+         If html is set to true, inserted text will be treated as html, otherwise it is treated as plain text
+        """
         prev_pos = self.cursor
         cursor: QtGui.QTextCursor = self.qt_element.textCursor()
         cursor.setPosition(index)
 
-        if tags is not None:
-            text = text.replace("\n", "<br/>")
-            cursor.insertHtml(f"<span class='{' '.join(tags)}'>{text}</span>")
-        else: cursor.insertText(text)
+        PyTextField._insert(cursor, str(text), tags, html)
         cursor.setPosition(prev_pos)
         self.qt_element.setTextCursor(cursor)
 
