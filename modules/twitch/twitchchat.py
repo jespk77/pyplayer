@@ -178,6 +178,7 @@ class TwitchIRC(pyworker.PyWorker):
 
 class TwitchChatWindow(pywindow.PyWindow):
     configuration = pyconfiguration.ConfigurationFile("twitch_chat")
+    msg_callbacks = {}
 
     def __init__(self, parent, channel):
         self._channel = channel
@@ -185,10 +186,12 @@ class TwitchChatWindow(pywindow.PyWindow):
         self.schedule_task(sec=1, task_id="process_message", func=self._add_message, loop=True)
         self.events.EventWindowDestroy(self._on_destroy)
         self.title = f"TwitchViewer: {channel}"
+        self.icon = "assets/icon_twitchviewer.png"
 
         global twitch_irc
         if twitch_irc is None: twitch_irc = TwitchIRC()
         twitch_irc.join_channel(channel)
+        self["chat_content"].style_sheet = ".chat-notice{color:gray} .chat-username{font-weight:700}"
 
     def _on_destroy(self):
         twitch_irc.leave_channel(self._channel)
@@ -198,7 +201,10 @@ class TwitchChatWindow(pywindow.PyWindow):
         lbl.set_alignment("center")
         lbl.text = f"Twitch Chat: {self._channel}"
 
-        self.add_element("chat_content", element_class=pyelement.PyTextField, row=1).accept_input = False
+        chat_content = self.add_element("chat_content", element_class=pyelement.PyTextField, row=1)
+        #chat_content.append(f"<span>Joined chat: {self._channel}</span>", html=True)
+        chat_content.accept_input = False
+
         send = self.add_element(element=pyelement.PyTextInput(self, "chat_message", True), row=2)
         @send.events.EventInteract
         def _send_message():
@@ -210,14 +216,27 @@ class TwitchChatWindow(pywindow.PyWindow):
         send_btn.text = "Send"
         send_btn.events.EventInteract(_send_message)
 
-    def _add_message(self):
+    def _insert_notice(self, notice: ChatMessage):
         chat = self["chat_content"]
+        chat.append(f"\n{notice.content}", tags=("chat-notice",))
+    msg_callbacks["NOTICE"] = msg_callbacks["DISCONNECT"] = _insert_notice
+
+    def _insert_privmsg(self, msg: ChatMessage):
+        chat = self["chat_content"]
+        chat.append(f"<div class='chat-content'> <span class='chat-username' style='color: {msg.meta.get('color', 'orange')}'>{msg.meta.get('display-name', '')}</span> <span>", html=True)
+        chat.append(msg.content)
+        chat.append("</span></div>", html=True)
+    msg_callbacks["PRIVMSG"] = _insert_privmsg
+
+    def _add_message(self):
         if twitch_irc is not None:
             messages = twitch_irc.get_message(self._channel)
-            for message in messages: chat.insert(chat.end, f"{message}\n\n")
-        else:
-            chat.insert(chat.end, "Disconnected from chat\n\n")
-            self.cancel_task("process_message")
+            for message in messages:
+                cb = self.msg_callbacks.get(message.content_type)
+                if cb:
+                    try: cb(self, message)
+                    except Exception as e: print("ERROR", "Processing chat message:", e)
+        else: self.cancel_task("process_message")
 
 
 def open_chat_window(channel):
