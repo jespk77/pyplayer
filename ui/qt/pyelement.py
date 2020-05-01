@@ -432,27 +432,31 @@ class PyTextField(PyElement):
         else: cursor.insertText(text)
         if span: cursor.insertHtml("</span>")
 
-    def append(self, text, tags=None, html=False):
-        """ Append text at the end of this field, equivalent to chat.insert(chat.end, ...) """
-        prev_pos = self.cursor
+    def append(self, text, tags=None, html=False, move_cursor=False):
+        """
+         Shorthand for inserting text at the end of this field, supports same set of keywords
+         Equivalent to chat.insert(chat.end, ...)
+        """
+        prev_pos = self.cursor if not move_cursor else None
         cursor: QtGui.QTextCursor = self.qt_element.textCursor()
         cursor.movePosition(cursor.End)
         PyTextField._insert(cursor, str(text), tags, html)
-        cursor.setPosition(prev_pos)
+        if prev_pos is not None: cursor.setPosition(prev_pos)
         self.qt_element.setTextCursor(cursor)
 
-    def insert(self, index, text, tags=None, html=False):
+    def insert(self, index, text, tags=None, html=False, move_cursor=False):
         """
          Insert given text into the given position (ignores 'accept_input' property)
          If tags is defined, the inserted text will have attached style classes that can be configured in the style sheet
          If html is set to true, inserted text will be treated as html, otherwise it is treated as plain text
+         If move_cursor is set to false, inserting text will not affect the position of the cursor
         """
-        prev_pos = self.cursor
+        prev_pos = self.cursor if not move_cursor else None
         cursor: QtGui.QTextCursor = self.qt_element.textCursor()
         cursor.setPosition(index)
 
         PyTextField._insert(cursor, str(text), tags, html)
-        cursor.setPosition(prev_pos)
+        if prev_pos is not None: cursor.setPosition(prev_pos)
         self.qt_element.setTextCursor(cursor)
 
     def insert_image(self, index, img_file):
