@@ -279,8 +279,9 @@ class StreamEntryFrame(pyelement.PyLabelFrame):
         lbl3.wrapping = True
 
         btn = self.add_element("btn_visit", element_class=pyelement.PyButton, rowspan=3, column=2)
-        btn.text = "Open"
+        btn.text = "Open (WIP)"
         btn.events.EventInteract(self._open_stream)
+        btn.accept_input = False
         self.layout.column(1, weight=1, minsize=150)
 
     def _open_stream(self):
@@ -348,7 +349,7 @@ class TwichOverview(pywindow.PyWindow):
         self.add_element("sep2", element_class=pyelement.PySeparator, row=5, columnspan=2)
 
         lbl2 = self.add_element("custom_label", element_class=pyelement.PyTextLabel, row=6)
-        lbl2.text = "Join another channel"
+        lbl2.text = "Join another channel (WIP)"
         custom_inpt = self.add_element("custom_channel", element_class=pyelement.PyTextInput, row=6, column=1)
         custom_inpt.accept_input = False
 
