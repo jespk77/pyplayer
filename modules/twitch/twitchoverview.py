@@ -169,24 +169,38 @@ THUMBNAIL_SIZE = 128, 64
 class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
     followed_stream_url = "https://api.twitch.tv/helix/streams?user_id={ids}"
     followed_game_url = "https://api.twitch.tv/helix/games?id={ids}"
-    def __init__(self, window):
-        pyworker.PyWorker.__init__(self, "twitch_refresh_follows")
+    def __init__(self, window, auto_active=True):
+        pyworker.PyWorker.__init__(self, "twitch_refresh_follows", auto_active)
         self._window = window
-        self._data = self._error = None
-        self._logindata = None
+        self._data = self._error = self._logindata = None
+
+        self.wait = pyworker.PyWaitCondition()
+        self.active = True
+        self.repeated = False
+        self.wait_time = 15
 
     def run(self):
-        print("INFO", "Fetching currently live channels...")
-        res = self.fetch_data()
+        with self.wait:
+            while self.active:
+                print("INFO", "Fetching currently live channels...")
+                self._window.schedule_task(task_id="twitch_start_refresh")
+                res = self._fetch_data()
 
-        print("INFO", "Fetching complete, refreshing data")
-        if res: self._window.schedule_task(task_id="twitch_channel_data", data=self._data)
-        else: self._window.schedule_task(task_id="twitch_channel_data", error=self._error)
+                print("INFO", "Fetching complete, refreshing data")
+                if res: self._window.schedule_task(task_id="twitch_channel_data", data=self._data)
+                else: self._window.schedule_task(task_id="twitch_channel_data", error=self._error)
+
+                if not self.repeated: break
+                # regular fetch takes about 3 seconds, so try to incorporate that in the wait time
+                self.wait.wait(min=self.wait_time, sec=-3)
+
+    def complete(self):
+        print("INFO", "Auto refresh worker completed")
 
     def error(self, error):
         self._window.schedule_task(task_id="twitch_channel_data", error=str(error))
 
-    def fetch_data(self):
+    def _fetch_data(self):
         self._logindata = read_logindata()
         if metadata_expired():
             print("INFO", "User meta cache expired, requesting")
@@ -273,6 +287,27 @@ class StreamEntryFrame(pyelement.PyLabelFrame):
         print("INFO", "Opening stream to", self._data['user_name'])
 
 
+class AutoRefreshFrame(pyelement.PyFrame):
+    main_id, check_id, input_id = "auto_refresh", "refresh_check", "refresh_delay"
+
+    def __init__(self, parent):
+        pyelement.PyFrame.__init__(self, parent, AutoRefreshFrame.main_id)
+        check = self.add_element(AutoRefreshFrame.check_id, element_class=pyelement.PyCheckbox)
+        check.text = "Auto refresh every"
+        inpt = self.add_element(AutoRefreshFrame.input_id, element_class=pyelement.PyTextInput, column=1)
+        inpt.width = 25
+        inpt.with_format_str("00").with_value(20)
+        lbl = self.add_element("min_lbl", element_class=pyelement.PyTextLabel, column=2)
+        lbl.text = "minutes"
+        lbl.set_alignment("centerV")
+        self.layout.column(2, weight=1)
+
+    @property
+    def enabled(self): return self["refresh_check"].checked
+    @property
+    def delay(self): return max(10, int(self["refresh_delay"].value))
+
+
 class TwichOverview(pywindow.PyWindow):
     follow_channel_text = "Followed live channels\n"
     refresh_cooldown = 30
@@ -282,10 +317,12 @@ class TwichOverview(pywindow.PyWindow):
         self.title = "TwitchViewer: Overview"
         self.icon = "assets/icon_twitchviewer.png"
         self._userlogin = self._usermeta = None
+        self._refresh_task = None
 
-        self.layout.row(3, weight=1, minsize=200).column(0, weight=1)
+        self.layout.row(4, weight=1, minsize=200).column(0, weight=1)
         self.schedule_task(func=self._refresh_status, task_id="refresh_status")
         self.add_task(task_id="twitch_channel_data", func=self._fill_channel_data)
+        self.add_task(task_id="twitch_start_refresh", func=self._on_refresh_active)
 
     def create_widgets(self):
         pywindow.PyWindow.create_widgets(self)
@@ -298,22 +335,61 @@ class TwichOverview(pywindow.PyWindow):
         lbl = self.add_element("followed_label", element_class=pyelement.PyTextLabel, row=2)
         lbl.text = self.follow_channel_text
         lbl.set_alignment("center")
-        btn = self.add_element("followed_refresh", element_class=pyelement.PyButton, row=2, column=1)
+        refresh_frame = self.add_element(element=AutoRefreshFrame(self), row=3)
+        refresh_frame["refresh_check"].events.EventInteract(self._set_repeated_refresh)
+        refresh_frame["refresh_delay"].events.EventInteract(self._delay_repeated_refresh)
+
+        btn = self.add_element("followed_refresh", element_class=pyelement.PyButton, row=2, column=1, rowspan=2)
         btn.text = "Refresh"
         btn.accept_input = False
-        @btn.events.EventInteract
-        def _on_refresh():
-            TwitchRefeshLiveChannelsWorker(self)
-            lbl.text = self.follow_channel_text + "Updating..."
-            btn.accept_input = False
+        btn.events.EventInteract(self.activate_refresh)
 
-        self.add_element("followed_content", element_class=pyelement.PyScrollableFrame, row=3, columnspan=2)
-        self.add_element("sep2", element_class=pyelement.PySeparator, row=4, columnspan=2)
+        self.add_element("followed_content", element_class=pyelement.PyScrollableFrame, row=4, columnspan=2)
+        self.add_element("sep2", element_class=pyelement.PySeparator, row=5, columnspan=2)
 
-        lbl2 = self.add_element("custom_label", element_class=pyelement.PyTextLabel, row=5)
+        lbl2 = self.add_element("custom_label", element_class=pyelement.PyTextLabel, row=6)
         lbl2.text = "Join another channel"
-        custom_inpt = self.add_element("custom_channel", element_class=pyelement.PyTextInput, row=5, column=1)
+        custom_inpt = self.add_element("custom_channel", element_class=pyelement.PyTextInput, row=6, column=1)
         custom_inpt.accept_input = False
+
+    def _set_repeated_refresh(self):
+        frame = self[AutoRefreshFrame.main_id]
+        check, inpt = frame[AutoRefreshFrame.check_id], frame[AutoRefreshFrame.input_id]
+        if check.checked:
+            print("INFO", "Enabling auto refresh worker")
+            if self._refresh_task is not None:
+                print("ERROR", "Refresh task already running, aborting...")
+                return
+
+            self._refresh_task = TwitchRefeshLiveChannelsWorker(self, False)
+            self._delay_repeated_refresh()
+            self._refresh_task.repeated = True
+            self._refresh_task.activate()
+        else:
+            print("INFO", "Disabling auto refresh worker")
+            if self._refresh_task is not None:
+                with self._refresh_task.wait: self._refresh_task.active = False
+                self._refresh_task.wait.notify_one()
+                self._refresh_task = None
+
+    def _delay_repeated_refresh(self):
+        frame = self[AutoRefreshFrame.main_id]
+        if self._refresh_task is None:
+            print("ERROR", "Refresh delay updated while no refresh task was set, aborting...")
+            return
+
+        if frame.delay != self._refresh_task.wait_time:
+            print("INFO", "Updating refresh delay from", self._refresh_task.wait_time, "to", frame.delay)
+            with self._refresh_task.wait: self._refresh_task.wait_time = frame.delay
+            frame[AutoRefreshFrame.input_id].value = self._refresh_task.wait_time
+
+    def _on_refresh_active(self):
+        self["followed_refresh"].accept_input = False
+        self["followed_label"].text = self.follow_channel_text + "\nUpdating..."
+
+    def activate_refresh(self):
+        if self._refresh_task: self._refresh_task.wait.notify_one()
+        else: TwitchRefeshLiveChannelsWorker(self)
 
     def _refresh_status(self):
         self._userlogin = read_logindata()
