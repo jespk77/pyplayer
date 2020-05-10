@@ -260,7 +260,7 @@ class PyTextInput(PyElement):
     @accept_input.setter
     def accept_input(self, value): self.qt_element.setEnabled(bool(value))
     def with_accept_input(self, value):
-        self.accept_input = not value
+        self.accept_input = value
         return self
 
     @property
@@ -345,6 +345,9 @@ class PyButton(PyElement):
     def accept_input(self): return self.qt_element.isEnabled()
     @accept_input.setter
     def accept_input(self, inpt): self.qt_element.setEnabled(bool(inpt))
+    def with_accept_input(self, inpt):
+        self.accept_input = inpt
+        return self
 
     @property
     def display_text(self): return self.qt_element.text()
@@ -649,3 +652,30 @@ class PySeparator(PyElement):
     def vertical(self): return not self.horizontal
     @vertical.setter
     def vertical(self, vertical): self.horizontal = not vertical
+
+try:
+    from PyQt5 import QtWebEngineWidgets
+    class PyWebpage(PyElement):
+        insert_html_script = "document.body.innerHTML += {html}"
+        insert_css_script = "const s = document.createElement('style'); s.textContent = {css}; document.head.style = s"
+
+        def __init__(self, parent, element_id):
+            self._qt = QtWebEngineWidgets.QWebEngineView()
+            PyElement.__init__(self, parent, element_id)
+            self.html_page = "<html><head></head><body>body</body></html>"
+
+        @property
+        def html_page(self): return ""
+        @html_page.setter
+        def html_page(self, html): self.qt_element.setHtml(html)
+
+        @property
+        def style_sheet(self): return ""
+        @style_sheet.setter
+        def style_sheet(self, css): self.qt_element.page().runJavaScript(self.insert_css_script.format(css=css))
+
+        def append(self, html):
+            self.qt_element.page().runJavaScript(self.insert_html_script.format(html=html.replace("\n", "<br/>")))
+
+except ImportError:
+    print("WARNING", "Missing dependency: 'PyQtWebEngine', PyWebpage element will not be available")
