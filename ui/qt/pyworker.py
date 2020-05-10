@@ -61,3 +61,42 @@ class PyWorker:
     def error(self, error):
         """ Executed only on error, either during 'start' or 'run' """
         pass
+
+class PyWaitCondition:
+    def __init__(self):
+        self._mutex = QtCore.QMutex()
+        self._qt = QtCore.QWaitCondition()
+
+    def __enter__(self): self.lock()
+    def __exit__(self, exc_type, exc_val, exc_tb): self.unlock()
+
+    def lock(self, ms=0, sec=0):
+        """
+         Attempt to lock the associated mutex for specified wait time
+         If no or negative delay specified, it will wait forever until locked
+         Returns true if the lock was succesfully obtained
+        """
+        self._mutex.tryLock(sec*1000+ms)
+
+    def unlock(self):
+        """ Unlock associated mutex """
+        self._mutex.unlock()
+
+    def notify_one(self):
+        """ Wakes up one thread waiting on this WaitCondition """
+        self._qt.wakeOne()
+
+    def notify_all(self):
+        """ Wakes up all threads waiting on this WaitCondition """
+        self._qt.wakeAll()
+
+    def wait(self, ms=0, sec=0, min=0):
+        """
+         Wait for specified time or when it gets woken by another thread
+         Note: the lock associated with this instance must be owned by the caller
+         Returns true if it was awoken or false if the wait time has passed
+        """
+        #self.lock()
+        res = self._qt.wait(self._mutex, min*60000+sec*1000+ms)
+        #self.unlock()
+        return res
