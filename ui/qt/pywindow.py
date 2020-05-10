@@ -324,9 +324,28 @@ class PyWindow:
         self._scheduled_tasks = None
         QtWidgets.QWidget.closeEvent(self.qt_element, event)
 
+def default_palette():
+    Palette, Color = QtGui.QPalette, QtGui.QColor
+    foreground, background = Color(255,255,255), Color(35,35,35)
+
+    palette = Palette()
+    palette.setColor(Palette.Window, background)
+    palette.setColor(Palette.WindowText, foreground)
+    palette.setColor(Palette.Base, background)
+    palette.setColor(Palette.AlternateBase, Color(45,45,45))
+    palette.setColor(Palette.Highlight, Color(0,185,185))
+
+    palette.setColor(Palette.Text, foreground)
+    palette.setColor(Palette.Button, background)
+    palette.setColor(Palette.ButtonText, foreground)
+    palette.setColor(Palette.Disabled, Palette.ButtonText, Color(128,128,128))
+    return palette
+
 class RootPyWindow(PyWindow):
     def __init__(self, window_id, layout="grid"):
         self._app = QtWidgets.QApplication(sys.argv)
+        self._app.setStyle("Fusion")
+        self._app.setPalette(default_palette())
         PyWindow.__init__(self, None, window_id=window_id, layout=layout)
         self.title = "RootPyWindow"
 
