@@ -19,6 +19,7 @@ invalid_cfg = messagetypes.Reply("Invalid directory configuration, check your op
 unknown_song = messagetypes.Reply("That song doesn't exist and there is nothing playing")
 no_songs = messagetypes.Reply("No songs found")
 MAX_LIST = 15
+default_dir_path = "default_directory"
 
 class Autoplay(enum.Enum):
 	OFF = 0
@@ -83,7 +84,7 @@ def set_autoplay_ignore(ignore):
 	autoplay_ignore = bool(ignore)
 
 def get_songmatches(path, keyword):
-	if not path: path = client.configuration["default_path"]
+	if not path: path = client.configuration[default_dir_path]
 	ls = media_player.find_song(path=client.configuration["directory"].get(path)["path"], keyword=keyword.split(" "))
 	if len(ls) == 1: return ls[0]
 	else: return None
@@ -177,7 +178,7 @@ def command_filter_clear(arg, argc):
 	if argc == 0:
 		dir = client.configuration["directory"]
 		if isinstance(dir, dict):
-			media_player.update_filter(path=dir.get(client.configuration["default_path"], {}).get("path", ""), keyword="")
+			media_player.update_filter(path=dir.get(client.configuration[default_dir_path], {}).get("path", ""), keyword="")
 			return messagetypes.Reply("Filter cleared")
 		else: return invalid_cfg
 
@@ -189,7 +190,7 @@ def command_filter(arg, argc):
 				displaypath = arg.pop(0)
 				path = dirs[displaypath]
 			else:
-				displaypath = client.configuration["default_path"]
+				displaypath = client.configuration[default_dir_path]
 				path = dirs.get(displaypath)
 
 			if path is not None:
@@ -408,7 +409,7 @@ def initialize():
 	def _on_click(position): interpreter.put_command(f"player position {position}")
 
 	client.configuration.get_or_create("directory", {})
-	client.configuration.get_or_create("default_directory", "")
+	client.configuration.get_or_create(default_dir_path, "")
 
 	client.add_task(task_id="player_progress_update", func=_set_client_progress)
 	client.add_task(task_id="player_title_update", func=_set_client_title)
@@ -435,7 +436,7 @@ def on_stopped(event, player):
 
 def on_player_update(event, player):
 	md = event.data
-	default_directory = client.configuration["directory"].get(client.configuration["default_directory"])
+	default_directory = client.configuration["directory"].get(client.configuration[default_dir_path])
 
 	if default_directory is not None and md.path == default_directory["path"]:
 		song_tracker.add(md.display_name)
