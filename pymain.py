@@ -36,11 +36,11 @@ class PySplashWindow(pywindow.RootPyWindow):
     def _update_program(self):
         print("INFO", "Checking for updates")
         self["status_bar"].text = "Checking for updates..."
-        pc = process_command("git pull -s recursive -Xtheirs", stdout=self._git_status)
+        pc = process_command("git fetch && git merge -s recursive -X theirs", stdout=self._git_status)
 
         if pc.returncode:
             self["status_bar"].text = "Failed to update, continuing in 5 seconds..."
-            return self.schedule_task(sec=1, func=self._load_modules)
+            return self.schedule_task(sec=5, func=self._load_modules)
         process_command("git rev-parse HEAD", stdout=self._git_hash)
 
     # STEP 1a: Display git update status
