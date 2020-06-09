@@ -37,6 +37,7 @@ class PyWindow:
         self._parent = parent
         self._window_id = window_id.lower()
         self._qt = QtWidgets.QWidget()
+        self._qt.setObjectName("PyWindow")
         self._qt.resizeEvent = self._on_window_resize
         self._qt.closeEvent = self._on_window_close
 
@@ -53,13 +54,17 @@ class PyWindow:
         self.qt_element.setLayout(self.layout.qt_layout)
 
         self.title = "PyWindow"
+        self.hidden = True
+
         try:
             self.create_widgets()
             self.events.call_event("window_open")
         except Exception as e:
             print("ERROR", "Encountered error while creating widgets:")
             log_exception(e)
-        self.hidden = True
+
+        geo = self._cfg.get("geometry")
+        if isinstance(geo, list): self.set_geometry(*geo)
 
     def __del__(self): print("MEMORY", f"PyWindow '{self.window_id}' deleted")
 
@@ -296,6 +301,8 @@ class PyWindow:
          Save current configuration options to file (if changed)
          Note: configuration is automatically saved when the window closes, this only needs to be called if changes need to be written beforehand
         """
+        geo = self._qt.geometry()
+        self.cfg['geometry'] = geo.x(), geo.y(), geo.width(), geo.height()
         self.configuration.save()
 
     # QWidget.resizeEvent override
