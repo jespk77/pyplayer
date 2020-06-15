@@ -1,12 +1,13 @@
 import subprocess, sys
 
-def process_command(cmd, stdin=None, stdout=None, stderr=None, timeout=None):
+def process_command(cmd, stdin=None, stdout=None, stderr=None, timeout=None, shell=False):
     """ Run a command that can be interacted with using standard IO: 'stdin', 'stdout', 'stderr'
             - If stdin is provided, it must be a bytes object
             - If stdout is provided, it must be callable: all command output is directed to this method'; when not provided all output is ignored
             - If stderr is provided, must be callable, it receives any error messages from the command; when not provided errors are directed to stdout
         Waits for the process to be finished but can be aborted if it takes longer than n seconds using 'timeout' argument
-        Returns the finished process when termated """
+        Supports shell commands by setting 'shell' argument to True
+        Returns the finished process when terminated """
     if isinstance(cmd, str): cmd = cmd.split(" ")
 
     if stderr is None: stderr = stdout
@@ -16,7 +17,7 @@ def process_command(cmd, stdin=None, stdout=None, stderr=None, timeout=None):
         pi.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     else: pi = None
 
-    pc = subprocess.Popen(cmd, startupinfo=pi, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    pc = subprocess.Popen(cmd, startupinfo=pi, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
     while pc.returncode is None:
         try:
             out, err = pc.communicate(stdin, timeout=1)
