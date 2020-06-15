@@ -433,6 +433,7 @@ class TwichOverview(pywindow.PyWindow):
             index = 0
             for channel in data:
                 content.add_element(element=StreamEntryFrame(content, channel), row=index)
+                content.layout.row(index, weight=0)
                 index += 1
             end_label = content.add_element("filler", element_class=pyelement.PyTextLabel,row=index)
             content.layout.row(index, weight=1)
