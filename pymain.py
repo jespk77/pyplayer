@@ -36,9 +36,13 @@ class PySplashWindow(pywindow.RootPyWindow):
     def _update_program(self):
         print("INFO", "Checking for updates")
         self["status_bar"].text = "Checking for updates..."
-        pc = process_command("git stash && git pull && git stash pop", stdout=self._git_status, shell=True)
+        pc = process_command("git pull", stdout=self._git_status)
+        if pc.returncode:
+            print("INFO", "Failed to update, there must be local changes, trying to merge them")
+            pc = process_command("git stash && git pull && git stash pop", stdout=self._git_status, shell=True)
 
         if pc.returncode:
+            print("WARNING", "Failed to update, ignoring update...")
             self["status_bar"].text = "Failed to update, continuing in 5 seconds..."
             return self.schedule_task(sec=5, func=self._load_modules)
         process_command("git rev-parse HEAD", stdout=self._git_hash)
