@@ -1,0 +1,8 @@
+{
+  "id": "interception",
+  "enabled": false,
+  "dependencies": ["interception"],
+  "platform": "win32",
+  "priority": 75,
+  "required": false
+}
