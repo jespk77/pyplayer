@@ -21,7 +21,7 @@ class PyElement:
         self._cfg = container.configuration.get_or_create_configuration(f"children::{element_id}", {})
         self._key_cb = {}
         self._double_clicked = False
-        if not hasattr(self, "_event_handler"): self._event_handler = pyevents.PyElementEvents(self)
+        if not hasattr(self, "_event_handler"): self._event_handler = pyevents.PyElementEvents(container, self)
 
     def __del__(self): print("MEMORY", f"PyElement '{self.element_id}' deleted")
 
@@ -251,7 +251,7 @@ class PyTextInput(PyElement):
     """
     def __init__(self, parent, element_id, return_only=False):
         self._qt = QtWidgets.QLineEdit(parent.qt_element)
-        self._event_handler = pyevents.PyElementInputEvent(self)
+        self._event_handler = pyevents.PyElementInputEvent(parent, self)
         PyElement.__init__(self, parent, element_id)
         (self.qt_element.returnPressed if return_only else self.qt_element.editingFinished).connect(lambda : self.events.call_event("interact"))
 
@@ -386,7 +386,7 @@ class PyTextField(PyElement):
     """
     def __init__(self, parent, element_id):
         self._qt = QtWidgets.QTextEdit(parent.qt_element)
-        self._event_handler = pyevents.PyElementInputEvent(self)
+        self._event_handler = pyevents.PyElementInputEvent(parent, self)
         PyElement.__init__(self, parent, element_id)
         self.qt_element.keyPressEvent = self._on_key_press
         self.undo = False

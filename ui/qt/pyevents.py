@@ -1,4 +1,10 @@
 class EventHandler:
+    """
+     Main handler for all types of events
+     An event is a function that gets called whenever a certain action happened, these often support a number of keywords
+     A keyword is bound to an event function when the function accepts an argument with that specific name, see description of each event for what keywords are supported
+     An argument can be left out (in that case the keyword is not passed) but is an error when an argument is added that isn't a supported keyword
+    """
     block = block_action = 0xBEEF
 
     def __init__(self):
@@ -19,8 +25,17 @@ class EventHandler:
         return cb
 
 class PyWindowEvents(EventHandler):
-    def __init__(self):
+    """
+     Container for all window events, see EventHandler for more information
+     All events support 'window' keyword, which contains a reference to the window that generated the event
+     """
+    def __init__(self, window):
         EventHandler.__init__(self)
+        self._window = window
+
+    def call_event(self, event_name, **kwargs):
+        kwargs["window"] = self._window
+        EventHandler.call_event(self, event_name, **kwargs)
 
     def EventWindowOpen(self, cb):
         """
@@ -62,9 +77,19 @@ class PyWindowEvents(EventHandler):
         return cb
 
 class PyElementEvents(EventHandler):
-    def __init__(self, element):
+    """
+     Container for all element events, see EventHandler for more information
+     All events support 'element' and 'container' keywords for references to the element that generated the event and its parent, respectively
+    """
+    def __init__(self, container, element):
         EventHandler.__init__(self)
+        self._container = container
         self._element = element
+
+    def call_event(self, event_name, **kwargs):
+        kwargs["container"] = self._container
+        kwargs["element"] = self._element
+        EventHandler.call_event(self, event_name, **kwargs)
 
     def EventLeftClick(self, cb):
         """

@@ -44,7 +44,7 @@ class PyWindow:
         self._elements = {}
         self._scheduled_tasks = {}
         self._children = {}
-        self._event_handler = pyevents.PyWindowEvents()
+        self._event_handler = pyevents.PyWindowEvents(self)
         self._cfg = pyconfiguration.ConfigurationFile(window_id)
         self._closed = False
 
