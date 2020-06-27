@@ -1,11 +1,10 @@
 from PyQt5 import QtCore
 
 class _Task(QtCore.QThread):
-    errored = QtCore.pyqtSignal(BaseException)
-
     def __init__(self, task):
         QtCore.QThread.__init__(self)
         self._task = task
+        self._error = None
 
     def start(self, priority=None):
         try:
@@ -13,27 +12,34 @@ class _Task(QtCore.QThread):
             QtCore.QThread.start(self)
         except Exception as e:
             print("ERROR", f"Failed to start worker '{self._task.worker_id}':", e)
-            self.errored.emit(e)
+            self._on_error(e)
             self._task = None
 
     def run(self):
         try: self._task.run()
         except Exception as e:
             print("ERROR", f"During execution of worker '{self._task.worker_id}':", e)
-            self.errored.emit(e)
-        finally:
+            self._on_error(e)
+
+        if not self._error:
             try: self._task.complete()
             except Exception as e:
                 print("ERROR", f"On completion of worker '{self._task.worker_id}':", e)
-                self.errored.emit(e)
+                self._on_error(e)
         self._task = None
+
+    def _on_error(self, error):
+        self._error = error
+        try: self._task.error(error)
+        except Exception as e:
+            e.__suppress_context__ = True
+            print("ERROR", "During handling of previous error:", e)
 
 
 class PyWorker:
     def __init__(self, worker_id, auto_activate=True):
         self._id = worker_id
         self._qt = _Task(self)
-        self._qt.errored.connect(self.error)
         if auto_activate: self.activate()
 
     def activate(self): self._qt.start()
