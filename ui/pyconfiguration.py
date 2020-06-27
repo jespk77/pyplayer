@@ -1,3 +1,6 @@
+import os
+if not os.path.isdir(".cfg"): os.mkdir(".cfg")
+
 separator = "::"
 def create_entry(value, read_only=False):
 	if isinstance(value, dict): return Configuration(value, read_only)
