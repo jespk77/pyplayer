@@ -92,6 +92,13 @@ def command_twitch(arg, argc):
         twitchoverview.create_window()
         return messagetypes.Reply("Openend twitch overview")
 
+def command_twitch_refresh(arg, argc):
+    window = client.find_window("twitch_overview")
+    if window is not None:
+        window.activate_refresh()
+        return messagetypes.Reply("Refreshing live channels")
+    else: return messagetypes.Reply("Twitch overview window not found")
+
 
 def initialize():
     twitchoverview.initialize(client)
@@ -99,6 +106,7 @@ def initialize():
 
 commands = {
     "twitch": {
-        "": command_twitch
+        "": command_twitch,
+        "refresh": command_twitch_refresh,
     }
 }
