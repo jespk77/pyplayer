@@ -77,6 +77,15 @@ class PyWindow:
         self.qt_element.setWindowFlags(QtCore.Qt.FramelessWindowHint)
 
     @property
+    def parent(self):
+        """ Reference to the parent of this window, will always be a PyWindow """
+        return self._parent
+    @property
+    def window(self):
+        """ Reference to self (used for keeping attribute consistency with PyElement) """
+        return self
+
+    @property
     def children(self):
         """ Returns an iterator with all contained child element """
         return list(self._elements.values())
@@ -91,14 +100,26 @@ class PyWindow:
 
     @property
     def qt_element(self): return self._qt
+
     @property
-    def window_id(self): return self._window_id
+    def window_id(self):
+        """ The id this windows was registered with """
+        return self._window_id
+
     @property
-    def layout(self): return self._layout
+    def layout(self):
+        """ Reference to the layout manager of this window """
+        return self._layout
+
     @property
-    def events(self): return self._event_handler
+    def events(self):
+        """ Reference to the event handler of this window """
+        return self._event_handler
+
     @property
-    def configuration(self): return self._cfg
+    def configuration(self):
+        """ Reference to the configuration of this window """
+        return self._cfg
     cfg = configuration
 
     @property

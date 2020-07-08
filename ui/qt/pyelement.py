@@ -8,7 +8,7 @@ def valid_check(element):
 class PyElement:
     def __init__(self, container, element_id):
         valid_check(container)
-        self._container: pywindow.PyWindow = container
+        self._container = container
         self._element_id = element_id
         if not hasattr(self, "_qt"): self._qt = QtWidgets.QWidget(container)
 
@@ -29,17 +29,33 @@ class PyElement:
     def qt_element(self) -> QtWidgets.QWidget: return self._qt
 
     @property
-    def element_id(self): return self._element_id
+    def parent(self):
+        """ Reference to the parent of this element, it may be a PyWindow or another PyElement instance """
+        return self._container
+
+    @property
+    def window(self):
+        """ Reference to the window that contains this element, it will always be a PyWindow instance """
+        return self.parent if isinstance(self.parent, pywindow.PyWindow) else self.parent.window
+
+    @property
+    def element_id(self):
+        """ The id this element was registered with """
+        return self._element_id
     widget_id = element_id
 
     @property
-    def configuration(self): return self._cfg
+    def configuration(self):
+        """ Reference to the configuration file of this element """
+        return self._cfg
     cfg = configuration
 
     @property
-    def layout(self): raise TypeError(f"Layout elements not supported for '{__name__}'")
+    def layout(self): raise TypeError(f"Layout elements not supported for '{type(self).__name__}'")
     @property
-    def events(self): return self._event_handler
+    def events(self):
+        """ Reference to the event handler of this element """
+        return self._event_handler
     event_handler = events
 
     @property
