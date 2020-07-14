@@ -240,14 +240,6 @@ class TwitchChatWindow(pywindow.PyWindow):
 
 
 def open_chat_window(channel):
-    client.schedule_task(task_id="twitch_open_chat", channel=channel)
-
-def initialize(clt):
-    global client
-    client = clt
-    client.add_task("twitch_open_chat", _open_chat)
-
-def _open_chat(channel):
     print("INFO", "Opening chat window for", channel)
     chat_window = TwitchChatWindow(client, channel)
     client.add_window(window=chat_window)

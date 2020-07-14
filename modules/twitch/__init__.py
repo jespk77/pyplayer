@@ -89,20 +89,13 @@ def command_twitch(arg, argc):
         twitchchat.open_chat_window(arg[0])
         return messagetypes.Reply(f"Twitch chat for '{arg[0]}' opened")
     else:
-        twitchoverview.create_window()
+        twitchoverview.create_window(client)
         return messagetypes.Reply("Openend twitch overview")
 
 def command_twitch_refresh(arg, argc):
-    window = client.find_window("twitch_overview")
-    if window is not None:
-        window.activate_refresh()
-        return messagetypes.Reply("Refreshing live channels")
-    else: return messagetypes.Reply("Twitch overview window not found")
-
-
-def initialize():
-    twitchoverview.initialize(client)
-    twitchchat.initialize(client)
+    if argc == 0:
+        if twitchoverview.refresh_overview(client) is not None: return messagetypes.Reply("Refreshing live channels")
+        else: return messagetypes.Reply("Twitch overview window not found")
 
 commands = {
     "twitch": {

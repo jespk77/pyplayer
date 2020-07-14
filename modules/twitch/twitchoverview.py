@@ -1,7 +1,6 @@
 from ui.qt import pywindow, pyelement, pyworker, pyimage
 import json, requests, socketserver, threading, os
 
-client = None
 relative_path = "modules/twitch/"
 from . import CLIENT_ID, read_logindata, write_logindata, invalidate_logindata
 from . import read_metadata, request_metadata, write_metadata, invalidate_metadata, metadata_expired
@@ -309,12 +308,13 @@ class AutoRefreshFrame(pyelement.PyFrame):
     def delay(self): return max(10, int(self["refresh_delay"].value))
 
 
+TwitchOverviewID = "twitch_overview"
 class TwichOverview(pywindow.PyWindow):
     follow_channel_text = "Followed live channels\n"
     refresh_cooldown = 30
 
     def __init__(self, parent):
-        pywindow.PyWindow.__init__(self, parent, "twitch_overview")
+        pywindow.PyWindow.__init__(self, parent, TwitchOverviewID)
         self.title = "TwitchViewer: Overview"
         self.icon = "assets/icon_twitchviewer.png"
         self._userlogin = self._usermeta = None
@@ -452,18 +452,13 @@ class TwichOverview(pywindow.PyWindow):
 
     def _enable_refresh(self): self["followed_refresh"].accept_input = True
 
-def create_window():
+def create_window(client):
     if not read_metadata(): write_metadata(request_metadata())
-    client.schedule_task(task_id="show_twitch_overview", create=True)
+    if client.find_window(TwitchOverviewID) is None: client.add_window(window_class=TwichOverview)
 
-def destroy_window(): client.schedule_task(task_id="show_twitch_overview")
-
-def initialize(clt):
-    global client
-    client = clt
-    client.add_task(task_id="show_twitch_overview", func=_set_twitch_overview)
-
-def _set_twitch_overview(create=False):
-    if create:
-        if client.find_window("twitch_overview") is None: client.add_window(window=TwichOverview(client))
-    else: client.close_window("twitch_overview")
+def refresh_overview(client):
+    window = client.find_window(TwitchOverviewID)
+    if window is not None:
+        window.activate_refresh()
+        return True
+    return False
