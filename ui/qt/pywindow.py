@@ -31,15 +31,20 @@ class _ScheduledTask(QtCore.QTimer):
         except Exception as e: log_exception(e)
 
 
+import threading
 class PyWindow:
     def __init__(self, parent, window_id, layout="grid"):
+        if threading.current_thread() != threading.main_thread(): raise RuntimeError("Window must be created in main thread")
+        if window_id is None: raise ValueError("Must specify a window id")
         if parent is not None and not isinstance(parent, PyWindow): raise ValueError(f"Parent must be a PyWindow instance, not '{type(parent).__name__}'")
+
         self._parent = parent
         self._window_id = window_id.lower()
         self._qt = QtWidgets.QWidget()
         self._qt.setObjectName("PyWindow")
         self._qt.resizeEvent = self._on_window_resize
         self._qt.closeEvent = self._on_window_close
+        self.hidden = True
 
         self._elements = {}
         self._scheduled_tasks = {}
@@ -54,17 +59,14 @@ class PyWindow:
         self.qt_element.setLayout(self.layout.qt_layout)
 
         self.title = "PyWindow"
-        self.hidden = True
-
-        try:
-            self.create_widgets()
-            self.events.call_event("window_open")
+        try: self.create_widgets()
         except Exception as e:
             print("ERROR", "Encountered error while creating widgets:")
             log_exception(e)
 
         geo = self._cfg.get("geometry")
         if isinstance(geo, list): self.set_geometry(*geo)
+        self.add_task("_add_window", func=self._add_window)
 
     def __del__(self): print("MEMORY", f"PyWindow '{self.window_id}' deleted")
 
@@ -215,21 +217,29 @@ class PyWindow:
     def add_window(self, window_id=None, window=None, window_class=None):
         """ Open new window with given id, closes previously opened window with this id if any was open
             use 'window' for attaching a previously created PyWindow instance
-            'window_class' must be a subclass of PyWindow, creates an instance of PyWindow if left out
-            Returns the newly created window """
+            'window_class' must be a subclass of PyWindow, creates an instance of PyWindow if left out """
+        self.schedule_task(task_id="_add_window", window_id=window_id, window=window, window_class=window_class)
+
+    def _add_window(self, window_id, window, window_class):
         if not window:
-            if not window_id: raise ValueError("Must specify a window_id")
-            window_id = window_id.lower()
             if not window_class: window_class = PyWindow
             elif not issubclass(window_class, PyWindow): raise TypeError("'window_class' parameter must be a PyWindow class")
-            window = window_class(self, window_id)
+
+            if window_id:
+                window_id = window_id.lower()
+                window = window_class(self, window_id)
+            else:
+                # when no window_id specified, try to construct a window anyway
+                # can still work if a subclass constructor specifies a window id, otherwise the error is raised in the PyWindow constructor
+                window = window_class(self)
+                window_id = window.window_id
         elif isinstance(window, PyWindow): window_id = window.window_id
         else: raise TypeError("'window' parameter must be a PyWindow instance")
 
         self.close_window(window_id)
         self._children[window_id] = window
         self._children[window_id].qt_element.show()
-        return self._children[window_id]
+        self._children[window_id].events.call_event("window_open")
 
     def get_window(self, window_id):
         """ Get open window with given id, raises KeyError when no window with this id is open
