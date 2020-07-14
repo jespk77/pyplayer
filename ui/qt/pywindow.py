@@ -214,13 +214,14 @@ class PyWindow:
         return False
     __delitem__ = remove_element
 
-    def add_window(self, window_id=None, window=None, window_class=None):
+    def add_window(self, window_id=None, window=None, window_class=None, **window_args):
         """ Open new window with given id, closes previously opened window with this id if any was open
             use 'window' for attaching a previously created PyWindow instance
-            'window_class' must be a subclass of PyWindow, creates an instance of PyWindow if left out """
-        self.schedule_task(task_id="_add_window", window_id=window_id, window=window, window_class=window_class)
+            'window_class' must be a subclass of PyWindow, creates an instance of PyWindow if left out
+            Supports custom keywords that are passed to the constructor of the window (ignored if window is specified) """
+        self.schedule_task(task_id="_add_window", window_id=window_id, window=window, window_class=window_class, window_args=window_args)
 
-    def _add_window(self, window_id, window, window_class):
+    def _add_window(self, window_id, window, window_class, window_args):
         if not window:
             if not window_class: window_class = PyWindow
             elif not issubclass(window_class, PyWindow): raise TypeError("'window_class' parameter must be a PyWindow class")
@@ -231,7 +232,7 @@ class PyWindow:
             else:
                 # when no window_id specified, try to construct a window anyway
                 # can still work if a subclass constructor specifies a window id, otherwise the error is raised in the PyWindow constructor
-                window = window_class(self)
+                window = window_class(self, **window_args)
                 window_id = window.window_id
         elif isinstance(window, PyWindow): window_id = window.window_id
         else: raise TypeError("'window' parameter must be a PyWindow instance")
