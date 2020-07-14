@@ -32,8 +32,14 @@ class PyPlayer(pywindow.PyWindow):
         pylogging.get_logger().log_level = self.configuration["loglevel"]
         self._window_tick()
 
-        @self.events.EventWindowClose
-        def _on_close(): self.stop_interpreter()
+        @self.events.EventWindowOpen
+        def _on_open(): self.parent.hidden = True
+        @self.events.EventWindowDestroy
+        def _on_close():
+            self.stop_interpreter()
+            self.parent.on_close(self)
+
+        self.start_interpreter({name: value for name, value in self.parent.configuration.get("modules").items() if value.get("enabled")})
 
     def create_widgets(self):
         pywindow.PyWindow.create_widgets(self)

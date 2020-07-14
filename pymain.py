@@ -113,15 +113,9 @@ class PySplashWindow(pywindow.RootPyWindow):
         import pyplayerqt
         self._actions[pyplayerqt.PyPlayerCloseReason.RESTART] = self._do_restart
         self._actions[pyplayerqt.PyPlayerCloseReason.MODULE_CONFIGURE] = self._do_module_configure
+        self.add_window("client", window_class=pyplayerqt.PyPlayer)
 
-        client = self.add_window("client", window_class=pyplayerqt.PyPlayer)
-        client.start_interpreter({name: value for name, value in self.configuration.get("modules").items() if value.get("enabled")})
-        client.events.EventWindowDestroy(lambda : self._on_close(client))
-
-        client.hidden = False
-        self.hidden = True
-
-    def _on_close(self, client):
+    def on_close(self, client):
         print("INFO", "PyPlayer closed with reason:", client.flags)
         close_cb = self._actions.get(client.flags)
         self.close_window("client")
