@@ -92,6 +92,8 @@ class PyElement:
 
     def has_focus(self): return self.qt_element.hasFocus()
     def get_focus(self): self.qt_element.setFocus(QtCore.Qt.OtherFocusReason)
+    def focus_next(self): self.qt_element.focusNextChild()
+    def focus_previous(self): self.qt_element.focusPreviousChild()
 
     def get_key(self, key):
         """ Returns keycode associated with given description, returns None if the description was not found """
@@ -406,6 +408,7 @@ class PyTextField(PyElement):
         PyElement.__init__(self, parent, element_id)
         self.qt_element.keyPressEvent = self._on_key_press
         self.undo = False
+        self.tabChangesFocus = True
 
     @property
     def accept_input(self): return not self.qt_element.isReadOnly()
@@ -441,6 +444,11 @@ class PyTextField(PyElement):
     def style_sheet(self): return self.qt_element.document().defaultStyleSheet()
     @style_sheet.setter
     def style_sheet(self, value): self.qt_element.document().setDefaultStyleSheet(str(value))
+
+    @property
+    def tabChangesFocus(self): return self._qt.tabChangesFocus()
+    @tabChangesFocus.setter
+    def tabChangesFocus(self, val): self._qt.setTabChangesFocus(bool(val))
 
     @staticmethod
     def _insert(cursor, text, tags, html):
