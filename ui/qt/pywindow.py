@@ -106,7 +106,8 @@ class PyWindow:
     @property
     def window_id(self):
         """ The id this windows was registered with """
-        return self._window_id
+        try: return self._window_id
+        except AttributeError: return "[Undefined]"
 
     @property
     def layout(self):
