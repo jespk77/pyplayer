@@ -448,9 +448,9 @@ class PyTextField(PyElement):
     def style_sheet(self, value): self.qt_element.document().setDefaultStyleSheet(str(value))
 
     @property
-    def tabChangesFocus(self): return self._qt.tabChangesFocus()
+    def tabChangesFocus(self): return self.qt_element.tabChangesFocus()
     @tabChangesFocus.setter
-    def tabChangesFocus(self, val): self._qt.setTabChangesFocus(bool(val))
+    def tabChangesFocus(self, val): self.qt_element.setTabChangesFocus(bool(val))
 
     @staticmethod
     def _insert(cursor, text, tags, html):
