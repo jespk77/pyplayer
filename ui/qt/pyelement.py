@@ -108,7 +108,9 @@ class PyElement:
         if cb:
             kwargs = {"key": event.key(), "modifiers": [self._key_modifiers[k] for k in self._key_modifiers.keys() if event.modifiers() & k]}
             args = cb.__code__.co_varnames
-            try: return cb(**{key: value for key, value in kwargs.items() if key in args})
+            try:
+                res = cb(**{key: value for key, value in kwargs.items() if key in args})
+                if res == self.events.block_action: return
             except Exception as e:
                 import traceback
                 print("ERROR", f"Error processing event 'key_down':")
