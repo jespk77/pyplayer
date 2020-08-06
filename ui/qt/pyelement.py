@@ -486,6 +486,24 @@ class PyTextField(PyElement):
         if prev_pos is not None: cursor.setPosition(prev_pos)
         self.qt_element.setTextCursor(cursor)
 
+    def get(self, index1=None, index2=None, line=None, selection=None):
+        """
+            Utility method for getting specific text from the textfield
+            If 'index1' and 'index2' are specified, returns the characters between both positions. If only 'index1' specified returns the character at that index.
+            If 'line' is specified, returns the text at given line number. If 'line' is 0 or negative, returns the text on the line of the cursor
+            If 'selection' is True, returns the currently selected text
+        """
+        if index1 is not None or index2 is not None:
+            if index1 is None: raise ValueError("Missing starting index")
+            if index2 is None: return self.qt_element.document().toPlainText()[index1]
+            return self.qt_element.document().toPlainText()[index1:index2]
+
+        if line is not None:
+            if line > 0: return self.qt_element.document().findBlockByLineNumber(line).text()
+            else: return self.qt_element.textCursor().block().text()
+
+        if selection is True: return self.qt_element.textCursor().selectedText()
+
     def insert(self, index, text, tags=None, html=False, move_cursor=False):
         """
          Insert given text into the given position (ignores 'accept_input' property)
