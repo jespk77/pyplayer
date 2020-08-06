@@ -3,7 +3,7 @@ from datetime import datetime
 from multiprocessing import Queue
 
 from .mediaplayer import MediaPlayer
-from . import songbrowser, lyricviewer
+from . import albumwindow, lyricviewer, songbrowser
 
 from utilities import messagetypes, song_tracker, history
 from ui.qt import pyelement
@@ -83,56 +83,7 @@ def set_autoplay_ignore(ignore):
 	global autoplay_ignore
 	autoplay_ignore = bool(ignore)
 
-def get_songmatches(path, keyword):
-	if not path: path = client.configuration[default_dir_path]
-	ls = media_player.find_song(path=client.configuration["directory"].get(path)["path"], keyword=keyword.split(" "))
-	if len(ls) == 1: return ls[0]
-	else: return None
-
-def album_list(keyword):
-	from modules.player import albumwindow
-	try:
-		with os.scandir(albumwindow.album_folder) as dir:
-			return [(os.path.splitext(f.name)[0], f.name) for f in dir if f.is_file() and keyword in f.name]
-	except FileNotFoundError: return []
-
-def album_process(type, songs):
-	for s in songs: interpreter.put_command("{} {} {}.".format(type, "music", s.replace(" - ", " ")))
-
 # ===== MAIN COMMANDS =====
-def command_album(arg, argc):
-	if argc > 0:
-		from modules.player import albumwindow
-		try: aw = albumwindow.AlbumWindow(client, album_process, "_".join(arg))
-		except FileNotFoundError: return messagetypes.Reply("Unknown album")
-
-		client.open_window("albumviewer", aw)
-		return messagetypes.Reply("Album opened")
-
-def command_album_add(arg, argc, display=None, album=None):
-	from modules.player import albumwindow
-	if argc > 0 and display is album is None:
-		albums = album_list(" ".join(arg))
-		if albums: return messagetypes.Select("Multiple albums found", lambda d,a: command_album_add(arg, argc, display=d, album=a), albums)
-		else: return messagetypes.Reply("No albums found")
-
-	client.open_window("albuminput", albumwindow.AlbumWindowInput(client, file=album, autocomplete_callback=get_songmatches))
-	return messagetypes.Reply("Album editor for '{}' opened".format(display) if display else "Album creator opened")
-
-def command_album_remove(arg, argc):
-	if argc > 0:
-		import os
-		from modules.player import albumwindow
-		filename = albumwindow.album_format.format("_".join(arg), "json")
-		try: os.remove(filename)
-		except FileNotFoundError: return messagetypes.Reply("Unknown album")
-		return messagetypes.Reply("Album deleted")
-
-def command_album_list(arg, argc):
-	albumlist = album_list(" ".join(arg))
-	if albumlist: return messagetypes.Reply("Found albums:\n  - " + "\n  - ".join([a[1] for a in albumlist]))
-	else: return messagetypes.Reply("No albums found")
-
 # - configure autoplay
 def command_autoplay_ignore(arg, argc):
 	if argc == 0:
@@ -346,10 +297,10 @@ def command_stop(arg, argc):
 
 commands = {
 	"album": {
-		"": command_album,
-		"add": command_album_add,
-		"delete": command_album_remove,
-		"list": command_album_list
+		"": albumwindow.command_album,
+		"add": albumwindow.command_album_add,
+		"delete": albumwindow.command_album_remove,
+		"list": albumwindow.command_album_list
 	}, "autoplay": {
 		"next": command_autoplay_next,
 		"off": command_autoplay_off,
@@ -413,8 +364,10 @@ def initialize():
 
 	client.add_task(task_id="player_progress_update", func=_set_client_progress)
 	client.add_task(task_id="player_title_update", func=_set_client_title)
-	songbrowser.initialize(interpreter, client)
+
+	albumwindow.initialize(interpreter, client, media_player)
 	lyricviewer.initialize(interpreter, client)
+	songbrowser.initialize(interpreter, client)
 	command_filter_clear(None, 0)
 
 def on_destroy():
