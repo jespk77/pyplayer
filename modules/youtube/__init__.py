@@ -94,27 +94,16 @@ def handle_url(value, data=None, path=None):
 # --- END OF HELPER FUNCTIONS
 
 def command_youtube_find(arg, argc, path=None):
-	if argc > 0:
-		if argc > 1 and arg[-1] == "all":
-			scan_official = False
-			arg.pop(-1)
-		else: scan_official = True
+	# searching videos the old way no longer works since data received when searching got changed
+	return messagetypes.Reply("Searching for videos is currently not available, use 'youtube get [code]' to download one directly")
 
-		arg = " ".join(arg)
-		ls = search(arg)
-		if ls is None: return messagetypes.Reply("There was an error looking for file, see log for details...")
-
-		res, officals = [], []
-		for title, link, desc in ls:
-			link = link[9:]
-			if scan_official and desc.startswith("Provided to YouTube by"): officals.append((title, link))
-			res.append((title, link))
-
-		if len(officals) > 0: return messagetypes.Select("Found official videos:", handle_url, choices=officals, path=path)
-		else: return messagetypes.Select("Found multiple videos:", handle_url, choices=res, path=path)
+def command_youtube_get(arg, argc):
+	if argc != 1: return messagetypes.Reply("Only one argument is supported")
+	return handle_url("", arg[0])
 
 commands = {
 	"youtube": {
-		"find": command_youtube_find
+		"find": command_youtube_find,
+		"get": command_youtube_get
 	}
 }
