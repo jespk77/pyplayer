@@ -229,7 +229,7 @@ class PyWindow:
 
             if window_id:
                 window_id = window_id.lower()
-                window = window_class(self, window_id)
+                window = window_class(self, window_id, **window_args)
             else:
                 # when no window_id specified, try to construct a window anyway
                 # can still work if a subclass constructor specifies a window id, otherwise the error is raised in the PyWindow constructor
