@@ -1,6 +1,6 @@
 from ui.qt import pywindow, pyelement, pyworker
 from utilities import messagetypes
-import re, collections
+import collections
 
 client = None
 main_window_id = "lyricviewer"
@@ -18,6 +18,7 @@ class LyricViewer(pywindow.PyWindow):
 		pywindow.PyWindow.__init__(self, parent, window_id)
 		self.icon = "assets/blank.png"
 		self.title = "LyricViewer"
+		self.add_task("set_lyrics", self._set_lyrics)
 
 	def create_widgets(self):
 		pywindow.PyWindow.create_widgets(self)
@@ -25,7 +26,8 @@ class LyricViewer(pywindow.PyWindow):
 		lyrics.accept_input = False
 		lyrics.text = "Loading..."
 
-	def set_lyrics(self, data, lyrics):
+	def set_lyrics(self, data, lyrics): self.schedule_task(task_id="set_lyrics", data=data, lyrics=lyrics)
+	def _set_lyrics(self, data, lyrics):
 		self.title = f"LyricViewer: {data.artist} - {data.title}"
 		self["lyrics_content"].text = lyrics
 
@@ -58,12 +60,15 @@ class TaskLyrics(pyworker.PyWorker):
 		else: self._lyrics = f"Error: HTTP code {rq.status_code}"
 
 	def complete(self):
-		client.schedule_task(task_id="player_lyricviewer", data=self._data, lyrics=self._lyrics)
+		window = client.get_window(main_window_id)
+		if window is not None: window.set_lyrics(self._data, self._lyrics)
+		else: print("INFO", "Lyrics collected but no lyrics window found")
 
 unknown_song = messagetypes.Reply("Unknown song")
 def get_lyrics(song, file=None):
 	artist, title = song.split(" - ", maxsplit=1)
 	if artist and title:
+		client.add_window(main_window_id, window_class=LyricViewer)
 		TaskLyrics(artist, title)
 		return messagetypes.Reply(f"Lyrics for {song} opened")
 	else: return unknown_song
@@ -75,11 +80,3 @@ def command_lyrics(path, song):
 def initialize(interp, clt):
 	global client
 	client = clt
-	client.add_task(task_id="player_lyricviewer", func=_set_lyric_viewer)
-
-def _set_lyric_viewer(data, lyrics):
-	if data is not None and lyrics is not None:
-		lyricwindow = client.find_window(main_window_id)
-		if lyricwindow is None: lyricwindow = client.add_window(main_window_id, window_class=LyricViewer)
-		lyricwindow.set_lyrics(data, lyrics)
-	else: client.close_window(main_window_id)
