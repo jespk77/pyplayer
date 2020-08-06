@@ -73,19 +73,19 @@ def process_path(narg, nargc, **data):
 		argn = " ".join(narg)
 		path = client.configuration["directory"].get(argn)
 		if path is not None: return process_song(**data, path=path)
-		else: return messagetypes.Reply("Unknown path '{}'".format(argn))
+		else: return messagetypes.Reply(f"Unknown path '{argn}'")
 
 def process_song(arg, argc, url=None, path=None):
-	if path is None: return messagetypes.Question("Where should it be saved to?", process_path, arg=arg, argc=argc, text=client.configuration["default_path"], url=url)
+	if path is None: return messagetypes.Question("Where should it be saved to?", process_path, arg=arg, argc=argc, text=client.configuration["default_directory"], url=url)
 	arg = " ".join(arg)
 
 	try: path = path["path"]
-	except KeyError: return messagetypes.Reply("No path set in '{}'".format(path))
+	except KeyError: return messagetypes.Reply(f"No path set in '{path}'")
 	import os
 	res = convert(url, os.path.join(path, arg))
 
-	if res == 0: return messagetypes.Reply("Song downloaded as '{}'".format(arg))
-	else: return messagetypes.Reply("Error downloading file: code {}".format(res))
+	if res == 0: return messagetypes.Reply(f"Song downloaded as '{arg}'")
+	else: return messagetypes.Reply(f"Error downloading file: code {res}")
 
 def handle_url(value, data=None, path=None):
 	if value is not None and data is not None:
