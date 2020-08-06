@@ -6,6 +6,8 @@ def valid_check(element):
     if not isinstance(element, PyElement) and not isinstance(element, pywindow.PyWindow): raise ValueError("Parent must be an instance of PyElement or PyWindow")
 
 class PyElement:
+    """ The base type of all elements, contains all shared logic """
+
     def __init__(self, container, element_id):
         valid_check(container)
         self._container = container
@@ -141,8 +143,8 @@ class PyElement:
 
 class PyFrame(PyElement):
     """
-     General element class that can contain child widgets
-     No interaction event
+        General element class that can contain child widgets
+        No interaction event
     """
     def __init__(self, parent, element_id, layout="grid"):
         if not hasattr(self, "_qt"): self._qt = QtWidgets.QWidget(parent._qt)
@@ -189,6 +191,11 @@ class PyFrame(PyElement):
         else: return False
 
 class PyScrollableFrame(PyFrame):
+    """
+        Similar to PyFrame but uses scrolling instead of resizing the frame
+        No interaction event
+    """
+
     def __init__(self, parent, element_id, layout="grid"):
         self._qt = QtWidgets.QScrollArea(parent.qt_element)
         self._content = QtWidgets.QWidget()
@@ -201,6 +208,11 @@ class PyScrollableFrame(PyFrame):
     def qt_element(self): return self._content
 
 class PyLabelFrame(PyFrame):
+    """
+       Similar to PyFrame but adds a border with an optional label around its content
+       No interaction event
+    """
+
     def __init__(self, parent, element_id, layout="grid"):
         self._qt = QtWidgets.QGroupBox(parent.qt_element)
         PyFrame.__init__(self, parent, element_id, layout)
@@ -214,8 +226,8 @@ class PyLabelFrame(PyFrame):
 
 class PyTextLabel(PyElement):
     """
-     Element for displaying a line of text and/or an image
-     No interaction event
+        Element for displaying a line of text and/or an image
+        No interaction event
     """
     def __init__(self, parent, element_id):
         self._qt = QtWidgets.QLabel(parent.qt_element)
@@ -265,9 +277,9 @@ class PyTextLabel(PyElement):
 
 class PyTextInput(PyElement):
     """
-     Element for entering a single line of data
-     Interaction event fires when the enter key is pressed or if this element loses focus, no keywords
-     If 'return_only' is set to true, interaction event only fires if the enter key is pressed
+        Element for entering a single line of data
+        Interaction event fires when the enter key is pressed or if this element loses focus, no keywords
+        If 'return_only' is set to true, interaction event only fires if the enter key is pressed
     """
     def __init__(self, parent, element_id, return_only=False):
         self._qt = QtWidgets.QLineEdit(parent.qt_element)
@@ -322,8 +334,8 @@ class PyTextInput(PyElement):
 
 class PyCheckbox(PyElement):
     """
-     Adds a simple checkable box
-     Interaction event fires when the element is toggled, no keywords
+        Adds a simple checkable box
+        Interaction event fires when the element is toggled, no keywords
     """
     def __init__(self, parent, element_id):
         self._qt = QtWidgets.QCheckBox(parent.qt_element)
@@ -352,8 +364,8 @@ class PyCheckbox(PyElement):
 
 class PyButton(PyElement):
     """
-     Clickable button element, can be customized with text and/or an image
-     Interaction event fires when the button is pressed, no keywords
+        Clickable button element, can be customized with text and/or an image
+        Interaction event fires when the button is pressed, no keywords
     """
     def __init__(self, parent, element_id):
         self._qt = QtWidgets.QPushButton(parent.qt_element)
@@ -396,14 +408,15 @@ def random_url():
     return "".join(random.choice("abcdefghijklmnopqrstuvwxyz1234567890") for _ in range(20))
 
 class PyTextField(PyElement):
+    """
+        Element for displaying and/or entering multiple lines of text
+        No interaction event
+    """
+
     start = 0
     @property
     def end(self): return len(self.text)
 
-    """
-     Element for displaying and/or entering multiple lines of text
-     No interaction event
-    """
     def __init__(self, parent, element_id):
         self._qt = QtWidgets.QTextEdit(parent.qt_element)
         self._event_handler = pyevents.PyElementInputEvent(parent, self)
@@ -539,12 +552,12 @@ class PyTextField(PyElement):
 
 class PyProgessbar(PyElement):
     """
-     Display the progress of a certain action on screen
-     Interaction event called when the mouse is clicked over the widget
-     Available keywords:
-        * x: the x coordinate of the element the mouse clicked on
-        * y: the y coordinate of the element the mouse clicked on
-        * position: the progress value it was clicked on, relative to the element's width
+        Display the progress of a certain action on screen
+        Interaction event called when the mouse is clicked over the widget
+        Available keywords:
+            * x: the x coordinate of the element the mouse clicked on
+            * y: the y coordinate of the element the mouse clicked on
+            * position: the progress value it was clicked on, relative to the element's width
     """
     def __init__(self, parent, element_id):
         self._qt = QtWidgets.QProgressBar(parent.qt_element)
@@ -585,9 +598,8 @@ class PyProgessbar(PyElement):
 
 class PyItemlist(PyElement):
     """
-     Show a list of items the user can select
-     Interaction event fires when an item is left clicked, updating the selection
-     No keywords
+        Show a list of items the user can select
+        Interaction event fires when an item is left clicked, updating the selection, no keywords
     """
     def __init__(self, parent, element_id):
         self._qt = QtWidgets.QListView(parent.qt_element)
