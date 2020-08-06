@@ -568,6 +568,227 @@ class PyTextField(PyElement):
         PyElement._on_key_press(self, event)
 
 
+class PyTable(PyElement):
+    """
+        Element that displays content in table form
+        Interaction event fires when the value in a cell gets updated
+            - Keywords: row: int, column: int, new_value: str
+    """
+    def __init__(self, parent, element_id, rows=1, columns=1):
+        self._qt = QtWidgets.QTableWidget(rows, columns, parent.qt_element)
+        PyElement.__init__(self, parent, element_id)
+        self._dynamic_column, self._dynamic_row = False, False
+        self._horizontal_header, self._vertical_header = False, False
+        self.qt_element.cellChanged.connect(self._on_cell_changed)
+
+    def _update_header_visibility(self):
+        self._qt.horizontalHeader().setVisible(self.columns > 1 or self._horizontal_header)
+        self._qt.verticalHeader().setVisible(self.rows > 1 or self._vertical_header)
+    def _table_update(self):
+        if self._dynamic_column and self.columns > 0:
+            col = self.columns - 1
+            for row in range(self.rows):
+                item = self.qt_element.item(row, col)
+                if item is not None and item.text():
+                    self.insert_column()
+                    break
+
+            empty = True
+            while empty:
+                col = self.columns - 2
+                if col < 1: break
+                for row in range(self.rows):
+                    item = self.qt_element.item(row, col)
+                    if item is not None and item.text():
+                        empty = False
+                        break
+                if empty: self.remove_column()
+
+        if self._dynamic_row and self.rows > 0:
+            row = self.rows - 1
+            for col in range(self.columns):
+                item = self.qt_element.item(row, col)
+                if item is not None and item.text():
+                    self.insert_row()
+                    break
+
+            empty = True
+            while empty:
+                row = self.rows - 2
+                if row < 1: break
+                for col in range(self.columns):
+                    item = self.qt_element.item(row, col)
+                    if item is not None and item.text():
+                        empty = False
+                        break
+                if empty: self.remove_row()
+        self._update_header_visibility()
+
+    @property
+    def columns(self):
+        """ The number of columns in this table """
+        return self.qt_element.columnCount()
+    @columns.setter
+    def columns(self, count):
+        """ Set a fixed number of columns for this table (disables dynamic column count) """
+        count = int(count)
+        self.dynamic_columns = False
+        self.qt_element.setColumnCount(count)
+        self._update_header_visibility()
+
+    @property
+    def column_width(self): return self.qt_element.horizontalHeader().sectionSize(0)
+    @column_width.setter
+    def column_width(self, width):
+        width = int(width)
+        if width <= 0: raise ValueError("column width must be greater than 0")
+
+        header = self.qt_element.horizontalHeader()
+        for i in range(self.columns): header.resizeSection(i, width)
+        header.setDefaultSectionSize(width)
+
+    @property
+    def column_header(self):
+        """ Whether the column header is currently visible """
+        return self.qt_element.horizontalHeader().isVisible()
+    @column_header.setter
+    def column_header(self, visible):
+        self._horizontal_header = bool(visible)
+        self._update_header_visibility()
+
+    @property
+    def dynamic_columns(self):
+        """ Whether the column count should automatically grow with the content """
+        return self._dynamic_column
+    @dynamic_columns.setter
+    def dynamic_columns(self, dynamic):
+        self._dynamic_column = bool(dynamic)
+        self._table_update()
+
+    def insert_column(self, index=None):
+        """
+            Insert new column at specified index
+            Inserts the column at the end if nothing specified
+        """
+        if index is None: index = self.columns
+        elif index < 0: index += self.columns
+        self.qt_element.insertColumn(index)
+
+    def remove_column(self, index=None):
+        """
+            Removes column at the specified index
+            Removes the column at the end if nothing specified
+        """
+        if index is None: index = self.columns - 1
+        elif index < 0: index += self.columns
+        self.qt_element.removeColumn(index)
+
+    @property
+    def rows(self):
+        """ The number of rows in this table """
+        return self.qt_element.rowCount()
+    @rows.setter
+    def rows(self, count):
+        """ Set a fixed number of rows for this table (disables dynamic row count) """
+        self.dynamic_rows = False
+        self.qt_element.setRowCount(count)
+        self._update_header_visibility()
+
+    @property
+    def row_header(self):
+        """ Whether the row header is currently visible """
+        return self.qt_element.verticalHeader().isVisible()
+    @row_header.setter
+    def row_header(self, visible):
+        self._vertical_header = bool(visible)
+        self._update_header_visibility()
+
+    @property
+    def row_height(self): return self.qt_element.verticalHeader().sectionSize(0)
+    @row_height.setter
+    def row_height(self, height):
+        height = int(height)
+        if height <= 0: raise ValueError("Height must be greater than 0")
+
+        header = self.qt_element.verticalHeader()
+        for i in range(self.rows): header.resizeSection(i, height)
+        header.setDefaultSectionSize(height)
+
+    @property
+    def dynamic_rows(self):
+        """ Whether the row count should automatically grow with the content """
+        return self._dynamic_row
+    @dynamic_rows.setter
+    def dynamic_rows(self, dynamic):
+        self._dynamic_row = bool(dynamic)
+        self._table_update()
+
+    def insert_row(self, index=None):
+        """
+            Insert new row at specified index
+            Inserts the row at the end if nothing specified
+        """
+        if index is None: index = self.rows
+        elif index < 0: index += self.rows
+        self.qt_element.insertRow(index)
+
+    def remove_row(self, index=None):
+        """
+            Removes row at the specified index
+            Removes the row at the end if nothing specified
+        """
+        if index is None: index = self.rows - 1
+        elif index < 0: index += self.rows
+        self.qt_element.removeRow(index)
+
+    def get(self, row=None, column=None):
+        """
+            Get value(s) from the table
+            If only 'row' is specified, returns values in all columns from that row
+            If only 'column' is specified, returns values in all rows from that columns
+            If both 'row' and 'column' specified, returns value from that position
+            Supports negative indices (with the same behavior as builtin types)
+            Returns None when a value out of range specified
+        """
+        if row is not None:
+            if row < 0: row += self.rows
+
+            if column is not None:
+                if column < 0: column += self.columns
+                item = self.qt_element.item(row, column)
+                return item.text() if item is not None else ""
+            items = [self.qt_element.item(row, i) for i in range(self.columns)] if 0 <= row < self.rows else None
+            return [i.text() if i is not None else "" for i in items] if items is not None else None
+
+        if column is not None:
+            if column < 0: column += self.columns
+            items = [self.qt_element.item(i, column) for i in range(self.rows)] if 0 <= column < self.columns else None
+            return [i.text() if i is not None else "" for i in items] if items is not None else None
+
+        return ValueError("Must specify at least one of 'row' or 'column'")
+
+    def set(self, row, column, value):
+        """
+            Update the cell at the specified position in the table
+            Supports negative indices (with the same behavior as builtin types)
+            It is an error if the position is out of range
+        """
+        if row < 0: row += self.rows
+        if column < 0: column += self.columns
+
+        if 0 <= row < self.rows and 0 <= column < self.columns:
+            item = self.qt_element.item(row, column)
+            if item is None:
+                item = QtWidgets.QTableWidgetItem(value)
+                self.qt_element.setItem(row, column, item)
+            else: item.setText(value)
+        else: raise IndexError(f"table index out of range ({row},{column})")
+
+    def _on_cell_changed(self, row, column):
+        self._table_update()
+        self.event_handler.call_event("interact", row=row, column=column, new_value=self.get(row, column))
+
+
 class PyProgessbar(PyElement):
     """
         Display the progress of a certain action on screen
