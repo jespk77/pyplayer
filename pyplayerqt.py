@@ -1,6 +1,6 @@
 from ui.qt import pywindow, pyelement
-from utilities.history import History
-from interpreter import Interpreter
+from core.history import History
+from core.interpreter import Interpreter
 
 import enum, datetime
 class PyPlayerCloseReason(enum.Enum):

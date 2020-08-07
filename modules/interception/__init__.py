@@ -2,7 +2,7 @@ import os, json
 from interception import ffi, lib as interception
 
 from ui.qt import pyworker
-from utilities import messagetypes
+from core import messagetypes
 
 # DEFAULT MODULE VARIABLES
 interpreter = client = None

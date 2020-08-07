@@ -1,4 +1,4 @@
-from utilities import messagetypes
+from core import messagetypes
 
 interpreter = client = None
 
@@ -89,7 +89,7 @@ def command_version(arg, argc):
 	if argc == 0:
 		global version_output
 		if not version_output:
-			from utilities import commands
+			from core import commands
 			def get_output(o): global version_output; version_output = o
 			commands.process_command(version_command, stdout=get_output)
 

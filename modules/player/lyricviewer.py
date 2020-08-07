@@ -1,5 +1,5 @@
 from ui.qt import pywindow, pyelement, pyworker
-from utilities import messagetypes
+from core import messagetypes
 import collections
 
 client = None

@@ -2,7 +2,8 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 import sys
 
 from . import pyelement, pyevents, pylayout, log_exception
-from .. import pyconfiguration
+from core import pyconfiguration
+
 
 class _ScheduledTask(QtCore.QTimer):
     _schedule_signal = QtCore.pyqtSignal(int, bool, dict)

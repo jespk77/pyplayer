@@ -1,4 +1,5 @@
-from utilities import messagetypes, song_tracker
+from modules.player import song_tracker
+from core import messagetypes
 from ui.qt import pyelement
 from collections import Counter
 import os

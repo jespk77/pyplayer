@@ -1,6 +1,6 @@
 import gc
 
-from utilities import messagetypes
+from core import messagetypes
 
 # DEFAULT MODULE VARIABLES
 client = interpreter = None

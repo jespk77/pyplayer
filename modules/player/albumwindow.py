@@ -1,6 +1,6 @@
 import json, os
 from ui.qt import pyimage, pywindow, pyelement
-from utilities import messagetypes
+from core import messagetypes
 
 client = interpreter = media_player = None
 album_folder = "albums"
@@ -290,7 +290,7 @@ def command_album(arg, argc):
 def command_album_add(arg, argc, display=None, album=None):
 	if argc > 0 and display is album is None:
 		albums = album_list(" ".join(arg))
-		if albums: return messagetypes.Select("Multiple albums found", lambda d,a: command_album_add(arg, argc, display=d, album=a), albums)
+		if albums: return messagetypes.Select("Multiple albums found", lambda d, a: command_album_add(arg, argc, display=d, album=a), albums)
 		else: return messagetypes.Reply("No albums found")
 
 	client.add_window(window_class=AlbumWindowInput, album_file=album, autocomplete_callback=get_songmatches)

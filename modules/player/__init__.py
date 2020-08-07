@@ -3,9 +3,9 @@ from datetime import datetime
 from multiprocessing import Queue
 
 from .mediaplayer import MediaPlayer
-from . import albumwindow, lyricviewer, songbrowser
+from . import albumwindow, lyricviewer, songbrowser, song_tracker
 
-from utilities import messagetypes, song_tracker, history
+from core import history, messagetypes
 from ui.qt import pyelement
 
 # DEFAULT MODULE VARIABLES

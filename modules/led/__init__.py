@@ -1,4 +1,4 @@
-from utilities import messagetypes
+from core import messagetypes
 import requests
 
 client = interpreter = None

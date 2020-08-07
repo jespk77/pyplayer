@@ -1,4 +1,4 @@
-from utilities import messagetypes
+from core import messagetypes
 import json, os, requests, time
 
 if not os.path.isdir(".cache"): os.mkdir(".cache")

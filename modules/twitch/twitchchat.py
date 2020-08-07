@@ -1,5 +1,5 @@
 from ui.qt import pywindow, pyelement, pyworker
-from ui import pyconfiguration
+from core import pyconfiguration
 from . import read_logindata, read_metadata
 import collections, multiprocessing, socket
 

@@ -4,7 +4,7 @@ from multiprocessing import Queue
 from PyQt5 import QtCore
 from weakref import WeakSet
 
-from utilities import messagetypes
+from core import messagetypes
 
 class Interpreter(QtCore.QThread):
 	""" Process commands from modules defined in the modules package
