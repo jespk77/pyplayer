@@ -148,7 +148,7 @@ class Configuration(ConfigurationItem):
 
 class ConfigurationFile(Configuration):
 	""" Same as a Configuration, but adds the ability read from/write to file """
-	cfg_version = "1b"
+	cfg_version = "2"
 
 	def __init__(self, filepath, cfg_values=None, readonly=False):
 		filepath = os.path.splitext(filepath)
