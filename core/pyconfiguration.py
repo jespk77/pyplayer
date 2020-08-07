@@ -169,17 +169,16 @@ class ConfigurationFile(Configuration):
 
 	def _read_file(self):
 		print("VERBOSE", f"Reading configuration file data from '{self.filename}'")
+		import json
 		try:
-			error = None
 			with open(self._file, "r") as file:
 				self._file_exists = True
-				import json
-				try: return json.load(file)
-				except json.JSONDecodeError as e:
-					print("ERROR", f"Parsing configuration file '{self._file}':", e)
-					error = e
-
-			if error is not None: raise ValueError(f"JSON parsing error: {error}")
+				cfg_data = json.load(file)
+				cfg_version = cfg_data.get("_version", "undefined")
+				if cfg_version != self.cfg_version:
+					print("WARNING", f"Configuration version mismatch: from {cfg_version} to {self.cfg_version}. Continuing to load but things might not work as expected")
+				return cfg_data
+		except json.JSONDecodeError as e: print("ERROR", f"Parsing configuration file '{self._file}':", e)
 		except FileNotFoundError: print("VERBOSE", f"Configuration file '{self._file}' not found")
 
 	def save(self):
