@@ -1,8 +1,6 @@
-from ui import pyconfiguration
 from utilities import messagetypes
 
 interpreter = client = None
-cfg_folder = ".cfg/"
 
 def get_time_from_string(delay):
 	try:
@@ -23,37 +21,6 @@ def get_time_from_string(delay):
 		else: sec = 0
 	except ValueError: return None
 	else: return hour, min, sec
-
-def command_cfg(arg, argc):
-	if argc > 0:
-		cg = client.get_window(arg[0])
-		if cg is None:
-			import os
-			file = os.path.join(cfg_folder, arg[0])
-			if os.path.isfile(file):
-				cg = pyconfiguration.ConfigurationFile(filepath=file)
-				arg.pop(0)
-			else: cg = client
-		else: arg.pop(0)
-
-		if len(arg) > 1:
-			arg = [arg[0], " ".join(arg[1:])]
-			key, value = arg
-			if value == "none":
-				try:
-					del cg.configuration[key]
-					msg = messagetypes.Reply("Option '{}' was deleted".format(key))
-				except Exception as e: return messagetypes.Reply(str(e))
-			else:
-				try:
-					cg.configuration[key] = value
-					msg = messagetypes.Reply("Option '{}' is updated to '{}'".format(key, value))
-				except Exception as e: return messagetypes.Reply(str(e))
-			cg.write_configuration()
-			return msg
-		elif len(arg) == 1:
-			try: return messagetypes.Reply("Option '{}' is set to '{}'".format(arg[0], cg.configuration[arg[0]]))
-			except KeyError: return messagetypes.Reply("Option '{}' was not found".format(arg[0]))
 
 def command_log_open(arg, argc):
 	if argc == 0:
@@ -149,7 +116,6 @@ def initialize():
 		client["header_right"].text = f"{str(date - boot_time).split('.')[0]} / {humanize.naturalsize(process.memory_info().rss)}"
 
 commands = {
-	"cfg": command_cfg,
 	"log": {
 		"": command_log_open,
 		"clean": command_log_clear,
