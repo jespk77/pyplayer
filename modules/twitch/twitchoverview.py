@@ -181,11 +181,11 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
     def run(self):
         with self.wait:
             while self.active:
-                print("INFO", "Fetching currently live channels...")
+                print("VERBOSE", "Fetching currently live channels...")
                 self._window.schedule_task(task_id="twitch_start_refresh")
                 res = self._fetch_data()
 
-                print("INFO", "Fetching complete, refreshing data")
+                print("VERBOSE", "Fetching complete, refreshing data...")
                 if res: self._window.schedule_task(task_id="twitch_channel_data", data=self._data)
                 else: self._window.schedule_task(task_id="twitch_channel_data", error=self._error)
 
@@ -202,7 +202,7 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
     def _fetch_data(self):
         self._logindata = read_logindata()
         if metadata_expired():
-            print("INFO", "User meta cache expired, requesting")
+            print("VERBOSE", "User meta cache expired, requesting...")
             metadata = request_metadata()
             write_metadata(metadata)
         else: metadata = read_metadata()
@@ -215,7 +215,7 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
         req = requests.get(self.followed_stream_url.format(ids="&user_id=".join(followed_channels)), headers=self._logindata)
         if req.status_code != 200:
             print("ERROR", "Got status code", req.status_code, "while requesting followed channels")
-            self._error = req.content
+            self._error = req.text
             print("ERROR", "->", req.content)
             return False
 
@@ -229,7 +229,7 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
         req = requests.get(self.followed_game_url.format(ids="&id=".join(followed_games)), headers=self._logindata)
         if req.status_code != 200:
             print("ERROR", "Got status code", req.status_code, "while requesting followed games")
-            self._error = req.content
+            self._error = req.text
             print("ERROR", "->", req.content)
             return False
 
@@ -311,14 +311,14 @@ class AutoRefreshFrame(pyelement.PyFrame):
 TwitchOverviewID = "twitch_overview"
 class TwichOverview(pywindow.PyWindow):
     follow_channel_text = "Followed live channels\n"
-    refresh_cooldown = 30
 
     def __init__(self, parent):
+        self._userlogin = self._usermeta = None
+        self._refresh_task = self._last_update = None
+
         pywindow.PyWindow.__init__(self, parent, TwitchOverviewID)
         self.title = "TwitchViewer: Overview"
         self.icon = "assets/icon_twitchviewer.png"
-        self._userlogin = self._usermeta = None
-        self._refresh_task = None
 
         self.layout.row(4, weight=1, minsize=200).column(0, weight=1)
         self.schedule_task(func=self._refresh_status, task_id="refresh_status")
@@ -334,7 +334,7 @@ class TwichOverview(pywindow.PyWindow):
         self.add_element("sep1", element_class=pyelement.PySeparator, row=1, columnspan=2)
 
         lbl = self.add_element("followed_label", element_class=pyelement.PyTextLabel, row=2)
-        lbl.text = self.follow_channel_text
+        lbl.text = self.follow_channel_text + self.last_updated_time
         lbl.set_alignment("center")
         refresh_frame = self.add_element(element=AutoRefreshFrame(self), row=3)
         refresh_frame["refresh_check"].events.EventInteract(self._set_repeated_refresh)
@@ -352,6 +352,11 @@ class TwichOverview(pywindow.PyWindow):
         lbl2.text = "Join another channel (WIP)"
         custom_inpt = self.add_element("custom_channel", element_class=pyelement.PyTextInput, row=6, column=1)
         custom_inpt.accept_input = False
+
+    @property
+    def last_updated_time(self):
+        if self._last_update is not None: return self._last_update.strftime("Last update: %b %d, %Y - %I:%M %p")
+        else: return "Press the refresh button to update"
 
     def _set_repeated_refresh(self):
         frame = self[AutoRefreshFrame.main_id]
@@ -380,13 +385,13 @@ class TwichOverview(pywindow.PyWindow):
             return
 
         if frame.delay != self._refresh_task.wait_time:
-            print("INFO", "Updating refresh delay from", self._refresh_task.wait_time, "to", frame.delay)
+            print("VERBOSE", "Updating refresh delay from", self._refresh_task.wait_time, "to", frame.delay)
             with self._refresh_task.wait: self._refresh_task.wait_time = frame.delay
             frame[AutoRefreshFrame.input_id].value = self._refresh_task.wait_time
 
     def _on_refresh_active(self):
         self["followed_refresh"].accept_input = False
-        self["followed_label"].text = self.follow_channel_text + "\nUpdating..."
+        self["followed_label"].text = self.follow_channel_text + "Updating..."
 
     def activate_refresh(self):
         if self._refresh_task: self._refresh_task.wait.notify_one()
@@ -396,7 +401,7 @@ class TwichOverview(pywindow.PyWindow):
         self._userlogin = read_logindata()
         self._usermeta = read_metadata()
         if self._userlogin:
-            print("INFO", "Currently signed in")
+            print("VERBOSE", "Currently signed in")
             self["status"].text = f"Signed in as {self._usermeta['display_name']}" if self._usermeta else "Signed in"
             btn_signinout = self["button_signinout"]
             btn_signinout.text = "Sign out"
@@ -404,7 +409,7 @@ class TwichOverview(pywindow.PyWindow):
             self["followed_refresh"].accept_input = True
 
         else:
-            print("INFO", "Not currently signed in")
+            print("VERBOSE", "Not currently signed in")
             self["status"].text = "Not signed in"
             btn_signinout = self["button_signinout"]
             btn_signinout.text = "Sign in"
@@ -412,21 +417,28 @@ class TwichOverview(pywindow.PyWindow):
             self["followed_refresh"].accept_input = False
 
     def sign_in(self):
-        print("INFO", "Opening sign in window")
+        print("VERBOSE", "Opening sign in window")
         sign_in = self.add_window(window=TwitchSigninWindow(self))
         @sign_in.events.EventWindowDestroy
         def _on_signed_in(): self.schedule_task(task_id="refresh_status")
 
     def sign_out(self):
-        print("INFO", "Signing out of account")
+        print("VERBOSE", "Signing out of account")
         TwitchSignOutWorker("twitch_signout")
         self.destroy()
 
     def _fill_channel_data(self, data=None, error=None):
-        if data is not None:
-            print("INFO", "Got updated live channel data")
+        if error is not None:
+            print("VERBOSE", "Failed to get updated live channel data")
+            if data is not None: print("WARNING", "Received data even though an error occured")
+            self["followed_label"].text = self.follow_channel_text + self.last_updated_time + "\nAn error occured, try again later"
+            self._enable_refresh()
+
+        elif data is not None:
+            print("VERBOSE", "Got updated live channel data")
             import datetime
-            self["followed_label"].text = self.follow_channel_text + datetime.datetime.today().strftime("Last update: %b %d, %Y - %I:%M %p")
+            self._last_update = datetime.datetime.today()
+            self["followed_label"].text = self.follow_channel_text + self.last_updated_time
             content = self["followed_content"]
             for c in content.children: content.remove_element(c.element_id)
 
@@ -441,11 +453,6 @@ class TwichOverview(pywindow.PyWindow):
             if len(data) == 0:
                 end_label.text = "No channels live"
                 end_label.set_alignment("centerH")
-            self.schedule_task(sec=self.refresh_cooldown, func=self._enable_refresh)
-
-        elif error:
-            print("INFO", "Failed to get updated live channel data")
-            self["followed_label"].text = self.follow_channel_text + "An error occured"
             self._enable_refresh()
 
         else: raise ValueError("Missing 'data' or 'error' keyword")
