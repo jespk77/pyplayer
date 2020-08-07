@@ -42,7 +42,7 @@ class ConfigurationItem:
 	def get_or_create(self, key, create_value=None): self.__getitem__(key)
 
 	def __len__(self): return len(self.value) if self.is_set else 0
-	def __str__(self): return f"ConfigurationItem(read_only={self._read_only}, value={str(self.value)})"
+	def __str__(self): return f"ConfigurationItem(dirty={self.dirty}, read_only={self.read_only}, value={self.value})"
 
 
 class Configuration(ConfigurationItem):
@@ -143,7 +143,7 @@ class Configuration(ConfigurationItem):
 	def value(self): return {k: v.value for k, v in self.items()}
 
 	def __len__(self): return len(self.value)
-	def __str__(self): return f"Configuration(read_only={self.read_only}, value=[{', '.join([f'{k}: {str(v)}' for k, v in self.items()])}]"
+	def __str__(self): return f"Configuration(dirty={self.dirty}, read_only={self.read_only}, value=[{', '.join([f'{k}: {str(v)}' for k, v in self.items()])}]"
 
 
 class ConfigurationFile(Configuration):
@@ -151,7 +151,8 @@ class ConfigurationFile(Configuration):
 	cfg_version = "1b"
 
 	def __init__(self, filepath, cfg_values=None, readonly=False):
-		self._file = f".cfg/{filepath}"
+		filepath = os.path.splitext(filepath)
+		self._file = f".cfg/{filepath[0]}.cfg" if not filepath[1] else f".cfg/{''.join(filepath)}"
 		Configuration.__init__(self, value=cfg_values, read_only=readonly)
 		self._initialvalues = self._value
 		self._file_exists = False
