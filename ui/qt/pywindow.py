@@ -20,6 +20,7 @@ class _ScheduledTask(QtCore.QTimer):
     def _schedule(self, delay, loop, kwargs=None):
         self.setInterval(delay)
         self.setSingleShot(not loop)
+        self._kwargs.clear()
         if kwargs: self._kwargs.update(kwargs)
         self.start()
 
