@@ -315,6 +315,7 @@ class TwichOverview(pywindow.PyWindow):
     def __init__(self, parent):
         self._userlogin = self._usermeta = None
         self._refresh_task = self._last_update = None
+        self._live_channels = None
 
         pywindow.PyWindow.__init__(self, parent, TwitchOverviewID)
         self.title = "TwitchViewer: Overview"
@@ -442,13 +443,22 @@ class TwichOverview(pywindow.PyWindow):
             content = self["followed_content"]
             for c in content.children: content.remove_element(c.element_id)
 
-            index = 0
+            index, new_channel = 0, False
             for channel in data:
+                if not new_channel and self._live_channels is not None: new_channel = channel['user_id'] not in self._live_channels
                 content.add_element(element=StreamEntryFrame(content, channel), row=index)
                 content.layout.row(index, weight=0)
                 index += 1
             end_label = content.add_element("filler", element_class=pyelement.PyTextLabel,row=index)
             content.layout.row(index, weight=1)
+
+            if new_channel:
+                print("VERBOSE", "Found new channel in the live list")
+                cmd = self.cfg.get_or_create("event-new_channel_live", "")
+                if cmd:
+                    from . import interpreter
+                    interpreter.put_command(cmd)
+            self._live_channels = {channel['user_id']: channel for channel in data}
 
             if len(data) == 0:
                 end_label.text = "No channels live"
