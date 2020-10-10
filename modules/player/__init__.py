@@ -76,7 +76,7 @@ def play_song(display, song, path):
 	else: return no_songs
 
 def put_queue(display, song, path):
-	song_queue.put_nowait((path[1], song))
+	song_queue.put_nowait((path[1] if isinstance(path, tuple) else path, song))
 	return messagetypes.Reply("Song '{}' added to queue".format(display))
 
 def set_autoplay_ignore(ignore):
