@@ -362,6 +362,18 @@ def initialize():
 	client.configuration.get_or_create("directory", {})
 	client.configuration.get_or_create(default_dir_path, "")
 
+	@client.events.EventKeyDown("MediaPause")
+	@client.events.EventKeyDown("MediaPlay")
+	@client.events.EventKeyDown("MediaTogglePlayPause")
+	def _media_play(): interpreter.put_command("player pause")
+
+	@client.events.EventKeyDown("MediaNext")
+	def _media_next(): interpreter.put_command("player next")
+	@client.events.EventKeyDown("MediaPrevious")
+	def _media_previous(): interpreter.put_command("player previous")
+	@client.events.EventKeyDown("MediaStop")
+	def _media_stop(): interpreter.put_command("player stop")
+
 	client.add_task(task_id="player_progress_update", func=_set_client_progress)
 	client.add_task(task_id="player_title_update", func=_set_client_title)
 
