@@ -1,3 +1,5 @@
+from PyQt5 import QtCore
+
 class EventHandler:
     """
      Main handler for all types of events
@@ -7,8 +9,9 @@ class EventHandler:
     """
     block = block_action = 0xBEEF
 
-    def __init__(self):
+    def __init__(self, element):
         self._events = {}
+        self._element = element
 
     def call_event(self, event_name, **kwargs):
         callback = self._events.get(event_name)
@@ -24,17 +27,53 @@ class EventHandler:
         self._events[event_name] = cb
         return cb
 
+    _key_modifiers = {QtCore.Qt.NoModifier: None, QtCore.Qt.ShiftModifier: "shift", QtCore.Qt.ControlModifier: "ctrl", QtCore.Qt.AltModifier: "alt"}
+    def call_keydown_event(self, event):
+        cb = self._element._key_cb.get(event.key())
+        if not cb: cb = self._element._key_cb.get('*')
+
+        if cb:
+            kwargs = {"key": event.key(), "modifiers": [self._key_modifiers[k] for k in self._key_modifiers.keys() if event.modifiers() & k]}
+            args = cb.__code__.co_varnames
+            try:
+                res = cb(**{key: value for key, value in kwargs.items() if key in args})
+                if res == self.block_action: return True
+            except Exception as e:
+                import traceback
+                print("ERROR", f"Error processing event 'key_down':")
+                traceback.print_exception(type(e), e, e.__traceback__)
+        return False
+
+    def EventKeyDown(self, key):
+        """
+         Event that fires when a key is pressed, or 'all' to capture all keys
+         Note: This event is only fired for the closest match, therefore the 'all' event is only fired if there's nothing bound to the specfic key that was pressed
+            - available keywords:
+                * key: the key code of the key that was pressed
+                * modifier: the modifier key that was held, or None if no modifier was held
+            - not cancellable
+        """
+        from PyQt5.QtCore import Qt
+        if key != "all":
+            key_code = Qt.__dict__.get("Key_"+key)
+            if not key_code: raise ValueError(f"Unknown key '{key}")
+        else: key_code = "*"
+
+        def wrapped(cb):
+            self._element._key_cb[key_code] = cb
+            return cb
+        return wrapped
+
 class PyWindowEvents(EventHandler):
     """
      Container for all window events, see EventHandler for more information
      All events support 'window' keyword, which contains a reference to the window that generated the event
      """
     def __init__(self, window):
-        EventHandler.__init__(self)
-        self._window = window
+        EventHandler.__init__(self, window)
 
     def call_event(self, event_name, **kwargs):
-        kwargs["window"] = self._window
+        kwargs["window"] = self._element
         EventHandler.call_event(self, event_name, **kwargs)
 
     def EventWindowOpen(self, cb):
@@ -82,9 +121,8 @@ class PyElementEvents(EventHandler):
      All events support 'element' and 'container' keywords for references to the element that generated the event and its parent, respectively
     """
     def __init__(self, container, element):
-        EventHandler.__init__(self)
+        EventHandler.__init__(self, element)
         self._container = container
-        self._element = element
 
     def call_event(self, event_name, **kwargs):
         kwargs["container"] = self._container
@@ -152,26 +190,6 @@ class PyElementEvents(EventHandler):
         """
         self.register_event("interact", cb)
         return cb
-
-    def EventKeyDown(self, key):
-        """
-         Event that fires when a key is pressed, or 'all' to capture all keys
-         Note: This event is only fired for the closest match, therefore the 'all' event is only fired if there's nothing bound to the specfic key that was pressed
-            - available keywords:
-                * key: the key code of the key that was pressed
-                * modifier: the modifier key that was held, or None if no modifier was held
-            - not cancellable
-        """
-        from PyQt5.QtCore import Qt
-        if key != "all":
-            key_code = Qt.__dict__.get("Key_"+key)
-            if not key_code: raise ValueError(f"Unknown key '{key}")
-        else: key_code = "*"
-
-        def wrapped(cb):
-            self._element._key_cb[key_code] = cb
-            return cb
-        return wrapped
 
     def EventFocusGet(self, cb):
         """

@@ -43,6 +43,7 @@ class PyWindow:
         self._window_id = window_id.lower()
         self._qt = QtWidgets.QWidget()
         self._qt.setObjectName("PyWindow")
+        self._qt.keyPressEvent = self._on_key_down
         self._qt.resizeEvent = self._on_window_resize
         self._qt.closeEvent = self._on_window_close
         self.hidden = True
@@ -50,6 +51,7 @@ class PyWindow:
         self._elements = {}
         self._scheduled_tasks = {}
         self._children = {}
+        self._key_cb = {}
         self._event_handler = pyevents.PyWindowEvents(self)
         self._cfg = pyconfiguration.ConfigurationFile(window_id)
         self._closed = False
@@ -338,6 +340,11 @@ class PyWindow:
         geo = self._qt.geometry()
         self.cfg['geometry'] = geo.x(), geo.y(), geo.width(), geo.height()
         self.configuration.save()
+
+    # QWidget.keyPressEvent override
+    def _on_key_down(self, event):
+        if self.events.call_keydown_event(event): print("VERBOSE", "Key event was blocked and won't be forwarded to the window")
+        else: type(self.qt_element).keyPressEvent(self.qt_element, event)
 
     # QWidget.resizeEvent override
     def _on_window_resize(self, event):
