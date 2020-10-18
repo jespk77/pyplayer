@@ -867,10 +867,10 @@ class PyItemlist(PyElement):
 
     def set_selection(self, index=None, item=None):
         """ Set the selection to given index or given item, returns the selected item """
-        if index:
+        if index is not None:
             self.selected_index = index
             return self.selected_item
-        if item:
+        if item is not None:
             self.selected_item = item
             return self.selected_item
         raise ValueError("Must specify either an index or an item")
