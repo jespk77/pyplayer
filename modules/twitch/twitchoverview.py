@@ -355,14 +355,7 @@ class TwichOverview(pywindow.PyWindow):
         btn.text = "Refresh"
         btn.accept_input = False
         btn.events.EventInteract(self.activate_refresh)
-
         self.add_element("followed_content", element_class=pyelement.PyScrollableFrame, row=4, columnspan=2)
-        self.add_element("sep2", element_class=pyelement.PySeparator, row=5, columnspan=2)
-
-        lbl2 = self.add_element("custom_label", element_class=pyelement.PyTextLabel, row=6)
-        lbl2.text = "Join another channel (WIP)"
-        custom_inpt = self.add_element("custom_channel", element_class=pyelement.PyTextInput, row=6, column=1)
-        custom_inpt.accept_input = False
 
     @property
     def last_updated_time(self):
