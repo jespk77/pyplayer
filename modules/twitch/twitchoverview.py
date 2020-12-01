@@ -277,14 +277,24 @@ class StreamEntryFrame(pyelement.PyLabelFrame):
         lbl3.set_alignment("center")
         lbl3.wrapping = True
 
-        btn = self.add_element("btn_visit", element_class=pyelement.PyButton, rowspan=3, column=2)
-        btn.text = "Open (WIP)"
-        btn.events.EventInteract(self._open_stream)
-        btn.accept_input = False
-        self.layout.column(1, weight=1, minsize=150)
+        btn = self.add_element("btn_visit", element_class=pyelement.PyButton, row=0, column=2)
+        btn.text = "Open (Twitch)"
+        btn.events.EventInteract(lambda : self.window.open_stream_twitch(self._data["user_name"]))
+        browser_available = self.window.configuration.get("browser_path") is not None
+        if not browser_available:
+            btn.accept_input = False
+            btn.text = "No 'browser_path'"
 
-    def _open_stream(self):
-        print("INFO", "Opening stream to", self._data['user_name'])
+        btn2 = self.add_element("btn_visit_alt", element_class=pyelement.PyButton, row=1, column=2)
+        btn2.text = "Open (Alternate twitch)"
+        btn2.events.EventInteract(lambda : self.window.open_stream_alt(self._data["user_name"]))
+        if not browser_available:
+            btn2.accept_input = False
+            btn2.text = "No 'browser_path'"
+        if self.window.configuration.get("alternate_player_url") is None:
+            btn2.accept_input = False
+            btn2.text = "No 'alternate_player_url'"
+        self.layout.column(1, weight=1, minsize=150)
 
 
 class AutoRefreshFrame(pyelement.PyFrame):
@@ -468,6 +478,17 @@ class TwichOverview(pywindow.PyWindow):
         else: raise ValueError("Missing 'data' or 'error' keyword")
 
     def _enable_refresh(self): self["followed_refresh"].accept_input = True
+
+    def open_stream_twitch(self, channel):
+        print("INFO", "Opening stream for", channel)
+        browser_path = self.window.configuration.get("browser_path")
+        if browser_path: os.system(f'"{browser_path}" https://twitch.tv/{channel}')
+
+    def open_stream_alt(self, channel):
+        print("INFO", "Opening stream to", channel, "with alternate player")
+        browser_path = self.window.configuration.get("browser_path")
+        alt_url = self.window.configuration.get("alternate_player_url")
+        if browser_path and alt_url: os.system(f'"{browser_path}" {alt_url.format(channel=channel)}')
 
 def create_window(client):
     if not read_metadata(): write_metadata(request_metadata())
