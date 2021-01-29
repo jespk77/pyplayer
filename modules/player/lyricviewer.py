@@ -13,9 +13,9 @@ def _check_lyrics(tag):
 		except KeyError: pass
 	return False
 
-class LyricViewer(pywindow.PyWindow):
+class LyricViewer(pywindow.PyWindowDocked):
 	def __init__(self, parent, window_id):
-		pywindow.PyWindow.__init__(self, parent, window_id)
+		pywindow.PyWindowDocked.__init__(self, parent, window_id)
 		self.icon = "assets/blank.png"
 		self.title = "LyricViewer"
 		self.add_task("set_lyrics", self._set_lyrics)
