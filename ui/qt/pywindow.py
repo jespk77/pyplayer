@@ -135,7 +135,7 @@ class PyWindow:
     @property
     def title(self): return self.qt_window.windowTitle()
     @title.setter
-    def title(self, value): self.qt_window.setWindowTitle(value)
+    def title(self, value): self.qt_window.setWindowTitle(str(value))
 
     @property
     def icon(self): return self.qt_window.windowIcon() is not None
@@ -145,7 +145,7 @@ class PyWindow:
     @property
     def hidden(self): return self.qt_window.isHidden()
     @hidden.setter
-    def hidden(self, hide): self.qt_window.setHidden(hide)
+    def hidden(self, hide): self.qt_window.setHidden(bool(hide))
 
     @property
     def geometry_string(self):
