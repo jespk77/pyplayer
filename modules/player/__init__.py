@@ -3,9 +3,9 @@ from datetime import datetime
 from multiprocessing import Queue
 
 from .mediaplayer import MediaPlayer
-from . import albumwindow, lyricviewer, songbrowser
+from . import albumwindow, lyricviewer, songbrowser, songhistory
 
-from utilities import messagetypes, song_tracker, history
+from utilities import messagetypes, song_tracker
 from ui.qt import pyelement
 
 # DEFAULT MODULE VARIABLES
@@ -14,7 +14,7 @@ interpreter = client = None
 # MODULE SPECIFIC VARIABLES
 media_player = MediaPlayer()
 song_queue = Queue()
-song_history = history.History()
+song_history = None
 invalid_cfg = messagetypes.Reply("Invalid directory configuration, check your options")
 unknown_song = messagetypes.Reply("That song doesn't exist and there is nothing playing")
 no_songs = messagetypes.Reply("No songs found")
@@ -317,6 +317,7 @@ commands = {
 	}, "lyrics": command_lyrics,
 	"player": {
 		"": command_play,
+		"history": songhistory.command_history_window,
 		"last_random": command_last_random,
 		"mute": command_mute,
 		"next": command_next_song,
@@ -376,6 +377,10 @@ def initialize():
 
 	client.add_task(task_id="player_progress_update", func=_set_client_progress)
 	client.add_task(task_id="player_title_update", func=_set_client_title)
+
+	songhistory.initialize(client, media_player)
+	global song_history
+	song_history = songhistory.song_history
 
 	albumwindow.initialize(interpreter, client, media_player)
 	lyricviewer.initialize(interpreter, client)
