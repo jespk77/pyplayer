@@ -168,8 +168,10 @@ class HistoryViewer(pywindow.PyWindowDocked):
 
 	def _on_index_update(self, new_index=None):
 		if new_index is None: new_index = self._history.index
-		print(new_index)
-		if new_index >= 0: self["history_view"].set_selection(new_index)
+		if new_index >= 0:
+			items = self["history_view"]
+			items.set_selection(new_index)
+			items.move_to(new_index)
 
 	def _on_history_update(self, new_history=None):
 		if new_history is None: new_history = iter(self._history)
