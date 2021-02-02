@@ -67,6 +67,11 @@ class PyPlayer(pywindow.PyWindow):
                 if hist is not None: inpt.value = hist
             return inpt.events.block_action
 
+        @inpt.events.EventKeyDown("Escape")
+        def _clear_input():
+            inpt.value = ""
+            return inpt.events.block_action
+
         @console.events.EventFocusGet
         def _on_focus(): inpt.get_focus()
 
