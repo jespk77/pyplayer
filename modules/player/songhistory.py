@@ -1,5 +1,5 @@
 import os
-from utilities import history, messagetypes
+from core import history, messagetypes
 
 client = media_player = song_history = None
 
