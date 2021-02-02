@@ -101,23 +101,10 @@ class PyElement:
         """ Returns keycode associated with given description, returns None if the description was not found """
         return QtCore.Qt.__dict__.get(f"Key_{key}")
 
-    _key_modifiers = {QtCore.Qt.NoModifier: None, QtCore.Qt.ShiftModifier: "shift", QtCore.Qt.ControlModifier: "ctrl", QtCore.Qt.AltModifier: "alt"}
     # QWidget.keyPressEvent override
     def _on_key_press(self, event):
-        cb = self._key_cb.get(event.key())
-        if not cb: cb = self._key_cb.get('*')
-
-        if cb:
-            kwargs = {"key": event.key(), "modifiers": [self._key_modifiers[k] for k in self._key_modifiers.keys() if event.modifiers() & k]}
-            args = cb.__code__.co_varnames
-            try:
-                res = cb(**{key: value for key, value in kwargs.items() if key in args})
-                if res == self.events.block_action: return
-            except Exception as e:
-                import traceback
-                print("ERROR", f"Error processing event 'key_down':")
-                traceback.print_exception(type(e), e, e.__traceback__)
-        type(self.qt_element).keyPressEvent(self.qt_element, event)
+        if self.events.call_keydown_event(event): print("VERBOSE", "Key down event blocked and won't be forwarded to the element")
+        else: type(self.qt_element).keyPressEvent(self.qt_element, event)
 
     # QWidget.mousePressEvent override
     def _on_mouse_press(self, event):
@@ -880,10 +867,10 @@ class PyItemlist(PyElement):
 
     def set_selection(self, index=None, item=None):
         """ Set the selection to given index or given item, returns the selected item """
-        if index:
+        if index is not None:
             self.selected_index = index
             return self.selected_item
-        if item:
+        if item is not None:
             self.selected_item = item
             return self.selected_item
         raise ValueError("Must specify either an index or an item")

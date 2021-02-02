@@ -21,6 +21,7 @@ class _ScheduledTask(QtCore.QTimer):
     def _schedule(self, delay, loop, kwargs=None):
         self.setInterval(delay)
         self.setSingleShot(not loop)
+        self._kwargs.clear()
         if kwargs: self._kwargs.update(kwargs)
         self.start()
 
@@ -41,15 +42,19 @@ class PyWindow:
 
         self._parent = parent
         self._window_id = window_id.lower()
-        self._qt = QtWidgets.QWidget()
-        self._qt.setObjectName("PyWindow")
-        self._qt.resizeEvent = self._on_window_resize
-        self._qt.closeEvent = self._on_window_close
-        self.hidden = True
+        if not hasattr(self, "_qt"):
+            self._qt = QtWidgets.QWidget()
+            self._qt.setObjectName("PyWindow")
+
+        self.qt_window.keyPressEvent = self._on_key_down
+        self.qt_window.resizeEvent = self._on_window_resize
+        self.qt_window.closeEvent = self._on_window_close
+        self.qt_window.hide()
 
         self._elements = {}
         self._scheduled_tasks = {}
         self._children = {}
+        self._key_cb = {}
         self._event_handler = pyevents.PyWindowEvents(self)
         self._cfg = pyconfiguration.ConfigurationFile(window_id)
         self._closed = False
@@ -103,6 +108,8 @@ class PyWindow:
 
     @property
     def qt_element(self): return self._qt
+    @property
+    def qt_window(self): return self._qt
 
     @property
     def window_id(self):
@@ -127,19 +134,19 @@ class PyWindow:
     cfg = configuration
 
     @property
-    def title(self): return self.qt_element.windowTitle()
+    def title(self): return self.qt_window.windowTitle()
     @title.setter
-    def title(self, value): self.qt_element.setWindowTitle(value)
+    def title(self, value): self.qt_window.setWindowTitle(str(value))
 
     @property
-    def icon(self): return self.qt_element.windowIcon() is not None
+    def icon(self): return self.qt_window.windowIcon() is not None
     @icon.setter
-    def icon(self, icon): self.qt_element.setWindowIcon(QtGui.QIcon(icon))
+    def icon(self, icon): self.qt_window.setWindowIcon(QtGui.QIcon(icon))
 
     @property
-    def hidden(self): return self.qt_element.isHidden()
+    def hidden(self): return self.qt_window.isHidden()
     @hidden.setter
-    def hidden(self, hide): self.qt_element.setHidden(hide)
+    def hidden(self, hide): self.qt_window.setHidden(bool(hide))
 
     @property
     def geometry_string(self):
@@ -147,7 +154,7 @@ class PyWindow:
          Returns the geometry of this window using the legacy string format
          Note: Don't use this if not familiar with the format
         """
-        geo = self.qt_element.geometry()
+        geo = self.qt_window.geometry()
         return f"{geo.width()}x{geo.height()}+{geo.x()}+{geo.y()}"
 
     def set_geometry(self, x=None, y=None, width=None, height=None, geometry=None):
@@ -156,27 +163,27 @@ class PyWindow:
             if not isinstance(geometry, str): raise ValueError("Geometry string must be string")
             import re
             res = re.findall("\d+", geometry)
-            if len(res) == 4: self.qt_element.setGeometry(res[2], res[3], res[0], res[1])
+            if len(res) == 4: self.qt_window.setGeometry(res[2], res[3], res[0], res[1])
             else: raise ValueError("Invalid geometry string")
             return
 
         if x is None or y is None or width is None or height is None: raise ValueError("Missing arguments")
-        self.qt_element.setGeometry(x, y, width, height)
+        self.qt_window.setGeometry(x, y, width, height)
 
     def center_window(self, size_x=None, size_y=None, fit_to_size=False):
         """
             Center this window around given resolution, leave values blank to use the current resolution
             If 'fit_to_size' is True, the window will be fixed to given resolution (only if 'size_x' or 'size_y' are not empty)
         """
-        if size_x is None: size_x = self.qt_element.height()
-        elif fit_to_size: self.qt_element.setFixedHeight(size_x)
-        if size_y is None: size_y = self.qt_element.width()
-        elif fit_to_size: self.qt_element.setFixedWidth(size_y)
+        if size_x is None: size_x = self.qt_window.height()
+        elif fit_to_size: self.qt_window.setFixedHeight(size_x)
+        if size_y is None: size_y = self.qt_window.width()
+        elif fit_to_size: self.qt_window.setFixedWidth(size_y)
 
         center = QtWidgets.QDesktopWidget().availableGeometry().center()
-        geometry = self.qt_element.frameGeometry()
+        geometry = self._qt.frameGeometry()
         geometry.moveTo(center.x() - (.5 * size_x), center.y() - (.5 * size_y))
-        self.qt_element.setGeometry(geometry)
+        self._qt.setGeometry(geometry)
 
     def add_element(self, element_id=None, element=None, element_class=None, **layout_kwargs):
         """ Add new element to this window, closes previously opened element with the same id (if open) """
@@ -241,7 +248,7 @@ class PyWindow:
 
         self.close_window(window_id)
         self._children[window_id] = window
-        self._children[window_id].qt_element.show()
+        self._children[window_id].qt_window.show()
         self._children[window_id].events.call_event("window_open")
 
     def get_window(self, window_id):
@@ -339,6 +346,11 @@ class PyWindow:
         self.cfg['geometry'] = geo.x(), geo.y(), geo.width(), geo.height()
         self.configuration.save()
 
+    # QWidget.keyPressEvent override
+    def _on_key_down(self, event):
+        if self.events.call_keydown_event(event): print("VERBOSE", "Key event was blocked and won't be forwarded to the window")
+        else: type(self.qt_element).keyPressEvent(self.qt_element, event)
+
     # QWidget.resizeEvent override
     def _on_window_resize(self, event):
         try:
@@ -394,3 +406,21 @@ class RootPyWindow(PyWindow):
         """ Run the application, this method will keep running until the root window is closed """
         self.qt_element.show()
         self._app.exec()
+
+class PyWindowDocked(PyWindow):
+    def __init__(self, parent, window_id, layout="grid"):
+        self._qt = QtWidgets.QDockWidget(parent.qt_element)
+        self._content = QtWidgets.QWidget(self._qt)
+        self.qt_window.setWidget(self._content)
+        PyWindow.__init__(self, parent, window_id, layout)
+        self.floating = True
+
+    @property
+    def qt_element(self): return self._content
+
+    @property
+    def floating(self):
+        """ Whether the window is currently floating """
+        return self._qt.isFloating()
+    @floating.setter
+    def floating(self, floating): self._qt.setFloating(bool(floating))

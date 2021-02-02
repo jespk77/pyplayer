@@ -113,6 +113,7 @@ class PySplashWindow(pywindow.RootPyWindow):
         import pyplayerqt
         self._actions[pyplayerqt.PyPlayerCloseReason.RESTART] = self._do_restart
         self._actions[pyplayerqt.PyPlayerCloseReason.MODULE_CONFIGURE] = self._do_module_configure
+        self.title = "PyPlayer"
         self.add_window("client", window_class=pyplayerqt.PyPlayer)
 
     def on_close(self, client):

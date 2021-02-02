@@ -14,7 +14,7 @@ class PyPlayer(pywindow.PyWindow):
         pywindow.PyWindow.__init__(self, root, window_id)
         self.layout.column(1, minsize=30, weight=1).row(3, minsize=100, weight=1)
 
-        self.title = "PyPlayerQt"
+        self.title = "PyPlayer"
         self.title_song = ""
         self.icon = "assets/icon.png"
         self.flags = PyPlayerCloseReason.NONE
@@ -67,12 +67,17 @@ class PyPlayer(pywindow.PyWindow):
                 if hist is not None: inpt.value = hist
             return inpt.events.block_action
 
+        @inpt.events.EventKeyDown("Escape")
+        def _clear_input():
+            inpt.value = ""
+            return inpt.events.block_action
+
         @console.events.EventFocusGet
         def _on_focus(): inpt.get_focus()
 
     def start_interpreter(self, module_cfg):
         self._interp = Interpreter(self, module_cfg)
-        self.update_title("PyPlayerQt")
+        self.update_title("PyPlayer")
 
     def stop_interpreter(self):
         if self._interp:

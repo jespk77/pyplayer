@@ -113,7 +113,7 @@ def bind_events():
 			browser.selected_index = browser.clicked_index
 			interpreter.put_command(f"player {browser.path[0]} {browser.selected_item.replace(' - ', ' ')}.")
 
-		@browser.events.EventRightClick
+		@browser.events.EventDoubleClickRight
 		def _browser_rightclick():
 			interpreter.put_command(f"queue {browser.path[0]} {browser.itemlist[browser.clicked_index].replace(' - ', ' ')}.")
 		browser.select_song(client.title_song)

@@ -3,9 +3,9 @@ from datetime import datetime
 from multiprocessing import Queue
 
 from .mediaplayer import MediaPlayer
-from . import albumwindow, lyricviewer, songbrowser, song_tracker
+from . import albumwindow, lyricviewer, songbrowser, song_tracker, songhistory
 
-from core import history, messagetypes
+from core import messagetypes
 from ui.qt import pyelement
 
 # DEFAULT MODULE VARIABLES
@@ -14,7 +14,7 @@ interpreter = client = None
 # MODULE SPECIFIC VARIABLES
 media_player = MediaPlayer()
 song_queue = Queue()
-song_history = history.History()
+song_history = None
 invalid_cfg = messagetypes.Reply("Invalid directory configuration, check your options")
 unknown_song = messagetypes.Reply("That song doesn't exist and there is nothing playing")
 no_songs = messagetypes.Reply("No songs found")
@@ -76,7 +76,7 @@ def play_song(display, song, path):
 	else: return no_songs
 
 def put_queue(display, song, path):
-	song_queue.put_nowait((path[1], song))
+	song_queue.put_nowait((path[1] if isinstance(path, tuple) else path, song))
 	return messagetypes.Reply("Song '{}' added to queue".format(display))
 
 def set_autoplay_ignore(ignore):
@@ -317,6 +317,7 @@ commands = {
 	}, "lyrics": command_lyrics,
 	"player": {
 		"": command_play,
+		"history": songhistory.command_history_window,
 		"last_random": command_last_random,
 		"mute": command_mute,
 		"next": command_next_song,
@@ -362,8 +363,24 @@ def initialize():
 	client.configuration.get_or_create("directory", {})
 	client.configuration.get_or_create(default_dir_path, "")
 
+	@client.events.EventKeyDown("MediaPause")
+	@client.events.EventKeyDown("MediaPlay")
+	@client.events.EventKeyDown("MediaTogglePlayPause")
+	def _media_play(): interpreter.put_command("player pause")
+
+	@client.events.EventKeyDown("MediaNext")
+	def _media_next(): interpreter.put_command("player next")
+	@client.events.EventKeyDown("MediaPrevious")
+	def _media_previous(): interpreter.put_command("player previous")
+	@client.events.EventKeyDown("MediaStop")
+	def _media_stop(): interpreter.put_command("player stop")
+
 	client.add_task(task_id="player_progress_update", func=_set_client_progress)
 	client.add_task(task_id="player_title_update", func=_set_client_title)
+
+	songhistory.initialize(client, media_player)
+	global song_history
+	song_history = songhistory.song_history
 
 	albumwindow.initialize(interpreter, client, media_player)
 	lyricviewer.initialize(interpreter, client)

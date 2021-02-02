@@ -6,11 +6,11 @@ class PyLogLevel(enum.Enum):
 	""" Defines the importance of the log message
 			when the logger is set to a level, all messages that are below that level are omitted """
 	VERBOSE = 0
-	MEMORY = VERBOSE + 1
+	NDEFINE = VERBOSE + 1
+	MEMORY = NDEFINE + 1
 	INFO = MEMORY + 1
 	WARNING = INFO + 1
 	ERROR = WARNING + 1
-	NDEFINE = 98
 	MESSAGE = 99
 
 	@staticmethod
