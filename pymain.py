@@ -1,5 +1,7 @@
+import sys
+
+import pymodules
 from ui.qt import pyelement, pywindow, pylauncher
-import os, sys
 
 resolution = 225, 325
 process_command = pylauncher.process_command
@@ -69,22 +71,16 @@ class PySplashWindow(pywindow.RootPyWindow):
     # STEP 2: Check modules
     def _load_modules(self):
         self["status_bar"].text = "Loading modules..."
-        modules = [(md.name, md.path) for md in os.scandir("modules") if md.is_dir()]
-        module_cfg = self.configuration.get_or_create("modules", {})
-        if self._force_configure or list(module_cfg.keys()) != [m[0] for m in modules]:
+        if pymodules.check_for_new_modules():
             print("INFO", "Module list has changed, opening module configuration")
-            import pymodules
-            self.add_window(window=pymodules.PyModuleConfigurator(self, modules, module_cfg))
+            self.add_window(window=pymodules.PyModuleConfigurationWindow(self, self._configure_modules_complete))
             self.hidden = True
         else: self.schedule_task(sec=1, func=self._load_dependencies)
 
-    def set_module_data(self, module_data):
+    def _configure_modules_complete(self):
         print("INFO", "Module data updated")
-        self.configuration["modules"] = module_data
         self.hidden = False
-        self._dependency_check = True
-        self.save_configuration()
-        self.schedule_task(func=self._load_dependencies if not self._force_configure else self._do_restart)
+        self.schedule_task(sec=1, func=self._load_dependencies if not self._force_configure else self._do_restart)
 
     # STEP 3: Check module dependencies
     def _load_dependencies(self):

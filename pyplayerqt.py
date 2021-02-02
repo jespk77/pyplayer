@@ -39,7 +39,7 @@ class PyPlayer(pywindow.PyWindow):
             self.stop_interpreter()
             self.parent.on_close(self)
 
-        self.start_interpreter({name: value for name, value in self.parent.configuration.get("modules").items() if value.get("enabled")})
+        self.start_interpreter()
 
     def create_widgets(self):
         pywindow.PyWindow.create_widgets(self)
@@ -75,9 +75,9 @@ class PyPlayer(pywindow.PyWindow):
         @console.events.EventFocusGet
         def _on_focus(): inpt.get_focus()
 
-    def start_interpreter(self, module_cfg):
-        self._interp = Interpreter(self, module_cfg)
-        self.update_title("PyPlayer")
+    def start_interpreter(self):
+        self._interp = Interpreter(self)
+        self._interp.start()
 
     def stop_interpreter(self):
         if self._interp:
@@ -129,6 +129,5 @@ class PyPlayer(pywindow.PyWindow):
 
     def update_title(self, title):
         if not title: title = self.title
-        prefix = " ".join(f"[{c}]" for c in self._interp.arguments)
         self.title_song = title
-        self.title = prefix + " " + title
+        self.title = self._interp.arguments + " " + title

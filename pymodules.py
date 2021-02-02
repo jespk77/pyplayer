@@ -1,7 +1,26 @@
-from ui.qt import pywindow, pyelement
 import os, json, sys
 
-class ModuleConfiguration(pyelement.PyLabelFrame):
+from ui.qt import pywindow, pyelement
+from core import pyconfiguration
+
+module_dir = "modules"
+module_cfg = pyconfiguration.ConfigurationFile("module_data")
+
+def scan_for_modules():
+    """ Returns a list of names for all modules found in the module folder """
+    return [md.name for md in os.scandir(module_dir) if md.is_dir()]
+
+def check_for_new_modules():
+    """ Returns a list of modules not previously configured """
+    modules = module_cfg.get("modules")
+    if modules:
+        modules = set(modules.keys())
+        found_modules = set(scan_for_modules())
+        return list(found_modules.difference(modules))
+    else: return scan_for_modules()
+
+class ModuleConfigurationFrame(pyelement.PyLabelFrame):
+    """ Frame for configuring a single module """
     def __init__(self, parent, module_id, module_data, update_cb):
         pyelement.PyLabelFrame.__init__(self, parent, f"module.{module_id}")
         self.label = f"Module: {module_id}"
@@ -20,8 +39,7 @@ class ModuleConfiguration(pyelement.PyLabelFrame):
         self._update_labels()
         if required or invalid_platform: check_enabled.accept_input = False
         @check_enabled.events.EventInteract
-        def _on_toggle():
-            self.set_enabled(check_enabled.checked)
+        def _on_toggle(): self.set_enabled(check_enabled.checked)
 
         priority_label = self.add_element("priority_label", element_class=pyelement.PyTextLabel, row=3)
         priority_label.text = "Priority:"
@@ -34,7 +52,7 @@ class ModuleConfiguration(pyelement.PyLabelFrame):
         priority.accept_input = check_enabled.accept_input
         @priority.events.EventInteract
         def _on_update():
-            self._data["priority"] = priority.value
+            self._data["priority"] = int(priority.value)
             if callable(self._update_cb): self._update_cb(self._id, self._data)
 
     def _update_labels(self):
@@ -49,33 +67,33 @@ class ModuleConfiguration(pyelement.PyLabelFrame):
             self._update_labels()
             if callable(self._update_cb): self._update_cb(self._id, self._data)
 
-class PyModuleConfigurator(pywindow.PyWindow):
-    def __init__(self, root, module_list=None, module_data=None):
-        self._root = root
-        self._modules = module_list if module_list else [(md.name, md.path) for md in os.scandir("modules") if md.is_dir()]
+class PyModuleConfigurationWindow(pywindow.PyWindow):
+    """ Window for configuring all modules """
+    def __init__(self, root, complete_cb):
+        self._complete_cb = complete_cb
         self._module_data = {}
-        self._current_data = module_data
-        pywindow.PyWindow.__init__(self, root, "module_select")
 
-        self.title = "PyPlayer Module Configuration"
+        pywindow.PyWindow.__init__(self, root, "module_select")
+        self.title = "PyPlayer: Module Configuration"
         self.icon = "assets/icon.png"
 
     def _load_module_data(self):
-        for module_id, module_path in self._modules:
+        for module_id in scan_for_modules():
             try:
-                with open(os.path.join(module_path, "package.json")) as file:
-                    print("INFO", f"Loading module '{module_id}'")
+                print("INFO", f"Loading module '{module_id}'...")
+                with open(os.path.join(f"modules/{module_id}", "package.json")) as file:
                     module_data = json.load(file)
                     self._module_data[module_id] = module_data
-                    current = self._current_data.get(module_id)
+                    current = module_cfg.get("modules::" + module_id)
                     if current:
                         self._module_data[module_id]["enabled"] = current["enabled"]
                         self._module_data[module_id]["priority"] = current["priority"]
+                    else: self._module_data[module_id]["new"] = True
             except FileNotFoundError:
                 print("WARNING", f"Skipping invalid module '{module_id}': package.json not found")
                 continue
             except Exception as e:
-                print("ERROR", "Loading module", module_id, "->", e)
+                print("ERROR", f"Trying to load module '{module_id}':", e)
                 continue
 
     def create_widgets(self):
@@ -83,7 +101,7 @@ class PyModuleConfigurator(pywindow.PyWindow):
         self._load_module_data()
         row=0
         for module_id, module_data in self._module_data.items():
-            modules.add_element(element=ModuleConfiguration(modules, module_id, module_data, self._module_update), row=row)
+            modules.add_element(element=ModuleConfigurationFrame(modules, module_id, module_data, self._module_update), row=row)
             row += 1
 
         b_enable_all = self.add_element("button_all", element_class=pyelement.PyButton, row=1, column=0)
@@ -112,7 +130,9 @@ class PyModuleConfigurator(pywindow.PyWindow):
         @b_confirm.events.EventInteract
         def _confirm():
             print("VERBOSE", "Module configuration complete")
-            self._root.set_module_data(self._module_data)
+            module_cfg["modules"] = self._module_data
+            module_cfg.save()
+            self._complete_cb()
             self.destroy()
 
     def _module_update(self, module_id, module_data):
