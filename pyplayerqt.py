@@ -14,7 +14,7 @@ class PyPlayer(pywindow.PyWindow):
         pywindow.PyWindow.__init__(self, root, window_id)
         self.layout.column(1, minsize=30, weight=1).row(3, minsize=100, weight=1)
 
-        self.title = "PyPlayerQt"
+        self.title = "PyPlayer"
         self.title_song = ""
         self.icon = "assets/icon.png"
         self.flags = PyPlayerCloseReason.NONE
