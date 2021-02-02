@@ -77,7 +77,7 @@ class PyPlayer(pywindow.PyWindow):
 
     def start_interpreter(self, module_cfg):
         self._interp = Interpreter(self, module_cfg)
-        self.update_title("PyPlayerQt")
+        self.update_title("PyPlayer")
 
     def stop_interpreter(self):
         if self._interp:
