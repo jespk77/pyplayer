@@ -86,11 +86,12 @@ class Error(Empty):
 
 	def get_prefix(self): return "! "
 	def get_contents(self):
-		try: print("ERROR", "".join(format_exception(None, self._error, self._error.__traceback__)))
-		except: print(self._error, self._message)
-
-		if len(self._message) > 0: return (self.get_prefix() + self._message + ", see log for details"), ("error",)
-		else: return self.get_prefix() + str(self._error) + ", see log for details", ("error",)
+		if len(self._message) > 0:
+			print("ERROR", self._message, self._error)
+			return (self.get_prefix() + self._message + ", see log for details"), ("error",)
+		else:
+			print("ERROR", "Executing command raised an exception", self._error)
+			self.get_prefix() + str(self._error) + ", see log for details", ("error",)
 
 class URL(Empty):
 	""" Return a url as a result of the command that will be opened in the default browser """
