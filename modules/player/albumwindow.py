@@ -1,8 +1,10 @@
 import json, os
-from ui.qt import pyimage, pywindow, pyelement
-from core import messagetypes
 
-client = interpreter = media_player = None
+from ui.qt import pyimage, pywindow, pyelement
+from core import messagetypes, interpreter
+module: interpreter.Module = None
+
+media_player = None
 album_folder = "albums"
 album_format = album_folder + "/{}.{}"
 
@@ -249,16 +251,15 @@ class AlbumBrowser(pywindow.PyWindow):
 
 
 # === Utilities ===
-def initialize(interp, clt, player):
-	global client, interpreter, media_player
-	client = clt
-	interpreter = interp
+def initialize(mod, player):
+	global module, media_player
+	module = mod
 	media_player = player
 	if not os.path.isdir(album_folder): os.mkdir(album_folder)
 
 def get_songmatches(path, keyword):
 	if not path: return None
-	ls = media_player.find_song(path=client.configuration["directory"].get(path)["path"], keyword=keyword.split(" "))
+	ls = media_player.find_song(path=module.client.configuration["directory"].get(path)["path"], keyword=keyword.split(" "))
 	if len(ls) == 1: return ls[0]
 	else: return None
 
@@ -273,7 +274,7 @@ def album_list(keyword=""):
 	except FileNotFoundError: return []
 
 def album_process(type, songs):
-	for s in songs: interpreter.put_command("{} {} {}.".format(type, "music", s.replace(" - ", " ")))
+	for s in songs: module.interpreter.put_command("{} {} {}.".format(type, "music", s.replace(" - ", " ")))
 
 # === Album commands ===
 def command_album(arg, argc):
@@ -281,10 +282,10 @@ def command_album(arg, argc):
 		try: meta = load_album_data("_".join(arg))
 		except FileNotFoundError: return messagetypes.Reply("Unknown album")
 
-		client.add_window(window_class=AlbumWindow, command_callback=album_process, album_data=meta)
+		module.client.add_window(window_class=AlbumWindow, command_callback=album_process, album_data=meta)
 		return messagetypes.Reply("Album opened")
 	else:
-		client.add_window(window_class=AlbumBrowser)
+		module.client.add_window(window_class=AlbumBrowser)
 		return messagetypes.Reply("Album browser opened")
 
 def command_album_add(arg, argc, display=None, album=None):
@@ -293,7 +294,7 @@ def command_album_add(arg, argc, display=None, album=None):
 		if albums: return messagetypes.Select("Multiple albums found", lambda d, a: command_album_add(arg, argc, display=d, album=a), albums)
 		else: return messagetypes.Reply("No albums found")
 
-	client.add_window(window_class=AlbumWindowInput, album_file=album, autocomplete_callback=get_songmatches)
+	module.client.add_window(window_class=AlbumWindowInput, album_file=album, autocomplete_callback=get_songmatches)
 	return messagetypes.Reply(f"Album editor for '{display}' opened" if display else "Album creator opened")
 
 def command_album_remove(arg, argc):

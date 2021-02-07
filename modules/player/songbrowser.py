@@ -1,16 +1,14 @@
-from modules.player import song_tracker
-from core import messagetypes
-from ui.qt import pyelement
-from collections import Counter
 import os
 
-# DEFAULT MODULE VARIABLES
-interpreter = client = None
+from collections import Counter
+from ui.qt import pyelement
+from core import messagetypes, interpreter
+from modules.player import song_tracker
+module: interpreter.Module = None
 
 # VARIABLES SPECIFIC TO THIS MODULE
 default_path_key = "default_directory"
 default_sort_key = "songbrowser_sorting"
-
 
 def get_songlist(path): return [os.path.splitext(entry.name)[0] for entry in os.scandir(path) if entry.is_file()]
 class SongBrowser(pyelement.PyItemlist):
@@ -94,32 +92,32 @@ class SongBrowser(pyelement.PyItemlist):
 
 # ===== HELPER OPERATIONS ===== #
 def parse_path(arg, argc):
-	dir = client.configuration["directory"]
+	dir = module.client.configuration["directory"]
 	if argc > 0:
 		try: return arg[0], dir[arg[0]]["path"]
 		except KeyError: return f"No directory with name: '{arg[0]}'",
 	else:
-		path = client.configuration[default_path_key]
+		path = module.client.configuration[default_path_key]
 		if path:
 			try: return path, dir[path]["path"]
 			except KeyError: return f"Invalid default directory '{path}' set",
 		else: return f"No default directory set, set one using key '{default_path_key}'",
 
 def bind_events():
-	browser = client["songbrowser"]
+	browser = module.client["songbrowser"]
 	if browser:
 		@browser.events.EventDoubleClick
 		def _browser_doubleclick():
 			browser.selected_index = browser.clicked_index
-			interpreter.put_command(f"player {browser.path[0]} {browser.selected_item.replace(' - ', ' ')}.")
+			module.interpreter.put_command(f"player {browser.path[0]} {browser.selected_item.replace(' - ', ' ')}.")
 
 		@browser.events.EventDoubleClickRight
 		def _browser_rightclick():
-			interpreter.put_command(f"queue {browser.path[0]} {browser.itemlist[browser.clicked_index].replace(' - ', ' ')}.")
-		browser.select_song(client.title_song)
+			module.interpreter.put_command(f"queue {browser.path[0]} {browser.itemlist[browser.clicked_index].replace(' - ', ' ')}.")
+		browser.select_song(module.client.title_song)
 
 def title_update(data, color):
-	try: client["songbrowser"].select_song(data.display_name)
+	try: module.client["songbrowser"].select_song(data.display_name)
 	except KeyError: pass
 def unsupported_path(): print("INFO", "Tried to open songbrowser sorted on plays with unsupported path, using name sorting instead...")
 
@@ -133,19 +131,19 @@ _browser_types = [
 
 def set_songbrowser(browser):
 	if browser:
-		client.add_element(element=browser, row=2, columnspan=3)
-		client.layout.row(2, weight=1, minsize=250).row(3, weight=0)
+		module.client.add_element(element=browser, row=2, columnspan=3)
+		module.client.layout.row(2, weight=1, minsize=250).row(3, weight=0)
 		bind_events()
 	else:
-		client.remove_element("songbrowser")
-		client.layout.row(2, weight=0, minsize=0).row(3, weight=1)
+		module.client.remove_element("songbrowser")
+		module.client.layout.row(2, weight=0, minsize=0).row(3, weight=1)
 
 def create_songbrowser(type, args=None):
 	if type < 0: return set_songbrowser(None)
 
 	try:
 		browser_cb = _browser_types[type]
-		browser = SongBrowser(client)
+		browser = SongBrowser(module.client)
 		browser_cb(browser, *args)
 
 		set_songbrowser(browser)
@@ -162,11 +160,11 @@ def command_browser_played_month(arg, argc):
 	if argc <= 2:
 		path = parse_path(arg, argc)
 		if len(path) == 2:
-			if path[0] != client.configuration[default_path_key]:
+			if path[0] != module.client.configuration[default_path_key]:
 				unsupported_path()
 				return command_browser_name(arg, argc)
 
-			client.schedule_task(task_id="songbrowser_create", type=3, args=(path, song_tracker.get_songlist(alltime=False)))
+			module.client.schedule_task(task_id="songbrowser_create", type=3, args=(path, song_tracker.get_songlist(alltime=False)))
 			return messagetypes.Reply("Browser enabled on plays per month in '{}'".format(path[0]))
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
@@ -174,11 +172,11 @@ def command_browser_played_all(arg, argc):
 	if argc <= 2:
 		path = parse_path(arg, argc)
 		if len(path) == 2:
-			if path[0] != client.configuration[default_path_key]:
+			if path[0] != module.client.configuration[default_path_key]:
 				unsupported_path()
 				return command_browser_name(arg, argc)
 
-			client.schedule_task(task_id="songbrowser_create", type=3, args=(path, song_tracker.get_songlist(alltime=True)))
+			module.client.schedule_task(task_id="songbrowser_create", type=3, args=(path, song_tracker.get_songlist(alltime=True)))
 			return messagetypes.Reply(f"Browser sorted on all time plays in '{path[0]}'")
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
@@ -186,7 +184,7 @@ def command_browser_recent(arg, argc):
 	if argc <= 2:
 		path = parse_path(arg, argc)
 		if len(path) == 2:
-			client.schedule_task(task_id="songbrowser_create", type=2, args=(path,))
+			module.client.schedule_task(task_id="songbrowser_create", type=2, args=(path,))
 			return messagetypes.Reply(f"Browser sorted on recent songs in '{path[0]}'")
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
@@ -194,7 +192,7 @@ def command_browser_shuffle(arg, argc):
 	if argc < 1:
 		path = parse_path(arg, argc)
 		if len(path) == 2:
-			client.schedule_task(task_id="songbrowser_create", type=1, args=(path,))
+			module.client.schedule_task(task_id="songbrowser_create", type=1, args=(path,))
 			return messagetypes.Reply(f"Browser enabled for shuffled songs in '{path[0]}'")
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
@@ -202,16 +200,16 @@ def command_browser_name(arg, argc):
 	if argc <= 2:
 		path = parse_path(arg, argc)
 		if len(path) == 2:
-			client.schedule_task(task_id="songbrowser_create", type=0, args=(path,))
+			module.client.schedule_task(task_id="songbrowser_create", type=0, args=(path,))
 			return messagetypes.Reply(f"Browser enabled for songs in '{path[0]}'")
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
 def command_browser_remove(arg, argc):
 	if argc == 0:
-		client.schedule_task(task_id="songbrowser_create", type=-1)
+		module.client.schedule_task(task_id="songbrowser_create", type=-1)
 		return messagetypes.Reply("Browser closed")
 
-def initialize(interp, cl):
-	global interpreter, client
-	interpreter, client = interp, cl
-	client.add_task(task_id="songbrowser_create", func=create_songbrowser)
+def initialize(mod):
+	global module
+	module = mod
+	module.client.add_task(task_id="songbrowser_create", func=create_songbrowser)

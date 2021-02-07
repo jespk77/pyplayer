@@ -1,6 +1,5 @@
-from core import messagetypes
-
-interpreter = client = None
+from core import messagetypes, interpreter
+module = interpreter.Module()
 
 def get_time_from_string(delay):
 	try:
@@ -47,12 +46,12 @@ def command_log_clear(arg, argc, all=False):
 
 def command_module_configure(arg, argc):
 	if argc == 0:
-		client.close_with_reason("module_configure")
+		module.client.close_with_reason("module_configure")
 		return messagetypes.Reply("Module configuration loading...")
 
 def command_restart(arg, argc):
 	if argc == 0:
-		client.close_with_reason("restart")
+		module.client.close_with_reason("restart")
 		return messagetypes.Reply("Restarting Pyplayer...")
 
 import datetime
@@ -66,19 +65,19 @@ def command_timer(arg, argc):
 			try:
 				global timer
 				timer = datetime.timedelta(hours=time[0], minutes=time[1], seconds=time[2])
-				@client.update_left_header
+				@module.client.update_left_header
 				def _timer_update(date):
 					global timer
 					if timer.total_seconds() > 0:
-						client["header_left"].text = "\u23f0 {!s}".format(timer)
+						module.client["header_left"].text = "\u23f0 {!s}".format(timer)
 						timer -= one_second
 					else:
 						timer = None
-						client["header_left"].text = ""
-						client.update_left_header(None)
-						interpreter.put_command(client.configuration.get_or_create("timer_command", ""))
+						module.client["header_left"].text = ""
+						module.client.update_left_header(None)
+						module.interpreter.put_command(module.client.configuration.get_or_create("timer_command", ""))
 
-				client["header_left"].text = "\u23f0 {!s}".format(timer)
+				module.client["header_left"].text = "\u23f0 {!s}".format(timer)
 				return messagetypes.Reply("Timer set")
 			except ValueError as e: return messagetypes.Reply(str(e))
 		else: return messagetypes.Reply("Cannot decode time syntax, try again...")
@@ -106,16 +105,17 @@ import psutil, humanize
 process = psutil.Process()
 boot_time = datetime.datetime.fromtimestamp(psutil.boot_time())
 
+@module.Initialize
 def initialize():
-	cmds = client.configuration.get_or_create("startup_commands", [])
-	for c in cmds: interpreter.put_command(c)
+	cmds = module.client.configuration.get_or_create("startup_commands", [])
+	for c in cmds: module.interpreter.put_command(c)
 
-	@client.update_right_header
+	@module.client.update_right_header
 	def _right_header(date):
 		global process, boot_time
-		client["header_right"].text = f"{str(date - boot_time).split('.')[0]} / {humanize.naturalsize(process.memory_info().rss)}"
+		module.client["header_right"].text = f"{str(date - boot_time).split('.')[0]} / {humanize.naturalsize(process.memory_info().rss)}"
 
-commands = {
+module.commands = {
 	"log": {
 		"": command_log_open,
 		"clean": command_log_clear,

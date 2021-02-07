@@ -1,10 +1,10 @@
-from ui.qt import pywindow, pyelement, pyworker
-from core import messagetypes
 import collections
 
-client = None
-main_window_id = "lyricviewer"
+from ui.qt import pywindow, pyelement, pyworker
+from core import messagetypes, interpreter
+module: interpreter.Module = None
 
+main_window_id = "lyricviewer"
 LyricData = collections.namedtuple("LyricData", ["artist", "title"])
 
 def _check_lyrics(tag):
@@ -60,7 +60,7 @@ class TaskLyrics(pyworker.PyWorker):
 		else: self._lyrics = f"Error: HTTP code {rq.status_code}"
 
 	def complete(self):
-		window = client.get_window(main_window_id)
+		window = module.client.get_window(main_window_id)
 		if window is not None: window.set_lyrics(self._data, self._lyrics)
 		else: print("INFO", "Lyrics collected but no lyrics window found")
 
@@ -68,7 +68,7 @@ unknown_song = messagetypes.Reply("Unknown song")
 def get_lyrics(song, file=None):
 	artist, title = song.split(" - ", maxsplit=1)
 	if artist and title:
-		client.add_window(main_window_id, window_class=LyricViewer)
+		module.client.add_window(main_window_id, window_class=LyricViewer)
 		TaskLyrics(artist, title)
 		return messagetypes.Reply(f"Lyrics for {song} opened")
 	else: return unknown_song
@@ -77,6 +77,6 @@ def command_lyrics(path, song):
 	if path is not None and song is not None: return messagetypes.Select("Multiple songs found", get_lyrics, song)
 	else: return unknown_song
 
-def initialize(interp, clt):
-	global client
-	client = clt
+def initialize(mod):
+	global module
+	module = mod

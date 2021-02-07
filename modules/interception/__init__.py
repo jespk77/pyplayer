@@ -2,10 +2,8 @@ import os, json
 from interception import ffi, lib as interception
 
 from ui.qt import pyworker
-from core import messagetypes
-
-# DEFAULT MODULE VARIABLES
-interpreter = client = None
+from core import messagetypes, interpreter
+module = interpreter.Module()
 
 # MODULE SPECIFIC VARIABLES
 trigger_file = "keytriggers"
@@ -37,7 +35,7 @@ def on_key_down(key):
     item = key_cache.get(key)
     if item is not None:
         cmd = item.get("command")
-        if cmd is not None: interpreter.put_command(cmd)
+        if cmd is not None: module.interpreter.put_command(cmd)
     else: print("WARNING", "no entry found for keycode", key)
 
 class InterceptionWorker(pyworker.PyWorker):
@@ -110,7 +108,7 @@ def interception_toggle(arg=None, argc=None):
     if _is_interception_running(): return interception_stop()
     else: return interception_start()
 
-commands = {
+module.commands = {
     "interception": {
         "start": interception_start,
         "stop": interception_stop,

@@ -2,27 +2,14 @@ import importlib, sys
 
 from multiprocessing import Queue
 from PyQt5 import QtCore
-from weakref import WeakSet
 
 import pymodules
 from core import messagetypes
 
 class Module:
-	def __init__(self, name, properties):
-		self._module_id = name
-		self._module_properties = properties
+	def __init__(self):
 		self._events = {}
-		self._cmds = {}
-		self._client = self._interpreter = None
-
-	@property
-	def name(self):
-		""" The identifier of this module """
-		return self._module_id
-	@property
-	def priority(self):
-		""" The command priority for this module, lower values get processed before higher ones """
-		return self._module_properties["priority"]
+		self._client = self._interpreter = self._cmds = None
 
 	@property
 	def client(self):
@@ -38,6 +25,7 @@ class Module:
 	def commands(self):
 		""" A dictionary containing all possible commands for this module """
 		return self._cmds
+
 	@commands.setter
 	def commands(self, commands):
 		if not isinstance(commands, dict): raise TypeError("Commands must be a dictionary")
@@ -45,29 +33,66 @@ class Module:
 
 	def Initialize(self, cb):
 		""" Initialize event for this module, called when the module is loaded """
-		if not callable(cb): raise TypeError("Event callback must be callable")
 		self._events["init"] = cb
 
 	def Destroy(self, cb):
 		""" Destroy event for this module, called when the module is destroyed """
-		if not callable(cb): raise TypeError("Event callback must be callable")
 		self._events["destroy"] = cb
+
+	def call_initialize(self, client, interpreter):
+		self._client = client
+		self._interpreter = interpreter
+		cb = self._events.get("init")
+		if callable(cb): cb()
+
+	def call_destroy(self):
+		cb = self._events.get("destroy")
+		if callable(cb): cb()
+
+	def __str__(self): return f"Module[command_count={len(self.commands)}, commands={self.commands.keys()}]"
+
+class _ModuleData:
+	def __init__(self, name, properties):
+		self._module_id = name
+		self._module_properties = properties
+		self._events = {}
+		self._cmds = {}
+		self._module = None
+
+	@property
+	def name(self):
+		""" The identifier of this module """
+		return self._module_id
+	@property
+	def priority(self):
+		""" The command priority for this module, lower values get processed before higher ones """
+		return self._module_properties["priority"]
+	@property
+	def enabled(self):
+		""" Whether this module is currently enabled """
+		return self._module_properties["enabled"]
+
+	@property
+	def commands(self): return self._module.commands
 
 	def initialize_module(self, client, interpreter):
 		print("VERBOSE", f"Initializing module '{self.name}'...")
-		self._client = client
-		self._interpreter = interpreter
-		self._call_event("init")
+		mod = importlib.import_module("." + self.name, "modules")
+		try:
+			self._module = mod.module
+			if not isinstance(self._module, Module):
+				raise TypeError("'module' attribute for modules must be an instance of interpreter.Module")
+			self._module.call_initialize(client, interpreter)
+		except AttributeError:
+			print("ERROR", f"Module '{self.name}' does not define a module attribute and cannot be loaded")
+			raise
 
 	def destroy_module(self):
 		print("VERBOSE", f"Destroying module '{self.name}'...")
-		self._call_event("destroy")
+		try: self._module.call_destroy()
+		except Exception as e: print("ERROR", f"Destroying module '{self.name}':", e)
 
-	def _call_event(self, event_id):
-		event_cb = self._events.get(event_id)
-		if event_cb is not None:
-			try: event_cb()
-			except Exception as e: print("ERROR", f"Processing event '{event_id}' for module '{self.name}':", e)
+	def __str__(self): return f"ModuleData[name={self.name}, priority={self.priority}, module={self._module}]"
 
 
 class Interpreter(QtCore.QThread):
@@ -102,6 +127,7 @@ class Interpreter(QtCore.QThread):
 		self.register_event("destroy", self._on_destroy)
 
 		self._set_sys_arg()
+		self._loaded_modules = []
 		self._modules = []
 		self._load_modules()
 
@@ -119,15 +145,29 @@ class Interpreter(QtCore.QThread):
 			except Exception as e: print("ERROR", "Loading memory tracker:", e)
 
 	def _load_modules(self):
-		modules = pymodules.module_cfg.get("modules")
+		modules = {mod_id: mod_options for mod_id, mod_options in pymodules.module_cfg.get("modules").items() if mod_options["enabled"]}
 
 		if modules:
 			mdl = sorted(modules.items(), key=lambda it: it[1]["priority"])
 			for module_id, module_options in mdl:
 				try:
-					r = self._load_module(module_id)
+					r = self._load_module(module_id, module_options)
 					if isinstance(r, messagetypes.Error): self._client.on_notification(*r.get_contents())
 				except Exception as e: print("ERROR", f"Loading module '{module_id}', it will not be available", e)
+
+	def _load_module(self, module, options):
+		if module in self._loaded_modules: raise RuntimeError(f"Another module with name '{module}' was already registered!")
+		try:
+			print("VERBOSE", f"Loading '{module}'...")
+			md = _ModuleData(module, options)
+			try: md.initialize_module(self._client, self)
+			except Exception as e: return messagetypes.Error(e, f"Failed to initialize '{module}': module will not be available")
+
+			self._loaded_modules.append(module)
+			self._modules.append(md)
+			print("VERBOSE", "Module successfully loaded")
+			return messagetypes.Reply("Module successfully loaded")
+		except Exception as e: return messagetypes.Error(e, f"Failed to import '{module}': module will not be available")
 
 	@property
 	def arguments(self):
@@ -192,7 +232,7 @@ class Interpreter(QtCore.QThread):
 		print("VERBOSE", f"Registering callback '{callback.__name__}' for event '{event_id}'")
 		if not callable(callback): raise TypeError(f"Event callback for '{event_id}' must be callable!")
 		if event_id not in self._events: self._events[event_id] = set()
-		self._events[event_id].append(callback)
+		self._events[event_id].add(callback)
 
 	def unregister_event(self, event_id, callback):
 		"""
@@ -266,27 +306,6 @@ class Interpreter(QtCore.QThread):
 
 			if isinstance(cl, dict): cl = cl.get("")
 			if cl is not None: return cl(command, len(command))
-
-
-	def _load_module(self, md):
-		if not md.startswith("modules."): md = "modules." + md
-		if md in [n.__name__ for n in self._modules]: raise RuntimeError(f"Another module with name '{md}' was already registered!")
-		try:
-			print("VERBOSE", f"Loading '{md}'...")
-			m = importlib.import_module(md)
-			m.interpreter = self
-			m.client = self._client
-			m.platform = ""
-
-			try: m.initialize()
-			except AttributeError as a:
-				if "initialize" not in str(a): raise
-			except Exception as e: return messagetypes.Error(e, f"Failed to initialize '{md}': module will not be available")
-
-			self._modules.append(m)
-			return messagetypes.Reply("Module successfully loaded")
-		except Exception as e: return messagetypes.Error(e, f"Failed to import '{md}': module will not be available")
-
 
 	def _on_destroy(self):
 		for module in self._modules:

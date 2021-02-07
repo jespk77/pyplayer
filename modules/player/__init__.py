@@ -5,11 +5,9 @@ from multiprocessing import Queue
 from .mediaplayer import MediaPlayer
 from . import albumwindow, lyricviewer, songbrowser, song_tracker, songhistory
 
-from core import messagetypes
 from ui.qt import pyelement
-
-# DEFAULT MODULE VARIABLES
-interpreter = client = None
+from core import messagetypes, interpreter
+module = interpreter.Module()
 
 # MODULE SPECIFIC VARIABLES
 media_player = MediaPlayer()
@@ -30,7 +28,7 @@ autoplay_ignore = False
 
 # ===== HELPER OPERATIONS =====
 def get_song(arg):
-	dir = client.configuration["directory"]
+	dir = module.client.configuration["directory"]
 	if len(arg) > 0:
 		path = dir.get(arg[0])
 		if path is not None:
@@ -127,21 +125,21 @@ def command_autoplay_next(arg, argc):
 # - configure random song filter
 def command_filter_clear(arg, argc):
 	if argc == 0:
-		dir = client.configuration["directory"]
+		dir = module.client.configuration["directory"]
 		if isinstance(dir, dict):
-			media_player.update_filter(path=dir.get(client.configuration[default_dir_path], {}).get("path", ""), keyword="")
+			media_player.update_filter(path=dir.get(module.client.configuration[default_dir_path], {}).get("path", ""), keyword="")
 			return messagetypes.Reply("Filter cleared")
 		else: return invalid_cfg
 
 def command_filter(arg, argc):
 	if argc > 0:
-		dirs = client.configuration["directory"]
+		dirs = module.client.configuration["directory"]
 		if isinstance(dirs, dict):
 			if arg[0] in dirs:
 				displaypath = arg.pop(0)
 				path = dirs[displaypath]
 			else:
-				displaypath = client.configuration[default_dir_path]
+				displaypath = module.client.configuration[default_dir_path]
 				path = dirs.get(displaypath)
 
 			if path is not None:
@@ -238,7 +236,7 @@ def command_queue(arg, argc):
 		else: return unknown_song
 
 def command_random(arg, argc):
-	dirs = client.configuration["directory"]
+	dirs = module.client.configuration["directory"]
 	path = ""
 	if argc > 0:
 		try:
@@ -270,7 +268,7 @@ def command_rss(arg, argc):
 		argc -= 1
 
 	if argc == 0:
-		url = client.configuration.get_or_create("rss_url", "")
+		url = module.client.configuration.get_or_create("rss_url", "")
 		if url:
 			import feedparser
 			fp = feedparser.parse(url)
@@ -284,7 +282,7 @@ def command_rss(arg, argc):
 		else: return messagetypes.Reply("What url? Enter one using key 'rss_url'")
 
 def command_browser(arg, argc):
-	sorting = client.configuration.get_or_create(songbrowser.default_sort_key, "name")
+	sorting = module.client.configuration.get_or_create(songbrowser.default_sort_key, "name")
 	if isinstance(sorting, str) and len(sorting) > 0:
 		try: return commands["browser"][sorting](arg, argc)
 		except KeyError: return messagetypes.Reply(f"Invalid default sorting set in configuration '{sorting}'")
@@ -295,7 +293,7 @@ def command_stop(arg, argc):
 		media_player.stop_player()
 		return messagetypes.Empty()
 
-commands = {
+module.commands = {
 	"album": {
 		"": albumwindow.command_album,
 		"add": albumwindow.command_album_add,
@@ -345,8 +343,9 @@ commands = {
 	}
 }
 
+@module.Initialize
 def initialize():
-	media_player.update_blacklist(client.configuration.get_or_create("artist_blacklist", []))
+	media_player.update_blacklist(module.client.configuration.get_or_create("artist_blacklist", []))
 	media_player.attach_event("media_changed", on_media_change)
 	media_player.attach_event("pos_changed", on_pos_change)
 	media_player.attach_event("player_updated", on_player_update)
@@ -354,73 +353,74 @@ def initialize():
 	media_player.attach_event("stopped", on_stopped)
 	if not song_tracker.is_loaded(): song_tracker.load_tracker()
 
-	progress = client.add_element("progress_bar", element_class=pyelement.PyProgessbar, row=1, columnspan=3)
+	progress = module.client.add_element("progress_bar", element_class=pyelement.PyProgessbar, row=1, columnspan=3)
 	progress.minimum, progress.maximum = 0, 10000
 	progress.progress = 0
 	@progress.events.EventInteract
-	def _on_click(position): interpreter.put_command(f"player position {position}")
+	def _on_click(position): module.interpreter.put_command(f"player position {position}")
 
-	client.configuration.get_or_create("directory", {})
-	client.configuration.get_or_create(default_dir_path, "")
+	module.client.configuration.get_or_create("directory", {})
+	module.client.configuration.get_or_create(default_dir_path, "")
 
-	@client.events.EventKeyDown("MediaPause")
-	@client.events.EventKeyDown("MediaPlay")
-	@client.events.EventKeyDown("MediaTogglePlayPause")
-	def _media_play(): interpreter.put_command("player pause")
+	@module.client.events.EventKeyDown("MediaPause")
+	@module.client.events.EventKeyDown("MediaPlay")
+	@module.client.events.EventKeyDown("MediaTogglePlayPause")
+	def _media_play(): module.interpreter.put_command("player pause")
 
-	@client.events.EventKeyDown("MediaNext")
-	def _media_next(): interpreter.put_command("player next")
-	@client.events.EventKeyDown("MediaPrevious")
-	def _media_previous(): interpreter.put_command("player previous")
-	@client.events.EventKeyDown("MediaStop")
-	def _media_stop(): interpreter.put_command("player stop")
+	@module.client.events.EventKeyDown("MediaNext")
+	def _media_next(): module.interpreter.put_command("player next")
+	@module.client.events.EventKeyDown("MediaPrevious")
+	def _media_previous(): module.interpreter.put_command("player previous")
+	@module.client.events.EventKeyDown("MediaStop")
+	def _media_stop(): module.interpreter.put_command("player stop")
 
-	client.add_task(task_id="player_progress_update", func=_set_client_progress)
-	client.add_task(task_id="player_title_update", func=_set_client_title)
+	module.client.add_task(task_id="player_progress_update", func=_set_client_progress)
+	module.client.add_task(task_id="player_title_update", func=_set_client_title)
 
-	songhistory.initialize(client, media_player)
+	songhistory.initialize(module.client, media_player)
 	global song_history
 	song_history = songhistory.song_history
 
-	albumwindow.initialize(interpreter, client, media_player)
-	lyricviewer.initialize(interpreter, client)
-	songbrowser.initialize(interpreter, client)
+	albumwindow.initialize(module, media_player)
+	lyricviewer.initialize(module)
+	songbrowser.initialize(module)
 	command_filter_clear(None, 0)
 
+@module.Destroy
 def on_destroy():
 	media_player.on_destroy()
 
 def on_media_change(event, player):
 	color = None
-	for key, options in client.configuration["directory"].items():
+	for key, options in module.client.configuration["directory"].items():
 		if media_player.current_media.path == options["path"]:
 			color = options.get("color")
 			break
-	client.schedule_task(task_id="player_title_update", media=media_player.current_media, color=color)
+	module.client.schedule_task(task_id="player_title_update", media=media_player.current_media, color=color)
 
 def on_pos_change(event, player):
-	client.schedule_task(task_id="player_progress_update", progress=event.u.new_position)
+	module.client.schedule_task(task_id="player_progress_update", progress=event.u.new_position)
 
 def on_stopped(event, player):
-	client.schedule_task(task_id="player_progress_update", progress=0)
+	module.client.schedule_task(task_id="player_progress_update", progress=0)
 
 def on_player_update(event, player):
 	md = event.data
-	default_directory = client.configuration["directory"].get(client.configuration[default_dir_path])
+	default_directory = module.client.configuration["directory"].get(module.client.configuration[default_dir_path])
 
 	if default_directory is not None and md.path == default_directory["path"]:
 		song_tracker.add(md.display_name)
-		try: client["songbrowser"].add_count(md.display_name)
+		try: module.client["songbrowser"].add_count(md.display_name)
 		except KeyError: pass
 	song_history.add((md.path, md.song))
 
 def on_end_reached(event, player):
-	interpreter.put_command("autoplay next")
+	module.interpreter.put_command("autoplay next")
 
 def _set_client_progress(progress):
 	progress = round(progress * 10000)
-	client["progress_bar"].progress = progress
+	module.client["progress_bar"].progress = progress
 
 def _set_client_title(media, color):
-	client.update_title(media.display_name)
+	module.client.update_title(media.display_name)
 	songbrowser.title_update(media, color)

@@ -1,7 +1,5 @@
-from core import messagetypes
-
-# DEFAULT MODULE VARIABLES
-interpreter = client = None
+from core import messagetypes, interpreter
+module = interpreter.Module()
 
 # MODULE SPECIFIC VARIABLES
 yt = None
@@ -21,7 +19,7 @@ def ensure_yt():
 	if yt is None:
 		import youtube_dl, os
 		try:
-			dir = client.configuration["directory"]["youtube"]["path"]
+			dir = module.client.configuration["directory"]["youtube"]["path"]
 			download_options["outtmpl"] = os.path.join(dir, download_options["outtmpl"])
 		except KeyError: print("WARNING", "No valid 'youtube' path detected, current directory will be used instead")
 		except Exception as e: print("ERROR", "Something went wrong detting youtube download options (defaults are used instead):", e)
@@ -71,7 +69,7 @@ def convert(url, filename=None):
 def process_path(narg, nargc, **data):
 	if nargc == 1:
 		argn = " ".join(narg)
-		path = client.configuration["directory"].get(argn)
+		path = module.client.configuration["directory"].get(argn)
 		if path is not None: return process_song(**data, path=path)
 		else: return messagetypes.Reply(f"Unknown path '{argn}'")
 
@@ -101,7 +99,7 @@ def command_youtube_get(arg, argc):
 	if argc != 1: return messagetypes.Reply("Only one argument is supported")
 	return handle_url("", arg[0])
 
-commands = {
+module.commands = {
 	"youtube": {
 		"find": command_youtube_find,
 		"get": command_youtube_get

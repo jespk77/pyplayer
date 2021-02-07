@@ -1,9 +1,7 @@
 import os, vlc
 
-from core import messagetypes
-
-# DEFAULT MODULE VARIABLES
-interpreter = client = None
+from core import messagetypes, interpreter
+module = interpreter.Module()
 
 # MODULE SPECIFIC VARIABLES
 loop_effect_command = "effect loop {}"
@@ -33,7 +31,7 @@ class SoundEffectPlayer:
 				self._media = None
 				return
 
-		sound_path = client.configuration["directory"].get("sounds", {}).get("path")
+		sound_path = module.client.configuration["directory"].get("sounds", {}).get("path")
 		if sound_path is None or not os.path.isdir(sound_path):
 			print("ERROR", "Invalid sound folder:", sound_path)
 			return
@@ -85,11 +83,12 @@ def play_effect(arg, argc):
 def stop_effect(arg, argc):
 	if argc == 0: return effect_player.stop_player()
 
+@module.Destroy
 def on_destroy():
 	global effect_player
 	effect_player.on_destroy()
 
-commands = {
+module.commands = {
 	"effect":{
 		"loop": play_effect_loop,
 		"stop": stop_effect,

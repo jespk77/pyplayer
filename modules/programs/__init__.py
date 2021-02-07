@@ -1,9 +1,7 @@
 import datetime
 
-from core import messagetypes
-
-# DEFAULT MODULE VARIABLES
-interpreter = client = None
+from core import messagetypes, interpreter
+module = interpreter.Module()
 
 # MODULE SPECIFIC VARIABLES
 last_joke = None
@@ -27,7 +25,7 @@ def get_random_number(arg, argc):
 	if value <= 0: return messagetypes.Reply("The number must at least be greater than 0")
 	else: return messagetypes.Reply("Your random number between 0 and {} is {}".format(value, random.choice(range(value))))
 
-commands = {
+module.commands = {
 	"joke": tell_joke,
 	"number": get_random_number
 }

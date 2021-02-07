@@ -1,12 +1,10 @@
-from core import messagetypes
 import json, os, requests, time
 
-if not os.path.isdir(".cache"): os.mkdir(".cache")
-
-# DEFAULT MODULE VARIABLES
-interpreter = client = None
+from core import messagetypes, interpreter
+module = interpreter.Module()
 
 CLIENT_ID = "6adynlxibzw3ug8udhyzy6w3yt70pw"
+if not os.path.isdir(".cache"): os.mkdir(".cache")
 
 # === Utilities ===
 user_logindata = ".cache/userdata"
@@ -89,15 +87,15 @@ def command_twitch(arg, argc):
         twitchchat.open_chat_window(arg[0])
         return messagetypes.Reply(f"Twitch chat for '{arg[0]}' opened")
     else:
-        twitchoverview.create_window(client)
+        twitchoverview.create_window(module.client)
         return messagetypes.Reply("Openend twitch overview")
 
 def command_twitch_refresh(arg, argc):
     if argc == 0:
-        if twitchoverview.refresh_overview(client) is not None: return messagetypes.Reply("Refreshing live channels")
+        if twitchoverview.refresh_overview(module.client) is not None: return messagetypes.Reply("Refreshing live channels")
         else: return messagetypes.Reply("Twitch overview window not found")
 
-commands = {
+module.commands = {
     "twitch": {
         "": command_twitch,
         "refresh": command_twitch_refresh,
