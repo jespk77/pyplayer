@@ -71,7 +71,7 @@ class PySplashWindow(pywindow.RootPyWindow):
     # STEP 2: Check modules
     def _load_modules(self):
         self["status_bar"].text = "Loading modules..."
-        if pymodules.check_for_new_modules():
+        if self._force_configure or pymodules.check_for_new_modules():
             print("INFO", "Module list has changed, opening module configuration")
             self.add_window(window=pymodules.PyModuleConfigurationWindow(self, self._configure_modules_complete))
             self.hidden = True
