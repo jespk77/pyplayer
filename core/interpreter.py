@@ -257,7 +257,5 @@ class Interpreter(QtCore.QThread):
 			if cb is not None: return cb.callback(cb.args, len(cb.args))
 
 	def _on_destroy(self):
-		for module in self._modules:
-			try: module.on_destroy()
-			except AttributeError: pass
-			except Exception as e: print("ERROR", f"'{module.__name__}' was not destroyed properly:", e)
+		print("VERBOSE", "Destroying modules...")
+		for md in self._modules: md.destroy_module()
