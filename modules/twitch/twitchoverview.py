@@ -1,5 +1,8 @@
-from ui.qt import pywindow, pyelement, pyworker, pyimage
 import json, requests, socketserver, threading, os
+from ui.qt import pywindow, pyelement, pyworker, pyimage
+
+from core import modules
+module = modules.Module(__package__)
 
 relative_path = "modules/twitch/"
 from . import CLIENT_ID, read_logindata, write_logindata, invalidate_logindata
@@ -280,7 +283,7 @@ class StreamEntryFrame(pyelement.PyLabelFrame):
         btn = self.add_element("btn_visit", element_class=pyelement.PyButton, row=0, column=2)
         btn.text = "Open (Twitch)"
         btn.events.EventInteract(lambda : self.window.open_stream_twitch(self._data["user_name"]))
-        browser_available = self.window.configuration.get("browser_path") is not None
+        browser_available = browser_path_key in module.configuration.get(browser_path_key)
         if not browser_available:
             btn.accept_input = False
             btn.text = "No 'browser_path'"
@@ -291,7 +294,7 @@ class StreamEntryFrame(pyelement.PyLabelFrame):
         if not browser_available:
             btn2.accept_input = False
             btn2.text = "No 'browser_path'"
-        if self.window.configuration.get("alternate_player_url") is None:
+        if alternate_player_key not in module.configuration is None:
             btn2.accept_input = False
             btn2.text = "No 'alternate_player_url'"
         self.layout.column(1, weight=1, minsize=150)
@@ -319,6 +322,10 @@ class AutoRefreshFrame(pyelement.PyFrame):
 
 
 TwitchOverviewID = "twitch_overview"
+browser_path_key = "browser_path"
+alternate_player_key = "alternate_player_url"
+channel_live_command_key = "new_channel_live_command"
+
 class TwichOverview(pywindow.PyWindow):
     follow_channel_text = "Followed live channels\n"
 
@@ -457,10 +464,8 @@ class TwichOverview(pywindow.PyWindow):
 
             if new_channel:
                 print("VERBOSE", "Found new channel in the live list")
-                cmd = self.cfg.get_or_create("event-new_channel_live", "")
-                if cmd:
-                    from . import interpreter
-                    interpreter.put_command(cmd)
+                cmd = module.configuration.get(channel_live_command_key)
+                if cmd: module.interpreter.put_command(cmd)
             self._live_channels = {channel['user_id']: channel for channel in data}
 
             if len(data) == 0:
@@ -474,14 +479,19 @@ class TwichOverview(pywindow.PyWindow):
 
     def open_stream_twitch(self, channel):
         print("INFO", "Opening stream for", channel)
-        browser_path = self.window.configuration.get("browser_path")
+        browser_path = module.configuration.get(browser_path_key)
         if browser_path: os.system(f'"{browser_path}" https://twitch.tv/{channel}')
 
     def open_stream_alt(self, channel):
         print("INFO", "Opening stream to", channel, "with alternate player")
-        browser_path = self.window.configuration.get("browser_path")
-        alt_url = self.window.configuration.get("alternate_player_url")
+        browser_path = module.configuration.get(browser_path_key)
+        alt_url = module.configuration.get(alternate_player_key)
         if browser_path and alt_url: os.system(f'"{browser_path}" {alt_url.format(channel=channel)}')
+
+def initialize():
+    module.configuration.get_or_create(browser_path_key, "")
+    module.configuration.get_or_create(alternate_player_key, "")
+    module.configuration.get_or_create(channel_live_command_key, "")
 
 def create_window(client):
     if not read_metadata(): write_metadata(request_metadata())

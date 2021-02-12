@@ -5,6 +5,7 @@ module = modules.Module(__package__)
 
 # MODULE SPECIFIC VARIABLES
 loop_effect_command = "effect loop {}"
+sounds_path_key = "sounds_path"
 
 class SoundEffectPlayer:
 	# sound effects longer than this time (im ms) are stopped when the same command is repeated, instead of replaying
@@ -21,7 +22,7 @@ class SoundEffectPlayer:
 
 	def _on_end_reached(self, event):
 		if self._last_effect[0] and self._last_effect[1]:
-			interpreter.put_command(loop_effect_command.format(self._last_effect[0]))
+			module.interpreter.put_command(loop_effect_command.format(self._last_effect[0]))
 
 	def play_effect(self, arg, loop=False):
 		if self._player.is_playing() and not self._last_effect[1]:
@@ -31,7 +32,7 @@ class SoundEffectPlayer:
 				self._media = None
 				return
 
-		sound_path = module.client.configuration["directory"].get("sounds", {}).get("path")
+		sound_path = module.configuration.get(sounds_path_key)
 		if sound_path is None or not os.path.isdir(sound_path):
 			print("ERROR", "Invalid sound folder:", sound_path)
 			return
@@ -82,6 +83,10 @@ def play_effect(arg, argc):
 
 def stop_effect(arg, argc):
 	if argc == 0: return effect_player.stop_player()
+
+@module.Initialize
+def initialize():
+	module.configuration.get_or_create(sounds_path_key, "")
 
 @module.Destroy
 def on_destroy():

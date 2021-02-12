@@ -1,5 +1,6 @@
 from core import messagetypes, modules
 module = modules.Module(__package__)
+player = modules.Module("modules.player")
 
 # MODULE SPECIFIC VARIABLES
 yt = None
@@ -19,8 +20,8 @@ def ensure_yt():
 	if yt is None:
 		import youtube_dl, os
 		try:
-			dir = module.client.configuration["directory"]["youtube"]["path"]
-			download_options["outtmpl"] = os.path.join(dir, download_options["outtmpl"])
+			dr = player.configuration["directory"]["youtube"]["path"]
+			download_options["outtmpl"] = os.path.join(dr, download_options["outtmpl"])
 		except KeyError: print("WARNING", "No valid 'youtube' path detected, current directory will be used instead")
 		except Exception as e: print("ERROR", "Something went wrong detting youtube download options (defaults are used instead):", e)
 		yt = youtube_dl.YoutubeDL(download_options)
@@ -69,12 +70,12 @@ def convert(url, filename=None):
 def process_path(narg, nargc, **data):
 	if nargc == 1:
 		argn = " ".join(narg)
-		path = module.client.configuration["directory"].get(argn)
+		path = player.configuration["directory"].get(argn)
 		if path is not None: return process_song(**data, path=path)
 		else: return messagetypes.Reply(f"Unknown path '{argn}'")
 
 def process_song(arg, argc, url=None, path=None):
-	if path is None: return messagetypes.Question("Where should it be saved to?", process_path, arg=arg, argc=argc, text=client.configuration["default_directory"], url=url)
+	if path is None: return messagetypes.Question("Where should it be saved to?", process_path, arg=arg, argc=argc, text=player.configuration["default_directory"], url=url)
 	arg = " ".join(arg)
 
 	try: path = path["path"]

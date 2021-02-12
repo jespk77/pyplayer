@@ -258,7 +258,7 @@ def initialize(player):
 
 def get_songmatches(path, keyword):
 	if not path: return None
-	ls = media_player.find_song(path=module.client.configuration["directory"].get(path)["path"], keyword=keyword.split(" "))
+	ls = media_player.find_song(path=module.configuration["directory"].get(path)["path"], keyword=keyword.split(" "))
 	if len(ls) == 1: return ls[0]
 	else: return None
 

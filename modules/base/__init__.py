@@ -57,6 +57,7 @@ def command_restart(arg, argc):
 import datetime
 timer = None
 one_second = datetime.timedelta(seconds=1)
+timer_command_key = "timer_command"
 
 def command_timer(arg, argc):
 	if argc == 1:
@@ -75,7 +76,7 @@ def command_timer(arg, argc):
 						timer = None
 						module.client["header_left"].text = ""
 						module.client.update_left_header(None)
-						module.interpreter.put_command(module.client.configuration.get_or_create("timer_command", ""))
+						module.interpreter.put_command(module.configuration.get(timer_command_key))
 
 				module.client["header_left"].text = "\u23f0 {!s}".format(timer)
 				return messagetypes.Reply("Timer set")
@@ -107,8 +108,9 @@ boot_time = datetime.datetime.fromtimestamp(psutil.boot_time())
 
 @module.Initialize
 def initialize():
-	cmds = module.client.configuration.get_or_create("startup_commands", [])
+	cmds = module.configuration.get_or_create("startup_commands", [])
 	for c in cmds: module.interpreter.put_command(c)
+	module.configuration.get_or_create("timer_command", "")
 
 	@module.client.update_right_header
 	def _right_header(date):

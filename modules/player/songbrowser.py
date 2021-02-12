@@ -92,12 +92,12 @@ class SongBrowser(pyelement.PyItemlist):
 
 # ===== HELPER OPERATIONS ===== #
 def parse_path(arg, argc):
-	dir = module.client.configuration["directory"]
+	dir = module.configuration["directory"]
 	if argc > 0:
 		try: return arg[0], dir[arg[0]]["path"]
 		except KeyError: return f"No directory with name: '{arg[0]}'",
 	else:
-		path = module.client.configuration[default_path_key]
+		path = module.configuration[default_path_key]
 		if path:
 			try: return path, dir[path]["path"]
 			except KeyError: return f"Invalid default directory '{path}' set",
@@ -160,7 +160,7 @@ def command_browser_played_month(arg, argc):
 	if argc <= 2:
 		path = parse_path(arg, argc)
 		if len(path) == 2:
-			if path[0] != module.client.configuration[default_path_key]:
+			if path[0] != module.configuration[default_path_key]:
 				unsupported_path()
 				return command_browser_name(arg, argc)
 
@@ -172,7 +172,7 @@ def command_browser_played_all(arg, argc):
 	if argc <= 2:
 		path = parse_path(arg, argc)
 		if len(path) == 2:
-			if path[0] != module.client.configuration[default_path_key]:
+			if path[0] != module.configuration[default_path_key]:
 				unsupported_path()
 				return command_browser_name(arg, argc)
 
@@ -211,3 +211,4 @@ def command_browser_remove(arg, argc):
 
 def initialize():
 	module.client.add_task(task_id="songbrowser_create", func=create_songbrowser)
+	module.configuration.get_or_create(default_sort_key, "name")

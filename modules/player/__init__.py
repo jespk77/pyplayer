@@ -28,7 +28,7 @@ autoplay_ignore = False
 
 # ===== HELPER OPERATIONS =====
 def get_song(arg):
-	dir = module.client.configuration["directory"]
+	dir = module.configuration["directory"]
 	if len(arg) > 0:
 		path = dir.get(arg[0])
 		if path is not None:
@@ -125,21 +125,21 @@ def command_autoplay_next(arg, argc):
 # - configure random song filter
 def command_filter_clear(arg, argc):
 	if argc == 0:
-		dir = module.client.configuration["directory"]
+		dir = module.configuration["directory"]
 		if isinstance(dir, dict):
-			media_player.update_filter(path=dir.get(module.client.configuration[default_dir_path], {}).get("path", ""), keyword="")
+			media_player.update_filter(path=dir.get(module.configuration[default_dir_path], {}).get("path", ""), keyword="")
 			return messagetypes.Reply("Filter cleared")
 		else: return invalid_cfg
 
 def command_filter(arg, argc):
 	if argc > 0:
-		dirs = module.client.configuration["directory"]
+		dirs = module.configuration["directory"]
 		if isinstance(dirs, dict):
 			if arg[0] in dirs:
 				displaypath = arg.pop(0)
 				path = dirs[displaypath]
 			else:
-				displaypath = module.client.configuration[default_dir_path]
+				displaypath = module.configuration[default_dir_path]
 				path = dirs.get(displaypath)
 
 			if path is not None:
@@ -236,7 +236,7 @@ def command_queue(arg, argc):
 		else: return unknown_song
 
 def command_random(arg, argc):
-	dirs = module.client.configuration["directory"]
+	dirs = module.configuration["directory"]
 	path = ""
 	if argc > 0:
 		try:
@@ -268,7 +268,7 @@ def command_rss(arg, argc):
 		argc -= 1
 
 	if argc == 0:
-		url = module.client.configuration.get_or_create("rss_url", "")
+		url = module.configuration.get_or_create("rss_url", "")
 		if url:
 			import feedparser
 			fp = feedparser.parse(url)
@@ -282,7 +282,7 @@ def command_rss(arg, argc):
 		else: return messagetypes.Reply("What url? Enter one using key 'rss_url'")
 
 def command_browser(arg, argc):
-	sorting = module.client.configuration.get_or_create(songbrowser.default_sort_key, "name")
+	sorting = module.configuration.get_or_create(songbrowser.default_sort_key, "name")
 	if isinstance(sorting, str) and len(sorting) > 0:
 		try: return module.commands["browser"][sorting](arg, argc)
 		except KeyError: return messagetypes.Reply(f"Invalid default sorting set in configuration '{sorting}'")
@@ -345,7 +345,7 @@ module.commands = {
 
 @module.Initialize
 def initialize():
-	media_player.update_blacklist(module.client.configuration.get_or_create("artist_blacklist", []))
+	media_player.update_blacklist(module.configuration.get_or_create("artist_blacklist", []))
 	media_player.attach_event("media_changed", on_media_change)
 	media_player.attach_event("pos_changed", on_pos_change)
 	media_player.attach_event("player_updated", on_player_update)
@@ -359,8 +359,8 @@ def initialize():
 	@progress.events.EventInteract
 	def _on_click(position): module.interpreter.put_command(f"player position {position}")
 
-	module.client.configuration.get_or_create("directory", {})
-	module.client.configuration.get_or_create(default_dir_path, "")
+	module.configuration.get_or_create("directory", {})
+	module.configuration.get_or_create(default_dir_path, "")
 
 	@module.client.events.EventKeyDown("MediaPause")
 	@module.client.events.EventKeyDown("MediaPlay")
@@ -391,7 +391,7 @@ def on_destroy():
 
 def on_media_change(event, player):
 	color = None
-	for key, options in module.client.configuration["directory"].items():
+	for key, options in module.configuration["directory"].items():
 		if media_player.current_media.path == options["path"]:
 			color = options.get("color")
 			break
@@ -405,7 +405,7 @@ def on_stopped(event, player):
 
 def on_player_update(event, player):
 	md = event.data
-	default_directory = module.client.configuration["directory"].get(module.client.configuration[default_dir_path])
+	default_directory = module.configuration["directory"].get(module.configuration[default_dir_path])
 
 	if default_directory is not None and md.path == default_directory["path"]:
 		song_tracker.add(md.display_name)

@@ -95,6 +95,10 @@ def command_twitch_refresh(arg, argc):
         if twitchoverview.refresh_overview(module.client) is not None: return messagetypes.Reply("Refreshing live channels")
         else: return messagetypes.Reply("Twitch overview window not found")
 
+@module.Initialize
+def initialize():
+    twitchoverview.initialize()
+
 module.commands = {
     "twitch": {
         "": command_twitch,
