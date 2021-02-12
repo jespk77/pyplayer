@@ -48,6 +48,11 @@ class Module:
 		""" Destroy event for this module, called when the module is destroyed """
 		self._events["destroy"] = cb
 
+	@property
+	def is_loaded(self):
+		""" Is True if the module has been loaded """
+		return self._interpreter is not None
+
 	def call_initialize(self, client, interpreter):
 		print("VERBOSE", "Initialization event received")
 		self._client = client
