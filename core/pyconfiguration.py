@@ -155,7 +155,6 @@ class ConfigurationFile(Configuration):
 		self._file = f".cfg/{filepath[0]}.cfg" if not filepath[1] else f".cfg/{''.join(filepath)}"
 		Configuration.__init__(self, value=cfg_values, read_only=readonly)
 		self._initialvalues = self._value
-		self._file_exists = False
 		self.load()
 
 	def load(self):
@@ -173,7 +172,6 @@ class ConfigurationFile(Configuration):
 		import json
 		try:
 			with open(self._file, "r") as file:
-				self._file_exists = True
 				cfg_data = json.load(file)
 				cfg_version = cfg_data.get("_version", "undefined")
 				if cfg_version != self.cfg_version:
@@ -186,12 +184,11 @@ class ConfigurationFile(Configuration):
 		if self.read_only: raise PermissionError("Cannot write a read only configuration")
 
 		print("VERBOSE", f"Trying to save file '{self._file}'")
-		if self.dirty or not self._file_exists:
+		if self.dirty:
 			print("VERBOSE", "Configuration dirty, writing to file...")
 			with open(self._file, "w") as file:
 				self["_version"] = self.cfg_version
 				import json
 				json.dump(self.value, file, indent=5)
 				file.flush()
-				self._file_exists = True
 				self._dirty = False
