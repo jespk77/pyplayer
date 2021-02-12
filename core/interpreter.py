@@ -61,18 +61,14 @@ class _ModuleData:
 class Interpreter(QtCore.QThread):
 	"""
 	 Process commands from modules defined in the modules package
-	 Each module contains:
-		'interpreter': a reference to this instance (only for reading/command queue access)
-		'client': a reference to the main window of the client
-
-	 Each module can define:
-		'initialize()': [optional] gets called whenever the module is imported/reloaded
-		'on_destoy()': [optional] gets called before the client is shut down or a module gets reloaded, use to clean up any previously created data/references
+	 Each module must define an instance of core.modules.Module which supports the following features:
+		'@Initialize': event that is fired whenever the module is first imported
+		'@Destroy': event that is fired before the client is shut down, use to clean up any previously created data/references
 		'commands: dict': defines the commands this module can process, if not defined this module will not receive any commands
 			Notes:
 				- each command callback receives two arguments, the remaining keywords (in a list split on spaces) and the size of this list
-				- use "" for default commands, the top level of the dictionary cannot have a default command
-				- after processing a command the module must return an instance of 'messagetypes', if nothing is returned the interpreter assumes the command was ignored and will continue processing the command further
+				- use "" for default commands, they are called if no further sublevel fit the given command. Adding a default command on the top level of the dict is not allowed
+				- After processing a command the module must return an instance of 'messagetypes', if nothing is returned the interpreter assumes the command was ignored and will continue processing the command further
 	"""
 	empty_response = messagetypes.Reply("No answer :(")
 
