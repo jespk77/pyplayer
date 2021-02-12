@@ -1,9 +1,12 @@
+from collections import namedtuple
+CommandResult = namedtuple("CommandResult", ["callback", "args"])
+
 class Module:
 	_modules = {}
 	def __new__(cls, key):
-		mod = Module._modules.get(key)
-		if mod is None:	Module._modules[key] = mod = super().__new__(cls)
-		return mod
+		md = Module._modules.get(key)
+		if md is None:	Module._modules[key] = md = super().__new__(cls)
+		return md
 
 	def __init__(self, key):
 		if not hasattr(self, "_events"):
@@ -48,5 +51,19 @@ class Module:
 	def call_destroy(self):
 		cb = self._events.get("destroy")
 		if callable(cb): cb()
+
+	def get_command_callback(self, command):
+		cmds = self.commands
+		if cmds is None: return None
+
+		for index, arg in enumerate(command):
+			cmd = cmds.get(arg)
+			if cmd is None:
+				cmds = cmds.get("")
+				if cmds is not None: return CommandResult(cmds, command[index:])
+			else: cmds = cmd
+
+			if callable(cmds): return CommandResult(cmds, command[index+1:])
+			elif cmds is None: return None
 
 	def __str__(self): return f"Module[command_count={len(self.commands)}, commands={self.commands.keys()}]"

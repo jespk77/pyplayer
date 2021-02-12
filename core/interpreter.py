@@ -27,9 +27,6 @@ class _ModuleData:
 		""" Whether this module is currently enabled """
 		return self._module_properties["enabled"]
 
-	@property
-	def commands(self): return self._module.commands
-
 	def initialize_module(self, client, interpreter):
 		print("VERBOSE", "Importing module...")
 		mod = importlib.import_module("." + self.name, "modules")
@@ -55,6 +52,9 @@ class _ModuleData:
 		try: self._module.call_destroy()
 		except Exception as e: print("ERROR", f"Destroying module '{self.name}':", e)
 
+	def process_command(self, command):
+		return self._module.get_command_callback(command)
+
 	def __str__(self): return f"ModuleData[name={self.name}, priority={self.priority}, module={self._module}]"
 
 
@@ -74,6 +74,8 @@ class Interpreter(QtCore.QThread):
 				- use "" for default commands, the top level of the dictionary cannot have a default command
 				- after processing a command the module must return an instance of 'messagetypes', if nothing is returned the interpreter assumes the command was ignored and will continue processing the command further
 	"""
+	empty_response = messagetypes.Reply("No answer :(")
+
 	CONSOLE = 1
 	MEMORY = 2
 
@@ -245,7 +247,7 @@ class Interpreter(QtCore.QThread):
 				else: op = res
 
 			print("VERBOSE", "Got command result:", op)
-			if not isinstance(op, messagetypes.Empty): op = messagetypes.Reply("No answer :(")
+			if not isinstance(op, messagetypes.Empty): op = self.empty_response
 			self.print_additional_debug()
 			self._client.on_reply(*op.get_contents())
 		except Exception as e:
@@ -255,21 +257,8 @@ class Interpreter(QtCore.QThread):
 	def _process_command(self, command):
 		print("VERBOSE", f"Processing command '{' '.join(command)}'...")
 		for md in self._modules:
-			try: cl = md.commands
-			except AttributeError:
-				print("WARNING", f"'{md.__name__}' does not have a 'commands' dictionary, this is most likely not intended...")
-				continue
-
-			if "" in cl: raise TypeError(f"'{md.__name__}' contains a default command, this is not allowed in the top level")
-			while isinstance(cl, dict):
-				if len(command) == 0: break
-				c = cl.get(command[0])
-				if c is not None: cl = c
-				else: break
-				command = command[1:]
-
-			if isinstance(cl, dict): cl = cl.get("")
-			if cl is not None: return cl(command, len(command))
+			cb = md.process_command(command)
+			if cb is not None: return cb.callback(cb.args, len(cb.args))
 
 	def _on_destroy(self):
 		for module in self._modules:
