@@ -31,12 +31,20 @@ class _ModuleData:
 	def commands(self): return self._module.commands
 
 	def initialize_module(self, client, interpreter):
-		print("VERBOSE", f"Initializing module '{self.name}'...")
+		print("VERBOSE", "Importing module...")
 		mod = importlib.import_module("." + self.name, "modules")
 		try:
-			self._module = mod.module
-			if not isinstance(self._module, modules.Module):
-				raise TypeError("'module' attribute for modules must be an instance of interpreter.Module")
+			module = None
+			print("VERBOSE", "Locating Module instance within module...")
+			for attr in mod.__dict__.values():
+				if isinstance(attr, modules.Module):
+					module = attr
+					break
+
+			if module is None: raise TypeError("module must contain an instance of core.modules.Module")
+			self._module = module
+
+			print("VERBOSE", f"Initializing module '{self.name}'...")
 			self._module.call_initialize(client, interpreter)
 		except AttributeError:
 			print("ERROR", f"Module '{self.name}' does not define a module attribute and cannot be loaded")
