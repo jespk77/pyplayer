@@ -2,9 +2,9 @@ import os
 
 from collections import Counter
 from ui.qt import pyelement
-from core import messagetypes, interpreter
+from core import messagetypes, modules
 from modules.player import song_tracker
-module: interpreter.Module = None
+module = modules.Module(__package__)
 
 # VARIABLES SPECIFIC TO THIS MODULE
 default_path_key = "default_directory"
@@ -209,7 +209,5 @@ def command_browser_remove(arg, argc):
 		module.client.schedule_task(task_id="songbrowser_create", type=-1)
 		return messagetypes.Reply("Browser closed")
 
-def initialize(mod):
-	global module
-	module = mod
+def initialize():
 	module.client.add_task(task_id="songbrowser_create", func=create_songbrowser)

@@ -1,8 +1,8 @@
 import collections
 
 from ui.qt import pywindow, pyelement, pyworker
-from core import messagetypes, interpreter
-module: interpreter.Module = None
+from core import messagetypes, modules
+module = modules.Module(__package__)
 
 main_window_id = "lyricviewer"
 LyricData = collections.namedtuple("LyricData", ["artist", "title"])
@@ -76,7 +76,3 @@ def get_lyrics(song, file=None):
 def command_lyrics(path, song):
 	if path is not None and song is not None: return messagetypes.Select("Multiple songs found", get_lyrics, song)
 	else: return unknown_song
-
-def initialize(mod):
-	global module
-	module = mod

@@ -1,5 +1,5 @@
-from core import messagetypes, interpreter
-module = interpreter.Module()
+from core import messagetypes, modules
+module = modules.Module(__package__)
 
 def get_time_from_string(delay):
 	try:

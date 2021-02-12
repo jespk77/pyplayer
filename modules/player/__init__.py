@@ -6,8 +6,8 @@ from .mediaplayer import MediaPlayer
 from . import albumwindow, lyricviewer, songbrowser, song_tracker, songhistory
 
 from ui.qt import pyelement
-from core import messagetypes, interpreter
-module = interpreter.Module()
+from core import messagetypes, modules
+module = modules.Module(__package__)
 
 # MODULE SPECIFIC VARIABLES
 media_player = MediaPlayer()
@@ -284,7 +284,7 @@ def command_rss(arg, argc):
 def command_browser(arg, argc):
 	sorting = module.client.configuration.get_or_create(songbrowser.default_sort_key, "name")
 	if isinstance(sorting, str) and len(sorting) > 0:
-		try: return commands["browser"][sorting](arg, argc)
+		try: return module.commands["browser"][sorting](arg, argc)
 		except KeyError: return messagetypes.Reply(f"Invalid default sorting set in configuration '{sorting}'")
 	return messagetypes.Reply(f"No default sorting set '{songbrowser.default_sort_key}' and none or invalid one specified")
 
@@ -381,9 +381,8 @@ def initialize():
 	global song_history
 	song_history = songhistory.song_history
 
-	albumwindow.initialize(module, media_player)
-	lyricviewer.initialize(module)
-	songbrowser.initialize(module)
+	albumwindow.initialize(media_player)
+	songbrowser.initialize()
 	command_filter_clear(None, 0)
 
 @module.Destroy

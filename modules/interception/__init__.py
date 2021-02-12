@@ -2,8 +2,8 @@ import os, json
 from interception import ffi, lib as interception
 
 from ui.qt import pyworker
-from core import messagetypes, interpreter
-module = interpreter.Module()
+from core import messagetypes, modules
+module = modules.Module(__package__)
 
 # MODULE SPECIFIC VARIABLES
 trigger_file = "keytriggers"

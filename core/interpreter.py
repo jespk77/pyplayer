@@ -4,52 +4,7 @@ from multiprocessing import Queue
 from PyQt5 import QtCore
 
 import pymodules
-from core import messagetypes
-
-class Module:
-	def __init__(self):
-		self._events = {}
-		self._client = self._interpreter = self._cmds = None
-
-	@property
-	def client(self):
-		""" Reference to the main window """
-		return self._client
-
-	@property
-	def interpreter(self):
-		""" Reference to the interpreter object """
-		return self._interpreter
-
-	@property
-	def commands(self):
-		""" A dictionary containing all possible commands for this module """
-		return self._cmds
-
-	@commands.setter
-	def commands(self, commands):
-		if not isinstance(commands, dict): raise TypeError("Commands must be a dictionary")
-		self._cmds = commands
-
-	def Initialize(self, cb):
-		""" Initialize event for this module, called when the module is loaded """
-		self._events["init"] = cb
-
-	def Destroy(self, cb):
-		""" Destroy event for this module, called when the module is destroyed """
-		self._events["destroy"] = cb
-
-	def call_initialize(self, client, interpreter):
-		self._client = client
-		self._interpreter = interpreter
-		cb = self._events.get("init")
-		if callable(cb): cb()
-
-	def call_destroy(self):
-		cb = self._events.get("destroy")
-		if callable(cb): cb()
-
-	def __str__(self): return f"Module[command_count={len(self.commands)}, commands={self.commands.keys()}]"
+from core import messagetypes, modules
 
 class _ModuleData:
 	def __init__(self, name, properties):
@@ -80,7 +35,7 @@ class _ModuleData:
 		mod = importlib.import_module("." + self.name, "modules")
 		try:
 			self._module = mod.module
-			if not isinstance(self._module, Module):
+			if not isinstance(self._module, modules.Module):
 				raise TypeError("'module' attribute for modules must be an instance of interpreter.Module")
 			self._module.call_initialize(client, interpreter)
 		except AttributeError:
@@ -157,14 +112,15 @@ class Interpreter(QtCore.QThread):
 
 	def _load_module(self, module, options):
 		if module in self._loaded_modules: raise RuntimeError(f"Another module with name '{module}' was already registered!")
+
 		try:
 			print("VERBOSE", f"Loading '{module}'...")
 			md = _ModuleData(module, options)
 			try: md.initialize_module(self._client, self)
 			except Exception as e: return messagetypes.Error(e, f"Failed to initialize '{module}': module will not be available")
 
-			self._loaded_modules.append(module)
 			self._modules.append(md)
+			self._loaded_modules.append(module)
 			print("VERBOSE", "Module successfully loaded")
 			return messagetypes.Reply("Module successfully loaded")
 		except Exception as e: return messagetypes.Error(e, f"Failed to import '{module}': module will not be available")

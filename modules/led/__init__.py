@@ -1,6 +1,6 @@
 import requests
-from core import messagetypes, interpreter
-module = interpreter.Module()
+from core import messagetypes, modules
+module = modules.Module(__package__)
 
 def command_led_set(arg, argc):
 	if 0 < argc < 3:

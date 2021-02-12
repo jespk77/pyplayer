@@ -1,7 +1,7 @@
 import gc
 
-from core import messagetypes, interpreter
-module = interpreter.Module()
+from core import messagetypes, modules
+module = modules.Module(__package__)
 
 def command_debug_auto_collection(arg, argc):
 	if argc == 0: return messagetypes.Reply("The automatic theshold is set to {}".format(gc.get_threshold()))

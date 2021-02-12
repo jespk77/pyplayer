@@ -1,8 +1,8 @@
 import json, os
 
 from ui.qt import pyimage, pywindow, pyelement
-from core import messagetypes, interpreter
-module: interpreter.Module = None
+from core import messagetypes, modules
+module = modules.Module(__package__)
 
 media_player = None
 album_folder = "albums"
@@ -251,9 +251,8 @@ class AlbumBrowser(pywindow.PyWindow):
 
 
 # === Utilities ===
-def initialize(mod, player):
-	global module, media_player
-	module = mod
+def initialize(player):
+	global media_player
 	media_player = player
 	if not os.path.isdir(album_folder): os.mkdir(album_folder)
 

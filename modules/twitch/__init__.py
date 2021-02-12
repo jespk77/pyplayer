@@ -1,7 +1,7 @@
 import json, os, requests, time
 
-from core import messagetypes, interpreter
-module = interpreter.Module()
+from core import messagetypes, modules
+module = modules.Module(__package__)
 
 CLIENT_ID = "6adynlxibzw3ug8udhyzy6w3yt70pw"
 if not os.path.isdir(".cache"): os.mkdir(".cache")

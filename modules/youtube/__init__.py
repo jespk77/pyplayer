@@ -1,5 +1,5 @@
-from core import messagetypes, interpreter
-module = interpreter.Module()
+from core import messagetypes, modules
+module = modules.Module(__package__)
 
 # MODULE SPECIFIC VARIABLES
 yt = None
