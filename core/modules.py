@@ -38,6 +38,7 @@ class Module:
 	@commands.setter
 	def commands(self, commands):
 		if not isinstance(commands, dict): raise TypeError("Commands must be a dictionary")
+		if "" in commands: raise ValueError("A default command is not allowed on the top level")
 		self._cmds = commands
 
 	def Initialize(self, cb):
