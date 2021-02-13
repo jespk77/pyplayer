@@ -52,8 +52,8 @@ class _ModuleData:
 		try: self._module.call_destroy()
 		except Exception as e: print("ERROR", f"Destroying module '{self.name}':", e)
 
-	def process_command(self, command):
-		return self._module.get_command_callback(command)
+	def process_command(self, command): return self._module.get_command_callback(command)
+	def process_autocomplete(self, text): return self._module.get_closest_match(text)
 
 	def __str__(self): return f"ModuleData[name={self.name}, priority={self.priority}, module={self._module}]"
 
@@ -84,6 +84,7 @@ class Interpreter(QtCore.QThread):
 		self._args = 0
 
 		self._events = {}
+		self.register_event("autocomplete", self._try_autocomplete)
 		self.register_event("parse_command", self._parse_command)
 		self.register_event("destroy", self._on_destroy)
 
@@ -156,6 +157,9 @@ class Interpreter(QtCore.QThread):
 				return
 			else: self._notify_event(event, *args)
 
+
+	def request_autocomplete(self, line):
+		self._queue.put_nowait(("autocomplete", line))
 
 	def put_command(self, cmd, callback=None):
 		"""
@@ -256,6 +260,17 @@ class Interpreter(QtCore.QThread):
 		for md in self._modules:
 			cb = md.process_command(command)
 			if cb is not None: return cb.callback(cb.args, len(cb.args))
+
+	def _try_autocomplete(self, text):
+		print("VERBOSE", f"Trying to autocomplete '{text}'...")
+		text = text.split(" ")
+		suggestions = []
+		for md in self._modules:
+			option = md.process_autocomplete(text)
+			if option is not None: suggestions.append(option)
+
+		print(suggestions)
+		self._client.schedule_task(task_id=self._client.autocomplete_task, suggestions=suggestions)
 
 	def _on_destroy(self):
 		print("VERBOSE", "Destroying modules...")

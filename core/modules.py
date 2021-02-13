@@ -1,5 +1,6 @@
 from collections import namedtuple
 CommandResult = namedtuple("CommandResult", ["callback", "args"])
+CommandSuggest = namedtuple("CommandSuggest", ["command", "options", "remainder"])
 
 from . import pyconfiguration
 
@@ -81,4 +82,32 @@ class Module:
 			if callable(cmds): return CommandResult(cmds, command[index+1:-1])
 			elif cmds is None: return None
 
-	def __str__(self): return f"Module[command_count={len(self.commands)}, commands={self.commands.keys()}]"
+	def get_closest_match(self, search):
+		cmds = self.commands
+		if cmds is None: return None
+
+		command, options, index = [], None, 0
+		for index, arg in enumerate(search):
+			if callable(cmds):
+				index -= 1
+				break
+
+			options = [key for key in cmds.keys() if key.startswith(arg)]
+			if len(options) > 1:
+				if index < len(search) - 1 and arg in options:
+					options.clear()
+					cmds = cmds[arg]
+					command.append(arg)
+				else: break
+			elif len(options) == 1:
+				val = options.pop()
+				command.append(val)
+				cmds = cmds[val]
+			else:
+				index -= 1
+				break
+
+		if command or options: return CommandSuggest(' '.join(command), options if options else None, ' '.join(search[index+1:]))
+		else: return None
+
+	def __str__(self): return f"Module[loaded={self.is_loaded}, commands=({','.join(self.commands.keys())})]"

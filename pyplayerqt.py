@@ -10,6 +10,8 @@ class PyPlayerCloseReason(enum.Enum):
 
 initial_cfg = { "header_format": "PyPlayer - %a %b %d, %Y %I:%M %p -", "loglevel": "info" }
 class PyPlayer(pywindow.PyWindow):
+    autocomplete_task = "autocomplete_task"
+
     def __init__(self, root, window_id):
         pywindow.PyWindow.__init__(self, root, window_id)
         self.layout.column(1, minsize=30, weight=1).row(3, minsize=100, weight=1)
@@ -27,6 +29,7 @@ class PyPlayer(pywindow.PyWindow):
         self.schedule_task(func=self._insert_reply, task_id="reply_task", reply="= Hello there =")
         self.schedule_task(sec=1, loop=True, func=self._window_tick, task_id="window_tick")
         self.add_task(task_id="shutdown", func=self.destroy)
+        self.add_task(task_id=self.autocomplete_task, func=self._insert_autocomplete)
 
         import pylogging
         pylogging.get_logger().log_level = self.configuration["loglevel"]
@@ -72,6 +75,15 @@ class PyPlayer(pywindow.PyWindow):
             inpt.value = ""
             return inpt.events.block_action
 
+        @inpt.events.EventKeyDown("Tab")
+        def _try_autocomplete():
+            txt = inpt.value
+            if txt:
+                print("trying to autocomplete:", txt)
+                inpt.accept_input = False
+                self._interp.request_autocomplete(inpt.value)
+                return inpt.events.block_action
+
         @console.events.EventFocusGet
         def _on_focus(): inpt.get_focus()
 
@@ -109,6 +121,16 @@ class PyPlayer(pywindow.PyWindow):
         console_input.accept_input = True
         if text: console_input.text = text
         console_input.get_focus()
+
+    def _insert_autocomplete(self, suggestions):
+        inpt = self["console_input"]
+        inpt.accept_input = True
+
+        if len(suggestions) > 0:
+            cmd = suggestions[0]
+            inpt.value = cmd.command + " "
+            if cmd.remainder: inpt.value += cmd.remainder
+        inpt.get_focus()
 
     def _window_tick(self):
         date = datetime.datetime.today()
