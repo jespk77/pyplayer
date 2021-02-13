@@ -32,6 +32,7 @@ class ConfigurationItem:
 	def __getitem__(self, item): raise TypeError("This item does not support subkeys")
 	def __setitem__(self, key, value): self.__getitem__(key)
 	def __delitem__(self, key): self.__getitem__(key)
+	def __contains__(self, item): return False
 
 	def update(self, other): self.__getitem__("")
 	def keys(self): self.__getitem__("")
@@ -88,6 +89,16 @@ class Configuration(ConfigurationItem):
 				del self._value[key]
 			else: del self._value[key[0]][key[1]]
 			self.mark_dirty()
+		else: raise ValueError("Keys must be string")
+
+	def __contains__(self, item):
+		if isinstance(item, str):
+			item = item.split(separator, maxsplit=1)
+
+			if len(item) > 1:
+				try: return self._value[item[0]].__contains__(item[1])
+				except KeyError: return False
+			else: return self._value.__contains__(item[0])
 		else: raise ValueError("Keys must be string")
 
 	def update(self, other):
