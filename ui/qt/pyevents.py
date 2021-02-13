@@ -56,7 +56,7 @@ class EventHandler:
         from PyQt5.QtCore import Qt
         if key != "all":
             key_code = Qt.__dict__.get("Key_"+key)
-            if not key_code: raise ValueError(f"Unknown key '{key}")
+            if not key_code: raise ValueError(f"Unknown key '{key}'")
         else: key_code = "*"
 
         def wrapped(cb):
