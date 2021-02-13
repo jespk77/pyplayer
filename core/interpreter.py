@@ -233,7 +233,7 @@ class Interpreter(QtCore.QThread):
 
 	def _parse_command(self, command, cb=None):
 		try:
-			command = command.split(" ")
+			command = command.rstrip(" ").split(" ")
 			op = None
 			self.print_additional_debug()
 			if cb is not None: op = cb(command)
