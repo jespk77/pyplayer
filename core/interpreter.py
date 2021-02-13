@@ -269,7 +269,7 @@ class Interpreter(QtCore.QThread):
 			option = md.process_autocomplete(text)
 			if option is not None: suggestions.append(option)
 
-		print(suggestions)
+		suggestions = sorted(suggestions, key=lambda item: len(item.remainder))
 		self._client.schedule_task(task_id=self._client.autocomplete_task, suggestions=suggestions)
 
 	def _on_destroy(self):
