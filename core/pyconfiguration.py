@@ -162,8 +162,8 @@ class ConfigurationFile(Configuration):
 	cfg_version = "2"
 
 	def __init__(self, filepath, cfg_values=None, readonly=False):
-		filepath = os.path.splitext(filepath)
-		self._file = f".cfg/{filepath[0]}.cfg" if not filepath[1] else f".cfg/{''.join(filepath)}"
+		self._file = ".cfg/" + filepath
+		if not self._file.endswith(".cfg"): self._file += ".cfg"
 		Configuration.__init__(self, value=cfg_values, read_only=readonly)
 		self._initialvalues = self._value
 		self.load()
