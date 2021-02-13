@@ -74,10 +74,10 @@ class Module:
 			cmd = cmds.get(arg)
 			if cmd is None:
 				cmds = cmds.get("")
-				if cmds is not None: return CommandResult(cmds, command[index:])
+				if cmds is not None: return CommandResult(cmds, command[index:-1])
 			else: cmds = cmd
 
-			if callable(cmds): return CommandResult(cmds, command[index+1:])
+			if callable(cmds): return CommandResult(cmds, command[index+1:-1])
 			elif cmds is None: return None
 
 	def __str__(self): return f"Module[command_count={len(self.commands)}, commands={self.commands.keys()}]"

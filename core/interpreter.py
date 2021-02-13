@@ -252,6 +252,7 @@ class Interpreter(QtCore.QThread):
 
 	def _process_command(self, command):
 		print("VERBOSE", f"Processing command '{' '.join(command)}'...")
+		command.append("\x00")
 		for md in self._modules:
 			cb = md.process_command(command)
 			if cb is not None: return cb.callback(cb.args, len(cb.args))
