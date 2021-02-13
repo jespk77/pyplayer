@@ -59,12 +59,12 @@ class PySplashWindow(pywindow.RootPyWindow):
 
     # STEP 1b: Checking git hash
     def _git_hash(self, out):
-        hash = self.configuration.get("hash")
+        hsh = pymodules.module_cfg.get("hash")
         out = out.rstrip("\m")
-        print("VERBOSE", "Comparing current hash", out, "with previous hash", hash)
-        if hash != out:
+        print("VERBOSE", "Comparing current hash", out, "with previous hash", hsh)
+        if hsh != out:
             print("INFO", "Git hash updated, checking depencies")
-            self.configuration["hash"] = out
+            pymodules.module_cfg["hash"] = out
             self._dependency_check = True
         self.schedule_task(sec=1, func=self._load_modules)
 
@@ -87,7 +87,7 @@ class PySplashWindow(pywindow.RootPyWindow):
         self.close_window("module_select")
         if self._dependency_check:
             self["status_bar"].text = "Checking dependencies..."
-            module_data = self.configuration["modules"]
+            module_data = pymodules.module_cfg["modules"]
             dependencies = set()
             for mod_id, mod_data in [(i,d) for i,d in module_data.items() if d.get("enabled")]:
                 deps = mod_data.get("dependencies")
