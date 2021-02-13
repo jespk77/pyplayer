@@ -21,7 +21,6 @@ class PyElement:
         self.qt_element.focusInEvent = self._on_focus
         self.qt_element.focusOutEvent = self._on_focus_lose
 
-        self._cfg = container.configuration.get_or_create_configuration(f"children::{element_id}", {})
         self._key_cb = {}
         self._double_clicked = False
         if not hasattr(self, "_event_handler"): self._event_handler = pyevents.PyElementEvents(container, self)
@@ -46,12 +45,6 @@ class PyElement:
         """ The id this element was registered with """
         return self._element_id
     widget_id = element_id
-
-    @property
-    def configuration(self):
-        """ Reference to the configuration file of this element """
-        return self._cfg
-    cfg = configuration
 
     @property
     def layout(self): raise TypeError(f"Layout elements not supported for '{type(self).__name__}'")
