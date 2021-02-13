@@ -65,6 +65,7 @@ class PySplashWindow(pywindow.RootPyWindow):
         if hsh != out:
             print("INFO", "Git hash updated, checking depencies")
             pymodules.module_cfg["hash"] = out
+            pymodules.module_cfg.save()
             self._dependency_check = True
         self.schedule_task(sec=1, func=self._load_modules)
 
