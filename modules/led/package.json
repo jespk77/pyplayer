@@ -1,8 +1,0 @@
-{
-  "id": "led",
-  "enabled": false,
-  "dependencies": ["requests"],
-  "platform": null,
-  "priority": 15,
-  "required": false
-}
