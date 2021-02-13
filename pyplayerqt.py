@@ -25,11 +25,14 @@ class PyPlayer(pywindow.PyWindow):
         self._command_history = History()
         self._interp = self._cmd = None
         self._left_head_update = self._right_head_update = None
+        self._autocomplete = {
+            "options": [], "index": 0
+        }
 
         self.schedule_task(func=self._insert_reply, task_id="reply_task", reply="= Hello there =")
         self.schedule_task(sec=1, loop=True, func=self._window_tick, task_id="window_tick")
         self.add_task(task_id="shutdown", func=self.destroy)
-        self.add_task(task_id=self.autocomplete_task, func=self._insert_autocomplete)
+        self.add_task(task_id=self.autocomplete_task, func=self._update_suggestions)
 
         import pylogging
         pylogging.get_logger().log_level = self.configuration["loglevel"]
@@ -57,10 +60,15 @@ class PyPlayer(pywindow.PyWindow):
 
         inpt: pyelement.PyTextInput = pyelement.PyTextInput(self, "console_input", True)
         self.add_element(element=inpt, row=4, columnspan=3)
+
+        @inpt.events.EventKeyDown("all")
+        def _on_any_key(): self._autocomplete["options"].clear()
+
         @inpt.events.EventInteract
         def _on_input_enter():
             self._on_command_enter(inpt.value)
             inpt.value = ""
+            _on_any_key()
 
         @inpt.events.EventHistory
         def _set_history(direction):
@@ -68,21 +76,25 @@ class PyPlayer(pywindow.PyWindow):
             elif direction < 0:
                 hist = self._command_history.get_previous()
                 if hist is not None: inpt.value = hist
+
+            _on_any_key()
             return inpt.events.block_action
 
         @inpt.events.EventKeyDown("Escape")
         def _clear_input():
             inpt.value = ""
+            _on_any_key()
             return inpt.events.block_action
 
         @inpt.events.EventKeyDown("Tab")
         def _try_autocomplete():
             txt = inpt.value
             if txt:
-                print("trying to autocomplete:", txt)
-                inpt.accept_input = False
-                self._interp.request_autocomplete(inpt.value)
-                return inpt.events.block_action
+                if len(self._autocomplete["options"]) <= 1:
+                    inpt.accept_input = False
+                    self._interp.request_autocomplete(inpt.value)
+                    return inpt.events.block_action
+                else: self._insert_autocomplete()
 
         @console.events.EventFocusGet
         def _on_focus(): inpt.get_focus()
@@ -122,14 +134,20 @@ class PyPlayer(pywindow.PyWindow):
         if text: console_input.text = text
         console_input.get_focus()
 
-    def _insert_autocomplete(self, suggestions):
+    def _update_suggestions(self, suggestions):
+        for s in suggestions:
+            if s.options is not None:
+                self._autocomplete["options"].extend([s.command + " " + option + " " + s.remainder for option in s.options])
+            else: self._autocomplete["options"].append(s.command + " " + s.remainder)
+            self._autocomplete["index"] = 0
+        self._insert_autocomplete()
+
+    def _insert_autocomplete(self):
         inpt = self["console_input"]
         inpt.accept_input = True
-
-        if len(suggestions) > 0:
-            cmd = suggestions[0]
-            inpt.value = cmd.command + " "
-            if cmd.remainder: inpt.value += cmd.remainder
+        index = self._autocomplete["index"]
+        inpt.value = self._autocomplete["options"][index]
+        self._autocomplete["index"] = (index + 1) % len(self._autocomplete["options"])
         inpt.get_focus()
 
     def _window_tick(self):
