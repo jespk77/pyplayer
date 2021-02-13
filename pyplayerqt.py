@@ -93,8 +93,8 @@ class PyPlayer(pywindow.PyWindow):
                 if len(self._autocomplete["options"]) <= 1:
                     inpt.accept_input = False
                     self._interp.request_autocomplete(inpt.value)
-                    return inpt.events.block_action
                 else: self._insert_autocomplete()
+                return inpt.events.block_action
 
         @console.events.EventFocusGet
         def _on_focus(): inpt.get_focus()
