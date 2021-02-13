@@ -283,7 +283,7 @@ class StreamEntryFrame(pyelement.PyLabelFrame):
         btn = self.add_element("btn_visit", element_class=pyelement.PyButton, row=0, column=2)
         btn.text = "Open (Twitch)"
         btn.events.EventInteract(lambda : self.window.open_stream_twitch(self._data["user_name"]))
-        browser_available = browser_path_key in module.configuration.get(browser_path_key)
+        browser_available = browser_path_key in module.configuration
         if not browser_available:
             btn.accept_input = False
             btn.text = "No 'browser_path'"
