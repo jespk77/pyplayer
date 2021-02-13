@@ -14,6 +14,7 @@ class PyElement:
         self._element_id = element_id
         if not hasattr(self, "_qt"): self._qt = QtWidgets.QWidget(container)
 
+        self.qt_element.event = self._on_event
         self.qt_element.mousePressEvent = self._on_mouse_press
         self.qt_element.keyPressEvent = self._on_key_press
         self.qt_element.mouseDoubleClickEvent = self._on_mouse_doubleclick
@@ -101,10 +102,19 @@ class PyElement:
         """ Returns keycode associated with given description, returns None if the description was not found """
         return QtCore.Qt.__dict__.get(f"Key_{key}")
 
+    # QWidget.event override
+    def _on_event(self, event: QtCore.QEvent):
+        if event.type() == QtCore.QEvent.KeyPress: return self._on_key_press(event)
+        else: return type(self.qt_element).event(self.qt_element, event)
+
     # QWidget.keyPressEvent override
     def _on_key_press(self, event):
-        if self.events.call_keydown_event(event): print("VERBOSE", "Key down event blocked and won't be forwarded to the element")
-        else: type(self.qt_element).keyPressEvent(self.qt_element, event)
+        if self.events.call_keydown_event(event):
+            print("VERBOSE", "Key down event blocked and won't be forwarded to the element")
+            return True
+
+        type(self.qt_element).keyPressEvent(self.qt_element, event)
+        return False
 
     # QWidget.mousePressEvent override
     def _on_mouse_press(self, event):
@@ -312,11 +322,11 @@ class PyTextInput(PyElement):
         key_code = key.key()
         if key_code == QtCore.Qt.Key_Up:
             res = self._event_handler.call_event("history", direction=-1)
-            if res == pyevents.EventHandler.block_action: return
+            if res == pyevents.EventHandler.block_action: return True
         elif key_code == QtCore.Qt.Key_Down:
             res = self._event_handler.call_event("history", direction=1)
-            if res == pyevents.EventHandler.block_action: return
-        PyElement._on_key_press(self, key)
+            if res == pyevents.EventHandler.block_action: return True
+        return PyElement._on_key_press(self, key)
 
 
 class PyCheckbox(PyElement):
