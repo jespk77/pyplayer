@@ -104,7 +104,7 @@ class PyElement:
 
     # QWidget.event override
     def _on_event(self, event: QtCore.QEvent):
-        if event.type() == QtCore.QEvent.KeyPress: return self._on_key_press(event)
+        if event.type() == QtCore.QEvent.KeyPress: return self._on_key_press(event) if self.accept_input else False
         else: return type(self.qt_element).event(self.qt_element, event)
 
     # QWidget.keyPressEvent override
