@@ -291,10 +291,7 @@ class StreamEntryFrame(pyelement.PyLabelFrame):
         btn2 = self.add_element("btn_visit_alt", element_class=pyelement.PyButton, row=1, column=2)
         btn2.text = "Open (Alternate twitch)"
         btn2.events.EventInteract(lambda : self.window.open_stream_alt(self._data["user_name"]))
-        if not browser_available:
-            btn2.accept_input = False
-            btn2.text = "No 'browser_path'"
-        if alternate_player_key not in module.configuration is None:
+        if not browser_available or alternate_player_key not in module.configuration:
             btn2.accept_input = False
             btn2.text = "No 'alternate_player_url'"
         self.layout.column(1, weight=1, minsize=150)
