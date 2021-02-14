@@ -185,7 +185,6 @@ class PyScrollableFrame(PyFrame):
         Similar to PyFrame but uses scrolling instead of resizing the frame
         No interaction event
     """
-
     def __init__(self, parent, element_id, layout="grid"):
         self._qt = QtWidgets.QScrollArea(parent.qt_element)
         self._content = QtWidgets.QWidget()
@@ -202,16 +201,76 @@ class PyLabelFrame(PyFrame):
        Similar to PyFrame but adds a border with an optional label around its content
        No interaction event
     """
-
     def __init__(self, parent, element_id, layout="grid"):
         self._qt = QtWidgets.QGroupBox(parent.qt_element)
         PyFrame.__init__(self, parent, element_id, layout)
-        pass
 
     @property
     def label(self): return self._qt.title()
     @label.setter
     def label(self, txt): self._qt.setTitle(str(txt))
+
+class PyTabFrame(PyElement):
+    """
+       Element with a number of subframes, different frames can be selected using tabs
+       No interaction event
+    """
+    def __init__(self, parent, element_id):
+        self._qt = QtWidgets.QTabWidget(parent.qt_element)
+        PyElement.__init__(self, parent, element_id)
+        self._tabs = []
+
+    def add_tab(self, name, frame_class=PyFrame, **frame_args):
+        """
+         Add a new tab at the end with given name and frame class
+         Returns the newly created frame
+        """
+        if not issubclass(frame_class, PyFrame): raise TypeError("Can only make tabs with subclasses of PyFrame")
+        if name in self._tabs: raise ValueError(f"A tab with name '{name}' already exists")
+
+        page = frame_class(self, f"tab.{name.lower().replace(' ', '_')}", **frame_args)
+        self._tabs.append(page)
+        self.qt_element.addTab(page.qt_element, name)
+        return page
+
+    def insert_tab(self, index, name, frame_class=PyFrame, **frame_args):
+        """
+         Insert a new at the given position with given name and frame class
+         Returns the newly created frame
+        """
+        if not issubclass(frame_class, PyFrame): raise TypeError("Can only make tabs with subclasses of PyFrame")
+        if name in self._tabs: raise ValueError(f"A tab with name '{name}' already exists")
+
+        page = frame_class(self, f"tab.{name.lower().replace(' ', '_')}", **frame_args)
+        self._tabs.insert(index, page)
+        self.qt_element.insertTab(index, page.qt_element, name)
+        return page
+
+    def get_tab(self, index):
+        """ Returns the frame bound to the tab at given index or None if the index is out of range """
+        try: return self._tabs[index]
+        except IndexError: return None
+    __getitem__ = get_tab
+
+    def get_tab_name(self, index):
+        """ Returns the current name of the tab at given index, returns an empty string if index out of range """
+        if index < 0: index += len(self._tabs)
+        return self._qt.tabText(index)
+
+    def set_tab_name(self, index, name):
+        """ Update the name of the tab at given index, has no effect if the index is out of range """
+        if index < 0: index += len(self._tabs)
+        self._qt.setTabText(index, name)
+
+    def remove_tab(self, index):
+        """ Remove tab at the given index, has no effect if the index is out of range """
+        if index < 0: index += len(self._tabs)
+        self._qt.removeTab(index)
+        try: del self._tabs[index]
+        except IndexError: pass
+
+    @property
+    def current_tab(self): return self.qt_element.indexOf(self.qt_element.currentWidget())
 
 
 class PyTextLabel(PyElement):
