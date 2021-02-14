@@ -144,6 +144,11 @@ class PyFrame(PyElement):
         except KeyError: self._layout = None
         if not self._layout: raise ValueError("Must specify a valid layout type")
         self.qt_element.setLayout(self._layout.qt_layout)
+        self.create_widgets()
+
+    def create_widgets(self):
+        """ Utility method for adding initial elements to this frame, ensures everything is initialized in the correct order """
+        pass
 
     @property
     def children(self): return list(self._children.values())
@@ -188,10 +193,10 @@ class PyScrollableFrame(PyFrame):
     def __init__(self, parent, element_id, layout="grid"):
         self._qt = QtWidgets.QScrollArea(parent.qt_element)
         self._content = QtWidgets.QWidget()
-        PyFrame.__init__(self, parent, element_id, layout)
         self._qt.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
         self._qt.setWidgetResizable(True)
         self._qt.setWidget(self._content)
+        PyFrame.__init__(self, parent, element_id, layout)
 
     @property
     def qt_element(self): return self._content
@@ -217,8 +222,8 @@ class PyTabFrame(PyElement):
     """
     def __init__(self, parent, element_id):
         self._qt = QtWidgets.QTabWidget(parent.qt_element)
-        PyElement.__init__(self, parent, element_id)
         self._tabs = []
+        PyElement.__init__(self, parent, element_id)
 
     def add_tab(self, name, frame_class=PyFrame, **frame_args):
         """
