@@ -225,28 +225,36 @@ class PyTabFrame(PyElement):
         self._tabs = []
         PyElement.__init__(self, parent, element_id)
 
-    def add_tab(self, name, frame_class=PyFrame, **frame_args):
+    def add_tab(self, name, frame=None, frame_class=PyFrame, **frame_args):
         """
-         Add a new tab at the end with given name and frame class
+         Add a new tab at the end with given name and existing frame or frame class
          Returns the newly created frame
         """
-        if not issubclass(frame_class, PyFrame): raise TypeError("Can only make tabs with subclasses of PyFrame")
         if name in self._tabs: raise ValueError(f"A tab with name '{name}' already exists")
+        if frame is None:
+            if not issubclass(frame_class, PyFrame): raise TypeError("Can only make tabs with subclasses of PyFrame")
+            page = frame_class(self, f"tab.{name.lower().replace(' ', '_')}", **frame_args)
+        else:
+            if not isinstance(frame, PyFrame): raise TypeError("Can only make tabs with subclasses of PyFrame")
+            page = frame
 
-        page = frame_class(self, f"tab.{name.lower().replace(' ', '_')}", **frame_args)
         self._tabs.append(page)
         self.qt_element.addTab(page.qt_element, name)
         return page
 
-    def insert_tab(self, index, name, frame_class=PyFrame, **frame_args):
+    def insert_tab(self, index, name, frame=None, frame_class=PyFrame, **frame_args):
         """
          Insert a new at the given position with given name and frame class
          Returns the newly created frame
         """
-        if not issubclass(frame_class, PyFrame): raise TypeError("Can only make tabs with subclasses of PyFrame")
         if name in self._tabs: raise ValueError(f"A tab with name '{name}' already exists")
+        if frame is None:
+            if not issubclass(frame_class, PyFrame): raise TypeError("Can only make tabs with subclasses of PyFrame")
+            page = frame_class(self, f"tab.{name.lower().replace(' ', '_')}", **frame_args)
+        else:
+            if not isinstance(frame, PyFrame): raise TypeError("Can only make tabs with subclasses of PyFrame")
+            page = frame
 
-        page = frame_class(self, f"tab.{name.lower().replace(' ', '_')}", **frame_args)
         self._tabs.insert(index, page)
         self.qt_element.insertTab(index, page.qt_element, name)
         return page
