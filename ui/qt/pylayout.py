@@ -1,16 +1,10 @@
 from collections import namedtuple
 from PyQt5 import QtWidgets
-from . import pyelement, pywindow
-
-def valid_check(owner):
-    if not isinstance(owner, (pywindow.PyWindow, pyelement.PyFrame)):
-        raise TypeError("Owner must be an instance of PyWindow or PyFrame")
 
 class PyLayout:
     layout_name = "undefined"
 
     def __init__(self, owner):
-        valid_check(owner)
         self._owner = owner
         self._qt = None
 
