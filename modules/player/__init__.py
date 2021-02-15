@@ -17,6 +17,7 @@ unknown_song = messagetypes.Reply("That song doesn't exist and there is nothing 
 no_songs = messagetypes.Reply("No songs found")
 MAX_LIST = 15
 default_dir_path = "default_directory"
+player_filter_update_task = "player_filter_update"
 
 class Autoplay(enum.Enum):
 	OFF = 0
@@ -129,7 +130,9 @@ def command_filter_clear(arg, argc):
 	if argc == 0:
 		dir = module.configuration["directory"]
 		if isinstance(dir, dict):
-			media_player.update_filter(path=dir.get(module.configuration[default_dir_path], {}).get("path", ""), keyword="")
+			default_path = module.configuration[default_dir_path]
+			media_player.update_filter(path=dir.get(default_path, {}).get("path", ""), keyword="")
+			module.client.schedule_task(task_id=player_filter_update_task, path=default_path)
 			return messagetypes.Reply("Filter cleared")
 		else: return invalid_cfg
 
@@ -147,6 +150,7 @@ def command_filter(arg, argc):
 			if path is not None:
 				arg = " ".join(arg)
 				media_player.update_filter(path=path["path"], keyword=arg)
+				module.client.schedule_task(task_id=player_filter_update_task, path=displaypath)
 				if len(arg) > 0: return messagetypes.Reply("Filter set to '" + arg + "' from '" + displaypath + "'")
 				else: return messagetypes.Reply("Filter set to directory '{}'".format(displaypath))
 		return invalid_cfg
@@ -367,8 +371,8 @@ def initialize():
 	@progress.events.EventInteract
 	def _on_click(position): module.interpreter.put_command(f"player position {position}")
 
-	player.add_element("autoplay1", element_class=pyelement.PyTextLabel, row=2)
-	player.add_element("autoplay2", element_class=pyelement.PyTextLabel, row=2, column=1).set_alignment("right")
+	player.add_element("autoplay", element_class=pyelement.PyTextLabel, row=2)
+	player.add_element("filter", element_class=pyelement.PyTextLabel, row=2, column=1).set_alignment("right")
 
 	module.configuration.get_or_create("directory", {})
 	module.configuration.get_or_create(default_dir_path, "")
@@ -387,7 +391,8 @@ def initialize():
 
 	module.client.add_task(task_id="player_progress_update", func=_set_client_progress)
 	module.client.add_task(task_id="player_title_update", func=_set_client_title)
-	module.client.schedule_task(task_id="player_autoplay_update", func=_set_client_autoplay)
+	module.client.schedule_task(task_id=player_autoplay_update_task, func=_set_client_autoplay)
+	module.client.schedule_task(task_id=player_filter_update_task, func=_set_client_filter, path=module.configuration[default_dir_path])
 	module.media_player = media_player
 	module.get_displayname = get_displayname
 
@@ -436,5 +441,13 @@ def _set_client_title(media, color):
 
 def _set_client_autoplay():
 	global autoplay, autoplay_ignore
-	module.client["player"]["autoplay1"].text = f"Autoplay: {autoplay.name.lower()}"
-	module.client["player"]["autoplay2"].text = "[Skip next]" if autoplay_ignore else ""
+	module.client["player"]["autoplay"].text = f"Autoplay: {autoplay.name.lower()}" + (" - [Skip next]" if autoplay_ignore else "")
+
+def _set_client_filter(path=None):
+	global media_player
+	if path is None: path = media_player.filter_path
+	keyword = media_player.filter_keyword
+
+	if keyword: keyword = "'" + keyword + "'"
+	else: keyword = "none"
+	module.client["player"]["filter"].text = f"Filter: {keyword} {('in ' + path) if path else ''}"
