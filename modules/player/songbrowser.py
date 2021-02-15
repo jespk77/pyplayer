@@ -135,7 +135,7 @@ def set_songbrowser(browser):
 	if browser:
 		module.client.layout.item(module.client.layout.index_of("console"), weight=0)
 		player = module.client["player"]
-		player.add_element(element=browser, row=9)
+		player.add_element(element=browser, row=9, columnspan=2)
 		player.layout.row(9, weight=1)
 		module.client.layout.item(module.client.layout.index_of("player"), weight=1)
 		bind_events()
