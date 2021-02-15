@@ -129,6 +129,14 @@ class PyElementEvents(EventHandler):
         kwargs["element"] = self._element
         EventHandler.call_event(self, event_name, **kwargs)
 
+    def EventDestroy(self, cb):
+        """
+         Event that fires when an element is about to be destroyed
+            - not cancellable
+        """
+        self.register_event("destroy", cb)
+        return cb
+
     def EventLeftClick(self, cb):
         """
          Event that fires when an element is left clicked

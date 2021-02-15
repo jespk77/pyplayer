@@ -131,6 +131,8 @@ class PyElement:
         self.events.call_event("lose_focus")
         type(self.qt_element).focusOutEvent(self.qt_element, event)
 
+    def on_destroy(self): self.events.call_event("destroy")
+
 class PyFrame(PyElement):
     """
         General element class that can contain child widgets
@@ -184,6 +186,10 @@ class PyFrame(PyElement):
             del self._children[element_id]
             return True
         else: return False
+
+    def on_destroy(self):
+        for c in self.children: c.on_destroy()
+        PyElement.on_destroy(self)
 
 class PyScrollableFrame(PyFrame):
     """

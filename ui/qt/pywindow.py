@@ -370,7 +370,8 @@ class PyWindow:
                 try: del self._parent._children[self.window_id]
                 except KeyError: pass
 
-            for c in list(self._children.values()): c.destroy()
+            for window in self.windows: window.destroy()
+            for element in self.children: element.on_destroy()
             self.events.call_event("window_destroy")
             self._closed = True
         except Exception as e: log_exception(e)
