@@ -411,7 +411,7 @@ def on_player_update(event, player):
 
 	if default_directory is not None and md.path == default_directory["path"]:
 		song_tracker.add(md.display_name)
-		try: module.client["songbrowser"].add_count(md.display_name)
+		try: module.client["player"]["songbrowser"].add_count(md.display_name)
 		except KeyError: pass
 	song_history.add((md.path, md.song))
 
@@ -420,7 +420,7 @@ def on_end_reached(event, player):
 
 def _set_client_progress(progress):
 	progress = round(progress * 10000)
-	module.client["progress_bar"].progress = progress
+	module.client["player"]["progress_bar"].progress = progress
 
 def _set_client_title(media, color):
 	module.client.update_title(media.display_name)
