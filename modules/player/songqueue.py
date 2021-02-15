@@ -48,7 +48,7 @@ class SongQueue:
 
     def _move(self, song, n):
         try: index = self._queue.index(song)
-        except ValueError: return
+        except ValueError: return 0
 
         del self._queue[index]
         index = min(max(index - n, 0), len(self._queue))
@@ -59,14 +59,14 @@ class SongQueue:
     def move_up(self, song, n=1):
         """
          Moves the specified song forward n spaces (or until it reaches the front), has no effect if the song isn't in the queue
-         Returns the new index of the song
+         Returns the new index of the song or 0 if the song wasn't found
         """
         return self._move(song, n)
 
     def move_down(self, song, n=1):
         """
          Moves the specified song backward n spaces (or until it reaches the back), has no effect if the song isn't in the queue
-         Returns the new index of the song
+         Returns the new index of the song or 0 if the song wasn't found
         """
         return self._move(song, -n)
 
