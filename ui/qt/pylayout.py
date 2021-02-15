@@ -1,3 +1,4 @@
+from collections import namedtuple
 from PyQt5 import QtWidgets
 from . import pyelement, pywindow
 
@@ -20,6 +21,8 @@ class PyLayout:
     def qt_layout(self): return self._qt
 
     def insert_element(self, element): raise TypeError("Cannot insert items in an undefined layout")
+    def index_of(self, element_id): self.index_of(None)
+
     def margins(self, w=None, h=None, left=None, right=None, up=None, down=None):
         if w is None: w = h
         if h is None: h = w
@@ -34,6 +37,7 @@ class PyLayout:
 
 class PyGridLayout(PyLayout):
     layout_name = "grid"
+    GridPosition = namedtuple("GridPosition", ["row", "column", "rowspan", "columnspan"])
 
     def __init__(self, owner):
         PyLayout.__init__(self, owner)
@@ -58,6 +62,12 @@ class PyGridLayout(PyLayout):
         self.qt_layout.addWidget(element._qt, row, column, rowspan, columnspan)
         return self
 
+    def index_of(self, item_id):
+        element = self.owner.find_element(item_id)
+        if element is not None:
+            return self.GridPosition(*self.qt_layout.getItemPosition(self.qt_layout.indexOf(element.qt_element)))
+        else: return None
+
 class PyVerticalLayout(PyLayout):
     layout_name = "vertical"
 
@@ -79,6 +89,11 @@ class PyVerticalLayout(PyLayout):
     def insert_spacing(self, index=None, spacing=0):
         if index is None: self.qt_layout.addSpacing(spacing)
         else: self.qt_layout.insertSpacing(index, spacing)
+
+    def index_of(self, element_id):
+        element = self.owner.find_element(element_id)
+        if element is not None: return self.qt_layout.indexOf(element.qt_element)
+        else: return None
 
 class PyHorizontalLayout(PyVerticalLayout):
     layout_name = "horizontal"
