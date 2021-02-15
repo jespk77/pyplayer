@@ -363,7 +363,7 @@ def initialize():
 	if not song_tracker.is_loaded(): song_tracker.load_tracker()
 
 	player = module.client.add_element("player", element_class=pyelement.PyLabelFrame, index=module.client.layout.index_of("console"))
-	player.layout.column(0, weight=1).column(1, weight=1)
+	player.layout.column(0, weight=1).column(1, weight=1).margins(5)
 	lbl = player.add_element("lbl", element_class=pyelement.PyTextLabel, columnspan=2)
 	lbl.set_font_style("bold")
 	lbl.text = "Player"
