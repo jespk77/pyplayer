@@ -146,9 +146,11 @@ class PyPlayer(pywindow.PyWindow):
     def _insert_autocomplete(self):
         inpt = self["console_input"]
         inpt.accept_input = True
-        index = self._autocomplete["index"]
-        inpt.value = self._autocomplete["options"][index]
-        self._autocomplete["index"] = (index + 1) % len(self._autocomplete["options"])
+        try:
+            index = self._autocomplete["index"]
+            inpt.value = self._autocomplete["options"][index]
+            self._autocomplete["index"] = (index + 1) % len(self._autocomplete["options"])
+        except IndexError: pass
         inpt.get_focus()
 
     def _window_tick(self):
