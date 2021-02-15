@@ -1,9 +1,20 @@
 from PyQt5 import QtWidgets
+from . import pyelement, pywindow
+
+def valid_check(owner):
+    if not isinstance(owner, (pywindow.PyWindow, pyelement.PyFrame)):
+        raise TypeError("Owner must be an instance of PyWindow or PyFrame")
 
 class PyLayout:
     layout_name = "undefined"
 
-    def __init__(self): self._qt = None
+    def __init__(self, owner):
+        valid_check(owner)
+        self._owner = owner
+        self._qt = None
+
+    @property
+    def owner(self): return self._owner
 
     @property
     def qt_layout(self): return self._qt
@@ -25,8 +36,8 @@ class PyGridLayout(PyLayout):
     layout_name = "grid"
 
     def __init__(self, owner):
-        PyLayout.__init__(self)
-        self._qt = QtWidgets.QGridLayout(owner)
+        PyLayout.__init__(self, owner)
+        self._qt = QtWidgets.QGridLayout(owner.qt_element)
 
     @property
     def rows(self): return self.qt_layout.rowCount()
@@ -51,8 +62,8 @@ class PyVerticalLayout(PyLayout):
     layout_name = "vertical"
 
     def __init__(self, owner):
-        PyLayout.__init__(self)
-        self._qt = QtWidgets.QVBoxLayout(owner)
+        PyLayout.__init__(self, owner)
+        self._qt = QtWidgets.QVBoxLayout(owner.qt_element)
 
     @property
     def count(self): return self.qt_layout.count()
@@ -73,8 +84,8 @@ class PyHorizontalLayout(PyVerticalLayout):
     layout_name = "horizontal"
 
     def __init__(self, owner):
-        PyLayout.__init__(self)
-        self._qt = QtWidgets.QHBoxLayout(owner)
+        PyLayout.__init__(self, owner)
+        self._qt = QtWidgets.QHBoxLayout(owner.qt_element)
 
 layouts = {
     PyGridLayout.layout_name: PyGridLayout,

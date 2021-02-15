@@ -59,7 +59,7 @@ class PyWindow:
         self._cfg = pyconfiguration.ConfigurationFile(window_id)
         self._closed = False
 
-        try: self._layout = pylayout.layouts[layout](self.qt_element)
+        try: self._layout = pylayout.layouts[layout](self)
         except KeyError: self._layout = None
         if not self.layout: raise ValueError(f"Unknown layout: '{layout}'")
         self.qt_element.setLayout(self.layout.qt_layout)

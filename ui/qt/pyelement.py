@@ -142,7 +142,7 @@ class PyFrame(PyElement):
         if not hasattr(self, "_qt"): self._qt = QtWidgets.QWidget(parent._qt)
         PyElement.__init__(self, parent, element_id)
         self._children = {}
-        try: self._layout = pylayout.layouts[layout](self.qt_element)
+        try: self._layout = pylayout.layouts[layout](self)
         except KeyError: self._layout = None
         if not self._layout: raise ValueError("Must specify a valid layout type")
         self.qt_element.setLayout(self._layout.qt_layout)
