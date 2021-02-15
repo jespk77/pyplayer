@@ -105,17 +105,20 @@ class SongQueueViewer(pyelement.PyFrame):
         btn = self.add_element("queue_up", element_class=pyelement.PyButton, row=2)
         btn.text = "Move up"
         @btn.events.EventInteract
-        def _move_item_up(): items.selected_index = self._queue.move_up(index=items.selected_index)
+        def _move_item_up():
+            if len(self._queue) > 0: items.selected_index = self._queue.move_up(index=items.selected_index)
 
         btn2: pyelement.PyButton = self.add_element("queue_down", element_class=pyelement.PyButton, row=2, column=1)
         btn2.text = "Move down"
         @btn2.events.EventInteract
-        def _move_item_down(): items.selected_index = self._queue.move_down(index=items.selected_index)
+        def _move_item_down():
+            if len(self._queue) > 0: items.selected_index = self._queue.move_down(index=items.selected_index)
 
         btn3 = self.add_element("queue_del", element_class=pyelement.PyButton, row=3)
         btn3.text = "Delete"
         @btn3.events.EventInteract
-        def _delete_item(): del self._queue[items.selected_index]
+        def _delete_item():
+            if len(self._queue) > 0: del self._queue[items.selected_index]
 
         btn4 = self.add_element("queue_clear", element_class=pyelement.PyButton, row=3, column=1)
         btn4.text = "Clear"
