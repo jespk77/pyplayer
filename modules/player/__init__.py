@@ -1,9 +1,8 @@
 import enum, os
 from datetime import datetime
-from multiprocessing import Queue
 
 from .mediaplayer import MediaPlayer
-from . import albumwindow, lyricviewer, songbrowser, song_tracker, songhistory
+from . import albumwindow, lyricviewer, songbrowser, song_tracker, songhistory, songqueue
 
 from ui.qt import pyelement
 from core import messagetypes, modules
@@ -11,8 +10,8 @@ module = modules.Module(__package__)
 
 # MODULE SPECIFIC VARIABLES
 media_player = MediaPlayer()
-song_queue = Queue()
-song_history = None
+song_queue = songqueue.song_queue
+song_history = songhistory.song_history
 invalid_cfg = messagetypes.Reply("Invalid directory configuration, check your options")
 unknown_song = messagetypes.Reply("That song doesn't exist and there is nothing playing")
 no_songs = messagetypes.Reply("No songs found")
@@ -74,7 +73,7 @@ def play_song(display, song, path):
 	else: return no_songs
 
 def put_queue(display, song, path):
-	song_queue.put_nowait((path[1] if isinstance(path, tuple) else path, song))
+	song_queue.add((path[1] if isinstance(path, tuple) else path, song))
 	return messagetypes.Reply("Song '{}' added to queue".format(display))
 
 def set_autoplay_ignore(ignore):
@@ -116,8 +115,8 @@ def command_autoplay_next(arg, argc):
 			return messagetypes.Empty()
 
 		global autoplay
-		if autoplay.value > 0 and not song_queue.empty():
-			song = song_queue.get_nowait()
+		if autoplay.value > 0 and len(song_queue) > 0:
+			song = song_queue.get_next()
 			media_player.play_song(path=song[0], song=song[1])
 		elif autoplay.value > 1: media_player.random_song()
 		return messagetypes.Empty()
@@ -164,6 +163,11 @@ def command_info_played(arg, argc):
 	path, song = get_song(arg)
 	if path is not None and song is not None: return messagetypes.Select("Multiple songs found", get_playcount, song, alltime=alltime)
 	else: return unknown_song
+
+def command_info_player(arg, argc):
+	window = module.client.find_window("player_info")
+	if window is None: module.client.add_window(window_class=songhistory.PlayerInfoWindow)
+	return messagetypes.Reply("Player info window opened")
 
 def command_info_reload(arg, argc):
 	if argc == 0:
@@ -212,18 +216,18 @@ def command_prev_song(arg, argc):
 
 def command_next_song(arg, argc):
 	if argc == 0:
-		if not song_queue.empty(): return command_queue_next([], 0)
+		if len(song_queue) > 0: return command_queue_next([], 0)
 		else: return command_random([], 0)
 
 def command_queue_clear(arg, argc):
 	if argc == 0:
-		while not song_queue.empty(): song_queue.get_nowait()
+		song_queue.clear()
 		return messagetypes.Reply("Queue cleared")
 
 def command_queue_next(arg, argc):
 	if argc == 0:
-		if not song_queue.empty():
-			item = song_queue.get_nowait()
+		if len(song_queue) > 0:
+			item = song_queue.get_next()
 			media_player.play_song(path=item[0], song=item[1])
 			set_autoplay_ignore(False)
 			return messagetypes.Empty()
@@ -311,11 +315,11 @@ module.commands = {
 	}, "info": {
 		"added": command_info_added,
 		"played": command_info_played,
+		"player": command_info_player,
 		"reload": command_info_reload
 	}, "lyrics": command_lyrics,
 	"player": {
 		"": command_play,
-		"history": songhistory.command_history_window,
 		"last_random": command_last_random,
 		"mute": command_mute,
 		"next": command_next_song,
@@ -376,10 +380,8 @@ def initialize():
 
 	module.client.add_task(task_id="player_progress_update", func=_set_client_progress)
 	module.client.add_task(task_id="player_title_update", func=_set_client_title)
-
-	songhistory.initialize(module.client, media_player)
-	global song_history
-	song_history = songhistory.song_history
+	module.media_player = media_player
+	module.get_displayname = get_displayname
 
 	albumwindow.initialize(media_player)
 	songbrowser.initialize()

@@ -1,32 +1,32 @@
-import os
-from core import history, messagetypes
+from core import history, modules
+module = modules.Module(__package__)
+from ui.qt import pyelement, pywindow
+from . import songqueue
 
-client = media_player = song_history = None
-
-def get_displayname(item): return os.path.splitext(item)[0]
+song_history = history.History()
 
 historywindow_id = "songhistory_viewer"
 class SongHistoryViewer(history.HistoryViewer):
     def __init__(self, parent):
         history.HistoryViewer.__init__(self, parent, historywindow_id, history=song_history)
-        self.title = "Song History"
-        self.EventClick(self._on_item_click)
+        self.EventSelect(self._on_item_click)
 
     def _on_history_update(self, new_history=None):
         if new_history is None: new_history = iter(self._history)
-        self["history_view"].itemlist = [get_displayname(i[1]) for i in new_history]
+        self["history_view"].itemlist = [module.get_displayname(i[1]) for i in new_history]
 
     def _on_item_click(self):
         item = self._history[self["history_view"].clicked_index]
-        media_player.play_song(item[0], item[1])
+        module.media_player.play_song(item[0], item[1])
 
-def command_history_window(arg, argc):
-    if client.find_window(historywindow_id) is None: client.add_window(window_class=SongHistoryViewer)
-    return messagetypes.Reply("Song history window opened")
+class PlayerInfoWindow(pywindow.PyWindowDocked):
+    window_id = "player_info"
 
+    def __init__(self, parent):
+        pywindow.PyWindowDocked.__init__(self, parent, self.window_id)
+        self.title = "Player Info"
 
-def initialize(cl, mp):
-    global client, media_player, song_history
-    client = cl
-    media_player = mp
-    song_history = history.History()
+    def create_widgets(self):
+        tab: pyelement.PyTabFrame = self.add_element("info_tabs", element_class=pyelement.PyTabFrame)
+        tab.add_tab("Queue", frame=songqueue.SongQueueViewer(tab))
+        tab.add_tab("History", frame=SongHistoryViewer(tab))
