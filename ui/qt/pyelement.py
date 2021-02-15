@@ -91,6 +91,30 @@ class PyElement:
     def focus_next(self): self.qt_element.focusNextChild()
     def focus_previous(self): self.qt_element.focusPreviousChild()
 
+    @property
+    def min_height(self): return self.qt_element.minimumHeight()
+    @min_height.setter
+    def min_height(self, height): self.qt_element.setMinimumHeight(int(height))
+    @property
+    def max_height(self): return self.qt_element.maximumHeight()
+    @max_height.setter
+    def max_height(self, height):
+        height = int(height)
+        if height <= 0: height = QtWidgets.QWIDGETSIZE_MAX
+        self.qt_element.setMaximumHeight(height)
+
+    @property
+    def min_width(self): return self.qt_element.minimumWidth()
+    @min_width.setter
+    def min_width(self, width): self.qt_element.setMinimumWidth(int(width))
+    @property
+    def max_width(self): return self.qt_element.maximumWidth()
+    @max_width.setter
+    def max_width(self, width):
+        width = int(width)
+        if width <= 0: width = QtWidgets.QWIDGETSIZE_MAX
+        self.qt_element.setMinimumWidth(width)
+
     def get_key(self, key):
         """ Returns keycode associated with given description, returns None if the description was not found """
         return QtCore.Qt.__dict__.get(f"Key_{key}")
