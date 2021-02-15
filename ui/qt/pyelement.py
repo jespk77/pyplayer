@@ -951,6 +951,10 @@ class PyItemlist(PyElement):
         self.qt_element.setFlow(QtWidgets.QListView.TopToBottom)
         self.qt_element.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.qt_element.setEditTriggers(QtWidgets.QListView.NoEditTriggers)
+        self._qt.setStyleSheet(f"""
+            QListView {{ 
+             selection-background-color: transparent; selection-color: {self._qt.palette().highlight().color().name()}
+            }} """)
         self._items = QtCore.QStringListModel()
 
     @property
