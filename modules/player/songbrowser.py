@@ -15,8 +15,10 @@ class SongBrowser(pyelement.PyItemlist):
 	""" Can list all items (songs) from a directory in a specified order
 		possible orderings: frequency(counter), creation time, name
 	"""
+	element_id = "songbrowser"
+
 	def __init__(self, parent):
-		pyelement.PyItemlist.__init__(self, parent, "songbrowser")
+		pyelement.PyItemlist.__init__(self, parent, self.element_id)
 		self._path = self._songcounter = None
 		self._path_valid = self._is_dynamic = False
 		self.auto_select = False
@@ -104,7 +106,7 @@ def parse_path(arg, argc):
 		else: return f"No default directory set, set one using key '{default_path_key}'",
 
 def bind_events():
-	browser = module.client["songbrowser"]
+	browser = module.client["player"]["songbrowser"]
 	if browser:
 		@browser.events.EventDoubleClick
 		def _browser_doubleclick():
@@ -131,20 +133,23 @@ _browser_types = [
 
 def set_songbrowser(browser):
 	if browser:
-		console_index = module.client.layout.index_of("console")
-		module.client.layout.item(console_index, weight=0)
-		module.client.add_element(element=browser, index=console_index, weight=1)
+		module.client.layout.item(module.client.layout.index_of("console"), weight=0)
+		player = module.client["player"]
+		player.add_element(element=browser, row=1)
+		player.layout.row(1, weight=1)
+		module.client.layout.item(module.client.layout.index_of("player"), weight=1)
 		bind_events()
 	else:
 		module.client.layout.item(module.client.layout.index_of("console"), weight=1)
-		module.client.remove_element("songbrowser")
+		module.client["player"].remove_element(SongBrowser.element_id)
+		module.client.layout.item(module.client.layout.index_of("player"), weight=0)
 
 def create_songbrowser(type, args=None):
 	if type < 0: return set_songbrowser(None)
 
 	try:
 		browser_cb = _browser_types[type]
-		browser = SongBrowser(module.client)
+		browser = SongBrowser(module.client["player"])
 		browser_cb(browser, *args)
 
 		set_songbrowser(browser)

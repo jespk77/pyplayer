@@ -28,8 +28,9 @@ class PyPlayer(pywindow.PyWindow):
             "options": [], "index": 0
         }
 
-        self.schedule_task(func=self._insert_reply, task_id="reply_task", reply="= Hello there =")
         self.schedule_task(sec=1, loop=True, func=self._window_tick, task_id="window_tick")
+        self.schedule_task(func=self._insert_reply, task_id="reply_task", reply="= Hello there =\nEnter a command below, the resulting output will show up here")
+        self.add_task(task_id="notification_task", func=self._insert_notification)
         self.add_task(task_id="shutdown", func=self.destroy)
         self.add_task(task_id=self.autocomplete_task, func=self._update_suggestions)
 
@@ -56,11 +57,13 @@ class PyPlayer(pywindow.PyWindow):
         header_center.text = "PyPlayer"
         header_center.set_alignment("centerH")
 
-        console = self.add_element("console", element_class=pyelement.PyTextField, weight=1)
-        console.accept_input = False
-
-        inpt: pyelement.PyTextInput = pyelement.PyTextInput(self, "console_input", True)
-        self.add_element(element=inpt)
+        console = self.add_element("console", element_class=pyelement.PyLabelFrame)
+        console.layout.margins(5)
+        console.add_element("lbl", element_class=pyelement.PyTextLabel, columnspan=2).text = "Commands"
+        command_output = console.add_element("output", element_class=pyelement.PyTextField, row=1, columnspan=2)
+        command_output.accept_input = False
+        console.add_element("prefix", element_class=pyelement.PyTextLabel, row=2)
+        inpt: pyelement.PyTextInput = console.add_element(element=pyelement.PyTextInput(console, "input", True), row=2, column=1)
 
         @inpt.events.EventKeyDown("all")
         def _on_any_key(): self._autocomplete["options"].clear()
@@ -97,7 +100,7 @@ class PyPlayer(pywindow.PyWindow):
                 else: self._insert_autocomplete()
                 return inpt.events.block_action
 
-        @console.events.EventFocusGet
+        @command_output.events.EventFocusGet
         def _on_focus(): inpt.get_focus()
 
     def start_interpreter(self):
@@ -119,21 +122,24 @@ class PyPlayer(pywindow.PyWindow):
 
     def _on_command_enter(self, cmd):
         if cmd:
-            self["console"].text += f"{cmd}\n"
+            self["console"]["output"].text += f"{cmd}\n"
             self._command_history.add(cmd)
-            self["console_input"].accept_input = False
+            self["console"]["input"].accept_input = False
             self._interp.put_command(cmd, self._cmd)
 
     def _insert_reply(self, reply, tags=None, prefix=None, text=None):
         if not prefix: prefix = "> "
-        console = self["console"]
-        console.insert(console.end, f"{reply}\n{prefix}")
-        console.show(console.end)
+        self["console"]["output"].text = reply
+        self["console"]["prefix"].text = prefix
 
-        console_input = self["console_input"]
+        console_input = self["console"]["input"]
         console_input.accept_input = True
         if text: console_input.text = text
         console_input.get_focus()
+
+    def _insert_notification(self, message, tags=None):
+        console = self["console"]["output"]
+        console.text = message + "\n" + console.text
 
     def _update_suggestions(self, suggestions):
         for s in suggestions:
@@ -144,7 +150,7 @@ class PyPlayer(pywindow.PyWindow):
         self._insert_autocomplete()
 
     def _insert_autocomplete(self):
-        inpt = self["console_input"]
+        inpt = self["console"]["input"]
         inpt.accept_input = True
         try:
             index = self._autocomplete["index"]
@@ -164,11 +170,11 @@ class PyPlayer(pywindow.PyWindow):
 
     def on_reply(self, reply, tags=None, cmd=None, prefix='', text=''):
         self._cmd = cmd
-        if not self["console_input"].accept_input:
+        if not self["console"]["input"].accept_input:
             self.schedule_task(task_id="reply_task", reply=reply, tags=tags, prefix=prefix, text=text)
 
     def on_notification(self, message, tags=None):
-        self.schedule_task(task_id="reply_task", reply=message, tags=tags)
+        self.schedule_task(task_id="notification_task", message=message, tags=tags)
 
     def update_title(self, title):
         if not title: title = self.title
