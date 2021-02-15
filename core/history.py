@@ -1,4 +1,4 @@
-from ui.qt import pywindow, pyelement
+from ui.qt import pyelement
 
 class History:
 	"""
@@ -138,21 +138,21 @@ class History:
 	def __iter__(self): return iter(self._history)
 	def __str__(self): return f"History[history={self._history}, index={self._index}, limit={self._limit}]"
 
-class HistoryViewer(pywindow.PyWindowDocked):
+class HistoryViewer(pyelement.PyFrame):
 	def __init__(self, parent, window_id, history):
 		self._history = history
-		pywindow.PyWindowDocked.__init__(self, parent, window_id)
-		self.title = "History Viewer"
+		pyelement.PyFrame.__init__(self, parent, window_id)
 
-		self.events.EventWindowClose(self._on_close)
-		self.add_task("on_index_update", self._on_index_update)
-		self.add_task("on_history_update", self._on_history_update)
-		self._history.OnIndexUpdated(lambda index: self.schedule_task(task_id="on_index_update", new_index=index))
-		self._history.OnHistoryUpdated(lambda hist: self.schedule_task(task_id="on_history_update", new_history=hist))
+		history_index_update, history_update = "history_index_update", "history_update"
+		self.window.add_task(history_index_update, self._on_index_update)
+		self.window.add_task(history_update, self._on_history_update)
+		self._history.OnIndexUpdated(lambda index: self.window.schedule_task(task_id=history_index_update, new_index=index))
+		self._history.OnHistoryUpdated(lambda hist: self.window.schedule_task(task_id=history_update, new_history=hist))
 
-	def _on_close(self):
-		self._history.OnIndexUpdated(None)
-		self._history.OnHistoryUpdated(None)
+		@self.events.EventDestroy
+		def _on_destroy():
+			self._history.OnIndexUpdated(None)
+			self._history.OnHistoryUpdated(None)
 
 	def create_widgets(self):
 		items = self.add_element("history_view", element_class=pyelement.PyItemlist)
@@ -178,4 +178,4 @@ class HistoryViewer(pywindow.PyWindowDocked):
 		self["history_view"].itemlist = [str(i) for i in new_history]
 
 	@property
-	def EventClick(self): return self["history_view"].events.EventDoubleClick
+	def EventSelect(self): return self["history_view"].events.EventDoubleClick
