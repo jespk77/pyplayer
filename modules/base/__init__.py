@@ -70,15 +70,15 @@ def command_timer(arg, argc):
 				def _timer_update(date):
 					global timer
 					if timer.total_seconds() > 0:
-						module.client["header_left"].text = "\u23f0 {!s}".format(timer)
+						module.client["header"]["left"].text = "\u23f0 {!s}".format(timer)
 						timer -= one_second
 					else:
 						timer = None
-						module.client["header_left"].text = ""
+						module.client["header"]["left"].text = ""
 						module.client.update_left_header(None)
 						module.interpreter.put_command(module.configuration.get(timer_command_key))
 
-				module.client["header_left"].text = "\u23f0 {!s}".format(timer)
+				module.client["header"]["left"].text = "\u23f0 {!s}".format(timer)
 				return messagetypes.Reply("Timer set")
 			except ValueError as e: return messagetypes.Reply(str(e))
 		else: return messagetypes.Reply("Cannot decode time syntax, try again...")
@@ -115,7 +115,7 @@ def initialize():
 	@module.client.update_right_header
 	def _right_header(date):
 		global process, boot_time
-		module.client["header_right"].text = f"{str(date - boot_time).split('.')[0]} / {humanize.naturalsize(process.memory_info().rss)}"
+		module.client["header"]["right"].text = f"{str(date - boot_time).split('.')[0]} / {humanize.naturalsize(process.memory_info().rss)}"
 
 module.commands = {
 	"log": {

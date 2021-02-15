@@ -355,7 +355,7 @@ def initialize():
 	media_player.attach_event("stopped", on_stopped)
 	if not song_tracker.is_loaded(): song_tracker.load_tracker()
 
-	progress = module.client.add_element("progress_bar", element_class=pyelement.PyProgessbar, row=1, columnspan=3)
+	progress = module.client.add_element("progress_bar", element_class=pyelement.PyProgessbar, index=1)
 	progress.minimum, progress.maximum = 0, 10000
 	progress.progress = 0
 	@progress.events.EventInteract

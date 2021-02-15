@@ -13,8 +13,7 @@ class PyPlayer(pywindow.PyWindow):
     autocomplete_task = "autocomplete_task"
 
     def __init__(self, root, window_id):
-        pywindow.PyWindow.__init__(self, root, window_id)
-        self.layout.column(1, minsize=30, weight=1).row(3, minsize=100, weight=1)
+        pywindow.PyWindow.__init__(self, root, window_id, "vertical")
 
         self.title = "PyPlayer"
         self.title_song = ""
@@ -49,17 +48,19 @@ class PyPlayer(pywindow.PyWindow):
 
     def create_widgets(self):
         pywindow.PyWindow.create_widgets(self)
-        self.add_element("header_left", element_class=pyelement.PyTextLabel, row=0, column=0)
-        header_center = self.add_element("header_center", element_class=pyelement.PyTextLabel, row=0, column=1)
-        self.add_element("header_right", element_class=pyelement.PyTextLabel, row=0, column=2)
+        header = self.add_element("header", element_class=pyelement.PyFrame)
+        header.add_element("left", element_class=pyelement.PyTextLabel, row=0, column=0)
+        header_center = header.add_element("center", element_class=pyelement.PyTextLabel, row=0, column=1)
+        header.add_element("right", element_class=pyelement.PyTextLabel, row=0, column=2)
+        header.layout.column(1, minsize=30, weight=1).margins(0)
         header_center.text = "PyPlayer"
         header_center.set_alignment("centerH")
 
-        console = self.add_element("console", element_class=pyelement.PyTextField, row=3, columnspan=3)
+        console = self.add_element("console", element_class=pyelement.PyTextField, weight=1)
         console.accept_input = False
 
         inpt: pyelement.PyTextInput = pyelement.PyTextInput(self, "console_input", True)
-        self.add_element(element=inpt, row=4, columnspan=3)
+        self.add_element(element=inpt)
 
         @inpt.events.EventKeyDown("all")
         def _on_any_key(): self._autocomplete["options"].clear()
@@ -152,7 +153,7 @@ class PyPlayer(pywindow.PyWindow):
 
     def _window_tick(self):
         date = datetime.datetime.today()
-        self["header_center"].text = date.strftime(self.configuration["header_format"])
+        self["header"]["center"].text = date.strftime(self.configuration["header_format"])
         if self._left_head_update: self._left_head_update(date)
         if self._right_head_update: self._right_head_update(date)
 

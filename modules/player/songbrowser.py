@@ -131,12 +131,13 @@ _browser_types = [
 
 def set_songbrowser(browser):
 	if browser:
-		module.client.add_element(element=browser, row=2, columnspan=3)
-		module.client.layout.row(2, weight=1, minsize=250).row(3, weight=0)
+		console_index = module.client.layout.index_of("console")
+		module.client.layout.item(console_index, weight=0)
+		module.client.add_element(element=browser, index=console_index, weight=1)
 		bind_events()
 	else:
+		module.client.layout.item(module.client.layout.index_of("console"), weight=1)
 		module.client.remove_element("songbrowser")
-		module.client.layout.row(2, weight=0, minsize=0).row(3, weight=1)
 
 def create_songbrowser(type, args=None):
 	if type < 0: return set_songbrowser(None)
