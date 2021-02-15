@@ -46,9 +46,12 @@ class SongQueue:
         try: return self._queue[0]
         except IndexError: return None
 
-    def _move(self, song, n):
-        try: index = self._queue.index(song)
-        except ValueError: return 0
+    def _move(self, song, index, n):
+        if index is None:
+            try: index = self._queue.index(song)
+            except ValueError: return 0
+        elif song is None: song = self._queue[index]
+        else: raise ValueError("Must specify song or index")
 
         del self._queue[index]
         index = min(max(index - n, 0), len(self._queue))
@@ -56,19 +59,19 @@ class SongQueue:
         self._call_update()
         return index
 
-    def move_up(self, song, n=1):
+    def move_up(self, song=None, index=None, n=1):
         """
-         Moves the specified song forward n spaces (or until it reaches the front), has no effect if the song isn't in the queue
+         Moves the specified song or index forward n spaces (or until it reaches the front), has no effect if the song isn't in the queue
          Returns the new index of the song or 0 if the song wasn't found
         """
-        return self._move(song, n)
+        return self._move(song, index, n)
 
-    def move_down(self, song, n=1):
+    def move_down(self, song=None, index=None, n=1):
         """
-         Moves the specified song backward n spaces (or until it reaches the back), has no effect if the song isn't in the queue
+         Moves the specified song or index backward n spaces (or until it reaches the back), has no effect if the song isn't in the queue
          Returns the new index of the song or 0 if the song wasn't found
         """
-        return self._move(song, -n)
+        return self._move(song, index, -n)
 
     def __contains__(self, item): return self._queue.__contains__(item)
     def __iter__(self): return self._queue.__iter__()
@@ -102,12 +105,12 @@ class SongQueueViewer(pyelement.PyFrame):
         btn = self.add_element("queue_up", element_class=pyelement.PyButton, row=2)
         btn.text = "Move up"
         @btn.events.EventInteract
-        def _move_item_up(): items.selected_index = self._queue.move_up(items.selected_item)
+        def _move_item_up(): items.selected_index = self._queue.move_up(index=items.selected_index)
 
         btn2: pyelement.PyButton = self.add_element("queue_down", element_class=pyelement.PyButton, row=2, column=1)
         btn2.text = "Move down"
         @btn2.events.EventInteract
-        def _move_item_down(): items.selected_index = self._queue.move_down(items.selected_item)
+        def _move_item_down(): items.selected_index = self._queue.move_down(index=items.selected_index)
 
         btn3 = self.add_element("queue_del", element_class=pyelement.PyButton, row=3)
         btn3.text = "Delete"
@@ -120,4 +123,7 @@ class SongQueueViewer(pyelement.PyFrame):
         def _clear_queue(): self._queue.clear()
 
     def _on_queue_update(self, items):
-        self["items"].itemlist = [module.get_displayname(item[1]) for item in items]
+        queue = self["items"]
+        selection = queue.selected_index
+        queue.itemlist = [module.get_displayname(item[1]) for item in items]
+        queue.selected_index = selection
