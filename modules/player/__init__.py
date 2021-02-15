@@ -323,11 +323,9 @@ module.commands = {
 		"last_random": command_last_random,
 		"mute": command_mute,
 		"next": command_next_song,
-		"next_song": command_next_song,
 		"pause": command_pause,
 		"position": command_position,
 		"previous": command_prev_song,
-		"prev_song": command_prev_song,
 		"random": command_random,
 		"reset": command_reset,
 		"stop": command_stop
