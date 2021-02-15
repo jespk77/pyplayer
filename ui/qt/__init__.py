@@ -3,9 +3,7 @@ __all__ = ["pyelement", "pyevents", "pyimage", "pylauncher", "pylayout", "pynetw
 # pyqt documentation:
 # https://doc.qt.io/qtforpython/modules.html
 
-def log_exception(e):
-    import traceback
-    traceback.print_exception(type(e), e, e.__traceback__)
+def log_exception(e): print("ERROR", "An error occured:", e)
 
 try:
     from . import pywindow, pyelement, pynetwork

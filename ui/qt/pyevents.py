@@ -18,10 +18,7 @@ class EventHandler:
         if callback:
             args = callback.__code__.co_varnames
             try: return callback(**{key: value for key, value in kwargs.items() if key in args})
-            except Exception as e:
-                import traceback
-                print("ERROR", f"Error processing event '{event_name}':")
-                traceback.print_exception(type(e), e, e.__traceback__)
+            except Exception as e: print("ERROR", f"Error processing event '{event_name}':", e)
 
     def register_event(self, event_name, cb):
         self._events[event_name] = cb
@@ -38,10 +35,7 @@ class EventHandler:
             try:
                 res = cb(**{key: value for key, value in kwargs.items() if key in args})
                 if res == self.block_action: return True
-            except Exception as e:
-                import traceback
-                print("ERROR", f"Error processing event 'key_down':")
-                traceback.print_exception(type(e), e, e.__traceback__)
+            except Exception as e: print("ERROR", f"Error processing event 'key_down':", e)
         return False
 
     def EventKeyDown(self, key):
