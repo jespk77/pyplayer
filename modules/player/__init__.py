@@ -24,6 +24,7 @@ class Autoplay(enum.Enum):
 	ON = 2
 autoplay = Autoplay.OFF
 autoplay_ignore = False
+player_autoplay_update_task = "player_autoplay_update"
 
 # ===== HELPER OPERATIONS =====
 def get_song(arg):
@@ -79,6 +80,7 @@ def put_queue(display, song, path):
 def set_autoplay_ignore(ignore):
 	global autoplay_ignore
 	autoplay_ignore = bool(ignore)
+	module.client.schedule_task(task_id=player_autoplay_update_task)
 
 # ===== MAIN COMMANDS =====
 # - configure autoplay
@@ -91,6 +93,7 @@ def command_autoplay_off(arg, argc):
 	if argc == 0:
 		global autoplay
 		autoplay = Autoplay.OFF
+		module.client.schedule_task(task_id=player_autoplay_update_task)
 		return messagetypes.Reply("Autoplay is off")
 
 def command_autoplay_on(arg, argc):
@@ -356,12 +359,16 @@ def initialize():
 	if not song_tracker.is_loaded(): song_tracker.load_tracker()
 
 	player = module.client.add_element("player", element_class=pyelement.PyLabelFrame, index=module.client.layout.index_of("console"))
-	player.add_element("lbl", element_class=pyelement.PyTextLabel).text = "Player"
-	progress = player.add_element("progress_bar", element_class=pyelement.PyProgessbar, row=1)
+	player.layout.column(0, weight=1).column(1, weight=1)
+	player.add_element("lbl", element_class=pyelement.PyTextLabel, columnspan=2).text = "Player"
+	progress = player.add_element("progress_bar", element_class=pyelement.PyProgessbar, row=1, columnspan=2)
 	progress.minimum, progress.maximum = 0, 10000
 	progress.progress = 0
 	@progress.events.EventInteract
 	def _on_click(position): module.interpreter.put_command(f"player position {position}")
+
+	player.add_element("autoplay1", element_class=pyelement.PyTextLabel, row=2)
+	player.add_element("autoplay2", element_class=pyelement.PyTextLabel, row=2, column=1).set_alignment("right")
 
 	module.configuration.get_or_create("directory", {})
 	module.configuration.get_or_create(default_dir_path, "")
@@ -380,6 +387,7 @@ def initialize():
 
 	module.client.add_task(task_id="player_progress_update", func=_set_client_progress)
 	module.client.add_task(task_id="player_title_update", func=_set_client_title)
+	module.client.schedule_task(task_id="player_autoplay_update", func=_set_client_autoplay)
 	module.media_player = media_player
 	module.get_displayname = get_displayname
 
@@ -425,3 +433,8 @@ def _set_client_progress(progress):
 def _set_client_title(media, color):
 	module.client.update_title(media.display_name)
 	songbrowser.title_update(media, color)
+
+def _set_client_autoplay():
+	global autoplay, autoplay_ignore
+	module.client["player"]["autoplay1"].text = f"Autoplay: {autoplay.name.lower()}"
+	module.client["player"]["autoplay2"].text = "[Skip next]" if autoplay_ignore else ""
