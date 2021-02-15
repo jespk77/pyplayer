@@ -342,6 +342,16 @@ class PyTextLabel(PyElement):
         except KeyError: pass
         raise ValueError(f"Unknown alignment '{align}' specified")
 
+    _font_style = {"none": "", "bold": "font-weight:bold", "italic": "font-style:italic", "underline": "text-decoration:underline",
+                   "strike": "text-decoration:line-through"}
+    def set_font_style(self, style):
+        try:
+            if isinstance(style, tuple):
+                self._qt.setStyleSheet(f"QLabel {{ {'; '.join([self._font_style[s] for s in style])} }}")
+            else: self._qt.setStyleSheet(f"QLabel {{ {self._font_style[style]} }}")
+            return
+        except KeyError: pass
+        raise ValueError(f"Unknown font style '{style}' specified")
 
 class PyTextInput(PyElement):
     """
