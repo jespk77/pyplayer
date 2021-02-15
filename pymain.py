@@ -101,9 +101,11 @@ class PySplashWindow(pywindow.RootPyWindow):
             for d in dependencies:
                 self["status_bar"].text = f"Installing '{d}'"
                 process_command(pip_install.format(sys.executable, d))
-            self["status_bar"].text = "Dependency check complete"
-        else: self["status_bar"].text = "Loading PyPlayer..."
-        self.schedule_task(sec=1, func=self._load_program)
+            self["status_bar"].text = "Dependency check complete, restarting..."
+            self._do_restart()
+        else:
+            self["status_bar"].text = "Loading PyPlayer..."
+            self.schedule_task(sec=1, func=self._load_program)
 
     # STEP 4: Load main program
     def _load_program(self):
