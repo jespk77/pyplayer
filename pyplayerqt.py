@@ -61,7 +61,7 @@ class PyPlayer(pywindow.PyWindow):
         console.layout.margins(5)
         lbl = console.add_element("lbl", element_class=pyelement.PyTextLabel, columnspan=2)
         lbl.set_font_style("bold")
-        lbl.text = "Commands"
+        lbl.text = " \u2692 Commands"
         command_output = console.add_element("output", element_class=pyelement.PyTextField, row=1, columnspan=2)
         command_output.accept_input = False
         console.add_element("prefix", element_class=pyelement.PyTextLabel, row=2).set_alignment("center")

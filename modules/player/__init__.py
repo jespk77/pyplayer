@@ -367,7 +367,7 @@ def initialize():
 	player.layout.column(0, weight=1).column(1, weight=1).margins(5)
 	lbl = player.add_element("lbl", element_class=pyelement.PyTextLabel, columnspan=2)
 	lbl.set_font_style("bold")
-	lbl.text = "Player"
+	lbl.text = " \u266b Player"
 
 	progress = player.add_element("progress_bar", element_class=pyelement.PyProgessbar, row=1, columnspan=2)
 	progress.minimum, progress.maximum = 0, 10000
