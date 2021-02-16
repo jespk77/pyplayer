@@ -931,6 +931,15 @@ class PyProgessbar(PyElement):
         self.maximum = value
         return self
 
+    @property
+    def color(self): return self.qt_element.palette().color(QtGui.QPalette.Active, QtGui.QPalette.Highlight).name()
+    @color.setter
+    def color(self, color):
+        pal, col = self.qt_element.palette(), QtGui.QColor(color)
+        pal.setColor(QtGui.QPalette.Active, QtGui.QPalette.Highlight, col)
+        pal.setColor(QtGui.QPalette.Inactive, QtGui.QPalette.Highlight, col)
+        self.qt_element.setPalette(pal)
+
     def _on_mouse_press(self, event):
         x, y = event.x(), event.y()
         self.events.call_event("interact", x=x, y=y, position=x/self.qt_element.width())
