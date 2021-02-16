@@ -18,6 +18,7 @@ no_songs = messagetypes.Reply("No songs found")
 MAX_LIST = 15
 default_dir_path = "default_directory"
 player_filter_update_task = "player_filter_update"
+default_color = None
 
 class Autoplay(enum.Enum):
 	OFF = 0
@@ -374,6 +375,9 @@ def initialize():
 	@progress.events.EventInteract
 	def _on_click(position): module.interpreter.put_command(f"player position {position}")
 
+	global default_color
+	default_color = progress.color
+
 	player.add_element("autoplay", element_class=pyelement.PyTextLabel, row=2)
 	player.add_element("filter", element_class=pyelement.PyTextLabel, row=2, column=1).set_alignment("right")
 
@@ -440,6 +444,7 @@ def _set_client_progress(progress):
 
 def _set_client_title(media, color):
 	module.client.update_title(media.display_name)
+	module.client["player"]["progress_bar"].color = color if color is not None else default_color
 	songbrowser.title_update(media, color)
 
 def _set_client_autoplay():
