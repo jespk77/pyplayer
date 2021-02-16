@@ -953,7 +953,7 @@ class PyItemlist(PyElement):
         self.qt_element.setEditTriggers(QtWidgets.QListView.NoEditTriggers)
         self._qt.setStyleSheet(f"""
             QListView {{ 
-             selection-background-color: transparent; selection-color: {self._qt.palette().highlight().color().name()}
+             selection-background-color: #101010; selection-color: {self._qt.palette().highlight().color().name()}
             }} """)
         self._items = QtCore.QStringListModel()
 
