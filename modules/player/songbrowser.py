@@ -119,8 +119,8 @@ def bind_events():
 		browser.select_song(module.client.title_song)
 
 def title_update(data, color):
-	try: module.client["songbrowser"].select_song(data.display_name)
-	except KeyError: pass
+	try: module.client["player"]["songbrowser"].select_song(data.display_name)
+	except KeyError: print("VERBOSE", "Failed to select the song in the browser, it's probably not currently open")
 def unsupported_path(): print("INFO", "Tried to open songbrowser sorted on plays with unsupported path, using name sorting instead...")
 
 # ===== Songbrowser configuration =====
