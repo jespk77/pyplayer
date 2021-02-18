@@ -315,6 +315,10 @@ class PyTabFrame(PyElement):
     @property
     def current_tab(self): return self.qt_element.indexOf(self.qt_element.currentWidget())
 
+    def on_destroy(self):
+        for tab in self._tabs: tab.on_destroy()
+        PyElement.on_destroy(self)
+
 
 class PyTextLabel(PyElement):
     """
