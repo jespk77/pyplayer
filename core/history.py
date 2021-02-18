@@ -1,3 +1,4 @@
+import json, os
 from ui.qt import pyelement
 
 class History:
@@ -6,11 +7,60 @@ class History:
 	 They are retrieved one by one using get, adding a new item automatically resets the index to the end
 	 Amount of items stored can be limited by adding a limit argument
 	"""
-	def __init__(self, limit=0):
+	def __init__(self, limit=0, file=None):
 		self._limit = max(0, limit)
 		self._history = []
 		self._index = 0
 		self._index_updated = self._history_updated = None
+
+		self._file = file
+		if self._file is not None:
+			self._save_file = True
+			if not self._file.endswith(".ht"): self._file += ".ht"
+			self._load_file()
+		else: self._save_file = False
+
+	def _load_file(self):
+		try:
+			with open(self._file, "r") as file: data = json.load(file)
+			self._history.extend(data["history"])
+			self._index, self._limit = data["index"], data["limit"]
+		except FileNotFoundError: self._save_file = False
+
+	def _delete_file(self):
+		if self._file is not None:
+			try: os.remove(self._file)
+			except FileNotFoundError: pass
+
+	def save(self):
+		""" Saves the current history to file, has no effect if no save file was set """
+		if self._save_file:
+			data = {
+				"history": self._history,
+				"index": self._index,
+				"limit": self._limit
+			}
+			with open(self._file, "w") as file: json.dump(data, file)
+		else: self._delete_file()
+
+	@property
+	def save_file(self):
+		""" Get the destination the history will be saved to or None if not set """
+		return self._file
+	@save_file.setter
+	def save_file(self, file):
+		self._delete_file()
+		self._file = file
+		if not file: self._save_file = False
+
+	@property
+	def can_save(self):
+		""" True if the history can be saved to file """
+		return self._save_file
+	@can_save.setter
+	def can_save(self, save):
+		if save and self._file is None: raise ValueError("Cannot save to file without setting a destination")
+		self._save_file = bool(save)
 
 	@property
 	def limit(self):
@@ -160,11 +210,19 @@ class HistoryViewer(pyelement.PyFrame):
 		self._on_history_update()
 		self._on_index_update()
 
-		btn = self.add_element("history_clear", element_class=pyelement.PyButton, row=1)
+		row = 1
+		if self._history.save_file is not None:
+			check = self.add_element("history_save", element_class=pyelement.PyCheckbox, row=row)
+			check.checked = self._history.can_save
+			check.text = "Save to file"
+			@check.events.EventInteract
+			def _change_save(): self._history.can_save = check.checked
+			row += 1
+
+		btn = self.add_element("history_clear", element_class=pyelement.PyButton, row=row)
 		btn.text = "Clear"
 		@btn.events.EventInteract
-		def _on_history_clear():
-			self._history.clear()
+		def _on_history_clear(): self._history.clear()
 
 	def _on_index_update(self, new_index=None):
 		if new_index is None: new_index = self._history.index
