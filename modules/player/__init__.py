@@ -408,6 +408,7 @@ def initialize():
 @module.Destroy
 def on_destroy():
 	media_player.on_destroy()
+	songhistory.on_destroy()
 
 def on_media_change(event, player):
 	color = None

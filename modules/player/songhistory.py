@@ -1,9 +1,12 @@
+import os
 from core import history, modules
 module = modules.Module(__package__)
 from ui.qt import pyelement, pywindow
 from . import songqueue
 
-song_history = history.History()
+if not os.path.isdir(".cache"): os.mkdir(".cache")
+song_history_path = os.path.join(".cache", "songhistory")
+song_history = history.History(limit=100, file=song_history_path)
 
 historywindow_id = "songhistory_viewer"
 class SongHistoryViewer(history.HistoryViewer):
@@ -30,3 +33,6 @@ class PlayerInfoWindow(pywindow.PyWindowDocked):
         tab: pyelement.PyTabFrame = self.add_element("info_tabs", element_class=pyelement.PyTabFrame)
         tab.add_tab("Queue", frame=songqueue.SongQueueViewer(tab))
         tab.add_tab("History", frame=SongHistoryViewer(tab))
+
+def on_destroy():
+    song_history.save()
