@@ -442,7 +442,8 @@ def _set_client_progress(progress):
 
 def _set_client_title(media, color):
 	module.client.update_title(media.display_name)
-	module.client["player"]["progress_bar"].color = color if color is not None else default_color
+	bar = module.client["player"]["progress_bar"]
+	bar.progress, bar.color = 0, color if color is not None else default_color
 	songbrowser.title_update(media, color)
 
 def _set_client_autoplay():
