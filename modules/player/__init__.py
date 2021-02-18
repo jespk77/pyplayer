@@ -365,11 +365,9 @@ def initialize():
 
 	player = module.client.add_element("player", element_class=pyelement.PyLabelFrame, index=module.client.layout.index_of("console"))
 	player.layout.column(0, weight=1).column(1, weight=1).margins(5)
-	lbl = player.add_element("lbl", element_class=pyelement.PyTextLabel, columnspan=2)
-	lbl.set_font_style("bold")
-	lbl.text = " \u266b Player"
+	player.label = " \u266b Player"
 
-	progress = player.add_element("progress_bar", element_class=pyelement.PyProgessbar, row=1, columnspan=2)
+	progress = player.add_element("progress_bar", element_class=pyelement.PyProgessbar, columnspan=2)
 	progress.minimum, progress.maximum = 0, 10000
 	progress.progress = 0
 	@progress.events.EventInteract
@@ -378,8 +376,8 @@ def initialize():
 	global default_color
 	default_color = progress.color
 
-	player.add_element("autoplay", element_class=pyelement.PyTextLabel, row=2)
-	player.add_element("filter", element_class=pyelement.PyTextLabel, row=2, column=1).set_alignment("right")
+	player.add_element("autoplay", element_class=pyelement.PyTextLabel, row=1)
+	player.add_element("filter", element_class=pyelement.PyTextLabel, row=1, column=1).set_alignment("right")
 
 	module.configuration.get_or_create("directory", {})
 	module.configuration.get_or_create(default_dir_path, "")
