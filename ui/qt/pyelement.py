@@ -223,13 +223,21 @@ class PyScrollableFrame(PyFrame):
     def __init__(self, parent, element_id, layout="grid"):
         self._qt = QtWidgets.QScrollArea(parent.qt_element)
         self._content = QtWidgets.QWidget()
-        self._qt.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
         self._qt.setWidgetResizable(True)
         self._qt.setWidget(self._content)
         PyFrame.__init__(self, parent, element_id, layout)
+        self.show_scrollbar = True
 
     @property
     def qt_element(self): return self._content
+
+    @property
+    def show_scrollbar(self):
+        """ If True the vertical scrollbar will always be visible, otherwise it's only visible if its content is bigger than the visible area """
+        return self._qt.verticalScrollBarPolicy() == QtCore.Qt.ScrollBarAlwaysOn
+    @show_scrollbar.setter
+    def show_scrollbar(self, show):
+        self._qt.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn if show else QtCore.Qt.ScrollBarAsNeeded)
 
 class PyLabelFrame(PyFrame):
     """
