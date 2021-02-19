@@ -113,7 +113,7 @@ class PyElement:
     def max_width(self, width):
         width = int(width)
         if width <= 0: width = QtWidgets.QWIDGETSIZE_MAX
-        self.qt_element.setMinimumWidth(width)
+        self.qt_element.setMaximumWidth(width)
 
     def get_key(self, key):
         """ Returns keycode associated with given description, returns None if the description was not found """
