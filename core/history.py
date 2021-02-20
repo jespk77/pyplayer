@@ -99,6 +99,7 @@ class History:
 		self._ensure_limit()
 		self._call_history_update()
 		self._reset_index()
+		self.save()
 		return len(self._history)
 
 	def peek_previous(self):
@@ -121,6 +122,7 @@ class History:
 			return default
 		else:
 			self._call_index_update()
+			self.save()
 			return self._history[self._index]
 
 	def peek_next(self):
@@ -143,6 +145,7 @@ class History:
 			return default
 		else:
 			self._call_index_update()
+			self.save()
 			return self._history[self._index]
 
 	@property
@@ -156,6 +159,7 @@ class History:
 		self._call_history_update()
 		self._index = 0
 		self._call_index_update()
+		self.save()
 
 	def OnIndexUpdated(self, cb):
 		"""
