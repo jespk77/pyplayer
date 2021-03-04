@@ -431,7 +431,7 @@ def on_player_update(event, player):
 		song_tracker.add(md.display_name)
 		try: module.client["player"]["songbrowser"].add_count(md.display_name)
 		except KeyError: pass
-	song_history.add((md.path, md.song))
+	song_history.add([md.path, md.song])
 
 def on_end_reached(event, player):
 	module.interpreter.put_command("autoplay next")
