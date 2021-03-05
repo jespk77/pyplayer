@@ -1100,8 +1100,9 @@ class PyProgessbar(PyElement):
 
 class PyItemlist(PyElement):
     """
-        Show a list of items the user can select
-        Interaction event fires when an item is left clicked, updating the selection, no keywords
+     Show a list of items the user can select
+     Interaction event fires when an item is left clicked, updating the selection
+        Keywords: current: int -> the newly selected index, previous: int -> the previously selected index
     """
     def __init__(self, parent, element_id):
         self._qt = QtWidgets.QListView(parent.qt_element)
@@ -1112,7 +1113,8 @@ class PyItemlist(PyElement):
         self.qt_element.setFlow(QtWidgets.QListView.TopToBottom)
         self.qt_element.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.qt_element.setEditTriggers(QtWidgets.QListView.NoEditTriggers)
-        self._qt.setStyleSheet(f"""
+        self.qt_element.currentChanged = self._on_selection_change
+        self.qt_element.setStyleSheet(f"""
             QListView {{ 
              selection-background-color: #101010; selection-color: {self._qt.palette().highlight().color().name()}
             }} """)
@@ -1179,6 +1181,10 @@ class PyItemlist(PyElement):
         """ Make sure given index is visible """
         self.qt_element.scrollTo(self._items.index(index))
 
+    # QListView.currentChanged override
+    def _on_selection_change(self, current, previous):
+        self.events.call_event("interact", current=current.row(), previous=previous.row())
+        return type(self.qt_element).currentChanged(self.qt_element, current, previous)
 
 class PySeparator(PyElement):
     def __init__(self, parent, element_id):
