@@ -508,6 +508,84 @@ class PyTextInput(PyElement):
         return PyElement._on_key_press(self, key)
 
 
+class PyNumberInput(PyElement):
+    """
+     Variant of PyTextInput that only accepts numbers
+     Precision can be adjusted during creation
+     Interaction event fires when the enter key is pressed or if this element loses focus, no keywords
+     If 'return_only' is set to true, interaction event only fires if the enter key is pressed
+    """
+    def __init__(self, parent, element_id, double=False, return_only=False):
+        self._double = double
+        self._qt = (QtWidgets.QSpinBox if not double else QtWidgets.QDoubleSpinBox)(parent.qt_element)
+        PyElement.__init__(self, parent, element_id)
+        (self.qt_element.returnPressed if return_only else self.qt_element.editingFinished).connect(lambda : self.events.call_event("interact"))
+
+    @property
+    def accept_input(self): self.qt_element.isReadOnly()
+    @accept_input.setter
+    def accept_input(self, inpt): self.qt_element.setReadOnly(bool(inpt))
+    def with_accept_input(self, inpt):
+        self.accept_input = inpt
+        return self
+
+    @property
+    def value(self):
+        """ The current value, does not include the prefix and/or suffix if set """
+        return self.qt_element.value()
+    @value.setter
+    def value(self, val): self.qt_element.setValue(val)
+    def with_value(self, val):
+        self.value = val
+        return self
+
+    @property
+    def min(self):
+        """ The minimum allowed value that can be entered """
+        return self.qt_element.minimum()
+    minimum = min
+    @min.setter
+    def min(self, value): self.qt_element.setMinimum(int(value) if not self._double else float(value))
+
+    @property
+    def max(self):
+        """ The maximum allowed value that can be entered """
+        return self.qt_element.maximum()
+    maximum = max
+    @max.setter
+    def max(self, value): self.qt_element.setMaximum(int(value) if not self._double else float(value))
+
+    def range(self, min_value, max_value): self.qt_element.setRange(min_value, max_value)
+
+    @property
+    def step(self):
+        """ How much the value should increase/decrease in one step """
+        return self.qt_element.singleStep()
+    @step.setter
+    def step(self, amount): self.qt_element.setSingleStep(int(amount) if not self._double else float(amount))
+
+    @property
+    def value_base(self):
+        """ The number base that should be used for display """
+        return self.qt_element.displayIntegerBase()
+    @value_base.setter
+    def value_base(self, base): self.qt_element.setDisplayIntegerBase(int(base))
+
+    @property
+    def prefix(self):
+        """ Text that should be displayed in front of the actual value """
+        return self.qt_element.prefix()
+    @prefix.setter
+    def prefix(self, txt): self.qt_element.setPrefix(txt)
+
+    @property
+    def suffix(self):
+        """ Text that should be displayed after the actual value """
+        return self.qt_element.suffix()
+    @suffix.setter
+    def suffix(self, txt): self.qt_element.setSuffix(txt)
+
+
 class PyCheckbox(PyElement):
     """
         Adds a simple checkable box
