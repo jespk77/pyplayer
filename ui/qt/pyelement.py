@@ -328,6 +328,68 @@ class PyTabFrame(PyElement):
         PyElement.on_destroy(self)
 
 
+class PyFrameList(PyElement):
+    """
+     Supports multiple frames inside itself, only one is visible at a time
+     No interaction event
+    """
+    def __init__(self, parent, element_id):
+        self._qt = QtWidgets.QStackedWidget(parent.qt_element)
+        self._pages = []
+        PyElement.__init__(self, parent, element_id)
+
+    def add_frame(self, frame=None, frame_class=None, **frame_args):
+        """
+         Adds a new frame at the end with given frame instance or class
+         Returns the newly added frame
+        """
+        if frame is None:
+            if not issubclass(frame_class, PyFrame): raise TypeError("Can only add pages with subclasses of PyFrame")
+            frame = frame_class(self, f"frame_{len(self._pages)}", **frame_args)
+        elif not isinstance(frame, PyFrame): raise TypeError("Can only add pages with subclasses of PyFrame")
+
+        self._pages.append(frame)
+        self.qt_element.addWidget(frame.qt_element)
+        return frame
+
+    def insert_frame(self, index, frame=None, frame_class=None, **frame_args):
+        """
+         Inserts a new frame at given index with the frame instance or class
+         Returns the newly added frame
+        """
+        if frame is None:
+            if not issubclass(frame_class, PyFrame): raise TypeError("Can only add pages with subclasses of PyFrame")
+            frame = frame_class(self, f"frame_{len(self._pages)}", **frame_args)
+        elif not isinstance(frame, PyFrame): raise TypeError("Can only add pages with subclasses of PyFrame")
+
+        self._pages.insert(index, frame)
+        self.qt_element.insertWidget(index, frame.qt_element)
+        return frame
+
+    def remove_frame(self, index):
+        """ Removes the frame at given index, has no effect if the index is out of range """
+        try:
+            frame = self._pages[index]
+            self.qt_element.removeWidget(frame.qt_element)
+            del self._pages[index]
+        except IndexError: pass
+
+    @property
+    def current_index(self):
+        """ The index of the currently visible frame or -1 if no frames are available """
+        return self.qt_element.currentIndex()
+    @current_index.setter
+    def current_index(self, index): self.qt_element.setCurrentIndex(int(index))
+
+    @property
+    def current_frame(self):
+        """ The currently visible frame or None if no frames available """
+        try: return self._pages[self.current_index]
+        except IndexError: return None
+
+    def __len__(self): return self.qt_element.count()
+
+
 class PyTextLabel(PyElement):
     """
         Element for displaying a line of text and/or an image
