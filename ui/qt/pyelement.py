@@ -133,7 +133,7 @@ class PyElement:
             return True
 
         type(self.qt_element).keyPressEvent(self.qt_element, event)
-        return False
+        return event.isAccepted()
 
     # QWidget.mousePressEvent override
     def _on_mouse_press(self, event):
