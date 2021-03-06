@@ -28,7 +28,9 @@ class PyElement:
     def __del__(self): print("MEMORY", f"PyElement '{self.element_id}' deleted")
 
     @property
-    def qt_element(self) -> QtWidgets.QWidget: return self._qt
+    def qt_element(self): return self._qt
+    @property
+    def qt_container(self): return self._qt
 
     @property
     def parent(self):
@@ -277,7 +279,7 @@ class PyTabFrame(PyElement):
             page = frame
 
         self._tabs.append(page)
-        self.qt_element.addTab(page.qt_element, name)
+        self.qt_element.addTab(page.qt_container, name)
         return page
 
     def insert_tab(self, index, name, frame=None, frame_class=PyFrame, **frame_args):
@@ -294,7 +296,7 @@ class PyTabFrame(PyElement):
             page = frame
 
         self._tabs.insert(index, page)
-        self.qt_element.insertTab(index, page.qt_element, name)
+        self.qt_element.insertTab(index, page.qt_container, name)
         return page
 
     def get_tab(self, index):
@@ -349,7 +351,7 @@ class PyFrameList(PyElement):
         elif not isinstance(frame, PyFrame): raise TypeError("Can only add pages with subclasses of PyFrame")
 
         self._pages.append(frame)
-        self.qt_element.addWidget(frame.qt_element)
+        self.qt_element.addWidget(frame.qt_container)
         return frame
 
     def insert_frame(self, index, frame=None, frame_class=None, **frame_args):
@@ -363,14 +365,14 @@ class PyFrameList(PyElement):
         elif not isinstance(frame, PyFrame): raise TypeError("Can only add pages with subclasses of PyFrame")
 
         self._pages.insert(index, frame)
-        self.qt_element.insertWidget(index, frame.qt_element)
+        self.qt_element.insertWidget(index, frame.qt_container)
         return frame
 
     def remove_frame(self, index):
         """ Removes the frame at given index, has no effect if the index is out of range """
         try:
             frame = self._pages[index]
-            self.qt_element.removeWidget(frame.qt_element)
+            self.qt_element.removeWidget(frame.qt_container)
             del self._pages[index]
         except IndexError: pass
 
