@@ -329,6 +329,10 @@ class PyTabFrame(PyElement):
         for tab in self._tabs: tab.on_destroy()
         PyElement.on_destroy(self)
 
+    def __len__(self): return self.qt_element.count()
+    def __iter__(self): return iter(self._tabs)
+    def __contains__(self, item): return item in self._tabs
+
 
 class PyFrameList(PyElement):
     """
@@ -368,6 +372,12 @@ class PyFrameList(PyElement):
         self.qt_element.insertWidget(index, frame.qt_container)
         return frame
 
+    def get_frame(self, index):
+        """ Gets the frame at the given index or None if out of range """
+        try: return self._pages[index]
+        except ValueError: return None
+    __getitem__ = get_frame
+
     def remove_frame(self, index):
         """ Removes the frame at given index, has no effect if the index is out of range """
         try:
@@ -390,6 +400,8 @@ class PyFrameList(PyElement):
         except IndexError: return None
 
     def __len__(self): return self.qt_element.count()
+    def __iter__(self): return iter(self._pages)
+    def __contains__(self, item): return item in self._pages
 
 
 class PyTextLabel(PyElement):
