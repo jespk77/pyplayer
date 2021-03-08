@@ -53,10 +53,12 @@ class PyFileDialog(PyDialog):
     @property
     def file(self): return self.qt_dialog.selectedFiles()[0]
     @file.setter
-    def file(self, file): self.qt_dialog.selectFile(file)
+    def file(self, file):
+        self.directory, file = os.path.split(file)
+        self.qt_dialog.selectFile(file)
 
     @property
-    def directory(self): return os.path.split(self.qt_dialog.selectedFiles()[0])[0]
+    def directory(self): return os.path.split(self.qt_dialog.selectedFiles()[0]+os.path.sep)[0]
     @directory.setter
     def directory(self, directory): self.qt_dialog.setDirectory(directory)
 
@@ -70,6 +72,10 @@ class PyFileDialog(PyDialog):
 
     @property
     def value(self): return self.directory if self.qt_dialog.fileMode() == QtWidgets.QFileDialog.Directory else self.file
+    @value.setter
+    def value(self, val):
+        if self.qt_dialog.fileMode() == QtWidgets.QFileDialog.Directory: self.directory = val
+        else: self.file = val
 
     _mode = {"any": QtWidgets.QFileDialog.AnyFile, "existing": QtWidgets.QFileDialog.ExistingFile, "directory": QtWidgets.QFileDialog.Directory}
     def set_mode(self, mode):
