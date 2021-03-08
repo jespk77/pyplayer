@@ -79,12 +79,13 @@ class PyOptionsFrame(pyelement.PyScrollableFrame):
         self._cfg = module_cfg
         pyelement.PyScrollableFrame.__init__(self, parent, element_id)
         self.show_scrollbar = False
-        self.layout.row(0, weight=0).margins(0)
+        self.layout.row(0, weight=0).row(1, weight=1).margins(0)
         self.events.EventDestroy(lambda : self._cfg.save())
 
     def create_widgets(self):
         if len(self._cfg) > 0: self.add_element(element=PyOptionsDictFrame(self, "", self._cfg))
         else: self.add_element("lbl_empty", element_class=pyelement.PyTextLabel).text = "No configurable options"
+        self.add_element("spacer", element_class=pyelement.PyFrame, row=1)
 
     def on_update(self, key, value): self._cfg[key] = value
 
