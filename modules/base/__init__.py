@@ -1,4 +1,6 @@
 from core import messagetypes, modules
+import pyoptions
+
 module = modules.Module(__package__)
 
 def get_time_from_string(delay):
@@ -53,6 +55,11 @@ def command_restart(arg, argc):
 	if argc == 0:
 		module.client.close_with_reason("restart")
 		return messagetypes.Reply("Restarting Pyplayer...")
+
+def command_options(arg, argc):
+	if argc == 0:
+		module.client.add_window(window_class=pyoptions.PyOptionsWindow, modules=module.interpreter.modules)
+		return messagetypes.Reply("Opening options window")
 
 import datetime
 timer = None
@@ -124,6 +131,7 @@ module.commands = {
 		"clear": lambda arg,argc: command_log_clear(arg, argc, all=True)
 	},
 	"modules": command_module_configure,
+	"options": command_options,
 	"restart": command_restart,
 	"timer": command_timer,
 	"version": command_version
