@@ -26,6 +26,10 @@ class _ModuleData:
 	def enabled(self):
 		""" Whether this module is currently enabled """
 		return self._module_properties["enabled"]
+	@property
+	def module(self):
+		""" The module object that is controlled """
+		return self._module
 
 	def initialize_module(self, client, interpreter):
 		print("VERBOSE", "Importing module...")
@@ -131,6 +135,11 @@ class Interpreter(QtCore.QThread):
 			print("VERBOSE", "Module successfully loaded")
 			return messagetypes.Reply("Module successfully loaded")
 		except Exception as e: return messagetypes.Error(e, f"Failed to import '{module}': module will not be available")
+
+	@property
+	def modules(self):
+		""" A dictionary containing all loaded modules """
+		return {mod.name: mod.module for mod in self._modules}
 
 	@property
 	def arguments(self):
