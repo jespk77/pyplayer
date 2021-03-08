@@ -1201,11 +1201,11 @@ class PyItemlist(PyElement):
         return type(self.qt_element).currentChanged(self.qt_element, current, previous)
 
 class PySeparator(PyElement):
-    def __init__(self, parent, element_id):
+    def __init__(self, parent, element_id, horizontal=True):
         self._qt = QtWidgets.QFrame(parent.qt_element)
         PyElement.__init__(self, parent, element_id)
         self.qt_element.setFrameShadow(QtWidgets.QFrame.Sunken)
-        self.horizontal = True
+        self.horizontal = horizontal
 
     @property
     def horizontal(self): return self.qt_element.frameShape() == QtWidgets.QFrame.HLine
