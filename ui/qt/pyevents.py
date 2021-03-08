@@ -1,17 +1,8 @@
 from PyQt5 import QtCore
 
-class EventHandler:
-    """
-     Main handler for all types of events
-     An event is a function that gets called whenever a certain action happened, these often support a number of keywords
-     A keyword is bound to an event function when the function accepts an argument with that specific name, see description of each event for what keywords are supported
-     An argument can be left out (in that case the keyword is not passed) but is an error when an argument is added that isn't a supported keyword
-    """
-    block = block_action = 0xBEEF
-
-    def __init__(self, element):
+class _EventCore:
+    def __init__(self):
         self._events = {}
-        self._element = element
 
     def call_event(self, event_name, **kwargs):
         callback = self._events.get(event_name)
@@ -23,6 +14,19 @@ class EventHandler:
     def register_event(self, event_name, cb):
         self._events[event_name] = cb
         return cb
+
+class EventHandler(_EventCore):
+    """
+     Main handler for all types of events
+     An event is a function that gets called whenever a certain action happened, these often support a number of keywords
+     A keyword is bound to an event function when the function accepts an argument with that specific name, see description of each event for what keywords are supported
+     An argument can be left out (in that case the keyword is not passed) but is an error when an argument is added that isn't a supported keyword
+    """
+    block = block_action = 0xBEEF
+
+    def __init__(self, element):
+        _EventCore.__init__(self)
+        self._element = element
 
     _key_modifiers = {QtCore.Qt.NoModifier: None, QtCore.Qt.ShiftModifier: "shift", QtCore.Qt.ControlModifier: "ctrl", QtCore.Qt.AltModifier: "alt"}
     def call_keydown_event(self, event):
@@ -222,4 +226,37 @@ class PyElementInputEvent(PyElementEvents):
             - cancellable: if cancelled the key press will not be forwarded to the element
         """
         self.register_event("history", cb)
+        return cb
+
+
+class PyDialogEvent(_EventCore):
+    """
+     Container for all dialog events, see EventHandler for more information
+     All events support 'dialog' keyword for a reference to the dialog that generated the event
+    """
+    def __init__(self, dialog):
+        self._dialog = dialog
+        _EventCore.__init__(self)
+
+    def call_event(self, event_name, **kwargs):
+        kwargs["dialog"] = self._dialog
+        _EventCore.call_event(self, event_name, **kwargs)
+
+    def EventSubmit(self, cb):
+        """
+         Event that fires when the user submits their choice in the dialog
+            - available keywords:
+                * value: the submitted value, possible options depend on the type of dialog
+            - not cancellable
+        """
+        self.register_event("submit", cb)
+        return cb
+
+    def EventCancel(self, cb):
+        """
+         Event that fires when the user closes the dialog without submitting anything
+            - no keywords
+            - not cancellable
+        """
+        self.register_event("cancel", cb)
         return cb
