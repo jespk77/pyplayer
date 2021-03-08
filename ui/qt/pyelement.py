@@ -1217,6 +1217,12 @@ class PySeparator(PyElement):
     @vertical.setter
     def vertical(self, vertical): self.horizontal = not vertical
 
+    @property
+    def color(self): return self.qt_element.palette().color(QtGui.QPalette.Active, QtGui.QPalette.Highlight).name()
+    @color.setter
+    def color(self, color): self.qt_element.setStyleSheet(f"QFrame{{ border: 1px inset {color} }} """)
+
+
 try:
     from PyQt5 import QtWebEngineWidgets
     class PyWebpage(PyElement):
