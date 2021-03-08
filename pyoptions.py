@@ -5,9 +5,17 @@ def create_element(parent, key, cfg):
     if isinstance(value, dict): return PyOptionsDictFrame(parent, key, cfg)
     elif isinstance(value, list): return PyOptionsListFrame(parent, key, cfg)
 
-    if isinstance(value, int): el = pyelement.PyNumberInput(parent, f"option_{key}")
-    elif isinstance(value, float): el = pyelement.PyNumberInput(parent, f"option_{key}", True)
-    else: el = pyelement.PyTextInput(parent, f"option_{key}")
+    element_id = f"option_{key}"
+    if isinstance(value, int): el = pyelement.PyNumberInput(parent, element_id)
+    elif isinstance(value, float): el = pyelement.PyNumberInput(parent, element_id, True)
+    elif isinstance(value, str):
+        if key.startswith("&"): el = pyelement.PyPathInput(parent, element_id, path=value)
+        elif key.startswith("#"): el = pyelement.PyColorInput(parent, element_id, color=value)
+        elif key.startswith("$"):
+            el = pyelement.PyPathInput(parent, element_id)
+            el.dialog.set_mode("directory")
+        else: el = pyelement.PyTextInput(parent, element_id)
+    else: raise ValueError("Unsupported type")
     el.events.EventInteract(lambda element: parent.on_update(key, element.value))
     el.value = value
     return el
@@ -63,7 +71,7 @@ class PyOptionsDictFrame(pyelement.PyFrame):
         for key, value in self._cfg.items():
             if not key.startswith("_"):
                 lbl = self.add_element(f"lbl_{key}", element_class=pyelement.PyTextLabel, row=row)
-                lbl.text = key.replace("_", " ").capitalize()
+                lbl.text = key.lstrip("$#&").replace("_", " ").capitalize()
                 lbl.set_alignment("centerV")
 
                 self.add_element(f"val_{key}", element=create_element(self, key, value), row=row, column=1)
