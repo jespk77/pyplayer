@@ -1205,7 +1205,7 @@ class PySeparator(PyElement):
         self._qt = QtWidgets.QFrame(parent.qt_element)
         PyElement.__init__(self, parent, element_id)
         self.qt_element.setFrameShadow(QtWidgets.QFrame.Sunken)
-        self.horizontal = horizontal
+        self.horizontal, self.thickness = horizontal, 2
 
     @property
     def horizontal(self): return self.qt_element.frameShape() == QtWidgets.QFrame.HLine
@@ -1218,9 +1218,16 @@ class PySeparator(PyElement):
     def vertical(self, vertical): self.horizontal = not vertical
 
     @property
+    def thickness(self): return self.max_height if self.horizontal else self.max_width
+    @thickness.setter
+    def thickness(self, thickness):
+        if self.horizontal: self.max_height = thickness
+        else: self.max_width = thickness
+
+    @property
     def color(self): return self.qt_element.palette().color(QtGui.QPalette.Active, QtGui.QPalette.Highlight).name()
     @color.setter
-    def color(self, color): self.qt_element.setStyleSheet(f"QFrame{{ border: 1px inset {color} }} """)
+    def color(self, color): self.qt_element.setStyleSheet(f"QFrame{{ border: {self.thickness}px inset {color} }} """)
 
 
 try:
