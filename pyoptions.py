@@ -1,26 +1,26 @@
 from ui.qt import pywindow, pyelement
 
-def create_element(parent, key, value):
-    if isinstance(value, dict): return PyOptionsDictFrame(parent, key, value)
-    elif isinstance(value, list): return PyOptionsListFrame(parent, key, value)
+def create_element(parent, key, cfg):
+    value = cfg.value
+    if isinstance(value, dict): return PyOptionsDictFrame(parent, key, cfg)
+    elif isinstance(value, list): return PyOptionsListFrame(parent, key, cfg)
 
     if isinstance(value, int): el = pyelement.PyNumberInput(parent, f"option_{key}")
     elif isinstance(value, float): el = pyelement.PyNumberInput(parent, f"option_{key}", True)
     else: el = pyelement.PyTextInput(parent, f"option_{key}")
-    el.events.EventInteract(lambda : parent.on_update(key, el.value))
+    el.events.EventInteract(lambda element: parent.on_update(key, element.value))
     el.value = value
     return el
 
 class PyOptionsListFrame(pyelement.PyFrame):
-    def __init__(self, parent, key, value):
-        if not isinstance(value, list): raise TypeError("value must be a list")
-        self._key, self._value = key, value
+    def __init__(self, parent, key, cfg):
+        self._key, self._cfg = key, cfg
         pyelement.PyFrame.__init__(self, parent, f"option_{key}")
         self.layout.margins(5)
 
     def create_widgets(self):
         row = 0
-        for item in self._value:
+        for item in self._cfg.value:
             if isinstance(item, str): el = self.add_element(f"item_{row}", element_class=pyelement.PyTextInput, row=row)
             else: el = self.add_element(f"item_{row}", element_class=pyelement.PyNumberInput, double=isinstance(item, float), row=row)
             el.index, el.value = row, item
@@ -37,31 +37,30 @@ class PyOptionsListFrame(pyelement.PyFrame):
 
     def on_update(self, index, value=None):
         if value is None:
-            del self._value[index]
+            del self._cfg.value[index]
             change = 1
-        elif index >= len(self._value):
-            self._value.append(value)
+        elif index >= len(self._cfg.value):
+            self._cfg.value.append(value)
             change = 2
         else:
-            self._value[index] = value
+            self._cfg.value[index] = value
             change = 0
-        self.parent.on_update(self._key, self._value)
 
+        self._cfg.mark_dirty()
         if change > 0:
             for c in self.children: self.remove_element(c.element_id)
             self.create_widgets()
-            if change == 2: self.get_element(f"item_{len(self._value) - 1}").get_focus()
+            if change == 2: self.get_element(f"item_{len(self._cfg.value) - 1}").get_focus()
 
 class PyOptionsDictFrame(pyelement.PyFrame):
-    def __init__(self, parent, key, value):
-        if not isinstance(value, dict): raise TypeError("value must be a dictionary")
-        self._key, self._value = key, value
+    def __init__(self, parent, key, cfg):
+        self._key, self._cfg = key, cfg
         pyelement.PyFrame.__init__(self, parent, f"option_{key}")
         self.layout.margins(5)
 
     def create_widgets(self):
         row = 0
-        for key, value in self._value.items():
+        for key, value in self._cfg.items():
             if not key.startswith("_"):
                 lbl = self.add_element(f"lbl_{key}", element_class=pyelement.PyTextLabel, row=row)
                 lbl.text = key.replace("_", " ").capitalize()
@@ -73,7 +72,7 @@ class PyOptionsDictFrame(pyelement.PyFrame):
                 row += 2
         self.remove_element(f"sep_{row-2}")
 
-    def on_update(self, key, value): self.parent.on_update(f"{self._key}::{key}" if self._key else key, value)
+    def on_update(self, key, value): self._cfg[key] = value
 
 class PyOptionsFrame(pyelement.PyScrollableFrame):
     def __init__(self, parent, element_id, module_cfg):
@@ -84,13 +83,10 @@ class PyOptionsFrame(pyelement.PyScrollableFrame):
         self.events.EventDestroy(lambda : self._cfg.save())
 
     def create_widgets(self):
-        cfg = self._cfg.value
-        if len(cfg) > 0: self.add_element(element=PyOptionsDictFrame(self, "", cfg), column=1)
+        if len(self._cfg) > 0: self.add_element(element=PyOptionsDictFrame(self, "", self._cfg))
         else: self.add_element("lbl_empty", element_class=pyelement.PyTextLabel).text = "No configurable options"
 
-    def on_update(self, key, value):
-        print("key", key, "updated to", value)
-        self._cfg[key] = value
+    def on_update(self, key, value): self._cfg[key] = value
 
 class PyOptionsWindow(pywindow.PyWindow):
     def __init__(self, parent, modules):
