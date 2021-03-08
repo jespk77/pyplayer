@@ -1,6 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from . import pywindow, pyevents, pyimage, pylayout
+from . import pywindow, pyevents, pyimage, pylayout, pydialog
 
 def valid_check(element):
     if not isinstance(element, PyElement) and not isinstance(element, pywindow.PyWindow): raise ValueError("Parent must be an instance of PyElement or PyWindow")
@@ -1231,6 +1231,80 @@ class PySeparator(PyElement):
     def color(self): return self.qt_element.palette().color(QtGui.QPalette.Active, QtGui.QPalette.Highlight).name()
     @color.setter
     def color(self, color): self.qt_element.setStyleSheet(f"QFrame{{ border: {self.thickness}px inset {color} }} """)
+
+
+class PyColorInput(PyFrame):
+    """
+     Custom element for entering a color value, can either be updated with text or a dialog
+     Interaction event fires when the color is updated either through text or the dialog
+     Keyword: 'color': str, the newly selected color
+    """
+    def __init__(self, parent, element_id, color=None):
+        PyFrame.__init__(self, parent, element_id)
+        self.layout.row(0, weight=1).column(0, weight=1).margins(0)
+        self._color = pydialog.PyColorDialog(self.window)
+        self._color.events.EventSubmit(self._on_select_color)
+        if color is not None: self.color = color
+
+    def create_widgets(self):
+        txt = self.add_element("txt", element_class=PyTextInput)
+        txt.events.EventInteract(lambda : self._on_select_color(txt.value))
+
+        btn = self.add_element("select", element_class=PyButton, column=1)
+        btn.text, btn.max_width = "...", 25
+        btn.events.EventInteract(lambda : self._color.open())
+
+    @property
+    def dialog(self): return self._color
+
+    @property
+    def color(self): return self["txt"].text
+    @color.setter
+    def color(self, color):
+        self["txt"].text = color
+        self.dialog.color = color
+    value = color
+
+    def _on_select_color(self, value):
+        self.color = value
+        self.events.call_event("interact", color=value)
+
+
+class PyPathInput(PyFrame):
+    """
+     Custom element for entering a path or directory, can either be updated with text or a dialog
+     Interaction event fires when the path is updated either through text or with the dialog
+     Keywords: 'path': str, the newly selected path
+    """
+    def __init__(self, parent, element_id, path=None):
+        PyFrame.__init__(self, parent, element_id)
+        self.layout.row(0, weight=1).column(0, weight=1).margins(0)
+        self._path = pydialog.PyFileDialog(self.window)
+        self._path.events.EventSubmit(self._on_path_select)
+        if path is not None: self.path = path
+
+    def create_widgets(self):
+        txt = self.add_element("txt", element_class=PyTextInput)
+        txt.events.EventInteract(lambda : self._on_path_select(txt.value))
+
+        btn = self.add_element("select", element_class=PyButton, column=1)
+        btn.text, btn.max_width = "...", 25
+        btn.events.EventInteract(lambda : self._path.open())
+
+    @property
+    def dialog(self): return self._path
+
+    @property
+    def path(self): return self["txt"].text
+    @path.setter
+    def path(self, path):
+        self["txt"].text = path
+        self.dialog.value = path
+    value = path
+
+    def _on_path_select(self, value):
+        self.path = value
+        self.events.call_event("interact", path=value)
 
 
 try:
