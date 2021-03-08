@@ -16,7 +16,6 @@ class PyElement:
 
         self.qt_element.event = self._on_event
         self.qt_element.mousePressEvent = self._on_mouse_press
-        self.qt_element.keyPressEvent = self._on_key_press
         self.qt_element.mouseDoubleClickEvent = self._on_mouse_doubleclick
         self.qt_element.focusInEvent = self._on_focus
         self.qt_element.focusOutEvent = self._on_focus_lose
