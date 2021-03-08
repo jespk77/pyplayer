@@ -399,6 +399,10 @@ class PyFrameList(PyElement):
         try: return self._pages[self.current_index]
         except IndexError: return None
 
+    def on_destroy(self):
+        for frame in self._pages: frame.on_destroy()
+        PyElement.on_destroy(self)
+
     def __len__(self): return self.qt_element.count()
     def __iter__(self): return iter(self._pages)
     def __contains__(self, item): return item in self._pages
