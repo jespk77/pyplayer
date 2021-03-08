@@ -35,6 +35,9 @@ class ConfigurationItem:
 	def mark_dirty(self):
 		with self._lock: self._dirty = True
 
+	def _clear_dirty(self):
+		self._dirty = False
+
 	def __getitem__(self, item): raise TypeError("This item does not support subkeys")
 	def __setitem__(self, key, value): self.__getitem__(key)
 	def __delitem__(self, key): self.__getitem__(key)
@@ -60,6 +63,17 @@ class Configuration(ConfigurationItem):
 		if value:
 			if isinstance(value, dict): self.update(value)
 			else: raise ValueError("Configuration value must be a dict")
+
+	@property
+	def dirty(self):
+		if self._dirty: return True
+		for val in self.values():
+			if val.dirty: return True
+		return False
+
+	def _clear_dirty(self):
+		self._dirty = False
+		for val in self.values(): val._clear_dirty()
 
 	def __getitem__(self, item):
 		with self._lock:
@@ -193,7 +207,7 @@ class ConfigurationFile(Configuration):
 			if self._initialvalues: self._value = self._initialvalues
 			fl = self._read_file()
 			if fl: self.update(fl)
-			self._dirty = False
+			self._clear_dirty()
 
 	@property
 	def filename(self): return self._file.split("/")[-1]
@@ -224,4 +238,4 @@ class ConfigurationFile(Configuration):
 					import json
 					json.dump(self.value, file, indent=5)
 					file.flush()
-					self._dirty = False
+					self._clear_dirty()
