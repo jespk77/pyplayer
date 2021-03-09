@@ -64,7 +64,7 @@ class PyOptionsDictFrame(pyelement.PyFrame):
     def __init__(self, parent, key, cfg):
         self._key, self._cfg = key, cfg
         pyelement.PyFrame.__init__(self, parent, f"option_{key}")
-        self.layout.margins(5)
+        self.layout.column(1, weight=1).margins(5)
 
     def create_widgets(self):
         row = 0
@@ -93,7 +93,6 @@ class PyOptionsDictFrame(pyelement.PyFrame):
                 sep = self.add_element(f"sep_{row}", element_class=pyelement.PySeparator, row=row+1, columnspan=3)
                 sep.color, sep.thickness = "#111111", 1
                 row += 2
-        self.remove_element(f"sep_{row-2}")
 
         if add_new:
             btn = self.add_element("add_new", element_class=pyelement.PyButton, row=row, columnspan=3)
