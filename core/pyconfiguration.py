@@ -60,6 +60,7 @@ class ConfigurationItem:
 class Configuration(ConfigurationItem):
 	def __init__(self, value=None, read_only=False):
 		ConfigurationItem.__init__(self, {}, read_only)
+		self._new_value = None
 		if value:
 			if isinstance(value, dict): self.update(value)
 			else: raise ValueError("Configuration value must be a dict")
@@ -183,6 +184,15 @@ class Configuration(ConfigurationItem):
 	@property
 	def value(self):
 		with self._lock: return {k: v.value for k, v in self.items()}
+
+	@property
+	def can_add_new(self): return self._new_value is not None
+	@property
+	def new_value(self): return self._new_value
+	@new_value.setter
+	def new_value(self, val):
+		if val is not None and not isinstance(val, dict): raise TypeError("Can only add new values from a dictionary")
+		self._new_value = val
 
 	def __len__(self):
 		with self._lock: return len(self.value)
