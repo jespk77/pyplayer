@@ -537,6 +537,7 @@ class PyNumberInput(PyElement):
         self._qt = (QtWidgets.QSpinBox if not double else QtWidgets.QDoubleSpinBox)(parent.qt_element)
         PyElement.__init__(self, parent, element_id)
         (self.qt_element.returnPressed if return_only else self.qt_element.editingFinished).connect(lambda : self.events.call_event("interact"))
+        self.min, self.max = -99, 99
 
     @property
     def accept_input(self): self.qt_element.isReadOnly()
