@@ -35,7 +35,7 @@ class PyOptionsListFrame(pyelement.PyFrame):
             el.events.EventInteract(lambda element: self.on_update(element.index, element.value))
 
             btn = self.add_element(f"del_{row}", element_class=pyelement.PyButton, row=row, column=1)
-            btn.index, btn.text = row, "X"
+            btn.index, btn.text, btn.max_width = row, "X", 20
             btn.events.EventInteract(lambda element: self.on_update(element.index))
             row += 1
 
