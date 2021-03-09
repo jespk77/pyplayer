@@ -23,42 +23,56 @@ def create_element(parent, key, cfg):
 class PyOptionsListFrame(pyelement.PyFrame):
     def __init__(self, parent, key, cfg):
         self._key, self._cfg = key, cfg
-        pyelement.PyFrame.__init__(self, parent, f"option_{key}")
+        self._index, self._type = 0, self._get_type()
+        self._items = []
+        pyelement.PyFrame.__init__(self, parent, f"option_{key}", "vertical")
         self.layout.margins(5)
 
+    def _get_type(self):
+        default = self._cfg.default_value
+        return type(default) if default is not None else str
+
+    def _create_itemframe(self, index, item):
+        frame = self.add_element(f"item_{self._index}", element_class=pyelement.PyFrame, index=self._index)
+        frame.current_index = index
+        frame.layout.margins(0)
+
+        if self._type is str: el = frame.add_element("value", element_class=pyelement.PyTextInput)
+        else: el = frame.add_element(element=pyelement.PyNumberInput(frame, "value", double=self._type is float))
+        el.value = item
+        el.events.EventInteract(lambda element: self.on_update(element.parent.current_index, element.value))
+
+        btn = frame.add_element("del", element_class=pyelement.PyButton, column=1)
+        btn.text, btn.max_width = "X", 20
+        btn.events.EventInteract(lambda element: self.on_update(element.parent.current_index))
+
+        self._items.append(frame.element_id)
+        self._index += 1
+
     def create_widgets(self):
-        row = 0
+        index = 0
         for item in self._cfg.value:
-            if isinstance(item, str): el = self.add_element(f"item_{row}", element_class=pyelement.PyTextInput, row=row)
-            else: el = self.add_element(f"item_{row}", element_class=pyelement.PyNumberInput, double=isinstance(item, float), row=row)
-            el.index, el.value = row, item
-            el.events.EventInteract(lambda element: self.on_update(element.index, element.value))
+            self._create_itemframe(index, item)
+            index += 1
 
-            btn = self.add_element(f"del_{row}", element_class=pyelement.PyButton, row=row, column=1)
-            btn.index, btn.text, btn.max_width = row, "X", 20
-            btn.events.EventInteract(lambda element: self.on_update(element.index))
-            row += 1
-
-        add_btn = self.add_element("add_btn", element_class=pyelement.PyButton, row=row, columnspan=2)
-        add_btn.index, add_btn.text = row, "Add"
-        add_btn.events.EventInteract(lambda element: self.on_update(element.index, ""))
+        add_btn = self.add_element("add_btn", element_class=pyelement.PyButton)
+        add_btn.new_index, add_btn.text = index, "Add"
+        add_btn.events.EventInteract(lambda element: self.on_update(element.new_index, "" if self._type is str else 0))
 
     def on_update(self, index, value=None):
         if value is None:
             del self._cfg.value[index]
-            change = 1
+            self.remove_element(self._items[index])
+            del self._items[index]
+
+            for index, e in enumerate(self._items): self[e].current_index = index
+            self["add_btn"].new_index = index + 1
         elif index >= len(self._cfg.value):
             self._cfg.value.append(value)
-            change = 2
-        else:
-            self._cfg.value[index] = value
-            change = 0
-
+            self._create_itemframe(index, value)
+            self["add_btn"].new_index = index + 1
+        else: self._cfg.value[index] = value
         self._cfg.mark_dirty()
-        if change > 0:
-            for c in self.children: self.remove_element(c.element_id)
-            self.create_widgets()
-            if change == 2: self.get_element(f"item_{len(self._cfg.value) - 1}").get_focus()
 
 class PyOptionsDictFrame(pyelement.PyFrame):
     def __init__(self, parent, key, cfg):
@@ -100,7 +114,7 @@ class PyOptionsDictFrame(pyelement.PyFrame):
             btn.events.EventInteract(self._add_new)
 
     def _add_new(self):
-        self._cfg[""] = self._cfg.new_value
+        self._cfg[""] = self._cfg.default_value
         self._recreate_widgets()
 
     def _move_key(self, element):
