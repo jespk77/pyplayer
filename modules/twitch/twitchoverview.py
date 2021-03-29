@@ -319,7 +319,7 @@ class AutoRefreshFrame(pyelement.PyFrame):
 
 
 TwitchOverviewID = "twitch_overview"
-browser_path_key = "browser_path"
+browser_path_key = "&browser_path"
 alternate_player_key = "alternate_player_url"
 channel_live_command_key = "new_channel_live_command"
 
