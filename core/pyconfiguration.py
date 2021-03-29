@@ -199,6 +199,16 @@ class Configuration(ConfigurationItem):
 		if val is not None and not isinstance(val, dict): raise TypeError("Can only add new values from a dictionary")
 		self._default_value = val
 
+	def rename(self, from_key, to_key):
+		"""
+		 Rename the options for a specific key to a different key
+		 Raises a KeyError if the target key already exists
+		"""
+		if to_key in self: raise KeyError(f"'{to_key}' already exists")
+		with self._lock:
+			self._value[to_key] = self._value[from_key]
+			del self._value[from_key]
+
 	def __len__(self):
 		with self._lock: return len(self.value)
 	def __str__(self):
