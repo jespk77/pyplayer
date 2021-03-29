@@ -160,6 +160,8 @@ class Configuration(ConfigurationItem):
 		""" Same as get, but when a key wasn't found the 'create_value' (if given) is set to that value """
 		with self._lock:
 			res = self.get(key)
+
+			if create_value is None: create_value = self.default_value
 			if res is None and create_value is not None:
 				self[key] = create_value
 				return self.get(key)
@@ -175,6 +177,8 @@ class Configuration(ConfigurationItem):
 		with self._lock:
 			try: res = self._get_item(key)
 			except KeyError: res = None
+
+			if create_value is None: create_value = self.default_value
 			if res is None and create_value is not None:
 				self[key] = create_value
 				return self._get_item(key)
