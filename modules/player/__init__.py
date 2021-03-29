@@ -34,10 +34,10 @@ def get_song(arg):
 	if len(arg) > 0:
 		path = dir.get(arg[0])
 		if path is not None:
-			path = path["path"]
+			path = path["$path"]
 			return path, media_player.find_song(path, arg[1:])
 
-		paths = [(key, vl["path"], vl["priority"]) for key, vl in dir.items() if vl["priority"] > 0]
+		paths = [(key, vl["$path"], vl["priority"]) for key, vl in dir.items() if vl["priority"] > 0]
 		paths.sort(key=lambda a: a[2])
 		songs = None
 		for pt in paths:
@@ -132,7 +132,7 @@ def command_filter_clear(arg, argc):
 		dir = module.configuration["directory"]
 		if isinstance(dir, dict):
 			default_path = module.configuration[default_dir_path]
-			media_player.update_filter(path=dir.get(default_path, {}).get("path", ""), keyword="")
+			media_player.update_filter(path=dir.get(default_path, {}).get("$path", ""), keyword="")
 			module.client.schedule_task(task_id=player_filter_update_task, path=default_path)
 			return messagetypes.Reply("Filter cleared")
 		else: return invalid_cfg
@@ -150,7 +150,7 @@ def command_filter(arg, argc):
 
 			if path is not None:
 				arg = " ".join(arg)
-				media_player.update_filter(path=path["path"], keyword=arg)
+				media_player.update_filter(path=path["$path"], keyword=arg)
 				module.client.schedule_task(task_id=player_filter_update_task, path=displaypath)
 				if len(arg) > 0: return messagetypes.Reply("Filter set to '" + arg + "' from '" + displaypath + "'")
 				else: return messagetypes.Reply("Filter set to directory '{}'".format(displaypath))
@@ -252,7 +252,7 @@ def command_random(arg, argc):
 	path = ""
 	if argc > 0:
 		try:
-			path = dirs[arg[0]]["path"]
+			path = dirs[arg[0]]["$path"]
 			arg.pop(0)
 		except KeyError: pass
 	set_autoplay_ignore(False)
@@ -379,7 +379,8 @@ def initialize():
 	player.add_element("autoplay", element_class=pyelement.PyTextLabel, row=1)
 	player.add_element("filter", element_class=pyelement.PyTextLabel, row=1, column=1).set_alignment("right")
 
-	module.configuration.get_or_create("directory", {})
+	directory = module.configuration.get_or_create_configuration("directory", {})
+	directory.default_value = {"#color": "", "$path": "", "priority": -1}
 	module.configuration.get_or_create(default_dir_path, "")
 
 	@module.client.events.EventKeyDown("MediaPause")
@@ -412,8 +413,8 @@ def on_destroy():
 def on_media_change(event, player):
 	color = None
 	for key, options in module.configuration["directory"].items():
-		if media_player.current_media.path == options["path"]:
-			color = options.get("color")
+		if media_player.current_media.path == options["$path"]:
+			color = options.get("#color")
 			break
 	module.client.schedule_task(task_id="player_title_update", media=media_player.current_media, color=color)
 
@@ -427,7 +428,7 @@ def on_player_update(event, player):
 	md = event.data
 	default_directory = module.configuration["directory"].get(module.configuration[default_dir_path])
 
-	if default_directory is not None and md.path == default_directory["path"]:
+	if default_directory is not None and md.path == default_directory["$path"]:
 		song_tracker.add(md.display_name)
 		try: module.client["player"]["songbrowser"].add_count(md.display_name)
 		except KeyError: pass
