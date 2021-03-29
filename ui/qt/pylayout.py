@@ -43,16 +43,20 @@ class PyGridLayout(PyLayout):
     def columns(self): return self.qt_layout.columnCount()
 
     def row(self, index, minsize=None, weight=None):
+        if index < 0: index += self.rows
         if minsize is not None: self.qt_layout.setRowMinimumHeight(index, minsize)
         if weight is not None: self.qt_layout.setRowStretch(index, weight)
         return self
 
     def column(self, index, minsize=None, weight=None):
+        if index < 0: index += self.columns
         if minsize is not None: self.qt_layout.setColumnMinimumWidth(index, minsize)
         if weight is not None: self.qt_layout.setColumnStretch(index, weight)
         return self
 
     def insert_element(self, element, row=0, column=0, rowspan=1, columnspan=1):
+        if row < 0: row += self.rows
+        if column < 0: column += self.columns
         self.qt_layout.addWidget(element._qt, row, column, rowspan, columnspan)
         return self
 
@@ -73,16 +77,21 @@ class PyVerticalLayout(PyLayout):
     def count(self): return self.qt_layout.count()
 
     def item(self, index, weight=None):
+        if index < 0: index += self.count()
         if weight is not None: self.qt_layout.setStretch(index, weight)
 
     def insert_element(self, element, index=None, weight=0):
-        if index is None: self.qt_layout.addWidget(element._qt, weight)
-        else: self.qt_layout.insertWidget(index, element._qt, weight)
+        if index is not None:
+            if index < 0: index += self.count()
+            self.qt_layout.insertWidget(index, element._qt, weight)
+        else: self.qt_layout.addWidget(element._qt, weight)
         return self
 
     def insert_spacing(self, index=None, spacing=0):
-        if index is None: self.qt_layout.addSpacing(spacing)
-        else: self.qt_layout.insertSpacing(index, spacing)
+        if index is not None:
+            if index < 0: index += self.count()
+            self.qt_layout.insertSpacing(index, spacing)
+        else: self.qt_layout.addSpacing(spacing)
 
     def index_of(self, element_id):
         element = self.owner.find_element(element_id)
