@@ -77,60 +77,60 @@ class PyOptionsListFrame(pyelement.PyFrame):
 class PyOptionsDictFrame(pyelement.PyFrame):
     def __init__(self, parent, key, cfg):
         self._key, self._cfg = key, cfg
-        pyelement.PyFrame.__init__(self, parent, f"option_{key}")
-        self.layout.column(1, weight=1).margins(5)
+        self._items, self._index = {}, 0
+        pyelement.PyFrame.__init__(self, parent, f"option_{key}", "vertical")
+        self.layout.margins(5)
 
-    def create_widgets(self):
-        row = 0
+    def _create_item(self, key, value, index=None):
         add_new = self._cfg.can_add_new
-
-        for key, value in self._cfg.items():
-            if not key.startswith("_"):
-                if add_new:
-                    inpt = self.add_element(f"inpt_{key}", element_class=pyelement.PyTextInput, row=row)
-                    inpt.prev_value = inpt.value = key.lstrip("$#&")
-                    inpt.events.EventInteract(self._move_key)
-
-                else:
-                    lbl = self.add_element(f"lbl_{key}", element_class=pyelement.PyTextLabel, row=row)
-                    lbl.text = key.lstrip("$#&").replace("_", " ").capitalize()
-                    lbl.set_alignment("centerV")
-
-                self.add_element(f"val_{key}", element=create_element(self, key, value), row=row, column=1)
-
-                if add_new:
-                    btn = self.add_element(f"del_{key}", element_class=pyelement.PyButton, row=row, column=2)
-                    btn.text, btn.max_width = "X", 20
-                    btn.key = key
-                    btn.events.EventInteract(self._delete_key)
-
-                sep = self.add_element(f"sep_{row}", element_class=pyelement.PySeparator, row=row+1, columnspan=3)
-                sep.color, sep.thickness = "#111111", 1
-                row += 2
+        frame = self.add_element(f"item_{self._index}", element_class=pyelement.PyFrame, index=index)
+        frame.key = key
+        frame.layout.margins(0)
 
         if add_new:
-            btn = self.add_element("add_new", element_class=pyelement.PyButton, row=row, columnspan=3)
-            btn.text = "Add"
+            inpt = frame.add_element("input", element_class=pyelement.PyTextInput)
+            inpt.prev_value = inpt.value = key.lstrip("$#&")
+            inpt.events.EventInteract(self._move_key)
+        else:
+            lbl = frame.add_element("label", element_class=pyelement.PyTextLabel)
+            lbl.text = key.lstrip("$#&").replace("_", " ").capitalize()
+            lbl.set_alignment("centerV")
+
+        frame.add_element("value", element=create_element(self, key, value), column=1)
+        if add_new:
+            btn = frame.add_element("delete", element_class=pyelement.PyButton, column=2)
+            btn.text, btn.max_width = "X", 20
+            btn.events.EventInteract(self._delete_key)
+
+        sep = frame.add_element("sep", element_class=pyelement.PySeparator, row=1, columnspan=3)
+        sep.color, sep.thickness = "#111111", 1
+        self._items[key] = frame.element_id
+        self._index += 1
+
+    def create_widgets(self):
+        for key, value in self._cfg.items():
+            if not key.startswith("_"): self._create_item(key, value)
+
+        if self._cfg.can_add_new:
+            btn = self.add_element("add_new", element_class=pyelement.PyButton)
+            btn.new_index, btn.text = self._index, "Add"
             btn.events.EventInteract(self._add_new)
 
     def _add_new(self):
-        self._cfg[""] = self._cfg.default_value
-        self._recreate_widgets()
+        self._create_item("", self._cfg.get_or_create_configuration(""), index=-1)
 
     def _move_key(self, element):
         if element.prev_value != element.value:
-            self._cfg[element.value] = self._cfg[element.prev_value]
-            del self._cfg[element.prev_value]
-            element.prev_value = element.value
-            self._recreate_widgets()
+            key = element.value
+            self._cfg.rename(element.prev_value, key)
+            self._items[key] = self._items[element.prev_value]
+            del self._items[element.prev_value]
+            element.prev_value = element.parent.key = key
 
     def _delete_key(self, element):
-        del self._cfg[element.key]
-        self._recreate_widgets()
-
-    def _recreate_widgets(self):
-        for c in self.children: self.remove_element(c.element_id)
-        self.create_widgets()
+        key = element.parent.key
+        self.remove_element(self._items[key])
+        del self._cfg[key]
 
     def on_update(self, key, value): self._cfg[key] = value
 
