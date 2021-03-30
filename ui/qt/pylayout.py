@@ -77,19 +77,19 @@ class PyVerticalLayout(PyLayout):
     def count(self): return self.qt_layout.count()
 
     def item(self, index, weight=None):
-        if index < 0: index += self.count()
+        if index < 0: index += self.count
         if weight is not None: self.qt_layout.setStretch(index, weight)
 
     def insert_element(self, element, index=None, weight=0):
         if index is not None:
-            if index < 0: index += self.count()
+            if index < 0: index += self.count
             self.qt_layout.insertWidget(index, element._qt, weight)
         else: self.qt_layout.addWidget(element._qt, weight)
         return self
 
     def insert_spacing(self, index=None, spacing=0):
         if index is not None:
-            if index < 0: index += self.count()
+            if index < 0: index += self.count
             self.qt_layout.insertSpacing(index, spacing)
         else: self.qt_layout.addSpacing(spacing)
 
