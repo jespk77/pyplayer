@@ -212,6 +212,7 @@ class Configuration(ConfigurationItem):
 		with self._lock:
 			self._value[to_key] = self._value[from_key]
 			del self._value[from_key]
+			self.mark_dirty()
 
 	def __len__(self):
 		with self._lock: return len(self.value)
