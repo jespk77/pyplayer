@@ -122,7 +122,6 @@ class PyPlayer(pywindow.PyWindow):
 
     def _on_command_enter(self, cmd):
         if cmd:
-            self["console"]["output"].text += f"{cmd}\n"
             self._command_history.add(cmd)
             self["console"]["input"].accept_input = False
             self._interp.put_command(cmd, self._cmd)
