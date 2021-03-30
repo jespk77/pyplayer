@@ -26,6 +26,7 @@ class PyOptionsListFrame(pyelement.PyFrame):
         self._index, self._type = 0, self._get_type()
         self._items = []
         pyelement.PyFrame.__init__(self, parent, f"option_{key}", "vertical")
+        self.events.EventDestroy(self.on_close)
         self.layout.margins(5)
 
     def _get_type(self):
@@ -74,11 +75,14 @@ class PyOptionsListFrame(pyelement.PyFrame):
         else: self._cfg.value[index] = value
         self._cfg.mark_dirty()
 
+    def on_close(self): self._cfg.value = list(filter(lambda item: item != "", self._cfg.value))
+
 class PyOptionsDictFrame(pyelement.PyFrame):
     def __init__(self, parent, key, cfg):
         self._key, self._cfg = key, cfg
         self._items, self._index = {}, 0
         pyelement.PyFrame.__init__(self, parent, f"option_{key}", "vertical")
+        self.events.EventDestroy(self.on_close)
         self.layout.margins(5)
 
     def _create_item(self, key, value, index=None):
@@ -142,6 +146,11 @@ class PyOptionsDictFrame(pyelement.PyFrame):
         del self._cfg[key]
 
     def on_update(self, key, value): self._cfg[key] = value
+
+    def on_close(self):
+        if self._cfg.can_add_new:
+            try: del self._cfg[""]
+            except KeyError: pass
 
 class PyOptionsFrame(pyelement.PyScrollableFrame):
     def __init__(self, parent, element_id, module_cfg):
