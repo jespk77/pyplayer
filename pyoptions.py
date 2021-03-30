@@ -122,7 +122,15 @@ class PyOptionsDictFrame(pyelement.PyFrame):
     def _move_key(self, element):
         if element.prev_value != element.value:
             key = element.value
-            self._cfg.rename(element.prev_value, key)
+            try: self._cfg.rename(element.prev_value, key)
+            except KeyError:
+                attempts = 0
+                while True:
+                    key = f"{element.value}_{attempts}"
+                    try: self._cfg.rename(element.prev_value, key)
+                    except KeyError: attempts += 1
+                    else: break
+                element.value = key
             self._items[key] = self._items[element.prev_value]
             del self._items[element.prev_value]
             element.prev_value = element.parent.key = key
