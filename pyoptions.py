@@ -117,7 +117,7 @@ class PyOptionsDictFrame(pyelement.PyFrame):
             btn.events.EventInteract(self._add_new)
 
     def _add_new(self):
-        self._create_item("", self._cfg.get_or_create_configuration(""), index=-1)
+        if not "" in self._cfg: self._create_item("", self._cfg.get_or_create_configuration(""), index=-1)
 
     def _move_key(self, element):
         if element.prev_value != element.value:
