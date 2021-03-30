@@ -96,14 +96,14 @@ class SongBrowser(pyelement.PyItemlist):
 def parse_path(arg, argc):
 	dir = module.configuration["directory"]
 	if argc > 0:
-		try: return arg[0], dir[arg[0]]["path"]
+		try: return arg[0], dir[arg[0]]["$path"]
 		except KeyError: return f"No directory with name: '{arg[0]}'",
 	else:
 		path = module.configuration[default_path_key]
 		if path:
-			try: return path, dir[path]["path"]
+			try: return path, dir[path]["$path"]
 			except KeyError: return f"Invalid default directory '{path}' set",
-		else: return f"No default directory set, set one using key '{default_path_key}'",
+		else: return "No default directory set"
 
 def bind_events():
 	browser = module.client["player"]["songbrowser"]
