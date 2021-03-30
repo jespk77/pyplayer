@@ -5,7 +5,7 @@ module = modules.Module(__package__)
 
 # MODULE SPECIFIC VARIABLES
 loop_effect_command = "effect loop {}"
-sounds_path_key = "sounds_path"
+sounds_path_key = "$sounds_path"
 
 class SoundEffectPlayer:
 	# sound effects longer than this time (im ms) are stopped when the same command is repeated, instead of replaying
