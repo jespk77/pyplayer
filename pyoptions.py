@@ -83,6 +83,8 @@ class PyOptionsDictFrame(pyelement.PyFrame):
 
     def _create_item(self, key, value, index=None):
         add_new = self._cfg.can_add_new
+        if not add_new and key.startswith("_"): return
+
         frame = self.add_element(f"item_{self._index}", element_class=pyelement.PyFrame, index=index)
         frame.key = key
         frame.layout.margins(0)
@@ -108,8 +110,7 @@ class PyOptionsDictFrame(pyelement.PyFrame):
         self._index += 1
 
     def create_widgets(self):
-        for key, value in self._cfg.items():
-            if not key.startswith("_"): self._create_item(key, value)
+        for key, value in self._cfg.items(): self._create_item(key, value)
 
         if self._cfg.can_add_new:
             btn = self.add_element("add_new", element_class=pyelement.PyButton)
