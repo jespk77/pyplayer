@@ -251,25 +251,7 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
             self._error = e.msg
             return False
 
-        followed_games = set([channel["game_id"] for channel in followed_channels])
-        req = requests.get(self.followed_game_url.format(ids="&id=".join(followed_games)), headers=self._logindata)
-        if req.status_code != 200:
-            print("ERROR", "Got status code", req.status_code, "while requesting followed games")
-            self._error = req.text
-            print("ERROR", "->", req.content)
-            return False
-
-        try: followed_games = {game["id"]: game["name"] for game in json.loads(req.content)["data"]}
-        except (json.JSONDecodeError, KeyError) as e:
-            print("ERROR", "Processing followed games respone:", e)
-            self._error = e.msg
-            return False
-
         for channel in followed_channels:
-            game_name = followed_games.get(channel["game_id"])
-            if game_name: channel["game_id"] = game_name
-            else: del channel["game_id"]
-
             thumbnail_url = channel["thumbnail_url"]
             req = requests.get(thumbnail_url.format(width=THUMBNAIL_SIZE[0], height=THUMBNAIL_SIZE[1]))
             if req.status_code == 200: channel["thumbnail"] = req.content
@@ -299,7 +281,7 @@ class StreamEntryFrame(pyelement.PyLabelFrame):
         lbl2.set_alignment("center")
         lbl2.wrapping = True
         lbl3 = self.add_element("game_lbl", element_class=pyelement.PyTextLabel, row=2, column=1)
-        lbl3.text = data.get("game_id", "(No game set)")
+        lbl3.text = data.get("game_name", "(No game set)")
         lbl3.set_alignment("center")
         lbl3.wrapping = True
 
