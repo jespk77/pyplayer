@@ -33,7 +33,7 @@ def invalidate_logindata():
 
 
 user_metadata = ".cache/usermeta"
-cache_expire = 86400
+cache_expire = 1800
 def read_metadata(request=False):
     try:
         with open(user_metadata, "rb") as file:
