@@ -27,6 +27,7 @@ def write_logindata(data):
     except Exception as e: print("ERROR", "While writing login data:", e)
 
 def invalidate_logindata():
+    invalidate_metadata()
     try: os.remove(user_logindata)
     except: pass
 
