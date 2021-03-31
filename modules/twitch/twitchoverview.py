@@ -215,25 +215,35 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
             else: write_metadata(metadata)
         else: metadata = read_metadata()
 
+        if metadata is None:
+            print("VERBOSE", "No metadata avaiable, cannot fetch data")
+            self._error = "Cannot get user metadata"
+            return False
+
         followed_channels = [c["to_id"] for c in metadata["followed"]]
         if len(followed_channels) == 0:
             self._data = []
             return True
 
-        req = requests.get(self.followed_stream_url.format(ids="&user_id=".join(followed_channels)), headers=self._logindata)
-        if req.status_code == 401:
-            err = req.json().get("error")
-            if err == "Unauthorized":
-                print("VERBOSE", "Invalid credentials, signing out")
-                invalidate_logindata()
-                self._error = err
-                return False
-
-        if req.status_code != 200:
-            print("ERROR", "Got status code", req.status_code, "while requesting followed channels")
-            self._error = req.text
-            print("ERROR", "->", req.content)
+        try: req = requests.get(self.followed_stream_url.format(ids="&user_id=".join(followed_channels)), headers=self._logindata)
+        except requests.ConnectionError as e:
+            print("INFO", "Failed to get updated channels:", str(e))
+            self._error = "Connection failed"
             return False
+        else:
+            if req.status_code == 401:
+                err = req.json().get("error")
+                if err == "Unauthorized":
+                    print("VERBOSE", "Invalid credentials, signing out")
+                    invalidate_logindata()
+                    self._error = err
+                    return False
+
+            if req.status_code != 200:
+                print("ERROR", "Got status code", req.status_code, "while requesting followed channels")
+                self._error = req.text
+                print("ERROR", "->", req.content)
+                return False
 
         try: followed_channels = json.loads(req.content)["data"]
         except (json.JSONDecodeError, KeyError) as e:
