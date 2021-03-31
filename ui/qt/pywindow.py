@@ -167,7 +167,10 @@ class PyWindow:
             else: raise ValueError("Invalid geometry string")
             return
 
-        if x is None or y is None or width is None or height is None: raise ValueError("Missing arguments")
+        if x is None: x = self._qt.x()
+        if y is None: y = self._qt.y()
+        if width is None: width = self._qt.width()
+        if height is None: height = self._qt.height()
         self.qt_window.setGeometry(x, y, width, height)
 
     def center_window(self, size_x=None, size_y=None, fit_to_size=False):
