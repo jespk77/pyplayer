@@ -52,6 +52,13 @@ def request_metadata():
 
     try:
         r = requests.get(user_info_url, headers=login)
+        if r.status_code == 401:
+            err = r.json().get("error")
+            if err == "Unauthorized":
+                print("VERBOSE", "Invalid credentials, signing out")
+                invalidate_logindata()
+                return err
+
         if r.status_code != 200:
             print("ERROR", "Received invalid status code:", r.status_code, "\n ->", r.json())
             return None

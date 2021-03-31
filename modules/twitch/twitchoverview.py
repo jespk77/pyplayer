@@ -207,7 +207,10 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
         if metadata_expired():
             print("VERBOSE", "User meta cache expired, requesting...")
             metadata = request_metadata()
-            write_metadata(metadata)
+            if metadata == "Unauthorized":
+                self._error = metadata
+                return False
+            else: write_metadata(metadata)
         else: metadata = read_metadata()
 
         followed_channels = [c["to_id"] for c in metadata["followed"]]
@@ -216,6 +219,14 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
             return True
 
         req = requests.get(self.followed_stream_url.format(ids="&user_id=".join(followed_channels)), headers=self._logindata)
+        if req.status_code == 401:
+            err = req.json().get("error")
+            if err == "Unauthorized":
+                print("VERBOSE", "Invalid credentials, signing out")
+                invalidate_logindata()
+                self._error = err
+                return False
+
         if req.status_code != 200:
             print("ERROR", "Got status code", req.status_code, "while requesting followed channels")
             self._error = req.text
@@ -439,6 +450,11 @@ class TwichOverview(pywindow.PyWindow):
         if error is not None:
             print("VERBOSE", "Failed to get updated live channel data")
             if data is not None: print("WARNING", "Received data even though an error occured")
+            if error == "Unauthorized":
+                self["followed_label"].text = self.follow_channel_text + "Login information no longer valid, please sign in again"
+                self._refresh_status()
+                return
+
             self["followed_label"].text = self.follow_channel_text + self.last_updated_time + "\nAn error occured, try again later"
             self._enable_refresh()
 
