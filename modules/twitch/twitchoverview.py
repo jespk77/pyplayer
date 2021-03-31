@@ -109,6 +109,7 @@ class TwitchSigninWindow(pywindow.PyWindow):
         self._server_worker = TwitchSigninWorker(self)
         self._server_worker.activate()
         self.events.EventWindowClose(self._on_close)
+        self.set_geometry(width=235, height=157)
 
     def create_widgets(self):
         pywindow.PyWindow.create_widgets(self)
@@ -152,6 +153,7 @@ class TwitchSigninWindow(pywindow.PyWindow):
     def _on_close(self):
         print("INFO", "Sign in window closed, terminating server")
         self._server_worker.stop_server()
+        self.parent.schedule_task(task_id="refresh_status")
 
 
 class TwitchSignOutWorker(pyworker.PyWorker):
@@ -360,7 +362,7 @@ class TwichOverview(pywindow.PyWindow):
         self.add_element("sep1", element_class=pyelement.PySeparator, row=1, columnspan=2)
 
         lbl = self.add_element("followed_label", element_class=pyelement.PyTextLabel, row=2)
-        lbl.text = self.follow_channel_text + self.last_updated_time
+        lbl.text = self.follow_channel_text
         lbl.set_alignment("center")
         refresh_frame = self.add_element(element=AutoRefreshFrame(self), row=3)
         refresh_frame["refresh_check"].events.EventInteract(self._set_repeated_refresh)
@@ -425,6 +427,8 @@ class TwichOverview(pywindow.PyWindow):
             btn_signinout = self["button_signinout"]
             btn_signinout.text = "Sign out"
             btn_signinout.events.EventInteract(self.sign_out)
+
+            self["followed_label"].text = self.follow_channel_text + self.last_updated_time
             self["followed_refresh"].accept_input = True
 
         else:
@@ -433,13 +437,13 @@ class TwichOverview(pywindow.PyWindow):
             btn_signinout = self["button_signinout"]
             btn_signinout.text = "Sign in"
             btn_signinout.events.EventInteract(self.sign_in)
+
+            self["followed_label"].text = self.follow_channel_text + "Sign in to get started"
             self["followed_refresh"].accept_input = False
 
     def sign_in(self):
         print("VERBOSE", "Opening sign in window")
-        sign_in = self.add_window(window=TwitchSigninWindow(self))
-        @sign_in.events.EventWindowDestroy
-        def _on_signed_in(): self.schedule_task(task_id="refresh_status")
+        self.add_window(window=TwitchSigninWindow(self))
 
     def sign_out(self):
         print("VERBOSE", "Signing out of account")
