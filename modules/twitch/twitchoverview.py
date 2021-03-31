@@ -263,25 +263,27 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
 
 class StreamEntryFrame(pyelement.PyLabelFrame):
     def __init__(self, parent, data):
-        pyelement.PyLabelFrame.__init__(self, parent, f"entry_{data['id']}")
         self._data = data
+        pyelement.PyLabelFrame.__init__(self, parent, f"entry_{self._data['id']}")
+        self.layout.column(1, weight=1, minsize=150)
 
+    def create_widgets(self):
         thumbnail = self.add_element("thumbnail", element_class=pyelement.PyTextLabel, rowspan=3)
-        thumbnail_img = data.get("thumbnail")
+        thumbnail_img = self._data.get("thumbnail")
         if thumbnail_img:
             pyimage.PyImage(thumbnail, data=thumbnail_img)
             thumbnail.width, thumbnail.height = THUMBNAIL_SIZE
 
         lbl1 = self.add_element("user_lbl", element_class=pyelement.PyTextLabel, row=0, column=1)
-        lbl1.text = data.get('user_name', "(No username set)")
+        lbl1.text = self._data.get('user_name', "(No username set)")
         lbl1.set_alignment("center")
         lbl1.wrapping = True
         lbl2 = self.add_element("title_lbl", element_class=pyelement.PyTextLabel, row=1, column=1)
-        lbl2.text = data.get('title', "(No title set)")
+        lbl2.text = self._data.get('title', "(No title set)")
         lbl2.set_alignment("center")
         lbl2.wrapping = True
         lbl3 = self.add_element("game_lbl", element_class=pyelement.PyTextLabel, row=2, column=1)
-        lbl3.text = data.get("game_name", "(No game set)")
+        lbl3.text = self._data.get("game_name", "(No game set)")
         lbl3.set_alignment("center")
         lbl3.wrapping = True
 
@@ -299,7 +301,6 @@ class StreamEntryFrame(pyelement.PyLabelFrame):
         if not browser_available or alternate_player_key not in module.configuration:
             btn2.accept_input = False
             btn2.text = "No 'alternate_player_url'"
-        self.layout.column(1, weight=1, minsize=150)
 
 
 class AutoRefreshFrame(pyelement.PyFrame):
@@ -307,6 +308,9 @@ class AutoRefreshFrame(pyelement.PyFrame):
 
     def __init__(self, parent):
         pyelement.PyFrame.__init__(self, parent, AutoRefreshFrame.main_id)
+        self.layout.column(2, weight=1)
+
+    def create_widgets(self):
         check = self.add_element(AutoRefreshFrame.check_id, element_class=pyelement.PyCheckbox)
         check.text = "Auto refresh every"
         inpt = self.add_element(AutoRefreshFrame.input_id, element_class=pyelement.PyTextInput, column=1)
@@ -315,7 +319,6 @@ class AutoRefreshFrame(pyelement.PyFrame):
         lbl = self.add_element("min_lbl", element_class=pyelement.PyTextLabel, column=2)
         lbl.text = "minutes"
         lbl.set_alignment("centerV")
-        self.layout.column(2, weight=1)
 
     @property
     def enabled(self): return self["refresh_check"].checked
