@@ -481,9 +481,9 @@ class PyTextInput(PyElement):
         (self.qt_element.returnPressed if return_only else self.qt_element.editingFinished).connect(lambda : self.events.call_event("interact"))
 
     @property
-    def accept_input(self): return self._qt.isEnabled()
+    def accept_input(self): return not self.qt_element.isReadOnly()
     @accept_input.setter
-    def accept_input(self, value): self.qt_element.setEnabled(bool(value))
+    def accept_input(self, value): self.qt_element.setReadOnly(not value)
     def with_accept_input(self, value):
         self.accept_input = value
         return self
