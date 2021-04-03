@@ -540,9 +540,9 @@ class PyNumberInput(PyElement):
         self.min, self.max = -99, 99
 
     @property
-    def accept_input(self): self.qt_element.isReadOnly()
+    def accept_input(self): return not self.qt_element.isReadOnly()
     @accept_input.setter
-    def accept_input(self, inpt): self.qt_element.setReadOnly(bool(inpt))
+    def accept_input(self, inpt): self.qt_element.setReadOnly(not inpt)
     def with_accept_input(self, inpt):
         self.accept_input = inpt
         return self
