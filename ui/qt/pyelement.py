@@ -1256,6 +1256,13 @@ class PyColorInput(PyFrame):
         btn.events.EventInteract(lambda : self._color.open())
 
     @property
+    def accept_input(self): return self["txt"].accept_input
+    @accept_input.setter
+    def accept_input(self, inpt):
+        self["txt"].accept_input = inpt
+        self["select"].hidden = not inpt
+
+    @property
     def dialog(self): return self._color
 
     @property
@@ -1291,6 +1298,13 @@ class PyPathInput(PyFrame):
         btn = self.add_element("select", element_class=PyButton, column=1)
         btn.text, btn.max_width = "...", 25
         btn.events.EventInteract(lambda : self._path.open())
+
+    @property
+    def accept_input(self): return self["txt"].accept_input
+    @accept_input.setter
+    def accept_input(self, inpt):
+        self["txt"].accept_input = inpt
+        self["select"].hidden = not inpt
 
     @property
     def dialog(self): return self._path
