@@ -145,10 +145,11 @@ class SongTracker:
 
     def _date_check(self):
         new_date = datetime.date.today()
-        if new_date.month != self._date.month:
-            print("VERBOSE", f"Changing month from {Month(self._date.month).name} to {Month(new_date.month).name}")
+        month_change, year_change = new_date.month != self._date.month, new_date.year != self._date.year
+        if month_change or year_change:
+            print("VERBOSE", f"Changing month from {Month(self._date.month).name}/{self._date.year} to {Month(new_date.month).name}/{new_date.year}")
             self._date = new_date
-            self._current.save_data(finalize=new_date.year != self._date.year)
+            self._current.save_data(finalize=year_change)
             self._current = self._get_tracker()
             for t in self._trackers.values(): t._date = self._date
 
