@@ -137,7 +137,7 @@ class SongTracker:
 
     def load_data(self):
         """ (Re)load data from disk """
-        self.current_month.load_data()
+        for t in self._trackers.values(): t.load_data()
 
     def save_data(self):
         """ Save current data to file """
@@ -166,10 +166,12 @@ class SongTracker:
     def add(self, item, n=1):
         self._date_check()
         self.current_month.add(item, n)
+        self.current_month.save_data()
 
     def subtract(self, item, n=-1):
         self._date_check()
         self.current_month.subtract(item, n)
+        self.current_month.save_data()
 
     def get(self, item, month=None, year=None):
         return self._get_tracker(year).get(item, month)
