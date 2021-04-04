@@ -125,8 +125,9 @@ class YearTracker:
 
     def remove_all(self):
         """ Removes all data from this month """
-        try: self._counters[Month(self._date.month).name]
+        try: del self._counters[Month(self._date.month).name]
         except KeyError: pass
+        else: self._dirty = True
 
 
 class SongTracker:
