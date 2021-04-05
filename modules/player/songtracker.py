@@ -153,7 +153,7 @@ class SongTracker:
 
     def save_data(self):
         """ Save current data to file """
-        self.current_month.save_data()
+        self._current.save_data()
 
     def _date_check(self):
         new_date = datetime.date.today()
@@ -164,9 +164,6 @@ class SongTracker:
             self._current.save_data(finalize=year_change)
             self._current = self._get_tracker(self._date.year)
             for t in self._trackers.values(): t._date = self._date
-
-    @property
-    def current_month(self): return self._current
 
     @staticmethod
     def _list_years(): return os.listdir(STAT_DIR)
@@ -181,13 +178,13 @@ class SongTracker:
 
     def add(self, item, n=1):
         self._date_check()
-        self.current_month.add(item, n)
-        self.current_month.save_data()
+        self._current.add(item, n)
+        self._current.save_data()
 
     def subtract(self, item, n=-1):
         self._date_check()
-        self.current_month.subtract(item, n)
-        self.current_month.save_data()
+        self._current.subtract(item, n)
+        self._current.save_data()
 
     def get(self, item, month=None, year=None):
         self._date_check()
