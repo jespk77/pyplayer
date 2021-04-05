@@ -73,7 +73,6 @@ class YearTracker:
          If the item doesn't exist yet, the item will be added and set to the given count instead
         """
         if self._date_check():
-            item = item.lower()
             try: month = self._counters[Month(self._date.month).name]
             except KeyError: self._counters[Month(self._date.month).name] = month = collections.Counter()
             month[item] += count
@@ -86,7 +85,6 @@ class YearTracker:
          Has no effect if the item doesn't exist
         """
         if self._date_check():
-            item = item.lower()
             try:
                 month = self._counters[Month(self._date.month).name]
                 n = month[item] - count
