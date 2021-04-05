@@ -96,18 +96,20 @@ class YearTracker:
                 else: self.remove(item)
             except KeyError: pass
 
-    def get(self, item, month_filter=None):
-        """
-         Get the tracked count for given item with an optional filter
-        """
-        if month_filter is not None:
-            if isinstance(month_filter, str):
-                try: month = Month[month_filter.capitalize()]
-                except KeyError: month = None
-                if month is None: raise ValueError(f"'{month_filter}' is not a valid Month")
-            elif isinstance(month_filter, int): month = Month(month_filter)
-            else: raise TypeError("Unsupported 'month_filter' type")
+    def _get_month(self, month_filter):
+        if isinstance(month_filter, str):
+            if month_filter == "current": return Month(self._date.month)
+            try: month = Month[month_filter.capitalize()]
+            except KeyError: month = None
+            if month is None: raise ValueError(f"'{month_filter}' is not a valid Month")
+        elif isinstance(month_filter, int): month = Month(month_filter)
+        else: raise TypeError("Unsupported 'month_filter' type")
+        return month
 
+    def get(self, item, month=None):
+        """ Get the count for given item with an optional filter """
+        if month is not None:
+            month = self._get_month(month)
             try: return self._counters[month.name][item]
             except KeyError: return 0
         return sum([m[item] for m in self._counters.values()])
@@ -134,7 +136,7 @@ class SongTracker:
     def __init__(self):
         self._date = datetime.date.today()
         self._trackers = {}
-        self._current = self._get_tracker()
+        self._current = self._get_tracker(self._date.year)
 
     def load_data(self):
         """ (Re)load data from disk """
@@ -151,14 +153,17 @@ class SongTracker:
             print("VERBOSE", f"Changing month from {Month(self._date.month).name}/{self._date.year} to {Month(new_date.month).name}/{new_date.year}")
             self._date = new_date
             self._current.save_data(finalize=year_change)
-            self._current = self._get_tracker()
+            self._current = self._get_tracker(self._date.year)
             for t in self._trackers.values(): t._date = self._date
 
     @property
     def current_month(self): return self._current
 
-    def _get_tracker(self, year=None):
-        if year is None: year = self._date.year
+    @staticmethod
+    def _list_years(): return os.listdir(STAT_DIR)
+
+    def _get_tracker(self, year):
+        if year == "current": year = self._date.year
 
         try: return self._trackers[year]
         except KeyError:
