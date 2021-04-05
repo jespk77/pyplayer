@@ -1,4 +1,4 @@
-import os
+import random, os
 
 from collections import Counter
 from ui.qt import pyelement
@@ -38,17 +38,7 @@ class SongBrowser(pyelement.PyItemlist):
 		self._path_valid = self._path is not None and os.path.isdir(self._path[1])
 		if not self._path_valid: self.itemlist = [(0, "Invalid path selected: " + str(self._path))]
 
-	def select_song(self, song):
-		index = -1
-		found = False
-		for s in self.itemlist:
-			if s == song: index = max(0, index + 1); found = True; break
-			else: index += 1
-
-		if found:
-			self.set_selection(index=index)
-			self.move_to(index)
-		else: self.clear_selection()
+	def select_song(self, song): self.selected_item = song
 
 	def create_list_from_frequency(self, path, songcounter):
 		self.path = path
@@ -79,7 +69,7 @@ class SongBrowser(pyelement.PyItemlist):
 		self.path = path
 		if self._path_valid:
 			sl = get_songlist(path[1])
-			import random; random.shuffle(sl)
+			random.shuffle(sl)
 			self.itemlist = sl
 
 	def add_count(self, song, add=1):
