@@ -398,6 +398,7 @@ def initialize():
 
 	module.client.add_task(task_id="player_progress_update", func=_set_client_progress)
 	module.client.add_task(task_id="player_title_update", func=_set_client_title)
+	module.client.add_task(task_id="player_browser_update", func=_on_browser_update)
 	module.client.schedule_task(task_id=player_autoplay_update_task, func=_set_client_autoplay)
 	module.client.schedule_task(task_id=player_filter_update_task, func=_set_client_filter, path=module.configuration[default_dir_path])
 	module.media_player = media_player
@@ -431,9 +432,12 @@ def on_player_update(event, player):
 
 	if default_directory is not None and md.path == default_directory["$path"]:
 		song_tracker.add(md.display_name)
-		try: module.client["player"]["songbrowser"].add_count(md.display_name)
-		except KeyError: pass
+		module.client.schedule_task(task_id="player_browser_update", song=md.display_name)
 	song_history.add([md.path, md.song])
+
+def _on_browser_update(song):
+	try: module.client["player"]["songbrowser"].add_count(song)
+	except KeyError: pass
 
 def on_end_reached(event, player):
 	module.interpreter.put_command("autoplay next")
