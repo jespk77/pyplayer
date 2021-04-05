@@ -190,10 +190,12 @@ class SongTracker:
         self.current_month.save_data()
 
     def get(self, item, month=None, year=None):
+        self._date_check()
         if year is not None: return self._get_tracker(year).get(item, month)
         return sum([self._get_tracker(y).get(item, month) for y in self._list_years()])
 
     def counter(self, month=None, year=None):
+        self._date_check()
         if year is not None: return self._get_tracker(year).counter(month=month)
 
         res = collections.Counter()
