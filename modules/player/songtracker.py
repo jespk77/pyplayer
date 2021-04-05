@@ -48,7 +48,7 @@ class YearTracker:
                     except KeyError: pass
 
                 totals = data.get("")
-                if totals is not None: self._counters[""] = totals
+                if totals is not None: self._counters[""] = collections.Counter(totals)
         except FileNotFoundError: pass
         self._dirty = False
 
