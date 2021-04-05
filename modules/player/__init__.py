@@ -2,7 +2,11 @@ import enum, os
 from datetime import datetime
 
 from .mediaplayer import MediaPlayer
-from . import albumwindow, lyricviewer, songbrowser, song_tracker, songhistory, songqueue
+from . import albumwindow, lyricviewer, songbrowser
+
+from .songqueue import song_queue
+from .songhistory import song_history
+from .songtracker import song_tracker
 
 from ui.qt import pyelement
 from core import messagetypes, modules
@@ -10,8 +14,6 @@ module = modules.Module(__package__)
 
 # MODULE SPECIFIC VARIABLES
 media_player = MediaPlayer()
-song_queue = songqueue.song_queue
-song_history = songhistory.song_history
 invalid_cfg = messagetypes.Reply("Invalid directory configuration, check your options")
 unknown_song = messagetypes.Reply("That song doesn't exist and there is nothing playing")
 no_songs = messagetypes.Reply("No songs found")
@@ -61,7 +63,7 @@ def get_addtime(display, song, path):
 def get_displayname(song): return os.path.splitext(song)[0]
 
 def get_playcount(display, song, alltime):
-	freq = song_tracker.get_freq(song=display, alltime=alltime)
+	freq = song_tracker.get(display) if alltime else song_tracker.get(display, year="current", month="current")
 	if freq > 0:
 		if not alltime: return messagetypes.Reply("'{}' has played {} times this month".format(display, freq))
 		else: return messagetypes.Reply("'{}' has played {} times overall".format(display, freq))
@@ -179,7 +181,7 @@ def command_info_player(arg, argc):
 
 def command_info_reload(arg, argc):
 	if argc == 0:
-		song_tracker.load_tracker()
+		song_tracker.load_data()
 		return messagetypes.Reply("Song tracker reloaded")
 
 def command_lyrics(arg, argc):
@@ -361,7 +363,6 @@ def initialize():
 	media_player.attach_event("player_updated", on_player_update)
 	media_player.attach_event("end_reached", on_end_reached)
 	media_player.attach_event("stopped", on_stopped)
-	if not song_tracker.is_loaded(): song_tracker.load_tracker()
 
 	player = module.client.add_element("player", element_class=pyelement.PyLabelFrame, index=module.client.layout.index_of("console"))
 	player.layout.column(0, weight=1).column(1, weight=1).margins(5)

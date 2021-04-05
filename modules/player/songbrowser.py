@@ -3,7 +3,7 @@ import os
 from collections import Counter
 from ui.qt import pyelement
 from core import messagetypes, modules
-from modules.player import song_tracker
+from .songtracker import song_tracker
 module = modules.Module(__package__)
 
 # VARIABLES SPECIFIC TO THIS MODULE
@@ -174,7 +174,7 @@ def command_browser_played_month(arg, argc):
 				unsupported_path()
 				return command_browser_name(arg, argc)
 
-			module.client.schedule_task(task_id="songbrowser_create", type=3, args=(path, song_tracker.get_songlist(alltime=False)))
+			module.client.schedule_task(task_id="songbrowser_create", type=3, args=(path, song_tracker.counter(month="current", year="current")))
 			return messagetypes.Reply("Browser enabled on plays per month in '{}'".format(path[0]))
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
@@ -186,7 +186,7 @@ def command_browser_played_all(arg, argc):
 				unsupported_path()
 				return command_browser_name(arg, argc)
 
-			module.client.schedule_task(task_id="songbrowser_create", type=3, args=(path, song_tracker.get_songlist(alltime=True)))
+			module.client.schedule_task(task_id="songbrowser_create", type=3, args=(path, song_tracker.counter()))
 			return messagetypes.Reply(f"Browser sorted on all time plays in '{path[0]}'")
 		elif len(path) == 1: return messagetypes.Reply(path[0])
 
