@@ -12,8 +12,9 @@ default_sort_key = "songbrowser_sorting"
 
 def get_songlist(path): return [os.path.splitext(entry.name)[0] for entry in os.scandir(path) if entry.is_file()]
 class SongBrowser(pyelement.PyItemlist):
-	""" Can list all items (songs) from a directory in a specified order
-		possible orderings: frequency(counter), creation time, name
+	"""
+	 Can list all items (songs) from a directory in a specified order
+	 possible orderings: frequency(counter), creation time, name
 	"""
 	element_id = "songbrowser"
 
@@ -21,15 +22,18 @@ class SongBrowser(pyelement.PyItemlist):
 		pyelement.PyItemlist.__init__(self, parent, self.element_id)
 		self._path = self._songcounter = None
 		self._path_valid = self._is_dynamic = False
+		self.label = "Song browser"
 		self.auto_select = False
 
 	@property
 	def path(self): return self._path
 	@path.setter
 	def path(self, path):
-		""" Path secifies the directory in which items need to be sorted
-					this can be defined as a tuple where (displayname, path name)
-					or a string to a path name (in this case the displayname is equal to path name) """
+		"""
+		 Path secifies the directory in which items need to be sorted
+		 This can be defined as a tuple where (displayname, path name)
+		 or a string to a path name (in this case the displayname is equal to path name)
+		"""
 		if isinstance(path, tuple) and len(path) > 1:
 			self._path = (path[0], path[1] if path[1].endswith("/") else path[1] + "/")
 		elif isinstance(path, str): self._path = (path, path if path.endswith("/") else path + "/")
@@ -42,6 +46,7 @@ class SongBrowser(pyelement.PyItemlist):
 
 	def create_list_from_frequency(self, path, songcounter):
 		self.path = path
+		self.label = f"Songs in {path[0]} (sorted by play count):"
 		if self._path_valid:
 			self._is_dynamic = True
 			self._songcounter = Counter()
@@ -53,6 +58,7 @@ class SongBrowser(pyelement.PyItemlist):
 
 	def create_list_from_recent(self, path):
 		self.path = path
+		self.label = f"Songs in '{path[0]}' (sorted by time added):"
 		if self._path_valid:
 			self._songcounter = Counter()
 			for entry in os.scandir(self.path[1]):
@@ -63,10 +69,12 @@ class SongBrowser(pyelement.PyItemlist):
 
 	def create_list_from_name(self, path):
 		self.path = path
+		self.label = f"Songs in '{path[0]}':"
 		if self._path_valid: self.itemlist = get_songlist(path[1])
 
 	def create_list_random(self, path):
 		self.path = path
+		self.label = f"Songs in '{path[0]}' (shuffled):"
 		if self._path_valid:
 			sl = get_songlist(path[1])
 			random.shuffle(sl)
@@ -124,18 +132,21 @@ _browser_types = [
 def set_songbrowser(browser):
 	if browser:
 		module.client.layout.item(module.client.layout.index_of("console"), weight=0)
-		player = module.client["player"]
-		player.add_element("browser_separator", element_class=pyelement.PySeparator, row=8, columnspan=2)
-		player.add_element(element=browser, row=9, columnspan=2)
-		player.layout.row(9, weight=1)
+		player_frame = module.client["player"]
+		player_frame.add_element("browser_separator", element_class=pyelement.PySeparator, row=2, columnspan=2)
+		player_frame.add_element("browser_label", element_class=pyelement.PyTextLabel, row=3, columnspan=2).text = browser.label
+		player_frame.add_element(element=browser, row=4, columnspan=2)
+		player_frame.layout.row(4, weight=1)
 		module.client["console"].max_height = 150
 		module.client.layout.item(module.client.layout.index_of("player"), weight=1)
 		bind_events()
 	else:
 		module.client.layout.item(module.client.layout.index_of("console"), weight=1)
-		module.client["player"].remove_element("browser_separator")
-		module.client["player"].remove_element(SongBrowser.element_id)
-		module.client["console"].max_height = 0
+		player_frame = module.client["player"]
+		player_frame.remove_element("browser_separator")
+		player_frame.remove_element("browser_label")
+		player_frame.remove_element(SongBrowser.element_id)
+		player_frame.max_height = 0
 		module.client.layout.item(module.client.layout.index_of("player"), weight=0)
 
 def create_songbrowser(type, args=None):
