@@ -46,6 +46,9 @@ class YearTracker:
                 for m in Month:
                     try: self._counters[m.name] = collections.Counter(data[m.name])
                     except KeyError: pass
+
+                totals = data.get("")
+                if totals is not None: self._counters[""] = totals
         except FileNotFoundError: pass
         self._dirty = False
 
@@ -106,7 +109,7 @@ class YearTracker:
 
     def get(self, item, month=None):
         """ Get the count for given item with an optional filter """
-        if month is not None:
+        if month is not None and "" not in self._counters:
             month = self._get_month(month)
             try: return self._counters[month.name][item]
             except KeyError: return 0
@@ -114,7 +117,7 @@ class YearTracker:
 
     def counter(self, month=None):
         """ Returns a Counter containing all items with an optional filter """
-        if month is not None:
+        if month is not None and "" not in self._counters:
             month = self._get_month(month)
             try: return self._counters[month.name].copy()
             except KeyError: return collections.Counter()
