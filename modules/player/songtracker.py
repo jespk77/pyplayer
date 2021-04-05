@@ -114,6 +114,17 @@ class YearTracker:
             except KeyError: return 0
         return sum([m[item] for m in self._counters.values()])
 
+    def counter(self, month=None):
+        """ Returns a Counter containing all items with an optional filter """
+        if month is not None:
+            month = self._get_month(month)
+            try: return self._counters[month.name].copy()
+            except KeyError: return collections.Counter()
+
+        res = collections.Counter()
+        for c in self._counters.values(): res += c
+        return res
+
     def remove(self, item):
         """
          Removes the count for this item
@@ -181,7 +192,25 @@ class SongTracker:
         self.current_month.save_data()
 
     def get(self, item, month=None, year=None):
-        return self._get_tracker(year).get(item, month)
+        if year is not None: return self._get_tracker(year).get(item, month)
+        return sum([self._get_tracker(y).get(item, month) for y in self._list_years()])
+
+    def counter(self, month=None, year=None):
+        if year is not None: return self._get_tracker(year).counter(month=month)
+
+        res = collections.Counter()
+        for y in self._list_years(): res += self._get_tracker(y).counter(month=month)
+        return res
+
+    _sort_types = {"name": lambda item: item[0], "count": lambda item: -item[1]}
+    def list(self, sort="count", month=None, year=None, reverse=False):
+        """
+         Lists all songs with given sorted order with an optional filter, current supported sortings: name,count
+         Returns a sorted list with items in the form (name,count)
+        """
+        return sorted(self.counter(month=month, year=year).items(), key=self._sort_types[sort], reverse=reverse)
+
+song_tracker = SongTracker()
 
 class SongTrackerWindow(pywindow.PyWindow):
     window_id = "song_statistics"
