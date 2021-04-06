@@ -103,9 +103,10 @@ class YearTracker:
             try: month = Month[month_filter.capitalize()]
             except KeyError: month = None
             if month is None: raise ValueError(f"'{month_filter}' is not a valid Month")
-        elif isinstance(month_filter, int): month = Month(month_filter)
+            return month
+        elif isinstance(month_filter, int): return Month(month_filter)
+        elif isinstance(month_filter, Month): return month_filter
         else: raise TypeError("Unsupported 'month_filter' type")
-        return month
 
     def get(self, item, month=None):
         """ Get the count for given item with an optional filter """
