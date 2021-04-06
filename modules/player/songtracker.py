@@ -1,4 +1,5 @@
-import collections, datetime, enum, json, os, stat
+import datetime, enum, json, os, stat
+from collections import Counter, namedtuple
 
 from ui.qt import pywindow, pyelement
 
@@ -19,6 +20,8 @@ class Month(enum.IntEnum):
     November = 11
     December = 12
 
+TrackedResult = namedtuple("TrackedResult", ["data", "month", "year", "read_only"], defaults=[False])
+
 class YearTracker:
     def __init__(self, year, date=None):
         if date is None: date = datetime.date.today()
@@ -31,10 +34,13 @@ class YearTracker:
         self.load_data()
 
     def _date_check(self):
-        if self._year != self._date.year:
+        if self.read_only:
             print("WARNING", f"Tried to modify data for an unexpected year {self._year} (current is {self._date.year})")
             return False
         return True
+
+    @property
+    def read_only(self): return self._date.year != self._year
 
     def load_data(self):
         """ (Re)load data from disk """
@@ -44,11 +50,11 @@ class YearTracker:
             with open(self._file, "r") as file:
                 data = json.load(file)
                 for m in Month:
-                    try: self._counters[m.name] = collections.Counter(data[m.name])
+                    try: self._counters[m.name] = Counter(data[m.name])
                     except KeyError: pass
 
                 totals = data.get("")
-                if totals is not None: self._counters[""] = collections.Counter(totals)
+                if totals is not None: self._counters[""] = Counter(totals)
         except FileNotFoundError: pass
         self._dirty = False
 
@@ -77,7 +83,7 @@ class YearTracker:
         """
         if self._date_check():
             try: month = self._counters[Month(self._date.month).name]
-            except KeyError: self._counters[Month(self._date.month).name] = month = collections.Counter()
+            except KeyError: self._counters[Month(self._date.month).name] = month = Counter()
             month[item] += count
             self._dirty = True
 
@@ -108,24 +114,24 @@ class YearTracker:
         elif isinstance(month_filter, Month): return month_filter
         else: raise TypeError("Unsupported 'month_filter' type")
 
-    def get(self, item, month=None):
+    def get(self, item, month=None) -> TrackedResult:
         """ Get the count for given item with an optional filter """
         if month is not None and "" not in self._counters:
             month = self._get_month(month)
-            try: return self._counters[month.name][item]
-            except KeyError: return 0
-        return sum([m[item] for m in self._counters.values()])
+            try: return TrackedResult(data=self._counters[month.name][item], month=month, year=self._year, read_only=self.read_only)
+            except KeyError: return TrackedResult(data=0, month=month, year=self._year, read_only=self.read_only)
+        return TrackedResult(data=sum([m[item] for m in self._counters.values()]), month=None, year=self._year, read_only=self.read_only)
 
-    def counter(self, month=None):
+    def counter(self, month=None) -> TrackedResult:
         """ Returns a Counter containing all items with an optional filter """
         if month is not None and "" not in self._counters:
             month = self._get_month(month)
-            try: return self._counters[month.name].copy()
-            except KeyError: return collections.Counter()
+            try: return TrackedResult(data=self._counters[month.name].copy(), month=month, year=self._year, read_only=self.read_only)
+            except KeyError: return TrackedResult(data=Counter(), month=month, year=self._year, read_only=self.read_only)
 
-        res = collections.Counter()
+        res = Counter()
         for c in self._counters.values(): res += c
-        return res
+        return TrackedResult(data=res, month=None, year=self._year, read_only=self.read_only)
 
     def remove(self, item):
         """
@@ -190,26 +196,36 @@ class SongTracker:
         self._current.subtract(item, n)
         self._current.save_data()
 
-    def get(self, item, month=None, year=None):
+    def get(self, item, month=None, year=None) -> TrackedResult:
         self._date_check()
         if year is not None: return self._get_tracker(year).get(item, month)
-        return sum([self._get_tracker(y).get(item, month) for y in self._list_years()])
 
-    def counter(self, month=None, year=None):
+        res, m = 0, None
+        for y in self._list_years():
+            item = self._get_tracker(y).get(item, month)
+            res += item.data
+            m = item.month
+        return TrackedResult(data=res, month=m, year=None, read_only=False)
+
+    def counter(self, month=None, year=None) -> TrackedResult:
         self._date_check()
         if year is not None: return self._get_tracker(year).counter(month=month)
 
-        res = collections.Counter()
-        for y in self._list_years(): res += self._get_tracker(y).counter(month=month)
-        return res
+        res, m = Counter(), None
+        for y in self._list_years():
+            year = self._get_tracker(y).counter(month=month)
+            res += year.data
+            m = year.month
+        return TrackedResult(data=res, month=m, year=None, read_only=False)
 
     _sort_types = {"name": lambda item: item[0], "count": lambda item: -item[1]}
-    def list(self, sort="count", month=None, year=None, reverse=False):
+    def list(self, sort="count", month=None, year=None, reverse=False) -> TrackedResult:
         """
          Lists all songs with given sorted order with an optional filter, current supported sortings: name,count
          Returns a sorted list with items in the form (name,count)
         """
-        return sorted(self.counter(month=month, year=year).items(), key=self._sort_types[sort], reverse=reverse)
+        res = self.counter(month=month, year=year)
+        return TrackedResult(data=sorted(res.data, key=self._sort_types[sort], reverse=reverse), *res[1:])
 
 song_tracker = SongTracker()
 
