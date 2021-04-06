@@ -348,8 +348,7 @@ module.commands = {
 		"": command_browser,
 		"none": songbrowser.command_browser_remove,
 		"name": songbrowser.command_browser_name,
-		"played-month": songbrowser.command_browser_played_month,
-		"played": songbrowser.command_browser_played_all,
+		"played": songbrowser.command_browser_played,
 		"recent": songbrowser.command_browser_recent,
 		"shuffle": songbrowser.command_browser_shuffle
 	}

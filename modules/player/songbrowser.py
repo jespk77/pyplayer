@@ -44,11 +44,11 @@ class SongBrowser(pyelement.PyItemlist):
 
 	def select_song(self, song): self.selected_item = song
 
-	def create_list_from_frequency(self, path, songcounter):
+	def create_list_from_frequency(self, path, songcounter, read_only, freq=None):
 		self.path = path
-		self.label = f"Songs in {path[0]} (sorted by play count):"
+		self.label = f"Songs in {path[0]} (sorted by play count{(' in ' + freq) if freq else ''}):"
 		if self._path_valid:
-			self._is_dynamic = True
+			self._is_dynamic = not read_only
 			self._songcounter = Counter()
 			for entry in os.scandir(self.path[1]):
 				if entry.is_file():
@@ -91,17 +91,21 @@ class SongBrowser(pyelement.PyItemlist):
 
 
 # ===== HELPER OPERATIONS ===== #
-def parse_path(arg, argc):
+def parse_path(arg, argc, use_default=False):
 	dir = module.configuration["directory"]
 	if argc > 0:
-		try: return arg[0], dir[arg[0]]["$path"]
-		except KeyError: return f"No directory with name: '{arg[0]}'",
-	else:
-		path = module.configuration[default_path_key]
-		if path:
-			try: return path, dir[path]["$path"]
-			except KeyError: return f"Invalid default directory '{path}' set",
-		else: return "No default directory set"
+		try:
+			res = arg[0], dir[arg[0]]["$path"]
+			arg.pop()
+			return res
+		except KeyError:
+			if not use_default: return f"No directory with name: '{arg[0]}'",
+
+	path = module.configuration[default_path_key]
+	if path:
+		try: return path, dir[path]["$path"]
+		except KeyError: return f"Invalid default directory '{path}' set",
+	else: return "No default directory set"
 
 def bind_events():
 	browser = module.client["player"]["songbrowser"]
@@ -167,29 +171,25 @@ def create_songbrowser(type, args=None):
 
 # ===== MAIN COMMANDS =====
 # - browser configure
-def command_browser_played_month(arg, argc):
-	if argc <= 2:
-		path = parse_path(arg, argc)
-		if len(path) == 2:
-			if path[0] != module.configuration[default_path_key]:
-				unsupported_path()
-				return command_browser_name(arg, argc)
+def command_browser_played(arg, argc):
+	path = parse_path(arg, argc, use_default=True)
+	if len(arg) > 0:
+		filt = arg[0].split("/", maxsplit=1)
+		if len(filt) == 1:
+			try: month, year = None, int(filt[0])
+			except ValueError: month, year = filt[0], "current"
+		else:
+			try: month, year = filt[0], int(filt[1])
+			except ValueError: return messagetypes.Reply(f"Invalid year: {filt[1]}")
+	else: month = year = None
 
-			module.client.schedule_task(task_id="songbrowser_create", type=3, args=(path, song_tracker.counter(month="current", year="current")))
-			return messagetypes.Reply("Browser enabled on plays per month in '{}'".format(path[0]))
-		elif len(path) == 1: return messagetypes.Reply(path[0])
+	res = song_tracker.counter(month=month, year=year)
+	freq = ""
+	if res.month is not None: freq += res.month.name + ", "
+	if res.year is not None: freq += str(res.year)
 
-def command_browser_played_all(arg, argc):
-	if argc <= 2:
-		path = parse_path(arg, argc)
-		if len(path) == 2:
-			if path[0] != module.configuration[default_path_key]:
-				unsupported_path()
-				return command_browser_name(arg, argc)
-
-			module.client.schedule_task(task_id="songbrowser_create", type=3, args=(path, song_tracker.counter()))
-			return messagetypes.Reply(f"Browser sorted on all time plays in '{path[0]}'")
-		elif len(path) == 1: return messagetypes.Reply(path[0])
+	module.client.schedule_task(task_id="songbrowser_create", type=3, args=(path, res.data, res.read_only, freq))
+	return messagetypes.Reply(f"Browser sorted on plays in '{path[0]}'")
 
 def command_browser_recent(arg, argc):
 	if argc <= 2:
