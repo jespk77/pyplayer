@@ -194,9 +194,8 @@ def command_mute(arg, argc):
 
 # - player specific commands
 def command_pause(arg, argc):
-	if argc == 0:
-		media_player.pause_player()
-		return messagetypes.Empty()
+	media_player.pause_player(arg[0] if argc > 0 else None)
+	return messagetypes.Empty()
 
 def command_position(arg, argc):
 	if argc == 1:

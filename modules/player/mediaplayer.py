@@ -220,9 +220,14 @@ class MediaPlayer:
 		self._player2.audio_set_mute(mute)
 		return self._muted
 
-	def pause_player(self):
+	def pause_player(self, pause=None):
 		""" Toggle player pause (has no effect if nothing is playing) """
-		self._paused = not self._paused and self._media_data is not None
+		if pause is not None:
+			if isinstance(pause, bool): self._paused = pause
+			elif isinstance(pause, str): self._paused = (pause.lower() == "true" or pause.lower() == "1")
+			else: raise ValueError("Unsupported type")
+		else: self._paused = not self._paused and self._media_data is not None
+
 		self._player1.set_pause(self._paused)
 		self._player2.set_pause(self._paused)
 
