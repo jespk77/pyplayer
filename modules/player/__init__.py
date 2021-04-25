@@ -1,4 +1,4 @@
-import enum, os
+import enum, os, random
 from datetime import datetime
 
 from .mediaplayer import MediaPlayer
@@ -451,6 +451,8 @@ def _set_client_progress(progress):
 def _set_client_title(media, color):
 	module.client.update_title(media.display_name)
 	bar = module.client["player"]["progress_bar"]
+
+	if color == "random": color = '#' + ''.join([random.choice("0123456789abcdef") for _ in range(6)])
 	bar.progress, bar.color = 0, color if color is not None else default_color
 	songbrowser.title_update(media, color)
 
