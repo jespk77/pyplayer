@@ -98,9 +98,17 @@ class PySplashWindow(pywindow.RootPyWindow):
             self["status_bar"].text = f"Verifying {len(dependencies)} dependencies..."
             pip_install = "{} -m pip install {}"
             if sys.platform == "linux": pip_install += "--user"
+
             for d in dependencies:
+                print("VERBOSE", f"Installing dependency '{d}'")
+                s = d.split("|", maxsplit=1)
+                if len(s) > 1 and sys.platform != s:
+                    print("INFO", f"Ignoring '{d}' on unsupported platform '{sys.platform}'")
+                    continue
+
                 self["status_bar"].text = f"Installing '{d}'"
                 process_command(pip_install.format(sys.executable, d))
+
             self["status_bar"].text = "Dependency check complete, restarting..."
             self._do_restart()
         else:
