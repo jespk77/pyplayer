@@ -6,6 +6,7 @@ module = modules.Module(__package__)
 # MODULE SPECIFIC VARIABLES
 loop_effect_command = "effect loop {}"
 sounds_path_key = "$sounds_path"
+pause_music_key = "pause_music_for_effects"
 
 class SoundEffectPlayer:
 	# sound effects longer than this time (im ms) are stopped when the same command is repeated, instead of replaying
@@ -21,6 +22,7 @@ class SoundEffectPlayer:
 		self._player.event_manager().event_attach(vlc.EventType.MediaPlayerEndReached, self._on_end_reached)
 
 	def _on_end_reached(self, event):
+		if module.configuration.get(pause_music_key): module.interpreter.put_command("player pause false")
 		if self._last_effect[0] and self._last_effect[1]:
 			module.interpreter.put_command(loop_effect_command.format(self._last_effect[0]))
 
@@ -59,6 +61,7 @@ class SoundEffectPlayer:
 					self._media = vlc.Media(mrl, "input-repeat=-1" if loop else "input-repeat=0")
 
 			self._player.set_media(self._media)
+			if module.configuration.get(pause_music_key): module.interpreter.put_command("player pause true")
 			self._player.play()
 			return messagetypes.Reply("Playing sound effect: " + self._last_effect[0])
 		else:
@@ -69,6 +72,7 @@ class SoundEffectPlayer:
 		self._player.stop()
 		self._media.release()
 		self._media = None
+		if module.configuration.get(pause_music_key): module.interpreter.put_command("player pause false")
 		return messagetypes.Empty()
 
 	def on_destroy(self):
@@ -87,6 +91,7 @@ def stop_effect(arg, argc):
 @module.Initialize
 def initialize():
 	module.configuration.get_or_create(sounds_path_key, "")
+	module.configuration.get_or_create(pause_music_key, False)
 
 @module.Destroy
 def on_destroy():
