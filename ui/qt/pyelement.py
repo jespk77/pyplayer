@@ -627,6 +627,7 @@ class PyCheckbox(PyElement):
     def checked(self): return self.qt_element.isChecked()
     @checked.setter
     def checked(self, checked): self.qt_element.setChecked(bool(checked))
+    value = checked
 
     @property
     def accept_input(self): return self.qt_element.isEnabled()

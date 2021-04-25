@@ -6,7 +6,8 @@ def create_element(parent, key, cfg):
     elif isinstance(value, list): return PyOptionsListFrame(parent, key, cfg)
 
     element_id = f"option_{key}"
-    if isinstance(value, int): el = pyelement.PyNumberInput(parent, element_id)
+    if isinstance(value, bool): el = pyelement.PyCheckbox(parent, element_id)
+    elif isinstance(value, int): el = pyelement.PyNumberInput(parent, element_id)
     elif isinstance(value, float): el = pyelement.PyNumberInput(parent, element_id, True)
     elif isinstance(value, str):
         if key.startswith("&"): el = pyelement.PyPathInput(parent, element_id, path=value)
