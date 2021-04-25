@@ -102,8 +102,8 @@ class PySplashWindow(pywindow.RootPyWindow):
             for d in dependencies:
                 print("VERBOSE", f"Installing dependency '{d}'")
                 s = d.split("|", maxsplit=1)
-                if len(s) > 1 and sys.platform != s:
-                    print("INFO", f"Ignoring '{d}' on unsupported platform '{sys.platform}'")
+                if len(s) > 1 and sys.platform != s[0]:
+                    print("INFO", f"Ignoring '{d}' on platform '{s[0]}' since it's only for '{sys.platform}'")
                     continue
 
                 self["status_bar"].text = f"Installing '{d}'"
