@@ -24,7 +24,8 @@ try:
             media_player.attach_event("media_changed", self._on_update)
             media_player.attach_event("playing", self._on_play)
             media_player.attach_event("paused", self._on_pause)
-            media_player.attach_event("end_reached", self._on_song_end)
+            media_player.attach_event("stopped", self._on_stop)
+            media_player.attach_event("end_reached", self._on_stop)
 
         def attach_button(self, event, cb):
             """ Attach the given callback to one of the buttons """
@@ -61,7 +62,7 @@ try:
         def _on_pause(self, event, player):
             self._win_controls.playback_status = MediaPlaybackStatus.PAUSED
 
-        def _on_song_end(self, event, player):
+        def _on_stop(self, event, player):
             self._win_controls.playback_status = MediaPlaybackStatus.STOPPED
 
     print("INFO", "Initializing Windows Media controller")
