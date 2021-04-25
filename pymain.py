@@ -86,7 +86,7 @@ class PySplashWindow(pywindow.RootPyWindow):
     # STEP 3: Check module dependencies
     def _load_dependencies(self):
         self.close_window("module_select")
-        if self._dependency_check:
+        if True:#self._dependency_check:
             self["status_bar"].text = "Checking dependencies..."
             module_data = pymodules.module_cfg["modules"]
             dependencies = set()
@@ -109,9 +109,11 @@ class PySplashWindow(pywindow.RootPyWindow):
                 for d in dependencies:
                     print("VERBOSE", f"Installing dependency '{d}'")
                     s = d.split("|", maxsplit=1)
-                    if len(s) > 1 and sys.platform != s[0]:
-                        print("INFO", f"Ignoring '{d}' on platform '{s[0]}' since it's only for '{sys.platform}'")
-                        continue
+                    if len(s) > 1:
+                        if sys.platform != s[0]:
+                            print("INFO", f"Ignoring '{d}' on platform '{s[0]}' since it's only for '{sys.platform}'")
+                            continue
+                        d = s[1]
 
                     self["status_bar"].text = f"Installing '{d}'"
                     process_command(pip_install.format(sys.executable, d))
