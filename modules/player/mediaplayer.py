@@ -1,6 +1,4 @@
-import os
-import random
-
+import os, random
 import vlc as VLCPlayer
 
 
@@ -25,7 +23,7 @@ class MediaPlayerEventUpdate(DynamicClass):
 		self.data = data
 		DynamicClass.__init__(self, **kwargs)
 
-class MediaPlayer():
+class MediaPlayer:
 	""" Helper class for playing music using the vlc python bindings
 	 	When a new song is started when the last song is almost done,
 	 	the player will start the new song without stopping the previous for smooth transitioning  """
@@ -274,7 +272,7 @@ class MediaPlayer():
 		""" Attach a new callback handle to the selected event, has no effect if handle was already attached or if it is not callable
 			(The attached callback will only be called only with the player that is in foreground when the event occurred)
 				event: The name of the event
-				callback: The function to be called when the event occurs, must take two arguments: the event that was triggered and the VLC player that triggered the event """
+				callback: The function to be called when the event occurs, must take two arguments: the event that was triggered and the current player instance """
 		self.update_event_handler(event, callback, add=True)
 
 	def detach_event(self, event, callback):
@@ -290,32 +288,32 @@ class MediaPlayer():
 				else: handle[2].remove(callback)
 		else: print("INFO", "Tried to register unknown event handler id '" + event + "', ignoring this call...")
 
-	def call_attached_handlers(self, name, event, player):
+	def call_attached_handlers(self, name, event):
 		if name in self._events:
 			for cb in self._events[name][2]:
-				try: cb(event, player)
+				try: cb(event, self)
 				except Exception as e: print("ERROR", f"Calling event handler '{name}':", e)
 
 	def on_song_end(self, event, name, player, player_one):
 		if not self._updated:
 			self._paused = False
-			self.call_attached_handlers(name, event, player)
+			self.call_attached_handlers(name, event)
 
 	def on_media_change(self, event, name, player, player_one):
 		if self._player_one == player_one:
-			self.call_attached_handlers(name, event, player)
+			self.call_attached_handlers(name, event)
 
 	def on_stop(self, event, name, player, player_one):
 		if self._player_one == player_one:
-			self.call_attached_handlers(name, event, player)
+			self.call_attached_handlers(name, event)
 
 	def on_pause(self, event, name, player, player_one):
 		if self._player_one == player_one:
-			self.call_attached_handlers(name, event, player)
+			self.call_attached_handlers(name, event)
 
 	def on_play(self, event, name, player, player_one):
 		if self._player_one == player_one:
-			self.call_attached_handlers(name, event, player)
+			self.call_attached_handlers(name, event)
 
 	def on_pos_change(self, event, name, player, player_one):
 		if (self._player_one == self._updated) == player_one:
@@ -324,11 +322,11 @@ class MediaPlayer():
 			if self._updated and pos > MediaPlayer.end_pos:
 				self._player_one = not self._player_one
 				self._updated = False
-				self.call_attached_handlers("player_updated", MediaPlayerEventUpdate(self._media_data), player)
-			self.call_attached_handlers(name, event, player)
+				self.call_attached_handlers("player_updated", MediaPlayerEventUpdate(self._media_data))
+			self.call_attached_handlers(name, event)
 
 	def on_update(self, event, name, player, player_one):
-		self.call_attached_handlers(name, event, player)
+		self.call_attached_handlers(name, event)
 
 # ====== DESTROY PLAYER INSTANCE =====
 	def on_destroy(self):

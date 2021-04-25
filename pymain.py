@@ -1,4 +1,4 @@
-import sys
+import json, sys
 
 import pymodules
 from ui.qt import pyelement, pywindow, pylauncher
@@ -91,21 +91,36 @@ class PySplashWindow(pywindow.RootPyWindow):
             module_data = pymodules.module_cfg["modules"]
             dependencies = set()
             for mod_id, mod_data in [(i,d) for i,d in module_data.items() if d.get("enabled")]:
-                deps = mod_data.get("dependencies")
-                if deps: dependencies.update(deps)
+                with open(pymodules.configuration_file(mod_id), "r") as file:
+                    data = json.load(file)
 
-            print("INFO", "Found dependencies:", dependencies)
-            self["status_bar"].text = f"Verifying {len(dependencies)} dependencies..."
-            pip_install = "{} -m pip install {}"
-            if sys.platform == "linux": pip_install += "--user"
-            for d in dependencies:
-                self["status_bar"].text = f"Installing '{d}'"
-                process_command(pip_install.format(sys.executable, d))
-            self["status_bar"].text = "Dependency check complete, restarting..."
-            self._do_restart()
-        else:
-            self["status_bar"].text = "Loading PyPlayer..."
-            self.schedule_task(sec=1, func=self._load_program)
+                deps = data.get("dependencies")
+                if deps and deps != mod_data["dependencies"]:
+                    pymodules.module_cfg[f"modules::{mod_id}::dependencies"] = deps
+                    dependencies.update(deps)
+
+            if len(dependencies) > 0:
+                print("INFO", "Found dependencies:", dependencies)
+                self["status_bar"].text = f"Verifying {len(dependencies)} dependencies..."
+                pymodules.module_cfg.save()
+                pip_install = "{} -m pip install {}"
+                if sys.platform == "linux": pip_install += "--user"
+
+                for d in dependencies:
+                    print("VERBOSE", f"Installing dependency '{d}'")
+                    s = d.split("|", maxsplit=1)
+                    if len(s) > 1 and sys.platform != s[0]:
+                        print("INFO", f"Ignoring '{d}' on platform '{s[0]}' since it's only for '{sys.platform}'")
+                        continue
+
+                    self["status_bar"].text = f"Installing '{d}'"
+                    process_command(pip_install.format(sys.executable, d))
+
+                self["status_bar"].text = "Dependency check complete, restarting..."
+                return self._do_restart()
+
+        self["status_bar"].text = "Loading PyPlayer..."
+        self.schedule_task(sec=1, func=self._load_program)
 
     # STEP 4: Load main program
     def _load_program(self):
@@ -138,4 +153,11 @@ if __name__ == "__main__":
     import pylogging
     log = pylogging.get_logger()
     if "dev" in sys.argv: log.log_level = "verbose"
+
+    # workaround in order to be able use this library later
+    # prevents "RuntimeError: Cannot change thread mode after it is set"
+    # error occurs after creating a 'PyQt5.QtWidgets.QApplication' instance (in PyRootWindow)
+    try: import winrt
+    except: pass
+
     PySplashWindow().start()

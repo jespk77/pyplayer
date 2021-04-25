@@ -6,6 +6,8 @@ from core import pyconfiguration
 module_dir = "modules"
 module_cfg = pyconfiguration.ConfigurationFile("module_data")
 
+def configuration_file(module): return os.path.join(f"modules/{module}", "package.json")
+
 def scan_for_modules():
     """ Returns a list of names for all modules found in the module folder """
     return [md.name for md in os.scandir(module_dir) if md.is_dir()]
@@ -81,7 +83,7 @@ class PyModuleConfigurationWindow(pywindow.PyWindow):
         for module_id in scan_for_modules():
             try:
                 print("INFO", f"Loading module '{module_id}'...")
-                with open(os.path.join(f"modules/{module_id}", "package.json")) as file:
+                with open(configuration_file(module_id)) as file:
                     module_data = json.load(file)
                     self._module_data[module_id] = module_data
                     current = module_cfg.get("modules::" + module_id)
