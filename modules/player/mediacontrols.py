@@ -4,7 +4,7 @@ class _MediaController:
 
 try:
     from winrt.windows.media.playback import MediaPlayer as WM
-    from winrt.windows.media import MediaPlaybackStatus, SystemMediaTransportControlsButton
+    from winrt.windows.media import MediaPlaybackStatus, MediaPlaybackType, SystemMediaTransportControlsButton
 
     class MediaControllerWin(_MediaController):
         def __init__(self):
@@ -16,7 +16,7 @@ try:
             self._win_controls.add_button_pressed(self._on_button_press)
 
             self._win_display = self._win_controls.display_updater
-            self._win_display.type = 1
+            self._win_display.type = MediaPlaybackType.MUSIC
             self._events = {}
             self._update_data("PyPlayer")
 
