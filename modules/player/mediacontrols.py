@@ -18,6 +18,7 @@ try:
             self._win_display = self._win_controls.display_updater
             self._win_display.type = 1
             self._events = {}
+            self._update_data("PyPlayer")
 
         def bind(self, media_player):
             media_player.attach_event("media_changed", self._on_update)
@@ -36,6 +37,11 @@ try:
                 try: cb()
                 except Exception as e: print("ERROR", f"Calling MediaController event {event}:", e)
 
+        def _update_data(self, title="", artist=""):
+            self._win_display.music_properties.artist = artist
+            self._win_display.music_properties.title = title
+            self._win_display.update()
+
         def _on_button_press(self, sender, event):
             btn = event.button
             if btn == SystemMediaTransportControlsButton.PLAY: self._call_button("play")
@@ -45,10 +51,9 @@ try:
             elif btn == SystemMediaTransportControlsButton.PREVIOUS: self._call_button("previous")
 
         def _on_update(self, event, player):
-                song = player.current_media.display_name.split(" - ", maxsplit=1)
-                self._win_display.music_properties.artist = song[0] if len(song) > 1 else ""
-                self._win_display.music_properties.title = song[1] if len(song) > 1 else song[0]
-                self._win_display.update()
+            song = player.current_media.display_name.split(" - ", maxsplit=1)
+            if len(song) > 1: self._update_data(artist=song[0], title=song[1])
+            else: self._update_data(title=song[0])
 
         def _on_play(self, event, player):
             self._win_controls.playback_status = MediaPlaybackStatus.PLAYING
