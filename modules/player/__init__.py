@@ -2,7 +2,7 @@ import enum, os
 from datetime import datetime
 
 from .mediaplayer import MediaPlayer
-from . import albumwindow, lyricviewer, songbrowser, song_tracker, songhistory, songqueue
+from . import albumwindow, mediacontrols, lyricviewer, songbrowser, song_tracker, songhistory, songqueue
 
 from ui.qt import pyelement
 from core import messagetypes, modules
@@ -10,6 +10,7 @@ module = modules.Module(__package__)
 
 # MODULE SPECIFIC VARIABLES
 media_player = MediaPlayer()
+media_controller = mediacontrols.controller
 song_queue = songqueue.song_queue
 song_history = songhistory.song_history
 invalid_cfg = messagetypes.Reply("Invalid directory configuration, check your options")
@@ -362,6 +363,7 @@ def initialize():
 	media_player.attach_event("end_reached", on_end_reached)
 	media_player.attach_event("stopped", on_stopped)
 	if not song_tracker.is_loaded(): song_tracker.load_tracker()
+	media_controller.bind(media_player)
 
 	player = module.client.add_element("player", element_class=pyelement.PyLabelFrame, index=module.client.layout.index_of("console"))
 	player.layout.column(0, weight=1).column(1, weight=1).margins(5)
@@ -387,13 +389,18 @@ def initialize():
 	@module.client.events.EventKeyDown("MediaPlay")
 	@module.client.events.EventKeyDown("MediaTogglePlayPause")
 	def _media_play(): module.interpreter.put_command("player pause")
+	media_controller.attach_button("play", _media_play)
+	media_controller.attach_button("pause", _media_play)
 
 	@module.client.events.EventKeyDown("MediaNext")
 	def _media_next(): module.interpreter.put_command("player next")
+	media_controller.attach_button("next", _media_next)
 	@module.client.events.EventKeyDown("MediaPrevious")
 	def _media_previous(): module.interpreter.put_command("player previous")
+	media_controller.attach_button("previous", _media_previous)
 	@module.client.events.EventKeyDown("MediaStop")
 	def _media_stop(): module.interpreter.put_command("player stop")
+	media_controller.attach_button("stop", _media_stop)
 
 	module.client.add_task(task_id="player_progress_update", func=_set_client_progress)
 	module.client.add_task(task_id="player_title_update", func=_set_client_title)
