@@ -11,8 +11,8 @@ try:
             self._wplayer = WM()
             self._win_controls = self._wplayer.system_media_transport_controls
             self._win_controls.is_next_enabled = self._win_controls.is_previous_enabled = True
-            self._win_controls.is_pause_enabled = self._win_controls.is_play_enabled = self._win_controls.is_stop_enabled = True
-            self._win_controls.is_enabled = True
+            self._win_controls.is_pause_enabled = self._win_controls.is_play_enabled = False
+            self._win_controls.is_enabled = self._win_controls.is_stop_enabled = True
             self._win_controls.add_button_pressed(self._on_button_press)
 
             self._win_display = self._win_controls.display_updater
@@ -57,12 +57,15 @@ try:
             else: self._update_data(title=song[0])
 
         def _on_play(self, event, player):
+            self._win_controls.is_pause_enabled = self._win_controls.is_play_enabled = True
             self._win_controls.playback_status = MediaPlaybackStatus.PLAYING
 
         def _on_pause(self, event, player):
+            self._win_controls.is_pause_enabled = self._win_controls.is_play_enabled = True
             self._win_controls.playback_status = MediaPlaybackStatus.PAUSED
 
         def _on_stop(self, event, player):
+            self._win_controls.is_pause_enabled = self._win_controls.is_play_enabled = False
             self._win_controls.playback_status = MediaPlaybackStatus.STOPPED
 
     print("INFO", "Initializing Windows Media controller")
