@@ -1,4 +1,4 @@
-import sys
+import json, sys
 
 import pymodules
 from ui.qt import pyelement, pywindow, pylauncher
@@ -91,29 +91,36 @@ class PySplashWindow(pywindow.RootPyWindow):
             module_data = pymodules.module_cfg["modules"]
             dependencies = set()
             for mod_id, mod_data in [(i,d) for i,d in module_data.items() if d.get("enabled")]:
-                deps = mod_data.get("dependencies")
-                if deps: dependencies.update(deps)
+                with open(pymodules.configuration_file(mod_id), "r") as file:
+                    data = json.load(file)
 
-            print("INFO", "Found dependencies:", dependencies)
-            self["status_bar"].text = f"Verifying {len(dependencies)} dependencies..."
-            pip_install = "{} -m pip install {}"
-            if sys.platform == "linux": pip_install += "--user"
+                deps = data.get("dependencies")
+                if deps and deps != mod_data["dependencies"]:
+                    pymodules.module_cfg[f"modules::{mod_id}::dependencies"] = deps
+                    dependencies.update(deps)
 
-            for d in dependencies:
-                print("VERBOSE", f"Installing dependency '{d}'")
-                s = d.split("|", maxsplit=1)
-                if len(s) > 1 and sys.platform != s[0]:
-                    print("INFO", f"Ignoring '{d}' on platform '{s[0]}' since it's only for '{sys.platform}'")
-                    continue
+            if len(dependencies) > 0:
+                print("INFO", "Found dependencies:", dependencies)
+                self["status_bar"].text = f"Verifying {len(dependencies)} dependencies..."
+                pymodules.module_cfg.save()
+                pip_install = "{} -m pip install {}"
+                if sys.platform == "linux": pip_install += "--user"
 
-                self["status_bar"].text = f"Installing '{d}'"
-                process_command(pip_install.format(sys.executable, d))
+                for d in dependencies:
+                    print("VERBOSE", f"Installing dependency '{d}'")
+                    s = d.split("|", maxsplit=1)
+                    if len(s) > 1 and sys.platform != s[0]:
+                        print("INFO", f"Ignoring '{d}' on platform '{s[0]}' since it's only for '{sys.platform}'")
+                        continue
 
-            self["status_bar"].text = "Dependency check complete, restarting..."
-            self._do_restart()
-        else:
-            self["status_bar"].text = "Loading PyPlayer..."
-            self.schedule_task(sec=1, func=self._load_program)
+                    self["status_bar"].text = f"Installing '{d}'"
+                    process_command(pip_install.format(sys.executable, d))
+
+                self["status_bar"].text = "Dependency check complete, restarting..."
+                return self._do_restart()
+
+        self["status_bar"].text = "Loading PyPlayer..."
+        self.schedule_task(sec=1, func=self._load_program)
 
     # STEP 4: Load main program
     def _load_program(self):
