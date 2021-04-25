@@ -1,6 +1,4 @@
-import os
-import random
-
+import os, random
 import vlc as VLCPlayer
 
 
@@ -25,7 +23,7 @@ class MediaPlayerEventUpdate(DynamicClass):
 		self.data = data
 		DynamicClass.__init__(self, **kwargs)
 
-class MediaPlayer():
+class MediaPlayer:
 	""" Helper class for playing music using the vlc python bindings
 	 	When a new song is started when the last song is almost done,
 	 	the player will start the new song without stopping the previous for smooth transitioning  """
