@@ -674,6 +674,62 @@ class PyButton(PyElement):
         self._img = QtGui.QIcon(img.data)
         self.qt_element.setIcon(self._img)
 
+class PyDropDownMenu(PyElement):
+    """
+     Element that allows the user to choose between a number of options
+     Interaction event fires when the selection has changed, keywords:
+        - index: int, the newly selected index
+        - value: str, the value at the new index
+    """
+    def __init__(self, parent, element_id):
+        self._qt = QtWidgets.QComboBox(parent.qt_element)
+        PyElement.__init__(self, parent, element_id)
+        self._qt.currentIndexChanged.connect(self._on_value_changed)
+
+    @property
+    def accept_input(self): return self._qt.isEnabled()
+    @accept_input.setter
+    def accept_input(self, inpt): self._qt.setEnabled(bool(inpt))
+
+    @property
+    def editable(self): return self._qt.isEditable()
+    @editable.setter
+    def editable(self, edit): self._qt.setEditable(bool(edit))
+
+    @property
+    def current_index(self): return self._qt.currentIndex()
+    @current_index.setter
+    def current_index(self, index):
+        if index < 0: index += len(self)
+        self._qt.setCurrentIndex(index)
+
+    @property
+    def current_value(self): return self._qt.currentText()
+    @current_value.setter
+    def current_value(self, value): self._qt.setCurrentText(value)
+    value = current_value
+
+    @property
+    def itemlist(self): return [self._qt.itemText(i) for i in range(self._qt.count())]
+    @itemlist.setter
+    def itemlist(self, items):
+        self.clear()
+        self._qt.insertItems(0, items)
+
+    def add_item(self, item): self._qt.addItem(item)
+    append = add_item
+    def insert_item(self, index, item): self._qt.insertItem(index, item)
+    def remove_item(self, index): self._qt.removeItem(index)
+    def clear(self): self._qt.clear()
+
+    def __getitem__(self, index): return self._qt.itemText(index)
+    def __setitem__(self, index, value): self._qt.setItemText(index, value)
+    def __delitem__(self, index): self._qt.removeItem(index)
+    def __len__(self): return self._qt.count()
+    def __iter__(self): return iter(self.itemlist)
+
+    def _on_value_changed(self, index):
+        self.events.call_event("interact", index=index, value=self[index])
 
 def random_url():
     import random
