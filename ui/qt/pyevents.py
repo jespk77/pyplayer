@@ -113,6 +113,25 @@ class PyWindowEvents(EventHandler):
         self.register_event("window_resize", cb)
         return cb
 
+    def EventWindowHide(self, cb):
+        """
+         Fired when the window gets hidden, this can be done either with the minimize button or programatically
+            - no keywords
+            - not cancellable
+        """
+        self.register_event("window_hide", cb)
+        return cb
+
+    def EventWindowShow(self, cb):
+        """
+         Fired when the window becomes visible after it was hidden
+            - no keywords
+            - not cancellable
+        """
+        self.register_event("window_show", cb)
+        return cb
+
+
 class PyElementEvents(EventHandler):
     """
      Container for all element events, see EventHandler for more information

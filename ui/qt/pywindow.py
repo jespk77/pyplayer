@@ -49,6 +49,8 @@ class PyWindow:
         self.qt_window.keyPressEvent = self._on_key_down
         self.qt_window.resizeEvent = self._on_window_resize
         self.qt_window.closeEvent = self._on_window_close
+        self.qt_window.hideEvent = self._on_window_hide
+        self.qt_window.showEvent = self._on_window_show
         self.qt_window.hide()
 
         self._elements = {}
@@ -382,6 +384,18 @@ class PyWindow:
         except Exception as e: log_exception(e)
         self._scheduled_tasks = None
         QtWidgets.QWidget.closeEvent(self.qt_element, event)
+
+    # QWidget.hideEvent override
+    def _on_window_hide(self, event):
+        if not self._closed:
+            self.events.call_event("window_hide")
+            QtWidgets.QWidget.hideEvent(self.qt_window, event)
+
+    # QWidget.showEvent override
+    def _on_window_show(self, event):
+        if not self._closed:
+            self.events.call_event("window_show")
+            QtWidgets.QWidget.showEvent(self.qt_window, event)
 
 def default_palette():
     Palette, Color = QtGui.QPalette, QtGui.QColor
