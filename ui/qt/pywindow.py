@@ -356,7 +356,7 @@ class PyWindow:
     # QWidget.keyPressEvent override
     def _on_key_down(self, event):
         if self.events.call_keydown_event(event): print("VERBOSE", "Key event was blocked and won't be forwarded to the window")
-        else: type(self.qt_element).keyPressEvent(self.qt_element, event)
+        else: type(self.qt_element).keyPressEvent(self.qt_window, event)
 
     # QWidget.resizeEvent override
     def _on_window_resize(self, event):
@@ -364,7 +364,7 @@ class PyWindow:
             new_size = event.size()
             self.events.call_event("window_resize", width=new_size.width(), height=new_size.height())
         except Exception as e: log_exception(e)
-        QtWidgets.QWidget.resizeEvent(self.qt_element, event)
+        QtWidgets.QWidget.resizeEvent(self.qt_window, event)
 
     # QWidget.closeEvent override
     def _on_window_close(self, event):
@@ -383,7 +383,7 @@ class PyWindow:
             self._closed = True
         except Exception as e: log_exception(e)
         self._scheduled_tasks = None
-        QtWidgets.QWidget.closeEvent(self.qt_element, event)
+        QtWidgets.QWidget.closeEvent(self.qt_window, event)
 
     # QWidget.hideEvent override
     def _on_window_hide(self, event):
