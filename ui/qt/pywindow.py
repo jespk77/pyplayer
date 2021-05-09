@@ -110,6 +110,8 @@ class PyWindow:
     def qt_element(self): return self._qt
     @property
     def qt_window(self): return self._qt
+    @property
+    def handle(self): return self.qt_window.winId()
 
     @property
     def window_id(self):

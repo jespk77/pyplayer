@@ -30,6 +30,8 @@ class PyElement:
     def qt_element(self): return self._qt
     @property
     def qt_container(self): return self._qt
+    @property
+    def handle(self): return self.qt_element.winId()
 
     @property
     def parent(self):
