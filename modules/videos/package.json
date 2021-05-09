@@ -1,0 +1,8 @@
+{
+  "id": "videos",
+  "enabled": false,
+  "dependencies": ["python-vlc"],
+  "platform": null,
+  "priority": 65,
+  "required": false
+}
