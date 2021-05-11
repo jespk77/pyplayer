@@ -72,7 +72,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
         pywindow.PyWindow.__init__(self, parent, self.window_id)
         self.title = "Video Player"
         self.icon = "assets/icon_video"
-        self.layout.row(0, weight=1).column(0, weight=1).column(5, weight=1)
+        self.layout.row(0, weight=1).column(0, weight=1).column(4, weight=1)
 
         self.events.EventWindowHide(self._on_hide)
         self.events.EventWindowShow(self._on_show)
@@ -82,7 +82,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
         if video_file is not None: self.play(video_file)
 
     def create_widgets(self):
-        self.add_element("content", element_class=pyelement.PyLabelFrame, columnspan=6)
+        self.add_element("content", element_class=pyelement.PyLabelFrame, columnspan=5)
         self.add_element("filler1", element_class=pyelement.PyFrame, row=1)
 
         btn = self.add_element("backward_btn", element_class=pyelement.PyButton, row=1, column=1)
@@ -91,15 +91,34 @@ class VideoPlayerWindow(pywindow.PyWindow):
         btn2 = self.add_element("playpause_btn", element_class=pyelement.PyButton, row=1, column=2)
         btn2.text = "Pause"
         btn2.events.EventInteract(self.pause)
-        btn3 = self.add_element("forward_btn", element_class=pyelement.PyButton, row=1, column=4)
+        btn3 = self.add_element("forward_btn", element_class=pyelement.PyButton, row=1, column=3)
         btn3.text = ">>"
         btn3.events.EventInteract(self.forward)
-        self.add_element("filler2", element_class=pyelement.PyFrame, row=1, column=5)
+        self.add_element("filler2", element_class=pyelement.PyFrame, row=1, column=4)
 
-    def _on_close(self):
-        module.interpreter.put_command("video stop")
+        @self.events.EventKeyDown("Space")
+        def _pause():
+            self.pause()
+            return self.events.block_action
+
+        @self.events.EventKeyDown("Left")
+        def _backward():
+            self.backward()
+            return self.events.block_action
+
+        @self.events.EventKeyDown("Right")
+        def _forward():
+            self.forward()
+            return self.events.block_action
 
     def play(self, video_file): self.schedule_task(task_id="play_video", video_file=video_file)
+    def pause(self): module.interpreter.put_command("video pause")
+    def stop(self): module.interpreter.put_command("video stop")
+    def forward(self, amount=5): module.interpreter.put_command(f"video time +{amount}")
+    def backward(self, amount=5): module.interpreter.put_command(f"video time -{amount}")
+
+    def _on_close(self): self.stop()
+
     def _play(self, video_file):
         if isinstance(video_file, tuple): display_name, video = video_file
         else: display_name = video = video_file
@@ -110,11 +129,6 @@ class VideoPlayerWindow(pywindow.PyWindow):
             video_player.play_video(video)
             self.title = f"Video Player: {display_name}"
         else: print("WARNING", "Tried to play invalid file")
-
-    def pause(self): module.interpreter.put_command("video pause")
-    def stop(self): module.interpreter.put_command("video stop")
-    def forward(self, amount=5): module.interpreter.put_command(f"video time +{amount}")
-    def backward(self, amount=5): module.interpreter.put_command(f"video time -{amount}")
 
     def _on_show(self):
         print("VERBOSE", "Video player no longer hidden, continue playback")
