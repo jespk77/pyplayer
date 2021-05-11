@@ -720,7 +720,7 @@ class PyTextField(PyElement):
     def with_text(self, txt):
         self.display_text = txt
         return self
-    text = display_text
+    text = value = display_text
 
     @property
     def cursor(self): return self.qt_element.textCursor().position()
@@ -1082,6 +1082,7 @@ class PyProgessbar(PyElement):
     def progress(self): return self.qt_element.value()
     @progress.setter
     def progress(self, value): self.qt_element.setValue(int(value))
+    value = progress
 
     @property
     def horizontal(self): return self.qt_element.orientation() == QtCore.Qt.Horizontal
@@ -1147,6 +1148,7 @@ class PyItemlist(PyElement):
     def itemlist(self, items):
         self._items.setStringList(items)
         self.qt_element.setModel(self._items)
+    value = itemlist
 
     @property
     def auto_select(self): return self.qt_element.selectionMode() == QtWidgets.QListView.SingleSelection
