@@ -16,13 +16,19 @@ def show_video_window(video=None):
 
 def get_tvshow_seasons(show):
     dr = module.configuration.get(f"shows::{show}")
-    if dr is not None: return [path.path for path in os.scandir(dr['$path']) if path.is_dir()]
+    if dr is not None:
+        if os.path.isdir(dr['$path']): return [path.path for path in os.scandir(dr['$path']) if path.is_dir()]
+        else: return []
     else: return None
 
-def get_episode_list(season): return [(get_displayname(ep), os.path.join(season, ep)) for ep in os.listdir(season)]
+def get_episode_list(season):
+    if os.path.isdir(season): return [(get_displayname(ep), os.path.join(season, ep)) for ep in os.listdir(season)]
+    else: return []
+
 def get_tvshow_episodes(show, season=None):
     seasons = get_tvshow_seasons(show)
     if seasons is not None:
+        if len(seasons) == 0: return seasons
         if season is not None: return get_episode_list(seasons[season - 1])
         else: return sum([get_episode_list(s) for s in seasons], [])
     else: return None
