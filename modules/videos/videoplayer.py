@@ -6,6 +6,14 @@ class VideoPlayer:
     def __init__(self):
         self._vlc = vlc.MediaPlayer()
 
+        self._events = {}
+        event_manager = self._vlc.event_manager()
+        event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, lambda e: self._call_event("end_reached", e))
+        event_manager.event_attach(vlc.EventType.MediaPlayerPaused, lambda e: self._call_event("pause", e))
+        event_manager.event_attach(vlc.EventType.MediaPlayerPlaying, lambda e: self._call_event("play", e))
+        event_manager.event_attach(vlc.EventType.MediaPlayerPositionChanged, lambda e: self._call_event("pos_changed", e))
+        event_manager.event_attach(vlc.EventType.MediaPlayerStopped, lambda e: self._call_event("stopped", e))
+
     def destroy(self):
         print("VERBOSE", "Releasing video player instance")
         self._vlc.release()
@@ -59,6 +67,29 @@ class VideoPlayer:
             print("VERBOSE", f"Moving current position {pos*100}%...")
             self._vlc.set_position(self._vlc.get_position() + pos)
 
+    def EventEndReached(self, cb): return self._register_event("end_reached", cb)
+    def EventPause(self, cb): return self._register_event("pause", cb)
+    def EventPlay(self, cb): return self._register_event("play", cb)
+    def EventPosition(self, cb): return self._register_event("pos_changed", cb)
+    def EventStop(self, cb): return self._register_event("stop", cb)
+
+    def _register_event(self, event_id, cb):
+        if cb is not None:
+            print("VERBOSE", f"Registring new event handler for '{event_id}'...")
+            if not callable(cb): raise TypeError("Event handler must be callable")
+            self._events[event_id] = cb
+            return cb
+        else:
+            print("VERBOSE", f"Unegistring event handler for '{event_id}'...")
+            try: del self._events[event_id]
+            except KeyError: pass
+
+    def _call_event(self, event_id, event):
+        cb = self._events.get(event_id)
+        if cb is not None:
+            try: cb(event)
+            except Exception as e: print("ERROR", f"Calling event handler for '{event_id}':", e)
+
 video_player = VideoPlayer()
 from ui.qt import pywindow, pyelement
 
@@ -79,6 +110,9 @@ class VideoPlayerWindow(pywindow.PyWindow):
         self.events.EventWindowClose(self._on_close)
 
         self.add_task("play_video", self._play)
+        self.add_task("on_play", self._execute_play)
+        self.add_task("on_pause", self._execute_pause)
+        self._register_events()
         if video_file is not None: self.play(video_file)
 
     def create_widgets(self):
@@ -89,7 +123,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
         btn.text = "<<"
         btn.events.EventInteract(self.backward)
         btn2 = self.add_element("playpause_btn", element_class=pyelement.PyButton, row=1, column=2)
-        btn2.text = "Pause"
+        btn2.text = "???"
         btn2.events.EventInteract(self.pause)
         btn3 = self.add_element("forward_btn", element_class=pyelement.PyButton, row=1, column=3)
         btn3.text = ">>"
@@ -117,7 +151,9 @@ class VideoPlayerWindow(pywindow.PyWindow):
     def forward(self, amount=5): module.interpreter.put_command(f"video time +{amount}")
     def backward(self, amount=5): module.interpreter.put_command(f"video time -{amount}")
 
-    def _on_close(self): self.stop()
+    def _on_close(self):
+        self.stop()
+        self._unregister_events()
 
     def _play(self, video_file):
         if isinstance(video_file, tuple): display_name, video = video_file
@@ -137,3 +173,16 @@ class VideoPlayerWindow(pywindow.PyWindow):
     def _on_hide(self):
         print("VERBOSE", "Video player hidden, pause playback")
         module.interpreter.put_command("video pause true")
+
+    def _register_events(self):
+        video_player.EventPlay(self._on_play)
+        video_player.EventPause(self._on_pause)
+
+    def _unregister_events(self):
+        video_player.EventPlay(None)
+        video_player.EventPause(None)
+
+    def _on_play(self, _): self.schedule_task(task_id="on_play")
+    def _execute_play(self): self["playpause_btn"].text = "Pause"
+    def _on_pause(self, _): self.schedule_task(task_id="on_pause")
+    def _execute_pause(self): self["playpause_btn"].text = "Play"
