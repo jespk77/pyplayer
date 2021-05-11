@@ -112,6 +112,8 @@ class VideoPlayerWindow(pywindow.PyWindow):
         self.add_task("play_video", self._play)
         self.add_task("on_play", self._execute_play)
         self.add_task("on_pause", self._execute_pause)
+        self.add_task("pos_change", self._execute_pos_change)
+        self.add_task("on_stop", self._execute_stop)
         self._register_events()
         if video_file is not None: self.play(video_file)
 
@@ -119,16 +121,22 @@ class VideoPlayerWindow(pywindow.PyWindow):
         self.add_element("content", element_class=pyelement.PyLabelFrame, columnspan=5)
         self.add_element("filler1", element_class=pyelement.PyFrame, row=1)
 
-        btn = self.add_element("backward_btn", element_class=pyelement.PyButton, row=1, column=1)
-        btn.text = "<<"
+        progress = self.add_element("progress", element_class=pyelement.PyProgessbar, row=1, columnspan=5)
+        progress.minimum, progress.value, progress.maximum = 0, 0, 10000
+        #progress.color = "green"
+        @progress.events.EventInteract
+        def _on_click(position): module.interpreter.put_command(f"video position {position}")
+
+        btn = self.add_element("backward_btn", element_class=pyelement.PyButton, row=2, column=1)
+        btn.text, btn.accept_input = "<<", False
         btn.events.EventInteract(self.backward)
-        btn2 = self.add_element("playpause_btn", element_class=pyelement.PyButton, row=1, column=2)
-        btn2.text = "???"
+        btn2 = self.add_element("playpause_btn", element_class=pyelement.PyButton, row=2, column=2)
+        btn2.text, btn2.accept_input = "???", False
         btn2.events.EventInteract(self.pause)
-        btn3 = self.add_element("forward_btn", element_class=pyelement.PyButton, row=1, column=3)
-        btn3.text = ">>"
+        btn3 = self.add_element("forward_btn", element_class=pyelement.PyButton, row=2, column=3)
+        btn3.text, btn3.accept_input = ">>", False
         btn3.events.EventInteract(self.forward)
-        self.add_element("filler2", element_class=pyelement.PyFrame, row=1, column=4)
+        self.add_element("filler2", element_class=pyelement.PyFrame, row=2, column=4)
 
         @self.events.EventKeyDown("Space")
         def _pause():
@@ -177,12 +185,28 @@ class VideoPlayerWindow(pywindow.PyWindow):
     def _register_events(self):
         video_player.EventPlay(self._on_play)
         video_player.EventPause(self._on_pause)
+        video_player.EventPosition(self._on_pos_change)
+        video_player.EventEndReached(self._on_stop)
+        video_player.EventStop(self._on_stop)
 
     def _unregister_events(self):
         video_player.EventPlay(None)
         video_player.EventPause(None)
+        video_player.EventPosition(None)
+        video_player.EventEndReached(None)
+        video_player.EventStop(None)
 
     def _on_play(self, _): self.schedule_task(task_id="on_play")
-    def _execute_play(self): self["playpause_btn"].text = "Pause"
+    def _execute_play(self):
+        self["playpause_btn"].text = "Pause"
+        self["backward_btn"].accept_input = self["playpause_btn"].accept_input = self["forward_btn"].accept_input = True
+
     def _on_pause(self, _): self.schedule_task(task_id="on_pause")
     def _execute_pause(self): self["playpause_btn"].text = "Play"
+    def _on_pos_change(self, e): self.schedule_task(task_id="pos_change", time=e.u.new_position)
+    def _execute_pos_change(self, time): self["progress"].value = time * 10000
+
+    def _on_stop(self, _): self.schedule_task(task_id="on_stop")
+    def _execute_stop(self):
+        self["progress"].value = 10000
+        self["backward_btn"].accept_input = self["playpause_btn"].accept_input = self["forward_btn"].accept_input = False
