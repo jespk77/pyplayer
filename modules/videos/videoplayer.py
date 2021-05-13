@@ -107,7 +107,7 @@ module = modules.Module(__package__)
 class VideoPlayerWindow(pywindow.PyWindow):
     window_id = "video_player_window"
 
-    def __init__(self, parent, video_file=None):
+    def __init__(self, parent, video_file=None, show=None):
         pywindow.PyWindow.__init__(self, parent, self.window_id)
         self.title = "Video Player"
         self.icon = "assets/icon_video"
@@ -123,7 +123,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
         self.add_task("pos_change", self._execute_pos_change)
         self.add_task("on_stop", self._execute_stop)
         self._register_events()
-        if video_file is not None: self.play(video_file)
+        if video_file is not None: self.play(video_file, show)
 
     def create_widgets(self):
         self.add_element("content", element_class=pyelement.PyLabelFrame, columnspan=5)
@@ -161,7 +161,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
             self.forward()
             return self.events.block_action
 
-    def play(self, video_file): self.schedule_task(task_id="play_video", video_file=video_file)
+    def play(self, video_file, show_data=None): self.schedule_task(task_id="play_video", video_file=video_file, show_data=show_data)
     def pause(self): module.interpreter.put_command("video pause")
     def stop(self): module.interpreter.put_command("video stop")
     def forward(self, amount=5): module.interpreter.put_command(f"video time +{amount}")
@@ -171,7 +171,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
         self.stop()
         self._unregister_events()
 
-    def _play(self, video_file):
+    def _play(self, video_file, show_data):
         if isinstance(video_file, tuple): display_name, video = video_file
         else: display_name = video = video_file
 
@@ -179,7 +179,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
         if os.path.isfile(video):
             video_player.set_window(self["content"].handle)
             video_player.play_video(video)
-            self.title = f"Video Player: {display_name}"
+            self.title = f"Video Player: {show_data['display_name'] + ' - ' if show_data and show_data['display_name'] else ''}{display_name}"
         else: print("WARNING", "Tried to play invalid file")
 
     def _on_show(self):

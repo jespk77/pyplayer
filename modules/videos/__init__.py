@@ -9,9 +9,9 @@ video_player = videoplayer.video_player
 
 def get_displayname(path): return os.path.splitext(path)[0]
 
-def show_video_window(video=None):
+def show_video_window(video=None, show=None):
     window = module.client.find_window(videoplayer.VideoPlayerWindow.window_id)
-    if window is None: module.client.add_window(window_class=videoplayer.VideoPlayerWindow, video_file=video)
+    if window is None: module.client.add_window(window_class=videoplayer.VideoPlayerWindow, video_file=video, show=show)
     else: window.play(video)
 
 def get_tvshow_seasons(show):
@@ -39,9 +39,9 @@ def parse_arg(arg, argc):
             else: return ShowSelection(show=show_data)
     return None, None, None
 
-def play_video(video, path):
+def play_video(video, path, show):
     if video is not None and path is not None:
-        show_video_window((video,path))
+        show_video_window((video,path), show)
         return messagetypes.Reply(f"Now playing '{video[0]}'")
     else: return messagetypes.Reply("No episode found")
 
@@ -52,7 +52,7 @@ def command_tvshow(arg, argc):
     if len(videos) == 0: return messagetypes.Reply("No episodes found")
 
     matches = [v for v in videos if v[0].startswith(episode)]
-    if len(matches) > 0: return messagetypes.Select("Multiple episodes found", play_video, matches)
+    if len(matches) > 0: return messagetypes.Select("Multiple episodes found", play_video, matches, show=show)
     else: return messagetypes.Reply("No episode found")
 
 def command_tvshow_random(arg, argc):
@@ -62,7 +62,7 @@ def command_tvshow_random(arg, argc):
     if len(videos) == 0: return messagetypes.Reply("No episodes found")
 
     video = random.choice(videos)
-    show_video_window(video)
+    show_video_window(video, show)
     return messagetypes.Reply(f"Now playing '{video[0]}'")
 
 def command_tvshow_start(arg, argc):
