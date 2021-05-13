@@ -131,7 +131,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
 
         progress = self.add_element("progress", element_class=pyelement.PyProgessbar, row=1, columnspan=5)
         progress.minimum, progress.value, progress.maximum = 0, 0, 10000
-        #progress.color = "green"
+        progress.color = module.configuration.get("#progressbar_color")
         @progress.events.EventInteract
         def _on_click(position): module.interpreter.put_command(f"video position {position}")
 
