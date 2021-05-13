@@ -39,17 +39,21 @@ def parse_arg(arg, argc):
             else: return ShowSelection(show=show_data)
     return None, None, None
 
+def play_video(video, path):
+    if video is not None and path is not None:
+        show_video_window((video,path))
+        return messagetypes.Reply(f"Now playing '{video[0]}'")
+    else: return messagetypes.Reply("No episode found")
+
 def command_tvshow(arg, argc):
     show, season, episode = parse_arg(arg, argc)
     if show is None: return messagetypes.Reply("Unknown show")
     videos = get_tvshow_episodes(show, season)
     if len(videos) == 0: return messagetypes.Reply("No episodes found")
 
-    for v in videos:
-        if v[0].startswith(episode):
-            show_video_window(v)
-            return messagetypes.Reply(f"Now playing '{v[0]}'")
-    return messagetypes.Reply("No episode found")
+    matches = [v for v in videos if v[0].startswith(episode)]
+    if len(matches) > 0: return messagetypes.Select("Multiple episodes found", play_video, matches)
+    else: return messagetypes.Reply("No episode found")
 
 def command_tvshow_random(arg, argc):
     show, season, _ = parse_arg(arg, argc)
