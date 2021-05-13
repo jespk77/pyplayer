@@ -72,7 +72,11 @@ class PyWindow:
             log_exception(e)
 
         geo = self._cfg.get("geometry")
-        if isinstance(geo, list): self.set_geometry(*geo)
+        if isinstance(geo, list):
+            self.set_geometry(*geo[:4])
+            if len(geo) > 4:
+                if geo[4] == 2: self.maximized = True
+                elif geo[4] == 1: self.minimized = True
         self.add_task("_add_window", func=self._add_window)
 
     def __del__(self): print("MEMORY", f"PyWindow '{self.window_id}' deleted")
@@ -150,6 +154,16 @@ class PyWindow:
     def hidden(self): return self.qt_window.isHidden()
     @hidden.setter
     def hidden(self, hide): self.qt_window.setHidden(bool(hide))
+
+    @property
+    def maximized(self): return self.qt_window.isMaximized()
+    @maximized.setter
+    def maximized(self, maximized): self.qt_window.showMaximized() if maximized else self.qt_window.showNormal()
+
+    @property
+    def minimized(self): return self.qt_window.isMinimized()
+    @minimized.setter
+    def minimized(self, minimized): self.qt_window.showMinimized() if minimized else self.qt_window.showNormal()
 
     @property
     def geometry_string(self):
@@ -349,7 +363,7 @@ class PyWindow:
          Note: configuration is automatically saved when the window closes, this only needs to be called if changes need to be written beforehand
         """
         geo = self._qt.geometry()
-        self.cfg['geometry'] = geo.x(), geo.y(), geo.width(), geo.height()
+        self.cfg['geometry'] = geo.x(), geo.y(), geo.width(), geo.height(), 2 if self.maximized else 1 if self.minimized else 0
         self.configuration.save()
 
     def _on_key_down(self, event):
