@@ -15,11 +15,8 @@ def show_video_window(video=None):
     else: window.play(video)
 
 def get_tvshow_seasons(show):
-    dr = module.configuration.get(f"shows::{show}")
-    if dr is not None:
-        if os.path.isdir(dr['$path']): return [path.path for path in os.scandir(dr['$path']) if path.is_dir()]
-        else: return []
-    else: return None
+    if os.path.isdir(show['$path']): return [path.path for path in os.scandir(show['$path']) if path.is_dir()]
+    else: return []
 
 def get_episode_list(season):
     if os.path.isdir(season): return [(get_displayname(ep), os.path.join(season, ep)) for ep in os.listdir(season)]
@@ -35,16 +32,17 @@ def get_tvshow_episodes(show, season=None):
 
 ShowSelection = namedtuple("ShowSelection", ["show", "season", "episode"], defaults=[None,None])
 def parse_arg(arg, argc):
-    if argc > 1:
-        show, sel = arg[0], arg[1]
-        return ShowSelection(show=show, season=int(sel[0]), episode=sel[1:])
-    elif argc == 1: return ShowSelection(show=arg[0])
-    else: return None, None
+    if argc > 0:
+        show_data = module.configuration.get(f"shows::{arg[0]}")
+        if show_data is not None:
+            if argc > 1: return ShowSelection(show=show_data, season=int(arg[1][0]), episode=arg[1][1:])
+            else: return ShowSelection(show=show_data)
+    return None, None, None
 
 def command_tvshow(arg, argc):
     show, season, episode = parse_arg(arg, argc)
+    if show is None: return messagetypes.Reply("Unknown show")
     videos = get_tvshow_episodes(show, season)
-    if videos is None: return messagetypes.Reply("Unknown show")
     if len(videos) == 0: return messagetypes.Reply("No episodes found")
 
     for v in videos:
@@ -55,13 +53,45 @@ def command_tvshow(arg, argc):
 
 def command_tvshow_random(arg, argc):
     show, season, _ = parse_arg(arg, argc)
+    if show is None: return messagetypes.Reply("Unknown show")
     videos = get_tvshow_episodes(show, season)
-    if videos is None: return messagetypes.Reply("Unknown show")
     if len(videos) == 0: return messagetypes.Reply("No episodes found")
 
     video = random.choice(videos)
     show_video_window(video)
     return messagetypes.Reply(f"Now playing '{video[0]}'")
+
+def command_tvshow_start(arg, argc):
+    show, _, _ = parse_arg(arg, argc)
+    if show is None: return messagetypes.Reply("Unknown show")
+
+    module.configuration[f"shows::{arg[0]}::_episode"] = 0
+    name = show["display_name"] if show["display_name"] else arg[0]
+    return messagetypes.Reply(f"Started new series for '{name}'")
+
+def command_tvshow_stop(arg, argc):
+    show, _, _ = parse_arg(arg, argc)
+    if show is None: return messagetypes.Reply("Unknown show")
+
+    try: del module.configuration[f"shows::{arg[0]}::_episode"]
+    except KeyError: pass
+    name = show["display_name"] if show["display_name"] else arg[0]
+    return messagetypes.Reply(f"Stopped series for '{name}'")
+
+def command_tvshow_continue(arg, argc):
+    show, _, _ = parse_arg(arg, argc)
+    if show is None: return messagetypes.Reply("Unknown show")
+
+    try: index = show["_episode"]
+    except KeyError: index = 0
+    videos = get_tvshow_episodes(show)
+    module.configuration[f"shows::{arg[0]}::_episode"] = index + 1
+
+    try:
+        video = videos[index]
+        show_video_window(video)
+        return messagetypes.Reply(f"Now playing '{video[0]}'")
+    except IndexError: return messagetypes.Reply("End of series reached")
 
 def command_video_pause(arg, argc):
     video_player.pause_video(arg[0] if argc > 0 else None)
@@ -103,7 +133,10 @@ def command_video_time(arg, argc):
 module.commands = {
     "tvshow": {
         "": command_tvshow,
+        "continue": command_tvshow_continue,
         "random": command_tvshow_random,
+        "start": command_tvshow_start,
+        "stop": command_tvshow_stop
     },
     "video": {
         "pause": command_video_pause,
