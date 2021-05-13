@@ -120,7 +120,7 @@ def command_video_pos(arg, argc):
         move = _move_cb(arg[0], video_player.move_position)
         if move is not None: return move
 
-        try: video_player.position = arg[0]
+        try: video_player.position = float(arg[0])
         except ValueError: return messagetypes.Reply("Invalid number")
         else: return messagetypes.Reply("Video player position updated")
 
@@ -129,7 +129,7 @@ def command_video_time(arg, argc):
         move = _move_cb(arg[0], video_player.move_time)
         if move is not None: return move
 
-        try: video_player.time = arg[0]
+        try: video_player.time = float(arg[0])
         except ValueError: return messagetypes.Reply("Invalid number")
         else: return messagetypes.Reply("Video player time updated")
 
