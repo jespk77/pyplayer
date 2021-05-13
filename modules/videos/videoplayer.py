@@ -94,7 +94,6 @@ class VideoPlayer:
     def _call_event(self, event_id, event):
         cb = self._events.get(event_id)
         if cb is not None:
-            print("VERBOSE", f"Calling event handler for '{event_id}'...")
             try: cb(event)
             except Exception as e: print("ERROR", f"While calling event handler for '{event_id}':", e)
 

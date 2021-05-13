@@ -24,40 +24,46 @@ def get_episode_list(season):
 
 def get_tvshow_episodes(show, season=None):
     seasons = get_tvshow_seasons(show)
-    if seasons is not None:
-        if len(seasons) == 0: return seasons
-        if season is not None: return get_episode_list(seasons[season - 1])
-        else: return sum([get_episode_list(s) for s in seasons], [])
-    else: return None
+    if len(seasons) == 0: return seasons
+
+    if season:
+        try: return get_episode_list(seasons[season - 1])
+        except IndexError: return []
+    else: return sum([get_episode_list(s) for s in seasons], [])
 
 ShowSelection = namedtuple("ShowSelection", ["show", "season", "episode"], defaults=[None,None])
 def parse_arg(arg, argc):
     if argc > 0:
         show_data = module.configuration.get(f"shows::{arg[0]}")
-        if show_data is not None:
-            if argc > 1: return ShowSelection(show=show_data, season=int(arg[1][0]), episode=arg[1][1:])
-            else: return ShowSelection(show=show_data)
+        if show_data is not None: return ShowSelection(show=show_data, season=int(arg[1]) if argc > 1 else "", episode=arg[2] if argc > 2 else "")
     return None, None, None
 
 def play_video(video, path, show):
     if video is not None and path is not None:
         show_video_window((video,path), show)
-        return messagetypes.Reply(f"Now playing '{video[0]}'")
+        return messagetypes.Reply(f"Now playing '{video}'")
     else: return messagetypes.Reply("No episode found")
 
 def command_tvshow(arg, argc):
-    show, season, episode = parse_arg(arg, argc)
+    try: show, season, episode = parse_arg(arg, argc)
+    except ValueError: return messagetypes.Reply("Invalid season number")
     if show is None: return messagetypes.Reply("Unknown show")
+
     videos = get_tvshow_episodes(show, season)
     if len(videos) == 0: return messagetypes.Reply("No episodes found")
 
-    matches = [v for v in videos if v[0].startswith(episode)]
-    if len(matches) > 0: return messagetypes.Select("Multiple episodes found", play_video, matches, show=show)
-    else: return messagetypes.Reply("No episode found")
+    try: v = videos[int(episode) - 1]
+    except (ValueError,IndexError):
+        matches = [v for v in videos if episode in v[0].split(" - ", maxsplit=1)[0]]
+        if len(matches) > 0: return messagetypes.Select("Multiple episodes found", play_video, matches, show=show)
+    else: return play_video(*v, show)
+    return messagetypes.Reply("No episode found")
 
 def command_tvshow_random(arg, argc):
-    show, season, _ = parse_arg(arg, argc)
+    try: show, season, _ = parse_arg(arg, argc)
+    except ValueError: return messagetypes.Reply("Invalid season number")
     if show is None: return messagetypes.Reply("Unknown show")
+
     videos = get_tvshow_episodes(show, season)
     if len(videos) == 0: return messagetypes.Reply("No episodes found")
 
@@ -66,7 +72,8 @@ def command_tvshow_random(arg, argc):
     return messagetypes.Reply(f"Now playing '{video[0]}'")
 
 def command_tvshow_start(arg, argc):
-    show, _, _ = parse_arg(arg, argc)
+    try: show, _, _ = parse_arg(arg, argc)
+    except ValueError: return messagetypes.Reply("Invalid season number")
     if show is None: return messagetypes.Reply("Unknown show")
 
     module.configuration[f"shows::{arg[0]}::_episode"] = 0
@@ -74,7 +81,8 @@ def command_tvshow_start(arg, argc):
     return messagetypes.Reply(f"Started new series for '{name}'")
 
 def command_tvshow_stop(arg, argc):
-    show, _, _ = parse_arg(arg, argc)
+    try: show, _, _ = parse_arg(arg, argc)
+    except ValueError: return messagetypes.Reply("Invalid season number")
     if show is None: return messagetypes.Reply("Unknown show")
 
     try: del module.configuration[f"shows::{arg[0]}::_episode"]
@@ -83,7 +91,8 @@ def command_tvshow_stop(arg, argc):
     return messagetypes.Reply(f"Stopped series for '{name}'")
 
 def command_tvshow_continue(arg, argc):
-    show, _, _ = parse_arg(arg, argc)
+    try: show, _, _ = parse_arg(arg, argc)
+    except ValueError: return messagetypes.Reply("Invalid season number")
     if show is None: return messagetypes.Reply("Unknown show")
 
     try: index = show["_episode"]
