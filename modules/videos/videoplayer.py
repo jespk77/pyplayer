@@ -49,17 +49,24 @@ class VideoPlayer:
     @property
     def time(self): return self._vlc.get_time() / 1000
     @time.setter
-    def time(self, time): self._vlc.set_time(float(time) * 1000)
+    def time(self, time):
+        if self.playing:
+            time = round(time * 1000)
+            print("VERBOSE", f"Updating play time to {time}s...")
+            self._vlc.set_time(time)
 
     @property
     def position(self): return self._vlc.get_position()
     @position.setter
-    def position(self, pos): self._vlc.set_position(float(pos))
+    def position(self, pos):
+        if self.playing:
+            print("VERBOSE", f"Updating play position to {pos*100}%...")
+            self._vlc.set_position(pos)
 
     def move_time(self, time):
         if self._vlc.is_playing():
             time = round(time * 1000)
-            print("VERBOSE", f"Moving play time {time} s...")
+            print("VERBOSE", f"Moving play time {time}s...")
             self._vlc.set_time(self._vlc.get_time() + time)
 
     def move_position(self, pos):
@@ -87,8 +94,9 @@ class VideoPlayer:
     def _call_event(self, event_id, event):
         cb = self._events.get(event_id)
         if cb is not None:
+            print("VERBOSE", f"Calling event handler for '{event_id}'...")
             try: cb(event)
-            except Exception as e: print("ERROR", f"Calling event handler for '{event_id}':", e)
+            except Exception as e: print("ERROR", f"While calling event handler for '{event_id}':", e)
 
 video_player = VideoPlayer()
 from ui.qt import pywindow, pyelement
