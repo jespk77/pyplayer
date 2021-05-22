@@ -138,7 +138,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
         btn.text, btn.accept_input = "<<", False
         btn.events.EventInteract(self.backward)
         btn2 = self.add_element("playpause_btn", element_class=pyelement.PyButton, row=2, column=2)
-        btn2.text, btn2.accept_input = "???", False
+        btn2.text, btn2.accept_input = "Play", True
         btn2.events.EventInteract(self.pause)
         btn3 = self.add_element("forward_btn", element_class=pyelement.PyButton, row=2, column=3)
         btn3.text, btn3.accept_input = ">>", False
@@ -206,7 +206,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
     def _on_play(self, _): self.schedule_task(task_id="on_play")
     def _execute_play(self):
         self["playpause_btn"].text = "Pause"
-        self["backward_btn"].accept_input = self["playpause_btn"].accept_input = self["forward_btn"].accept_input = True
+        self["backward_btn"].accept_input = self["forward_btn"].accept_input = True
 
     def _on_pause(self, _): self.schedule_task(task_id="on_pause")
     def _execute_pause(self): self["playpause_btn"].text = "Play"
@@ -216,4 +216,4 @@ class VideoPlayerWindow(pywindow.PyWindow):
     def _on_stop(self, _): self.schedule_task(task_id="on_stop")
     def _execute_stop(self):
         self["progress"].value = 10000
-        self["backward_btn"].accept_input = self["playpause_btn"].accept_input = self["forward_btn"].accept_input = False
+        self["backward_btn"].accept_input = self["forward_btn"].accept_input = False
