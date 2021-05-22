@@ -1,7 +1,7 @@
 {
   "id": "player",
   "enabled": true,
-  "dependencies": ["python-vlc", "feedparser", "win32|winrt"],
+  "dependencies": ["python-vlc==3.0.11115", "feedparser", "win32|winrt"],
   "platform": null,
   "priority": 2,
   "required": false
