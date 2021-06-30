@@ -203,6 +203,12 @@ class Configuration(ConfigurationItem):
 		if val is not None and not isinstance(val, dict): raise TypeError("Can only add new values from a dictionary")
 		self._default_value = val
 
+		if val is not None:
+			for entry in self.values():
+				for key, value in val.items():
+					if key not in entry: entry[key] = value
+
+
 	def rename(self, from_key, to_key):
 		"""
 		 Rename the options for a specific key to a different key
