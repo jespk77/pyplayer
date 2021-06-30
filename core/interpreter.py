@@ -86,11 +86,12 @@ class Interpreter(QtCore.QThread):
 		self._client = client
 		self._queue = Queue()
 		self._args = 0
+		self._active = True
 
 		self._events = {}
 		self.register_event("autocomplete", self._try_autocomplete)
 		self.register_event("parse_command", self._parse_command)
-		self.register_event("destroy", self._on_destroy)
+		self.register_event("destroy", self._destroy)
 
 		self._set_sys_arg()
 		self._loaded_modules = []
@@ -158,13 +159,10 @@ class Interpreter(QtCore.QThread):
 		 All registered handlers are executed in the order they were added
 		"""
 		print("INFO", "Interpreter thread started")
-		while True:
+		while self._active:
 			event, *args = self._queue.get()
 			print("VERBOSE", f"Processing event '{event}' with data:", args)
-			if event is False:
-				self._notify_event("destroy")
-				return
-			else: self._notify_event(event, *args)
+			self._notify_event(event, *args)
 
 
 	def request_autocomplete(self, line):
@@ -196,7 +194,8 @@ class Interpreter(QtCore.QThread):
 		 This operation uses a multiprocessing.queue and therefore is thread-safe and uses the 'put' operation without wait and therefore will not block
 		"""
 		print("VERBOSE", "Received end event, terminating interpreter...")
-		self._queue.put_nowait((False,))
+		self._queue.put_nowait(("destroy",))
+		self.wait()
 
 
 	def register_event(self, event_id, callback):
@@ -281,6 +280,7 @@ class Interpreter(QtCore.QThread):
 		suggestions = sorted(suggestions, key=lambda item: len(item.remainder))
 		self._client.schedule_task(task_id=self._client.autocomplete_task, suggestions=suggestions)
 
-	def _on_destroy(self):
+	def _destroy(self):
 		print("VERBOSE", "Destroying modules...")
 		for md in self._modules: md.destroy_module()
+		self._active = False
