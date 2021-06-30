@@ -31,5 +31,5 @@ class PlayerInfoWindow(pywindow.PyWindowDocked):
 
     def create_widgets(self):
         tab: pyelement.PyTabFrame = self.add_element("info_tabs", element_class=pyelement.PyTabFrame)
-        tab.add_tab("Queue", frame=songqueue.SongQueueViewer(tab))
         tab.add_tab("History", frame=SongHistoryViewer(tab))
+        tab.add_tab("Queue", frame=songqueue.SongQueueViewer(tab))
