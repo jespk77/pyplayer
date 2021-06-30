@@ -102,7 +102,7 @@ def command_tvshow_continue(arg, argc):
 
     try:
         video = videos[index]
-        show_video_window(video)
+        show_video_window(video, module.configuration.get(f"shows::{arg[0]}"))
         return messagetypes.Reply(f"Now playing '{video[0]}'")
     except IndexError: return messagetypes.Reply("End of series reached")
 
