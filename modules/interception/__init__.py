@@ -5,6 +5,8 @@ from ui.qt import pyworker
 from core import messagetypes, modules
 module = modules.Module(__package__)
 
+from . import keyconfigurationwindow
+
 # MODULE SPECIFIC VARIABLES
 trigger_file = "keytriggers"
 loop_effect_command = "effect loop {}"
@@ -108,8 +110,16 @@ def interception_toggle(arg=None, argc=None):
     if _is_interception_running(): return interception_stop()
     else: return interception_start()
 
+def interception_configure(arg, argc):
+    if not os.path.isfile(trigger_file): return messagetypes.Reply("Cannot configure keys without a file")
+    keyconfigurationwindow.trigger_file = trigger_file
+    if module.client.find_window(keyconfigurationwindow.KeyConfigurationWindow.window_id) is None:
+        module.client.add_window(window_class=keyconfigurationwindow.KeyConfigurationWindow)
+    return messagetypes.Reply("Interception key configuration window opened")
+
 module.commands = {
     "interception": {
+        "configure": interception_configure,
         "start": interception_start,
         "stop": interception_stop,
         "toggle": interception_toggle,
