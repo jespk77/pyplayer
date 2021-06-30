@@ -122,6 +122,8 @@ class VideoPlayerWindow(pywindow.PyWindow):
         self.add_task("pos_change", self._execute_pos_change)
         self.add_task("on_stop", self._execute_stop)
         self._register_events()
+
+        self._show_data = show
         if video_file is not None: self.play(video_file, show)
 
     def create_widgets(self):
@@ -160,6 +162,12 @@ class VideoPlayerWindow(pywindow.PyWindow):
             self.forward()
             return self.events.block_action
 
+        @self.events.EventKeyDown("PageDown")
+        def _forward_intro():
+            if self._show_data is not None:
+                self.forward(self._show_data.get("intro_time", 10))
+            return self.events.block_action
+
     def play(self, video_file, show_data=None): self.schedule_task(task_id="play_video", video_file=video_file, show_data=show_data)
     def pause(self): module.interpreter.put_command("video pause")
     def stop(self): module.interpreter.put_command("video stop")
@@ -173,6 +181,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
     def _play(self, video_file, show_data):
         if isinstance(video_file, tuple): display_name, video = video_file
         else: display_name = video = video_file
+        self._show_data = show_data
 
         print("VERBOSE", f"Trying to play '{video}'...")
         if os.path.isfile(video):

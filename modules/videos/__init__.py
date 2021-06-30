@@ -163,7 +163,7 @@ module.commands = {
 def init():
     module.configuration.get_or_create("#progressbar_color", "#00ffff")
     cfg = module.configuration.get_or_create_configuration("shows", {})
-    cfg.default_value = {"$path": "", "display_name": ""}
+    cfg.default_value = {"$path": "", "display_name": "", "intro_time": 10}
 
 @module.Destroy
 def destroy():
