@@ -12,7 +12,7 @@ def get_displayname(path): return os.path.splitext(path)[0]
 def show_video_window(video=None, show=None):
     window = module.client.find_window(videoplayer.VideoPlayerWindow.window_id)
     if window is None: module.client.add_window(window_class=videoplayer.VideoPlayerWindow, video_file=video, show=show)
-    else: window.play(video)
+    else: window.play(video, show)
 
 def get_tvshow_seasons(show):
     if os.path.isdir(show['$path']): return [path.path for path in os.scandir(show['$path']) if path.is_dir()]
