@@ -72,7 +72,7 @@ class TwitchSigninWorker(pyworker.PyWorker, socketserver.TCPServer):
     def set_account_data(self, data):
         with self._state_event:
             if data.get("state") == self._state:
-                print("INFO", "Received account data, scheduling signin completion")
+                print("VERBOSE", "Received account data, scheduling signin completion")
                 write_logindata(data)
                 write_metadata(request_metadata())
                 self._window.schedule_task(task_id="signin_data", success=True)
@@ -81,16 +81,16 @@ class TwitchSigninWorker(pyworker.PyWorker, socketserver.TCPServer):
                 self._window.schedule_task(task_id="signin_data", success=False)
 
     def stop_server(self):
-        print("INFO", "Stopping server")
+        print("VERBOSE", "Stopping server")
         self.shutdown()
 
     def run(self):
-        print("INFO", "Server started, waiting for requests")
+        print("VERBOSE", "Server started, waiting for requests")
         try: self.serve_forever()
         except Exception as e: print("ERROR", "While running server:", e)
 
     def complete(self):
-        print("INFO", "Server stopped, doing cleanup")
+        print("VERBOSE", "Server stopped, doing cleanup")
         self.server_close()
         self._window = None
 
@@ -132,26 +132,26 @@ class TwitchSigninWindow(pywindow.PyWindow):
         btn3.events.EventInteract(self.destroy)
 
     def _start_sign_in(self):
-        print("INFO", "Started sign in process")
+        print("VERBOSE", "Started sign in process")
         self["btn_signin"].accept_input = False
         self._server_worker.create_request(self.auth_url.format(client_id=CLIENT_ID, resp_uri=self.resp_uri, scope="+".join(self.scope)))
 
     def _manual_sign_in(self):
-        print("INFO", "Used manual token submission")
+        print("VERBOSE", "Used manual token submission")
         write_logindata({"access_token": self["input_token"].value})
         self._on_sign_in(True)
 
     def _on_sign_in(self, success):
         if success:
-            print("INFO", "Sign in data received, closing window")
+            print("VERBOSE", "Sign in data received, closing window")
             self.destroy()
         else:
-            print("INFO", "No data received")
+            print("VERBOSE", "No data received")
             self["header"].text = "Error, try again..."
             self["btn_signin"].accept_input = True
 
     def _on_close(self):
-        print("INFO", "Sign in window closed, terminating server")
+        print("VERBOSE", "Sign in window closed, terminating server")
         self._server_worker.stop_server()
         self.parent.schedule_task(task_id="refresh_status")
 
@@ -163,7 +163,7 @@ class TwitchSignOutWorker(pyworker.PyWorker):
         userdata = read_logindata()
         if userdata:
             r = requests.post(self.signout_url.format(client_id=userdata["Client-ID"], token=userdata["Authorization"].split(" ", maxsplit=1)[1]))
-            if r.status_code == 200: print("INFO", "Successfully logged out")
+            if r.status_code == 200: print("VERBOSE", "Successfully logged out")
             else: print("WARNING", "Failed to deauthorize token:", f"(status={r.status_code}, message={r.content})")
             invalidate_metadata()
             invalidate_logindata()
@@ -207,7 +207,7 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
                 else: self.wait.wait(sec=(self.wait_time * 60) - wtime)
 
     def complete(self):
-        print("INFO", "Auto refresh worker completed")
+        print("VERBOSE", "Auto refresh worker completed")
 
     def error(self, error):
         self._window.schedule_task(task_id="twitch_channel_data", error=str(error))
@@ -235,7 +235,7 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
 
         try: req = requests.get(self.followed_stream_url.format(ids="&user_id=".join(followed_channels)), headers=self._logindata)
         except requests.ConnectionError as e:
-            print("INFO", "Failed to get updated channels:", str(e))
+            print("ERROR", "Failed to get updated channels:", str(e))
             self._error = "Connection failed"
             return False
         else:
@@ -263,7 +263,7 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
             thumbnail_url = channel["thumbnail_url"]
             req = requests.get(thumbnail_url.format(width=THUMBNAIL_SIZE[0], height=THUMBNAIL_SIZE[1]))
             if req.status_code == 200: channel["thumbnail"] = req.content
-            else: print("INFO", "Failed to get thumbnail:", f"(status={req.status_code}, message={req.content}")
+            else: print("ERROR", "Failed to get thumbnail:", f"(status={req.status_code}, message={req.content}")
 
         self._data = followed_channels
         return True
@@ -391,7 +391,7 @@ class TwichOverview(pywindow.PyWindow):
         frame = self[AutoRefreshFrame.main_id]
         check, inpt = frame[AutoRefreshFrame.check_id], frame[AutoRefreshFrame.input_id]
         if check.checked:
-            print("INFO", "Enabling auto refresh worker")
+            print("VERBOSE", "Enabling auto refresh worker")
             if self._refresh_task is not None:
                 print("ERROR", "Refresh task already running, aborting...")
                 return
@@ -401,7 +401,7 @@ class TwichOverview(pywindow.PyWindow):
             self._refresh_task.repeated = True
             self._refresh_task.activate()
         else:
-            print("INFO", "Disabling auto refresh worker")
+            print("VERBOSE", "Disabling auto refresh worker")
             if self._refresh_task is not None:
                 with self._refresh_task.wait: self._refresh_task.active = False
                 self._refresh_task.wait.notify_one()
@@ -504,12 +504,12 @@ class TwichOverview(pywindow.PyWindow):
     def _enable_refresh(self): self["followed_refresh"].accept_input = True
 
     def open_stream_twitch(self, channel):
-        print("INFO", "Opening stream for", channel)
+        print("VERBOSE", "Opening stream for", channel)
         browser_path = module.configuration.get(browser_path_key)
         if browser_path: os.system(f'"{browser_path}" https://twitch.tv/{channel}')
 
     def open_stream_alt(self, channel):
-        print("INFO", "Opening stream to", channel, "with alternate player")
+        print("VERBOSE", "Opening stream to", channel, "with alternate player")
         browser_path = module.configuration.get(browser_path_key)
         alt_url = module.configuration.get(alternate_player_key)
         if browser_path and alt_url: os.system(f'"{browser_path}" {alt_url.format(channel=channel)}')
