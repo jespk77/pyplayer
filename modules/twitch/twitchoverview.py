@@ -1,4 +1,4 @@
-import json, requests, socketserver, threading, time, os
+import datetime, json, requests, socketserver, threading, time, os
 from ui.qt import pywindow, pyelement, pyworker, pyimage
 
 from core import modules
@@ -310,6 +310,13 @@ class StreamEntryFrame(pyelement.PyLabelFrame):
             btn2.accept_input = False
             btn2.text = "No 'alternate_player_url'"
 
+        start_time = self._data.get("started_at")
+        if start_time is not None:
+            start_time = datetime.datetime.fromisoformat(start_time.rstrip('Z'))
+            uptime = str(datetime.datetime.utcnow() - start_time).split(".", maxsplit=1)[0]
+            uptime_lbl = self.add_element("uptime_lbl", element_class=pyelement.PyTextLabel, row=2, column=2)
+            uptime_lbl.text = f"\u23f0 {uptime}"
+            uptime_lbl.set_alignment("center")
 
 class AutoRefreshFrame(pyelement.PyFrame):
     main_id, check_id, input_id = "auto_refresh", "refresh_check", "refresh_delay"
