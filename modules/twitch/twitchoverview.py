@@ -273,7 +273,7 @@ class StreamEntryFrame(pyelement.PyLabelFrame):
     def __init__(self, parent, data):
         self._data = data
         pyelement.PyLabelFrame.__init__(self, parent, f"entry_{self._data['id']}")
-        self.layout.column(1, weight=1, minsize=150)
+        self.layout.column(1, weight=1, minsize=150).margins(2)
 
     def create_widgets(self):
         thumbnail = self.add_element("thumbnail", element_class=pyelement.PyTextLabel, rowspan=3)
@@ -282,11 +282,9 @@ class StreamEntryFrame(pyelement.PyLabelFrame):
             pyimage.PyImage(thumbnail, data=thumbnail_img)
             thumbnail.width, thumbnail.height = THUMBNAIL_SIZE
 
-        lbl1 = self.add_element("user_lbl", element_class=pyelement.PyTextLabel, row=0, column=1)
-        lbl1.text = self._data.get('user_name', "(No username set)")
-        lbl1.set_alignment("center")
-        lbl1.wrapping = True
-        lbl2 = self.add_element("title_lbl", element_class=pyelement.PyTextLabel, row=1, column=1)
+        self.set_label_alignment("center")
+        self.label = self._data.get('user_name', "(No username set)")
+        lbl2 = self.add_element("title_lbl", element_class=pyelement.PyTextLabel, rowspan=2, column=1)
         lbl2.text = self._data.get('title', "(No title set)")
         lbl2.set_alignment("center")
         lbl2.wrapping = True
@@ -296,19 +294,19 @@ class StreamEntryFrame(pyelement.PyLabelFrame):
         lbl3.wrapping = True
 
         btn = self.add_element("btn_visit", element_class=pyelement.PyButton, row=0, column=2)
-        btn.text = "Open (Twitch)"
+        btn.text = "Twitch player \u25b6"
         btn.events.EventInteract(lambda : self.window.open_stream_twitch(self._data["user_name"]))
         browser_available = browser_path_key in module.configuration
         if not browser_available:
             btn.accept_input = False
-            btn.text = "No 'browser_path'"
+            btn.text = "No browser set"
 
         btn2 = self.add_element("btn_visit_alt", element_class=pyelement.PyButton, row=1, column=2)
-        btn2.text = "Open (Alternate twitch)"
+        btn2.text = "Alternate player \u25b6"
         btn2.events.EventInteract(lambda : self.window.open_stream_alt(self._data["user_name"]))
         if not browser_available or alternate_player_key not in module.configuration:
             btn2.accept_input = False
-            btn2.text = "No 'alternate_player_url'"
+            btn2.text = "No alternate player"
 
         start_time = self._data.get("started_at")
         if start_time is not None:
@@ -319,7 +317,7 @@ class StreamEntryFrame(pyelement.PyLabelFrame):
             uptime_lbl.set_alignment("center")
 
 class AutoRefreshFrame(pyelement.PyFrame):
-    main_id, check_id, input_id = "auto_refresh", "refresh_check", "refresh_delay"
+    main_id, check_id, input_id, btn_id = "auto_refresh", "refresh_check", "refresh_delay", "manual_refresh"
 
     def __init__(self, parent):
         pyelement.PyFrame.__init__(self, parent, AutoRefreshFrame.main_id)
@@ -339,6 +337,10 @@ class AutoRefreshFrame(pyelement.PyFrame):
         lbl = self.add_element("min_lbl", element_class=pyelement.PyTextLabel, column=2)
         lbl.text = "minutes"
         lbl.set_alignment("centerV")
+
+        btn = self.add_element(AutoRefreshFrame.btn_id, element_class=pyelement.PyButton, column=3)
+        btn.text = "Refresh \u21bb"
+        btn.accept_input = False
 
     @property
     def enabled(self): return self["refresh_check"].checked
@@ -363,7 +365,7 @@ class TwichOverview(pywindow.PyWindow):
         self.title = "TwitchViewer: Overview"
         self.icon = "assets/icon_twitchviewer.png"
 
-        self.layout.row(4, weight=1, minsize=200).column(0, weight=1)
+        self.layout.row(4, weight=1, minsize=200).column(0, weight=1).margins(5)
         self.schedule_task(func=self._refresh_status, task_id="refresh_status")
         self.add_task(task_id="twitch_channel_data", func=self._fill_channel_data)
         self.add_task(task_id="twitch_start_refresh", func=self._on_refresh_active)
@@ -376,17 +378,14 @@ class TwichOverview(pywindow.PyWindow):
         self.add_element("button_signinout", element_class=pyelement.PyButton, column=1)
         self.add_element("sep1", element_class=pyelement.PySeparator, row=1, columnspan=2)
 
-        lbl = self.add_element("followed_label", element_class=pyelement.PyTextLabel, row=2)
+        lbl = self.add_element("followed_label", element_class=pyelement.PyTextLabel, row=2, columnspan=2)
         lbl.text = self.follow_channel_text
         lbl.set_alignment("center")
-        refresh_frame = self.add_element(element=AutoRefreshFrame(self), row=3)
-        refresh_frame["refresh_check"].events.EventInteract(self._set_repeated_refresh)
-        refresh_frame["refresh_delay"].events.EventInteract(self._delay_repeated_refresh)
+        refresh_frame = self.add_element(element=AutoRefreshFrame(self), row=3, columnspan=2)
+        refresh_frame[AutoRefreshFrame.check_id].events.EventInteract(self._set_repeated_refresh)
+        refresh_frame[AutoRefreshFrame.input_id].events.EventInteract(self._delay_repeated_refresh)
+        refresh_frame[AutoRefreshFrame.btn_id].events.EventInteract(self.activate_refresh)
 
-        btn = self.add_element("followed_refresh", element_class=pyelement.PyButton, row=2, column=1, rowspan=2)
-        btn.text = "Refresh"
-        btn.accept_input = False
-        btn.events.EventInteract(self.activate_refresh)
         self.add_element("followed_content", element_class=pyelement.PyScrollableFrame, row=4, columnspan=2)
 
     @property
@@ -427,12 +426,15 @@ class TwichOverview(pywindow.PyWindow):
             self._refresh_task.wait.notify_one()
 
     def _on_refresh_active(self):
-        self["followed_refresh"].accept_input = False
+        self._set_refresh_status(False)
         self["followed_label"].text = self.follow_channel_text + "Updating..."
 
     def activate_refresh(self):
         if self._refresh_task: self._refresh_task.refresh()
         else: TwitchRefeshLiveChannelsWorker(self)
+
+    def _set_refresh_status(self, enabled):
+        self[AutoRefreshFrame.main_id][AutoRefreshFrame.btn_id].accept_input = enabled
 
     def _refresh_status(self):
         self._userlogin = read_logindata()
@@ -445,7 +447,7 @@ class TwichOverview(pywindow.PyWindow):
             btn_signinout.events.EventInteract(self.sign_out)
 
             self["followed_label"].text = self.follow_channel_text + self.last_updated_time
-            self["followed_refresh"].accept_input = True
+            self._set_refresh_status(True)
 
         else:
             print("VERBOSE", "Not currently signed in")
@@ -455,7 +457,7 @@ class TwichOverview(pywindow.PyWindow):
             btn_signinout.events.EventInteract(self.sign_in)
 
             self["followed_label"].text = self.follow_channel_text + "Sign in to get started"
-            self["followed_refresh"].accept_input = False
+            self._set_refresh_status(False)
 
     def sign_in(self):
         print("VERBOSE", "Opening sign in window")
@@ -476,7 +478,7 @@ class TwichOverview(pywindow.PyWindow):
                 return
 
             self["followed_label"].text = self.follow_channel_text + self.last_updated_time + "\nAn error occured, try again later"
-            self._enable_refresh()
+            self._set_refresh_status(True)
 
         elif data is not None:
             print("VERBOSE", "Got updated live channel data")
@@ -504,11 +506,9 @@ class TwichOverview(pywindow.PyWindow):
             if len(data) == 0:
                 end_label.text = "No channels live"
                 end_label.set_alignment("centerH")
-            self._enable_refresh()
+            self._set_refresh_status(True)
 
         else: raise ValueError("Missing 'data' or 'error' keyword")
-
-    def _enable_refresh(self): self["followed_refresh"].accept_input = True
 
     def open_stream_twitch(self, channel):
         print("VERBOSE", "Opening stream for", channel)
