@@ -256,6 +256,13 @@ class PyLabelFrame(PyFrame):
     @label.setter
     def label(self, txt): self._qt.setTitle(str(txt))
 
+    _alignments = {"left": QtCore.Qt.AlignLeft, "center": QtCore.Qt.AlignHCenter, "right": QtCore.Qt.AlignRight}
+    def set_label_alignment(self, alignment):
+        qt_alignment = self._alignments.get(alignment)
+        if qt_alignment is None: raise ValueError(f"Unknown alignment '{alignment}', must be one of {','.join(self._alignments.keys())}")
+        self._qt.setAlignment(qt_alignment)
+
+
 class PyTabFrame(PyElement):
     """
        Element with a number of subframes, different frames can be selected using tabs
