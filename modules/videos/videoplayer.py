@@ -188,6 +188,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
             video_player.set_window(self["content"].handle)
             video_player.play_video(video)
             self.title = f"Video Player: {show_data['display_name'] + ' - ' if show_data and show_data['display_name'] else ''}{display_name}"
+            self.activate()
         else: print("WARNING", "Tried to play invalid file")
 
     def _on_show(self):
