@@ -165,6 +165,10 @@ class PyWindow:
     @minimized.setter
     def minimized(self, minimized): self.qt_window.showMinimized() if minimized else self.qt_window.showNormal()
 
+    def activate(self):
+        """ Sets this window to be visible and have keyboard focus """
+        self._qt.activateWindow()
+
     @property
     def geometry_string(self):
         """
