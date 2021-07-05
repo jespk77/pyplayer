@@ -226,8 +226,8 @@ class PyScrollableFrame(PyFrame):
     def __init__(self, parent, element_id, layout="grid"):
         self._qt = QtWidgets.QScrollArea(parent.qt_element)
         self._content = QtWidgets.QWidget()
-        self._qt.setWidgetResizable(True)
-        self._qt.setWidget(self._content)
+        self.qt_container.setWidgetResizable(True)
+        self.qt_container.setWidget(self._content)
         PyFrame.__init__(self, parent, element_id, layout)
         self.show_scrollbar = True
 
@@ -237,10 +237,10 @@ class PyScrollableFrame(PyFrame):
     @property
     def show_scrollbar(self):
         """ If True the vertical scrollbar will always be visible, otherwise it's only visible if its content is bigger than the visible area """
-        return self._qt.verticalScrollBarPolicy() == QtCore.Qt.ScrollBarAlwaysOn
+        return self.qt_container.verticalScrollBarPolicy() == QtCore.Qt.ScrollBarAlwaysOn
     @show_scrollbar.setter
     def show_scrollbar(self, show):
-        self._qt.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn if show else QtCore.Qt.ScrollBarAsNeeded)
+        self.qt_container.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn if show else QtCore.Qt.ScrollBarAsNeeded)
 
 class PyLabelFrame(PyFrame):
     """
@@ -252,15 +252,15 @@ class PyLabelFrame(PyFrame):
         PyFrame.__init__(self, parent, element_id, layout)
 
     @property
-    def label(self): return self._qt.title()
+    def label(self): return self.qt_element.title()
     @label.setter
-    def label(self, txt): self._qt.setTitle(str(txt))
+    def label(self, txt): self.qt_element.setTitle(str(txt))
 
     _alignments = {"left": QtCore.Qt.AlignLeft, "center": QtCore.Qt.AlignHCenter, "right": QtCore.Qt.AlignRight}
     def set_label_alignment(self, alignment):
         qt_alignment = self._alignments.get(alignment)
         if qt_alignment is None: raise ValueError(f"Unknown alignment '{alignment}', must be one of {','.join(self._alignments.keys())}")
-        self._qt.setAlignment(qt_alignment)
+        self.qt_element.setAlignment(qt_alignment)
 
 
 class PyTabFrame(PyElement):
@@ -316,17 +316,17 @@ class PyTabFrame(PyElement):
     def get_tab_name(self, index):
         """ Returns the current name of the tab at given index, returns an empty string if index out of range """
         if index < 0: index += len(self._tabs)
-        return self._qt.tabText(index)
+        return self.qt_element.tabText(index)
 
     def set_tab_name(self, index, name):
         """ Update the name of the tab at given index, has no effect if the index is out of range """
         if index < 0: index += len(self._tabs)
-        self._qt.setTabText(index, name)
+        self.qt_element.setTabText(index, name)
 
     def remove_tab(self, index):
         """ Remove tab at the given index, has no effect if the index is out of range """
         if index < 0: index += len(self._tabs)
-        self._qt.removeTab(index)
+        self.qt_element.removeTab(index)
         try: del self._tabs[index]
         except IndexError: pass
 
@@ -471,8 +471,8 @@ class PyTextLabel(PyElement):
     def set_font_style(self, style):
         try:
             if isinstance(style, tuple):
-                self._qt.setStyleSheet(f"QLabel {{ {'; '.join([self._font_style[s] for s in style])} }}")
-            else: self._qt.setStyleSheet(f"QLabel {{ {self._font_style[style]} }}")
+                self.qt_element.setStyleSheet(f"QLabel {{ {'; '.join([self._font_style[s] for s in style])} }}")
+            else: self.qt_element.setStyleSheet(f"QLabel {{ {self._font_style[style]} }}")
             return
         except KeyError: pass
         raise ValueError(f"Unknown font style '{style}' specified")
@@ -864,8 +864,8 @@ class PyTable(PyElement):
         self.qt_element.cellChanged.connect(self._on_cell_changed)
 
     def _update_header_visibility(self):
-        self._qt.horizontalHeader().setVisible(self.columns > 1 or self._horizontal_header)
-        self._qt.verticalHeader().setVisible(self.rows > 1 or self._vertical_header)
+        self.qt_element.horizontalHeader().setVisible(self.columns > 1 or self._horizontal_header)
+        self.qt_element.verticalHeader().setVisible(self.rows > 1 or self._vertical_header)
     def _table_update(self):
         if self._dynamic_column and self.columns > 0:
             col = self.columns - 1
@@ -1145,7 +1145,7 @@ class PyItemlist(PyElement):
         self.qt_element.currentChanged = self._on_selection_change
         self.qt_element.setStyleSheet(f"""
             QListView {{ 
-             selection-background-color: #101010; selection-color: {self._qt.palette().highlight().color().name()}
+             selection-background-color: #101010; selection-color: {self.qt_element.palette().highlight().color().name()}
             }} """)
         self._items = QtCore.QStringListModel()
 
@@ -1171,7 +1171,7 @@ class PyItemlist(PyElement):
     def selected_index(self, index):
         """ Set the current selection to given index, clears the selection if the given index is less than 0 """
         self.clear_selection()
-        if index >= 0: self.qt_element.setSelection(self._qt.visualRect(self._items.index(index)), QtCore.QItemSelectionModel.Select)
+        if index >= 0: self.qt_element.setSelection(self.qt_element.visualRect(self._items.index(index)), QtCore.QItemSelectionModel.Select)
 
     def clear_selection(self):
         """ Removes any selected item """
