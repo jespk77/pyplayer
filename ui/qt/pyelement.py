@@ -250,11 +250,25 @@ class PyLabelFrame(PyFrame):
     def __init__(self, parent, element_id, layout="grid"):
         self._qt = QtWidgets.QGroupBox(parent.qt_element)
         PyFrame.__init__(self, parent, element_id, layout)
+        self._qt.clicked.connect(lambda checked: self.events.call_event("interact", checked=checked))
 
     @property
     def label(self): return self.qt_element.title()
     @label.setter
     def label(self, txt): self.qt_element.setTitle(str(txt))
+
+    @property
+    def checkbox(self): return self.qt_element.isCheckable()
+    @checkbox.setter
+    def checkbox(self, check):
+        self.qt_element.setCheckable(bool(check))
+
+    @property
+    def checked(self): return self.checkbox and self.qt_element.isChecked()
+    @checked.setter
+    def checked(self, check):
+        if self.checkbox: self.qt_element.setChecked(bool(check))
+    value = accept_input = checked
 
     _alignments = {"left": QtCore.Qt.AlignLeft, "center": QtCore.Qt.AlignHCenter, "right": QtCore.Qt.AlignRight}
     def set_label_alignment(self, alignment):
