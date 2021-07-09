@@ -9,7 +9,7 @@ LyricData = collections.namedtuple("LyricData", ["artist", "title"])
 
 def _check_lyrics(tag):
 	if tag.name == "div":
-		try: return ' '.join(tag["class"]) == "lyrics"
+		try: return ' '.join(tag["class"]).startswith("Lyrics__Container")
 		except KeyError: pass
 	return False
 
@@ -38,7 +38,7 @@ class TaskLyrics(pyworker.PyWorker):
 		pyworker.PyWorker.__init__(self, "task_get_lyrics")
 
 	def run(self):
-		print("INFO", f"Looking for lyrics for artist:'{self._data.artist}' and title:'{self._data.title}'")
+		print("VERBOSE", f"Looking for lyrics for artist:'{self._data.artist}' and title:'{self._data.title}'")
 		import requests, re
 		q = f"{self._data.artist} {self._data.title}"
 		url = "https://genius.com/{}-lyrics".format(re.sub(r"[ =]", "-", re.sub(r"[^a-z0-9= -]", "", q, flags=re.IGNORECASE)))
@@ -49,14 +49,22 @@ class TaskLyrics(pyworker.PyWorker):
 			return
 
 		if rq.status_code == 200:
-			from bs4 import BeautifulSoup
+			from bs4 import BeautifulSoup, element
 			html = BeautifulSoup(rq.content, features="html.parser")
 			ls = html.find_all(_check_lyrics)
 			try:
-				self._lyrics = re.sub(r"<.+?>", "", str(ls[0].contents[3]), flags=re.DOTALL)
-			except IndexError:
-				print("INFO", "Lyrics cannot be parsed; html might have changed!")
-				self._lyrics = "Lyrics not found"
+				content = []
+				for page in ls:
+					page = page.contents
+					for item in page:
+						if isinstance(item, element.Tag):
+							if item.name == "br": content.append("\n")
+						elif isinstance(item, element.NavigableString): content.append(str(item).replace("\\", ""))
+				self._lyrics = "".join(content)
+			except Exception as e:
+				print("INFO", "Lyrics failed to parse; html might have changed:", e)
+				self._lyrics = "Error: Cannot process lyrics page"
+		elif rq.status_code == "404": self._lyrics = "Error: No lyrics found"
 		else: self._lyrics = f"Error: HTTP code {rq.status_code}"
 
 	def complete(self):
