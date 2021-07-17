@@ -159,11 +159,19 @@ class PyWindow:
     def maximized(self): return self.qt_window.isMaximized()
     @maximized.setter
     def maximized(self, maximized): self.qt_window.showMaximized() if maximized else self.qt_window.showNormal()
+    @property
+    def can_maximize(self): return int(self.qt_window.windowFlags()) & QtCore.Qt.WindowMaximizeButtonHint != 0
+    @can_maximize.setter
+    def can_maximize(self, maximize): self.qt_window.setWindowFlag(QtCore.Qt.WindowMaximizeButtonHint, maximize)
 
     @property
     def minimized(self): return self.qt_window.isMinimized()
     @minimized.setter
     def minimized(self, minimized): self.qt_window.showMinimized() if minimized else self.qt_window.showNormal()
+    @property
+    def can_minimize(self): return int(self.qt_window.windowFlags()) & QtCore.Qt.WindowMinimizeButtonHint != 0
+    @can_minimize.setter
+    def can_minimize(self, minimize): self.qt_window.setWindowFlag(QtCore.Qt.WindowMinimizeButtonHint, minimize)
 
     def activate(self):
         """ Sets this window to be visible and have keyboard focus """
