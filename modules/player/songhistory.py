@@ -22,12 +22,14 @@ class SongHistoryViewer(history.HistoryViewer):
         item = self._history[self["history_view"].clicked_index]
         module.media_player.play_song(item[0], item[1])
 
-class PlayerInfoWindow(pywindow.PyWindowDocked):
+class PlayerInfoWindow(pywindow.PyWindow):
     window_id = "player_info"
 
     def __init__(self, parent):
-        pywindow.PyWindowDocked.__init__(self, parent, self.window_id)
+        pywindow.PyWindow.__init__(self, parent, self.window_id)
         self.title = "Player Info"
+        self.icon = "assets/blank"
+        self.can_maximize = self.can_minimize = False
 
     def create_widgets(self):
         tab: pyelement.PyTabFrame = self.add_element("info_tabs", element_class=pyelement.PyTabFrame)
