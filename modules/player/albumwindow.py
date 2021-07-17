@@ -70,44 +70,55 @@ class AlbumWindowInput(pywindow.PyWindow):
 		self.layout.row(3, weight=1)
 
 	def create_widgets(self):
+		lbl = self.add_element("artist_label", element_class=pyelement.PyTextLabel)
+		lbl.display_text = "Artist:"
+		lbl.set_alignment("centerV")
 		inpt = pyelement.PyTextInput(self, "input_artist")
 		inpt.value = self._dt.get("artist", "")
 		inpt.events.EventInteract(self._reset_button)
-		self.add_element("artist_label", element_class=pyelement.PyTextLabel).display_text = "Artist:"
 		self.add_element(element=inpt, column=1)
 
+		lbl = self.add_element("name_label", element_class=pyelement.PyTextLabel, row=1)
+		lbl.display_text = "Album:"
+		lbl.set_alignment("centerV")
 		inpt = pyelement.PyTextInput(self, "input_name")
 		inpt.value = self._dt.get("name", "")
 		inpt.events.EventInteract(self._reset_button)
-		self.add_element("name_label", element_class=pyelement.PyTextLabel, row=1).display_text = "Album:"
 		self.add_element(element=inpt, row=1, column=1)
 
+		lbl = self.add_element("release_label", element_class=pyelement.PyTextLabel, row=2)
+		lbl.display_text = "Release date:"
+		lbl.set_alignment("centerV")
 		inpt = pyelement.PyTextInput(self, "input_release_date")
 		inpt.value = self._dt.get("release_date", "")
 		inpt.events.EventInteract(self._reset_button)
-		self.add_element("release_label", element_class=pyelement.PyTextLabel, row=2).display_text = "Release date:"
 		self.add_element(element=inpt, row=2, column=1)
 
+		lbl = self.add_element("song_path", element_class=pyelement.PyTextLabel, row=3)
+		lbl.display_text = "Song path:"
+		lbl.set_alignment("centerV")
 		inpt = pyelement.PyTextInput(self, "input_song_path")
-		inpt.value = self._dt.get("song_path", self.parent.configuration.get("default_directory", ""))
+		inpt.value = self._dt.get("song_path", module.configuration.get("default_directory", ""))
 		inpt.events.EventInteract(self._reset_button)
-		self.add_element("song_path", element_class=pyelement.PyTextLabel, row=3).display_text = "Song path:"
 		self.add_element(element=inpt, row=3, column=1)
 
+		lbl = self.add_element("songlist_label", element_class=pyelement.PyTextLabel, row=4)
+		lbl.display_text = "Song list:"
+		lbl.set_alignment("centerV")
 		inpt = pyelement.PyTable(self, "input_songlist")
 		inpt.dynamic_rows = inpt.row_header = True
 		inpt.column_width = 500
 		songlist = self._dt.get("songlist", [])
 		for i in range(len(songlist)): inpt.set(i, 0, songlist[i])
 		inpt.events.EventInteract(self._autocomplete_line)
-
-		self.add_element("songlist_label", element_class=pyelement.PyTextLabel, row=4).display_text = "Song list:"
 		self.add_element(element=inpt, row=4, column=1)
 
+		lbl = self.add_element("image_label", element_class=pyelement.PyTextLabel, row=5)
+		lbl.display_text = "Cover image:"
+		lbl.set_alignment("centerV")
 		inpt = pyelement.PyTextInput(self, "input_image")
 		inpt.value = self._dt.get("image", "")
 		inpt.events.EventInteract(self._reset_button)
-		self.add_element("image_label", element_class=pyelement.PyTextLabel, row=5).display_text = "Cover image:"
 		self.add_element(element=inpt, row=5, column=1)
 
 		self.layout.column(0, minsize=30).column(1, weight=1).row(4, weight=1)
@@ -124,7 +135,7 @@ class AlbumWindowInput(pywindow.PyWindow):
 	def status_display(self, vl): self["confirm_write"].text = str(vl)
 
 	def _reset_button(self):
-		self.status_display = "Save & Close"
+		self.status_display = "Save && Close"
 		self["confirm_write"].accept_input = True
 
 	def _autocomplete_line(self, row, column, new_value):
