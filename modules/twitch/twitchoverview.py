@@ -170,7 +170,7 @@ class TwitchSignOutWorker(pyworker.PyWorker):
 
 
 THUMBNAIL_SIZE = 128, 64
-class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
+class TwitchRefreshLiveChannelsWorker(pyworker.PyWorker):
     followed_stream_url = "https://api.twitch.tv/helix/streams?user_id={ids}"
     followed_game_url = "https://api.twitch.tv/helix/games?id={ids}"
     def __init__(self, window, auto_active=True):
@@ -182,16 +182,19 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
         self.active = True
         self.repeated = False
         self.wait_time = 15
-        self._start_time = 0
 
     def refresh(self):
-        self._start_time = 0
+        self._window.refresh_worker_refresh_time = 0
         self.wait.notify_one()
 
     def run(self):
         with self.wait:
             while self.active:
-                wtime = round(time.time() - self._start_time)
+                current = time.time()
+                try: refresh_time = self._window.refresh_worker_refresh_time
+                except AttributeError: refresh_time = 0
+                wtime = round(current - refresh_time)
+
                 if wtime >= (self.wait_time * 60):
                     print("VERBOSE", "Fetching currently live channels...")
                     self._window.schedule_task(task_id="twitch_start_refresh")
@@ -201,9 +204,9 @@ class TwitchRefeshLiveChannelsWorker(pyworker.PyWorker):
                     if res: self._window.schedule_task(task_id="twitch_channel_data", data=self._data)
                     else: self._window.schedule_task(task_id="twitch_channel_data", error=self._error)
 
+                    self._window.refresh_worker_refresh_time = time.time()
                     if not self.repeated: break
-                    self._start_time = time.time()
-                    self.wait.wait(min=self.wait_time)
+                    self.wait.wait(min=self.wait_time, sec=round(current-time.time()))
                 else: self.wait.wait(sec=(self.wait_time * 60) - wtime)
 
     def complete(self):
@@ -402,7 +405,7 @@ class TwichOverview(pywindow.PyWindow):
                 print("ERROR", "Refresh task already running, aborting...")
                 return
 
-            self._refresh_task = TwitchRefeshLiveChannelsWorker(self, False)
+            self._refresh_task = TwitchRefreshLiveChannelsWorker(self, False)
             self._delay_repeated_refresh()
             self._refresh_task.repeated = True
             self._refresh_task.activate()
@@ -431,7 +434,7 @@ class TwichOverview(pywindow.PyWindow):
 
     def activate_refresh(self):
         if self._refresh_task: self._refresh_task.refresh()
-        else: TwitchRefeshLiveChannelsWorker(self)
+        else: TwitchRefreshLiveChannelsWorker(self)
 
     def _set_refresh_status(self, enabled):
         self[AutoRefreshFrame.main_id][AutoRefreshFrame.btn_id].accept_input = enabled
