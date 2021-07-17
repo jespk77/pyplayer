@@ -175,7 +175,7 @@ class PyWindow:
 
     def activate(self):
         """ Sets this window to be visible and have keyboard focus """
-        self._qt.activateWindow()
+        self.qt_window.activateWindow()
 
     @property
     def geometry_string(self):
@@ -196,10 +196,10 @@ class PyWindow:
             else: raise ValueError("Invalid geometry string")
             return
 
-        if x is None: x = self._qt.x()
-        if y is None: y = self._qt.y()
-        if width is None: width = self._qt.width()
-        if height is None: height = self._qt.height()
+        if x is None: x = self.qt_window.x()
+        if y is None: y = self.qt_window.y()
+        if width is None: width = self.qt_window.width()
+        if height is None: height = self.qt_window.height()
         self.qt_window.setGeometry(x, y, width, height)
 
     def center_window(self, size_x=None, size_y=None, fit_to_size=False):
@@ -213,9 +213,9 @@ class PyWindow:
         elif fit_to_size: self.qt_window.setFixedWidth(size_y)
 
         center = QtWidgets.QDesktopWidget().availableGeometry().center()
-        geometry = self._qt.frameGeometry()
+        geometry = self.qt_window.frameGeometry()
         geometry.moveTo(center.x() - (.5 * size_x), center.y() - (.5 * size_y))
-        self._qt.setGeometry(geometry)
+        self.qt_window.setGeometry(geometry)
 
     def add_element(self, element_id=None, element=None, element_class=None, **layout_kwargs):
         """ Add new element to this window, closes previously opened element with the same id (if open) """
@@ -374,7 +374,7 @@ class PyWindow:
          Save current configuration options to file (if changed)
          Note: configuration is automatically saved when the window closes, this only needs to be called if changes need to be written beforehand
         """
-        geo = self._qt.geometry()
+        geo = self.qt_window.geometry()
         self.cfg['geometry'] = geo.x(), geo.y(), geo.width(), geo.height(), 2 if self.maximized else 1 if self.minimized else 0
         self.configuration.save()
 
@@ -455,7 +455,7 @@ class RootPyWindow(PyWindow):
 class PyWindowDocked(PyWindow):
     def __init__(self, parent, window_id, layout="grid"):
         self._qt = QtWidgets.QDockWidget(parent.qt_element)
-        self._content = QtWidgets.QWidget(self._qt)
+        self._content = QtWidgets.QWidget(self.qt_window)
         self.qt_window.setWidget(self._content)
         PyWindow.__init__(self, parent, window_id, layout)
         self.floating = True
@@ -466,6 +466,6 @@ class PyWindowDocked(PyWindow):
     @property
     def floating(self):
         """ Whether the window is currently floating """
-        return self._qt.isFloating()
+        return self.qt_window.isFloating()
     @floating.setter
-    def floating(self, floating): self._qt.setFloating(bool(floating))
+    def floating(self, floating): self.qt_window.setFloating(bool(floating))
