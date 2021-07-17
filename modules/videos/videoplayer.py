@@ -123,6 +123,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
         self.add_task("on_stop", self._execute_stop)
         self._register_events()
 
+        self._playing = self._pause_minimize = False
         self._show_data = show
         if video_file is not None: self.play(video_file, show)
 
@@ -192,13 +193,17 @@ class VideoPlayerWindow(pywindow.PyWindow):
         else: print("WARNING", "Tried to play invalid file")
 
     def _on_show(self):
-        print("VERBOSE", "Video player no longer hidden, continue playback")
-        module.interpreter.put_command("video pause false")
+        if self._pause_minimize:
+            print("VERBOSE", "Video player no longer hidden, continue playback")
+            module.interpreter.put_command("video pause false")
+            self._pause_minimize = False
         video_player.set_window(self["content"].handle)
 
     def _on_hide(self):
-        print("VERBOSE", "Video player hidden, pause playback")
-        module.interpreter.put_command("video pause true")
+        if self._playing:
+            print("VERBOSE", "Video player hidden, pause playback")
+            module.interpreter.put_command("video pause true")
+            self._pause_minimize = True
 
     def _register_events(self):
         video_player.EventPlay(self._on_play)
@@ -218,9 +223,13 @@ class VideoPlayerWindow(pywindow.PyWindow):
     def _execute_play(self):
         self["playpause_btn"].text = "Pause"
         self["backward_btn"].accept_input = self["forward_btn"].accept_input = True
+        self._playing = True
 
     def _on_pause(self, _): self.schedule_task(task_id="on_pause")
-    def _execute_pause(self): self["playpause_btn"].text = "Play"
+    def _execute_pause(self):
+        self["playpause_btn"].text = "Play"
+        self._playing = False
+
     def _on_pos_change(self, e): self.schedule_task(task_id="pos_change", time=e.u.new_position)
     def _execute_pos_change(self, time): self["progress"].value = time * 10000
 
