@@ -194,6 +194,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
     def _on_show(self):
         print("VERBOSE", "Video player no longer hidden, continue playback")
         module.interpreter.put_command("video pause false")
+        video_player.set_window(self["content"].handle)
 
     def _on_hide(self):
         print("VERBOSE", "Video player hidden, pause playback")
