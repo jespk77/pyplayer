@@ -13,11 +13,12 @@ def _check_lyrics(tag):
 		except KeyError: pass
 	return False
 
-class LyricViewer(pywindow.PyWindowDocked):
+class LyricViewer(pywindow.PyWindow):
 	def __init__(self, parent, window_id):
-		pywindow.PyWindowDocked.__init__(self, parent, window_id)
+		pywindow.PyWindow.__init__(self, parent, window_id)
 		self.icon = "assets/blank.png"
 		self.title = "LyricViewer"
+		self.can_maximize = self.can_minimize = False
 		self.add_task("set_lyrics", self._set_lyrics)
 
 	def create_widgets(self):
