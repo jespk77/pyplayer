@@ -16,6 +16,7 @@ class AlbumWindow(pywindow.PyWindow):
 		pywindow.PyWindow.__init__(self, master, self.default_id)
 		self.icon = "assets/icon_album"
 		self.title = "Album: {} - {}".format(self._metadata["artist"], self._metadata["name"])
+		self.can_minimize = self.can_maximize = False
 
 		self._cb = command_callback
 		self._path = self._metadata["song_path"]
@@ -67,6 +68,7 @@ class AlbumWindowInput(pywindow.PyWindow):
 		pywindow.PyWindow.__init__(self, master, self.default_id)
 		self.icon = "assets/icon_album"
 		self.title = "Album Creator"
+		self.can_minimize = self.can_maximize = False
 		self.layout.row(3, weight=1)
 
 	def create_widgets(self):
@@ -197,6 +199,7 @@ class AlbumBrowser(pywindow.PyWindow):
 		pywindow.PyWindow.__init__(self, parent, self.default_id)
 		self.title = "Album Browser"
 		self.icon = "assets/icon_album"
+		self.can_minimize = self.can_maximize = False
 		self.layout.row(1, weight=1, minsize=100).column(0, weight=1)
 
 	@staticmethod

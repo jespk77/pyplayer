@@ -28,7 +28,7 @@ class PlayerInfoWindow(pywindow.PyWindow):
     def __init__(self, parent):
         pywindow.PyWindow.__init__(self, parent, self.window_id)
         self.title = "Player Info"
-        self.icon = "assets/blank"
+        self.icon = "assets/icon"
         self.can_maximize = self.can_minimize = False
 
     def create_widgets(self):

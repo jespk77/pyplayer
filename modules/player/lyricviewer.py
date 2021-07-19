@@ -17,7 +17,7 @@ def _check_lyrics(tag):
 class LyricViewer(pywindow.PyWindow):
 	def __init__(self, parent, window_id):
 		pywindow.PyWindow.__init__(self, parent, window_id)
-		self.icon = "assets/blank.png"
+		self.icon = "assets/icon"
 		self.title = "LyricViewer"
 		self.can_maximize = self.can_minimize = False
 		self.add_task("set_lyrics", self._set_lyrics)
@@ -90,7 +90,7 @@ def get_lyrics(song, file=None):
 	if artist and title:
 		module.client.add_window(main_window_id, window_class=LyricViewer)
 		TaskLyrics(artist, title)
-		return messagetypes.Reply(f"Lyrics for {song} opened")
+		return messagetypes.Reply(f"Lyrics for '{song}' opened")
 	else: return unknown_song
 
 def command_lyrics(path, song):
