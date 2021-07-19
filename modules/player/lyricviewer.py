@@ -30,7 +30,7 @@ class LyricViewer(pywindow.PyWindow):
 
 	def set_lyrics(self, data, lyrics): self.schedule_task(task_id="set_lyrics", data=data, lyrics=lyrics)
 	def _set_lyrics(self, data, lyrics):
-		self.title = f"LyricViewer: {data.artist} - {data.title}"
+		self.title = f"LyricViewer: {data.artist} - {data.title}" if data is not None else "LyricViewer"
 		self["lyrics_content"].text = lyrics
 
 class TaskLyrics(pyworker.PyWorker):
@@ -38,6 +38,10 @@ class TaskLyrics(pyworker.PyWorker):
 		self._data = LyricData(artist, title)
 		self._lyrics = []
 		pyworker.PyWorker.__init__(self, "task_get_lyrics")
+
+	def start(self):
+		window = module.client.find_window(main_window_id)
+		if window is not None: window.set_lyrics(None, "Loading...")
 
 	def _add_element(self, item):
 		if isinstance(item, element.Tag):
@@ -88,7 +92,8 @@ unknown_song = messagetypes.Reply("Unknown song")
 def get_lyrics(song, file=None):
 	artist, title = song.split(" - ", maxsplit=1)
 	if artist and title:
-		module.client.add_window(main_window_id, window_class=LyricViewer)
+		if not module.client.find_window(main_window_id):
+			module.client.add_window(main_window_id, window_class=LyricViewer)
 		TaskLyrics(artist, title)
 		return messagetypes.Reply(f"Lyrics for '{song}' opened")
 	else: return unknown_song
