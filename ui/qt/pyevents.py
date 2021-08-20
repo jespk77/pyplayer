@@ -62,6 +62,16 @@ class EventHandler(_EventCore):
             return cb
         return wrapped
 
+    def EventHandleChange(self, cb):
+        """
+         Event that fires whenever the handle to the element changes
+            - available keywords:
+                * handle: the new handle of the element
+            - not cancellable
+        """
+        self.register_event("handle_change", cb)
+        return cb
+
 class PyWindowEvents(EventHandler):
     """
      Container for all window events, see EventHandler for more information

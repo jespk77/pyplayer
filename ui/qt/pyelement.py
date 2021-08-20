@@ -125,7 +125,8 @@ class PyElement:
     # QWidget.event override
     def _on_event(self, event: QtCore.QEvent):
         if event.type() == QtCore.QEvent.KeyPress: return self._on_key_press(event) if self.accept_input else False
-        else: return type(self.qt_element).event(self.qt_element, event)
+        elif event.type() == QtCore.QEvent.WinIdChange: self._on_handle_change(event)
+        return type(self.qt_element).event(self.qt_element, event)
 
     # QWidget.keyPressEvent override
     def _on_key_press(self, event):
@@ -157,6 +158,9 @@ class PyElement:
     def _on_focus_lose(self, event):
         self.events.call_event("lose_focus")
         type(self.qt_element).focusOutEvent(self.qt_element, event)
+
+    def _on_handle_change(self, event):
+        self.events.call_event("handle_change", handle=self.handle)
 
     def on_destroy(self): self.events.call_event("destroy")
 
