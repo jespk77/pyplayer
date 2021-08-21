@@ -110,7 +110,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
     window_id = "video_player_window"
     episode_update_position = 0.95
 
-    def __init__(self, parent, video_file=None, show=None, is_series=False):
+    def __init__(self, parent, video_file=None, show=None, series_index=-1):
         pywindow.PyWindow.__init__(self, parent, self.window_id)
         self.title = "Video Player"
         self.icon = "assets/icon_video"
@@ -129,8 +129,8 @@ class VideoPlayerWindow(pywindow.PyWindow):
 
         self._playing = self._pause_minimize = False
         self._show_id = show
-        self._updated, self._is_series = True, False
-        if video_file is not None: self.play(video_file, show, is_series)
+        self._updated, self._series_index = True, series_index
+        if video_file is not None: self.play(video_file, show, series_index)
 
     def create_widgets(self):
         self.add_element("content", element_class=pyelement.PyLabelFrame, columnspan=7)
@@ -180,8 +180,8 @@ class VideoPlayerWindow(pywindow.PyWindow):
                 self.forward(self.show_data.get("intro_time", 10))
             return self.events.block_action
 
-    def play(self, video_file, show_id=None, is_series=False):
-        self.schedule_task(task_id="play_video", video_file=video_file, show_id=show_id, is_series=is_series)
+    def play(self, video_file, show_id=None, series_index=-1):
+        self.schedule_task(task_id="play_video", video_file=video_file, show_id=show_id, series_index=series_index)
 
     @staticmethod
     def pause(): module.interpreter.put_command("video pause")
@@ -196,7 +196,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
     def show_data(self): return module.configuration["shows"].get(self._show_id, {})
 
     @property
-    def episode_index(self): return self.show_data.get("_episode", -1) if self._is_series else -1
+    def episode_index(self): return self.show_data.get("_episode", -1) if self._series_index >= 0 else -1
     @episode_index.setter
     def episode_index(self, index):
         index = max(index, 0)
@@ -204,19 +204,19 @@ class VideoPlayerWindow(pywindow.PyWindow):
         module.configuration.save()
 
     def _add_episode(self, index=1, play_next=True):
-        if self._is_series and index != 0:
-            self.episode_index += index
+        if self._series_index >= 0 and index != 0:
+            self.episode_index = self._series_index + index
             if play_next: module.interpreter.put_command(f"tvshow continue {self._show_id}")
 
     def _on_close(self):
         self.stop()
         self._unregister_events()
 
-    def _play(self, video_file, show_id, is_series):
+    def _play(self, video_file, show_id, series_index):
         if isinstance(video_file, tuple): display_name, video = video_file
         else: display_name = video = video_file
         self._show_id = show_id
-        self._updated, self._is_series = True, is_series
+        self._updated, self._series_index = True, series_index
 
         print("VERBOSE", f"Trying to play '{video}'...")
         if os.path.isfile(video):
@@ -226,7 +226,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
             self.title = f"{show_data['display_name'] + ' | ' if show_data and show_data['display_name'] else ''}{display_name}"
             self.activate()
 
-            self["next_episode_btn"].hidden = self["prev_episode_btn"].hidden = not self._is_series
+            self["next_episode_btn"].hidden = self["prev_episode_btn"].hidden = self._series_index < 0
         else: print("WARNING", "Tried to play invalid file")
 
     def _on_show(self):

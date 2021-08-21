@@ -9,10 +9,10 @@ video_player = videoplayer.video_player
 
 def get_displayname(path): return os.path.splitext(path)[0]
 
-def show_video_window(video=None, show=None, is_series=False):
+def show_video_window(video=None, show=None, series_index=-1):
     window = module.client.find_window(videoplayer.VideoPlayerWindow.window_id)
-    if window is None: module.client.add_window(window_class=videoplayer.VideoPlayerWindow, video_file=video, show=show, is_series=is_series)
-    else: window.play(video, show, is_series)
+    if window is None: module.client.add_window(window_class=videoplayer.VideoPlayerWindow, video_file=video, show=show, series_index=series_index)
+    else: window.play(video, show, series_index)
 
 def get_tvshow_seasons(show):
     show = module.configuration["shows"].get(show)
@@ -106,7 +106,7 @@ def command_tvshow_continue(arg, argc):
 
     try:
         video = videos[index]
-        show_video_window(video, arg[0], True)
+        show_video_window(video, arg[0], index)
         return messagetypes.Reply(f"Now playing '{video[0]}'")
     except IndexError: return messagetypes.Reply("End of series reached")
 
