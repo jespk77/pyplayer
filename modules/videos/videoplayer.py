@@ -203,10 +203,10 @@ class VideoPlayerWindow(pywindow.PyWindow):
         module.configuration[f"shows::{self._show_id}::_episode"] = index
         module.configuration.save()
 
-    def _add_episode(self, index=1):
+    def _add_episode(self, index=1, play_next=True):
         if self._is_series and index != 0:
             self.episode_index += index
-            module.interpreter.put_command(f"tvshow continue {self._show_id}")
+            if play_next: module.interpreter.put_command(f"tvshow continue {self._show_id}")
 
     def _on_close(self):
         self.stop()
@@ -274,7 +274,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
             self._updated = False
             if self._is_series:
                 print("VERBOSE", "Update position in the episode reached, increasing index")
-                self._add_episode(1)
+                self._add_episode(1, False)
 
     def _on_stop(self, _): self.schedule_task(task_id="on_stop")
     def _execute_stop(self):
