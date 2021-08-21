@@ -98,7 +98,7 @@ class TwitchSigninWorker(pyworker.PyWorker, socketserver.TCPServer):
 class TwitchSigninWindow(pywindow.PyWindow):
     resp_uri = "http://localhost:6767/twitch_auth"
     scope = ["user:edit", "chat:read", "chat:edit", "channel:moderate", "whispers:read", "whispers:edit"]
-    auth_url = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id={client_id}&redirect_uri={resp_uri}&scope={scope}&force_verify=true"
+    auth_url = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id={client_id}&redirect_uri={resp_uri}&scope={scope}"
 
     def __init__(self, parent):
         pywindow.PyWindow.__init__(self, parent, "twitch_signin")
