@@ -77,17 +77,20 @@ def command_tvshow_start(arg, argc):
     if show is None: return messagetypes.Reply("Unknown show")
 
     module.configuration[f"shows::{arg[0]}::_episode"] = 0
-    name = show["display_name"] if show["display_name"] else arg[0]
-    return messagetypes.Reply(f"Started new series for '{name}'")
+    module.configuration.save()
+    return command_tvshow_continue(arg, argc)
 
 def command_tvshow_stop(arg, argc):
     try: show, _, _ = parse_arg(arg, argc)
     except ValueError: return messagetypes.Reply("Invalid season number")
     if show is None: return messagetypes.Reply("Unknown show")
+    show_data = module.configuration["shows"].get(show)
 
-    try: del module.configuration[f"shows::{arg[0]}::_episode"]
+    try:
+        del module.configuration[f"shows::{arg[0]}::_episode"]
+        module.configuration.save()
     except KeyError: pass
-    name = show["display_name"] if show["display_name"] else arg[0]
+    name = show_data["display_name"] if show_data["display_name"] else arg[0]
     return messagetypes.Reply(f"Stopped series for '{name}'")
 
 def command_tvshow_continue(arg, argc):
@@ -95,6 +98,7 @@ def command_tvshow_continue(arg, argc):
     except ValueError: return messagetypes.Reply("Invalid season number")
     if show is None: return messagetypes.Reply("Unknown show")
     show_data = module.configuration["shows"].get(show)
+    if "_episode" not in show_data: return messagetypes.Reply("No series active")
 
     try: index = show_data["_episode"]
     except KeyError: index = 0

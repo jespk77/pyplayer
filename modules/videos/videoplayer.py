@@ -114,7 +114,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
         pywindow.PyWindow.__init__(self, parent, self.window_id)
         self.title = "Video Player"
         self.icon = "assets/icon_video"
-        self.layout.row(0, weight=1).column(0, weight=1).column(4, weight=1)
+        self.layout.row(0, weight=1).column(1, weight=1).column(5, weight=1)
 
         self.events.EventWindowHide(self._on_hide)
         self.events.EventWindowShow(self._on_show)
@@ -133,25 +133,31 @@ class VideoPlayerWindow(pywindow.PyWindow):
         if video_file is not None: self.play(video_file, show, is_series)
 
     def create_widgets(self):
-        self.add_element("content", element_class=pyelement.PyLabelFrame, columnspan=5)
-        self.add_element("filler1", element_class=pyelement.PyFrame, row=1)
+        self.add_element("content", element_class=pyelement.PyLabelFrame, columnspan=7)
 
-        progress = self.add_element("progress", element_class=pyelement.PyProgessbar, row=1, columnspan=5)
+        progress = self.add_element("progress", element_class=pyelement.PyProgessbar, row=1, columnspan=7)
         progress.minimum, progress.value, progress.maximum = 0, 0, 10000
         progress.color = module.configuration.get("#progressbar_color")
         @progress.events.EventInteract
         def _on_click(position): module.interpreter.put_command(f"video position {position}")
 
-        btn = self.add_element("backward_btn", element_class=pyelement.PyButton, row=2, column=1)
-        btn.text, btn.accept_input = "<<", False
-        btn.events.EventInteract(self.backward)
-        btn2 = self.add_element("playpause_btn", element_class=pyelement.PyButton, row=2, column=2)
+        btn = self.add_element("prev_episode_btn", element_class=pyelement.PyButton, row=2, column=0)
+        btn.text, btn.hidden = "Previous episode", True
+        btn.events.EventInteract(lambda : self._add_episode(-1))
+
+        btn1 = self.add_element("backward_btn", element_class=pyelement.PyButton, row=2, column=2)
+        btn1.text, btn1.accept_input = "<<", False
+        btn1.events.EventInteract(self.backward)
+        btn2 = self.add_element("playpause_btn", element_class=pyelement.PyButton, row=2, column=3)
         btn2.text, btn2.accept_input = "Play", True
         btn2.events.EventInteract(self.pause)
-        btn3 = self.add_element("forward_btn", element_class=pyelement.PyButton, row=2, column=3)
+        btn3 = self.add_element("forward_btn", element_class=pyelement.PyButton, row=2, column=4)
         btn3.text, btn3.accept_input = ">>", False
         btn3.events.EventInteract(self.forward)
-        self.add_element("filler2", element_class=pyelement.PyFrame, row=2, column=4)
+
+        btn4 = self.add_element("next_episode_btn", element_class=pyelement.PyButton, row=2, column=6)
+        btn4.text, btn4.hidden = "Next episode", True
+        btn4.events.EventInteract(lambda : self._add_episode(1))
 
         @self.events.EventKeyDown("Space")
         def _pause():
@@ -189,6 +195,19 @@ class VideoPlayerWindow(pywindow.PyWindow):
     @property
     def show_data(self): return module.configuration["shows"].get(self._show_id, {})
 
+    @property
+    def episode_index(self): return self.show_data.get("_episode", -1) if self._is_series else -1
+    @episode_index.setter
+    def episode_index(self, index):
+        index = max(index, 0)
+        module.configuration[f"shows::{self._show_id}::_episode"] = index
+        module.configuration.save()
+
+    def _add_episode(self, index=1):
+        if self._is_series and index != 0:
+            self.episode_index += index
+            module.interpreter.put_command(f"tvshow continue {self._show_id}")
+
     def _on_close(self):
         self.stop()
         self._unregister_events()
@@ -206,6 +225,8 @@ class VideoPlayerWindow(pywindow.PyWindow):
             show_data = self.show_data
             self.title = f"{show_data['display_name'] + ' | ' if show_data and show_data['display_name'] else ''}{display_name}"
             self.activate()
+
+            self["next_episode_btn"].hidden = self["prev_episode_btn"].hidden = not self._is_series
         else: print("WARNING", "Tried to play invalid file")
 
     def _on_show(self):
@@ -253,7 +274,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
             self._updated = False
             if self._is_series:
                 print("VERBOSE", "Update position in the episode reached, increasing index")
-                module.configuration[f"shows::{self._show_id}::_episode"] += 1
+                self._add_episode(1)
 
     def _on_stop(self, _): self.schedule_task(task_id="on_stop")
     def _execute_stop(self):
