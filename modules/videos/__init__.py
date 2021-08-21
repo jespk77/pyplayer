@@ -9,13 +9,14 @@ video_player = videoplayer.video_player
 
 def get_displayname(path): return os.path.splitext(path)[0]
 
-def show_video_window(video=None, show=None):
+def show_video_window(video=None, show=None, is_series=False):
     window = module.client.find_window(videoplayer.VideoPlayerWindow.window_id)
-    if window is None: module.client.add_window(window_class=videoplayer.VideoPlayerWindow, video_file=video, show=show)
-    else: window.play(video, show)
+    if window is None: module.client.add_window(window_class=videoplayer.VideoPlayerWindow, video_file=video, show=show, is_series=is_series)
+    else: window.play(video, show, is_series)
 
 def get_tvshow_seasons(show):
-    if os.path.isdir(show['$path']): return [path.path for path in os.scandir(show['$path']) if path.is_dir()]
+    show = module.configuration["shows"].get(show)
+    if show is not None and os.path.isdir(show['$path']): return [path.path for path in os.scandir(show['$path']) if path.is_dir()]
     else: return []
 
 def get_episode_list(season):
@@ -34,8 +35,7 @@ def get_tvshow_episodes(show, season=None):
 ShowSelection = namedtuple("ShowSelection", ["show", "season", "episode"], defaults=[None,None])
 def parse_arg(arg, argc):
     if argc > 0:
-        show_data = module.configuration.get(f"shows::{arg[0]}")
-        if show_data is not None: return ShowSelection(show=show_data, season=int(arg[1]) if argc > 1 else "", episode=arg[2] if argc > 2 else "")
+        if arg[0] in module.configuration["shows"]: return ShowSelection(show=arg[0], season=int(arg[1]) if argc > 1 else "", episode=arg[2] if argc > 2 else "")
     return None, None, None
 
 def play_video(video, path, show):
@@ -94,15 +94,15 @@ def command_tvshow_continue(arg, argc):
     try: show, _, _ = parse_arg(arg, argc)
     except ValueError: return messagetypes.Reply("Invalid season number")
     if show is None: return messagetypes.Reply("Unknown show")
+    show_data = module.configuration["shows"].get(show)
 
-    try: index = show["_episode"]
+    try: index = show_data["_episode"]
     except KeyError: index = 0
     videos = get_tvshow_episodes(show)
-    module.configuration[f"shows::{arg[0]}::_episode"] = index + 1
 
     try:
         video = videos[index]
-        show_video_window(video, module.configuration.get(f"shows::{arg[0]}"))
+        show_video_window(video, arg[0], True)
         return messagetypes.Reply(f"Now playing '{video[0]}'")
     except IndexError: return messagetypes.Reply("End of series reached")
 

@@ -1,10 +1,10 @@
 import os
-
 import vlc
 
 class VideoPlayer:
     def __init__(self):
         self._vlc = vlc.MediaPlayer()
+        self._handle = 0
 
         self._events = {}
         event_manager = self._vlc.event_manager()
@@ -20,6 +20,8 @@ class VideoPlayer:
 
     def set_window(self, handle):
         print("VERBOSE", "Updated video player window handle")
+        handle = int(handle)
+        self._handle = handle
         self._vlc.set_hwnd(handle)
 
     @property
@@ -41,6 +43,7 @@ class VideoPlayer:
 
             print("VERBOSE", f"Set video paused to {pause}")
             self._vlc.set_pause(pause)
+            self._vlc.set_hwnd(self._handle)
 
     def stop_video(self):
         print("VERBOSE", "Stopped video playback")
@@ -52,7 +55,7 @@ class VideoPlayer:
     def time(self, time):
         if self.playing:
             time = round(time * 1000)
-            print("VERBOSE", f"Updating play time to {time}s...")
+            print("VERBOSE", f"Updating play time to {time}ms...")
             self._vlc.set_time(time)
 
     @property
@@ -66,7 +69,7 @@ class VideoPlayer:
     def move_time(self, time):
         if self._vlc.is_playing():
             time = round(time * 1000)
-            print("VERBOSE", f"Moving play time {time}s...")
+            print("VERBOSE", f"Moving play time {time}ms...")
             self._vlc.set_time(self._vlc.get_time() + time)
 
     def move_position(self, pos):
@@ -82,12 +85,12 @@ class VideoPlayer:
 
     def _register_event(self, event_id, cb):
         if cb is not None:
-            print("VERBOSE", f"Registring new event handler for '{event_id}'...")
+            print("VERBOSE", f"Registering new event handler for '{event_id}'...")
             if not callable(cb): raise TypeError("Event handler must be callable")
             self._events[event_id] = cb
             return cb
         else:
-            print("VERBOSE", f"Unegistring event handler for '{event_id}'...")
+            print("VERBOSE", f"Unregistering event handler for '{event_id}'...")
             try: del self._events[event_id]
             except KeyError: pass
 
@@ -105,8 +108,9 @@ module = modules.Module(__package__)
 
 class VideoPlayerWindow(pywindow.PyWindow):
     window_id = "video_player_window"
+    episode_update_position = 0.95
 
-    def __init__(self, parent, video_file=None, show=None):
+    def __init__(self, parent, video_file=None, show=None, is_series=False):
         pywindow.PyWindow.__init__(self, parent, self.window_id)
         self.title = "Video Player"
         self.icon = "assets/icon_video"
@@ -124,8 +128,9 @@ class VideoPlayerWindow(pywindow.PyWindow):
         self._register_events()
 
         self._playing = self._pause_minimize = False
-        self._show_data = show
-        if video_file is not None: self.play(video_file, show)
+        self._show_id = show
+        self._updated, self._is_series = True, False
+        if video_file is not None: self.play(video_file, show, is_series)
 
     def create_widgets(self):
         self.add_element("content", element_class=pyelement.PyLabelFrame, columnspan=5)
@@ -165,30 +170,41 @@ class VideoPlayerWindow(pywindow.PyWindow):
 
         @self.events.EventKeyDown("PageDown")
         def _forward_intro():
-            if self._show_data is not None:
-                self.forward(self._show_data.get("intro_time", 10))
+            if self.show_data is not None:
+                self.forward(self.show_data.get("intro_time", 10))
             return self.events.block_action
 
-    def play(self, video_file, show_data=None): self.schedule_task(task_id="play_video", video_file=video_file, show_data=show_data)
-    def pause(self): module.interpreter.put_command("video pause")
-    def stop(self): module.interpreter.put_command("video stop")
-    def forward(self, amount=5): module.interpreter.put_command(f"video time +{amount}")
-    def backward(self, amount=5): module.interpreter.put_command(f"video time -{amount}")
+    def play(self, video_file, show_id=None, is_series=False):
+        self.schedule_task(task_id="play_video", video_file=video_file, show_id=show_id, is_series=is_series)
+
+    @staticmethod
+    def pause(): module.interpreter.put_command("video pause")
+    @staticmethod
+    def stop(): module.interpreter.put_command("video stop")
+    @staticmethod
+    def forward(amount=5): module.interpreter.put_command(f"video time +{amount}")
+    @staticmethod
+    def backward(amount=5): module.interpreter.put_command(f"video time -{amount}")
+
+    @property
+    def show_data(self): return module.configuration["shows"].get(self._show_id, {})
 
     def _on_close(self):
         self.stop()
         self._unregister_events()
 
-    def _play(self, video_file, show_data):
+    def _play(self, video_file, show_id, is_series):
         if isinstance(video_file, tuple): display_name, video = video_file
         else: display_name = video = video_file
-        self._show_data = show_data
+        self._show_id = show_id
+        self._updated, self._is_series = True, is_series
 
         print("VERBOSE", f"Trying to play '{video}'...")
         if os.path.isfile(video):
             video_player.set_window(self["content"].handle)
             video_player.play_video(video)
-            self.title = f"Video Player: {show_data['display_name'] + ' - ' if show_data and show_data['display_name'] else ''}{display_name}"
+            show_data = self.show_data
+            self.title = f"{show_data['display_name'] + ' | ' if show_data and show_data['display_name'] else ''}{display_name}"
             self.activate()
         else: print("WARNING", "Tried to play invalid file")
 
@@ -231,7 +247,13 @@ class VideoPlayerWindow(pywindow.PyWindow):
         self._playing = False
 
     def _on_pos_change(self, e): self.schedule_task(task_id="pos_change", time=e.u.new_position)
-    def _execute_pos_change(self, time): self["progress"].value = time * 10000
+    def _execute_pos_change(self, time):
+        self["progress"].value = time * 10000
+        if self._updated and time > self.episode_update_position:
+            self._updated = False
+            if self._is_series:
+                print("VERBOSE", "Update position in the episode reached, increasing index")
+                module.configuration[f"shows::{self._show_id}::_episode"] += 1
 
     def _on_stop(self, _): self.schedule_task(task_id="on_stop")
     def _execute_stop(self):
