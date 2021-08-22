@@ -272,7 +272,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
         self["progress"].value = time * 10000
         if self._updated and time > self.episode_update_position:
             self._updated = False
-            if self._is_series:
+            if self._series_index >= 0:
                 print("VERBOSE", "Update position in the episode reached, increasing index")
                 self._add_episode(1, False)
 
