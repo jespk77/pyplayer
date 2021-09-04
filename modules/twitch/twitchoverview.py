@@ -182,6 +182,7 @@ class TwitchRefreshLiveChannelsWorker(pyworker.PyWorker):
         self.active = True
         self.repeated = False
         self.wait_time = 15
+        if auto_active: self.refresh()
 
     def refresh(self):
         self._window.refresh_worker_refresh_time = 0
