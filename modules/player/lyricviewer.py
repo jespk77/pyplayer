@@ -70,7 +70,7 @@ class TaskLyrics(pyworker.PyWorker):
 						if isinstance(item, element.Tag) and item.name == "a":
 							reference = False
 							for c in item.attrs["class"]:
-								if c.startswith("ReferentFragment__ClickTarget"):
+								if c.startswith("ReferentFragment"):
 									reference = True
 									break
 
