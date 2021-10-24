@@ -37,7 +37,7 @@ class MediaPlayer:
 		self._player2 = self._vlc.media_player_new()
 		self._player2.audio_output_set("mmdevice")
 
-		self._muted = self._paused = False
+		self._paused = False
 		self._player_one = True
 		self._media = self._media_data = None
 		self._updated = False
@@ -46,11 +46,14 @@ class MediaPlayer:
 
 		self._events = {
 			"end_reached": (VLCPlayer.EventType.MediaPlayerEndReached, self.on_song_end, []),
-			"media_changed": (VLCPlayer.EventType.MediaPlayerMediaChanged, self.on_media_change, []),
-			"paused": (VLCPlayer.EventType.MediaPlayerPaused, self.on_pause, []),
-			"playing": (VLCPlayer.EventType.MediaPlayerPlaying, self.on_play, []),
+			"media_changed": (VLCPlayer.EventType.MediaPlayerMediaChanged, self.on_event_default, []),
+			"paused": (VLCPlayer.EventType.MediaPlayerPaused, self.on_event_default, []),
+			"playing": (VLCPlayer.EventType.MediaPlayerPlaying, self.on_event_default, []),
 			"pos_changed": (VLCPlayer.EventType.MediaPlayerPositionChanged, self.on_pos_change, []),
-			"stopped": (VLCPlayer.EventType.MediaPlayerStopped, self.on_stop, [])
+			"stopped": (VLCPlayer.EventType.MediaPlayerStopped, self.on_event_default, []),
+			"volume_changed": (VLCPlayer.EventType.MediaPlayerAudioVolume, self.on_event_default, []),
+			"muted": (VLCPlayer.EventType.MediaPlayerMuted, self.on_event_default, []),
+			"unmuted": (VLCPlayer.EventType.MediaPlayerUnmuted, self.on_event_default, []),
 		}
 
 		# register vlc event handlers
@@ -177,7 +180,6 @@ class MediaPlayer:
 		player.set_media(self._media)
 		player.play()
 
-		self.mute_player(self._muted)
 		self._paused = False
 		self._updated = True
 		return self._media_data
@@ -211,15 +213,6 @@ class MediaPlayer:
 			print("VERBOSE", "Cannot update position since no previous media was found")
 			return False
 
-	def mute_player(self, mute=None):
-		""" Update mute status of this player to given value
-			When no value is given the mute satus is toggled """
-		if mute is None: mute = not self._muted
-		self._muted = mute
-		self._player1.audio_set_mute(mute)
-		self._player2.audio_set_mute(mute)
-		return self._muted
-
 	def pause_player(self, pause=None):
 		""" Toggle player pause (has no effect if nothing is playing) """
 		if pause is not None:
@@ -237,6 +230,21 @@ class MediaPlayer:
 		self._player1.stop()
 		self._player2.stop()
 		self._media_data = None
+
+	@property
+	def volume(self): return self._player1.audio_get_volume()
+	@volume.setter
+	def volume(self, volume):
+		volume = min(max(volume, 0), 100)
+		self._player1.audio_set_volume(volume)
+		self._player2.audio_set_volume(volume)
+
+	@property
+	def mute(self): return self._player1.audio_get_mute()
+	@mute.setter
+	def mute(self, mute):
+		self._player1.audio_set_mute(mute)
+		self._player2.audio_set_mute(mute)
 
 # ===== OTHER FUNCTIONS =====
 	def random_song(self, path="", keyword=""):
@@ -304,19 +312,7 @@ class MediaPlayer:
 			self._paused = False
 			self.call_attached_handlers(name, event)
 
-	def on_media_change(self, event, name, player, player_one):
-		if self._player_one == player_one:
-			self.call_attached_handlers(name, event)
-
-	def on_stop(self, event, name, player, player_one):
-		if self._player_one == player_one:
-			self.call_attached_handlers(name, event)
-
-	def on_pause(self, event, name, player, player_one):
-		if self._player_one == player_one:
-			self.call_attached_handlers(name, event)
-
-	def on_play(self, event, name, player, player_one):
+	def on_event_default(self, event, name, player, player_one):
 		if self._player_one == player_one:
 			self.call_attached_handlers(name, event)
 

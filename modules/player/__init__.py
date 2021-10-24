@@ -18,8 +18,11 @@ unknown_song = messagetypes.Reply("That song doesn't exist and there is nothing 
 no_songs = messagetypes.Reply("No songs found")
 MAX_LIST = 15
 default_dir_path = "default_directory"
-player_filter_update_task = "player_filter_update"
 default_color = None
+
+player_filter_update_task = "player_filter_update"
+player_volume_update_task = "player_volume_update"
+player_mute_update_task = "player_mute_update"
 
 class Autoplay(enum.Enum):
 	OFF = 0
@@ -189,8 +192,14 @@ def command_lyrics(arg, argc):
 
 def command_mute(arg, argc):
 	if argc == 0:
-		media_player.mute_player()
+		media_player.mute = not media_player.mute
 		return messagetypes.Reply("Player mute toggled")
+
+def command_volume(arg, argc):
+	if argc == 1:
+		try: media_player.volume = int(arg[0])
+		except ValueError: return messagetypes.Reply("Invalid value")
+		return messagetypes.Reply("Player volume updated")
 
 # - player specific commands
 def command_pause(arg, argc):
@@ -336,7 +345,8 @@ module.commands = {
 		"previous": command_prev_song,
 		"random": command_random,
 		"reset": command_reset,
-		"stop": command_stop
+		"stop": command_stop,
+		"volume": command_volume,
 	}, "queue": {
 		"": command_queue,
 		"clear": command_queue_clear,
@@ -361,6 +371,9 @@ def initialize():
 	media_player.attach_event("player_updated", on_player_update)
 	media_player.attach_event("end_reached", on_end_reached)
 	media_player.attach_event("stopped", on_stopped)
+	media_player.attach_event("volume_changed", on_volume_changed)
+	media_player.attach_event("muted", on_player_mute_toggle)
+	media_player.attach_event("unmuted", on_player_mute_toggle)
 	if not song_tracker.is_loaded(): song_tracker.load_tracker()
 	media_controller.bind(media_player)
 
@@ -379,6 +392,25 @@ def initialize():
 
 	player.add_element("autoplay", element_class=pyelement.PyTextLabel, row=1)
 	player.add_element("filter", element_class=pyelement.PyTextLabel, row=1, column=1).set_alignment("right")
+
+	volume = player.add_element("volume_control", element_class=pyelement.PyFrame, row=2, columnspan=2)
+	volume.layout.margins(0)
+	volume.add_element("volume_label", element_class=pyelement.PyTextLabel).with_text("Music volume:").set_alignment("centerV")
+
+	volume_control = volume.add_element("volume_control", element_class=pyelement.PyProgessbar, column=2)
+	volume_control.min, volume_control.max, volume_control.value = 0, 100, 100
+	@volume_control.events.EventInteract
+	def _on_click_volume(position): module.interpreter.put_command(f"player volume {round(position * 100)}")
+
+	volume_mute = volume.add_element("volume_mute", element_class=pyelement.PyButton, column=1)
+	volume_mute.text, volume_mute.width, volume_mute.checkable = "Mute", 40, True
+	@volume_mute.events.EventInteract
+	def _on_click_mute(): module.interpreter.put_command("player mute")
+
+	volume_full = volume.add_element("volume_full", element_class=pyelement.PyButton, column=3)
+	volume_full.text, volume_full.width = ">>>", 40
+	@volume_full.events.EventInteract
+	def _on_click_full(): module.interpreter.put_command("player volume 100")
 
 	directory = module.configuration.get_or_create_configuration("directory", {})
 	directory.default_value = {"#color": "", "$path": "", "priority": -1}
@@ -405,6 +437,8 @@ def initialize():
 	module.client.add_task(task_id="player_title_update", func=_set_client_title)
 	module.client.schedule_task(task_id=player_autoplay_update_task, func=_set_client_autoplay)
 	module.client.schedule_task(task_id=player_filter_update_task, func=_set_client_filter, path=module.configuration[default_dir_path])
+	module.client.schedule_task(task_id=player_volume_update_task, func=_set_client_volume, volume=media_player.volume)
+	module.client.schedule_task(task_id=player_mute_update_task, func=_set_client_mute, mute=media_player.mute)
 	module.media_player = media_player
 	module.get_displayname = get_displayname
 
@@ -443,6 +477,13 @@ def on_player_update(event, player):
 def on_end_reached(event, player):
 	module.interpreter.put_command("autoplay next")
 
+def on_volume_changed(event, player):
+	module.client.schedule_task(task_id=player_volume_update_task, volume=player.volume)
+
+def on_player_mute_toggle(event, player):
+	module.client.schedule_task(task_id=player_mute_update_task, mute=player.mute)
+
+
 def _set_client_progress(progress):
 	progress = round(progress * 10000)
 	module.client["player"]["progress_bar"].progress = progress
@@ -467,3 +508,11 @@ def _set_client_filter(path=None):
 	if keyword: keyword = "'" + keyword + "'"
 	else: keyword = "none"
 	module.client["player"]["filter"].text = f"Filter: {keyword} {('in ' + path) if path else ''}"
+
+def _set_client_volume(volume):
+	module.client["player"]["volume_control"]["volume_control"].progress = volume
+
+def _set_client_mute(mute):
+	volume = module.client["player"]["volume_control"]
+	volume["volume_control"].color = "#444444" if mute else "green"
+	volume["volume_mute"].checked = mute
