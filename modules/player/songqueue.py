@@ -88,6 +88,8 @@ class SongQueue:
 
 song_queue = SongQueue()
 class SongQueueViewer(pyelement.PyFrame):
+    title = "Song Queue"
+
     def __init__(self, parent, queue=None):
         self._queue = queue if queue is not None else song_queue
         pyelement.PyFrame.__init__(self, parent, "song_queue")

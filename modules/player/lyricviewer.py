@@ -18,7 +18,7 @@ class LyricViewer(pywindow.PyWindow):
 	def __init__(self, parent, window_id):
 		pywindow.PyWindow.__init__(self, parent, window_id)
 		self.icon = "assets/icon"
-		self.title = "LyricViewer"
+		self.title = "Lyrics"
 		self.can_maximize = self.can_minimize = False
 		self.add_task("set_lyrics", self._set_lyrics)
 
@@ -30,7 +30,7 @@ class LyricViewer(pywindow.PyWindow):
 
 	def set_lyrics(self, data, lyrics): self.schedule_task(task_id="set_lyrics", data=data, lyrics=lyrics)
 	def _set_lyrics(self, data, lyrics):
-		self.title = f"LyricViewer: {data.artist} - {data.title}" if data is not None else "LyricViewer"
+		self.title = f"Lyrics: {data.artist} - {data.title}" if data is not None else "Lyrics"
 		self["lyrics_content"].text = lyrics
 
 class TaskLyrics(pyworker.PyWorker):
