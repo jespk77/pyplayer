@@ -284,12 +284,13 @@ class PyLabelFrame(PyFrame):
 class PyTabFrame(PyElement):
     """
        Element with a number of subframes, different frames can be selected using tabs
-       No interaction event
+       Interaction event fires when the current tab is changed, keyword 'index' is the new current page index or -1 if there's no new page
     """
     def __init__(self, parent, element_id):
         self._qt = QtWidgets.QTabWidget(parent.qt_element)
         self._tabs = []
         PyElement.__init__(self, parent, element_id)
+        self._qt.currentChanged.connect(lambda index: self.events.call_event("interact", index=index))
 
     def add_tab(self, name, frame=None, frame_class=PyFrame, **frame_args):
         """
