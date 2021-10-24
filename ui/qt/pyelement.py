@@ -682,6 +682,16 @@ class PyButton(PyElement):
         return self
 
     @property
+    def checkable(self): return self.qt_element.isCheckable()
+    @checkable.setter
+    def checkable(self, checkable): self.qt_element.setCheckable(bool(checkable))
+
+    @property
+    def checked(self): return self.qt_element.isChecked()
+    @checked.setter
+    def checked(self, checked): self.qt_element.setChecked(checked)
+
+    @property
     def display_text(self): return self.qt_element.text()
     @display_text.setter
     def display_text(self, txt): self.qt_element.setText(str(txt))
