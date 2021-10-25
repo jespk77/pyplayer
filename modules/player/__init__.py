@@ -23,6 +23,7 @@ default_color = None
 player_filter_update_task = "player_filter_update"
 player_volume_update_task = "player_volume_update"
 player_mute_update_task = "player_mute_update"
+VOLUME_SCROLL_STEP = 5
 
 class Autoplay(enum.Enum):
 	OFF = 0
@@ -197,7 +198,11 @@ def command_mute(arg, argc):
 
 def command_volume(arg, argc):
 	if argc == 1:
-		try: media_player.volume = int(arg[0])
+		try:
+			volume = arg[0]
+			if volume.startswith("+"): media_player.volume += int(volume[1:])
+			elif volume.startswith("-"): media_player.volume -= int(volume[1:])
+			else: media_player.volume = int(arg[0])
 		except ValueError: return messagetypes.Reply("Invalid value")
 		return messagetypes.Reply("Player volume updated")
 
@@ -397,10 +402,12 @@ def initialize():
 	volume.layout.margins(0)
 	volume.add_element("volume_label", element_class=pyelement.PyTextLabel).with_text("Music volume:").set_alignment("centerV")
 
-	volume_control = volume.add_element("volume_control", element_class=pyelement.PyProgessbar, column=2)
+	volume_control: pyelement.PyProgessbar = volume.add_element("volume_control", element_class=pyelement.PyProgessbar, column=2)
 	volume_control.min, volume_control.max, volume_control.value = 0, 100, 100
 	@volume_control.events.EventInteract
 	def _on_click_volume(position): module.interpreter.put_command(f"player volume {round(position * 100)}")
+	@volume_control.events.EventScroll
+	def _on_scroll_volume(y): module.interpreter.put_command(f"player volume {'+' if y > 0 else '-'}{VOLUME_SCROLL_STEP}")
 
 	volume_mute = volume.add_element("volume_mute", element_class=pyelement.PyButton, column=1)
 	volume_mute.text, volume_mute.width, volume_mute.checkable = "Mute", 40, True
