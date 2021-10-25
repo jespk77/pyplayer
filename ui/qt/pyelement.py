@@ -17,6 +17,7 @@ class PyElement:
         self.qt_element.event = self._on_event
         self.qt_element.mousePressEvent = self._on_mouse_press
         self.qt_element.mouseDoubleClickEvent = self._on_mouse_doubleclick
+        self.qt_element.wheelEvent = self._on_mouse_wheel
         self.qt_element.focusInEvent = self._on_focus
         self.qt_element.focusOutEvent = self._on_focus_lose
 
@@ -148,6 +149,17 @@ class PyElement:
         self._double_clicked = True
         self.events.call_event("double_click_left" if event.button() == QtCore.Qt.LeftButton else "double_click_right", x=event.x(), screen_x=event.globalX(), y=event.y(), screen_y=event.globalY())
         type(self.qt_element).mouseDoubleClickEvent(self.qt_element, event)
+
+    # QWidget.wheelEvent override
+    def _on_mouse_wheel(self, event):
+        pixel_delta = event.pixelDelta()
+        angle_delta = event.angleDelta()
+        if not pixel_delta.isNull(): delta = pixel_delta.x(), pixel_delta.y()
+        elif not angle_delta.isNull(): delta = angle_delta.x(), angle_delta.y()
+        else: delta = 0,0
+
+        self.events.call_event("scroll_wheel", x=delta[0], y=delta[1], delta=delta)
+        type(self.qt_element).wheelEvent(self.qt_element, event)
 
     # QWidget.focusInEvent override
     def _on_focus(self, event):

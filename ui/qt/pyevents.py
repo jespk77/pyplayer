@@ -216,6 +216,18 @@ class PyElementEvents(EventHandler):
         self.register_event("double_click_right", cb)
         return cb
 
+    def EventScroll(self, cb):
+        """
+         Event that fires when the mouse wheel is scrolled while hovering over the element
+            - available keywords:
+                * x: the amount of scroll in the x direction
+                * y: the amount of scroll in the y direction
+                * delta: the amount of scroll packed in a tuple (x,y)
+            - not cancellable
+        """
+        self.register_event("scroll_wheel", cb)
+        return cb
+
     def EventInteract(self, cb):
         """
          Event that fires when an element is interacted with
