@@ -374,8 +374,7 @@ class PyWindow:
          Save current configuration options to file (if changed)
          Note: configuration is automatically saved when the window closes, this only needs to be called if changes need to be written beforehand
         """
-        geo = self.qt_window.geometry()
-        self.cfg['geometry'] = geo.x(), geo.y(), geo.width(), geo.height(), 2 if self.maximized else 1 if self.minimized else 0
+        self.cfg['geometry'] = self.qt_window.x(), self.qt_window.y(), self.qt_window.width(), self.qt_window.height(), 2 if self.maximized else 1 if self.minimized else 0
         self.configuration.save()
 
     def _on_key_down(self, event):
