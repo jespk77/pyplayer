@@ -251,8 +251,11 @@ class MediaPlayer:
 		""" Choose a random song from a directory, uses values set in player filter when no arguments are given """
 		if path == "": path = self.filter_path
 		if keyword == "": keyword = self.filter_keyword
+
 		print("VERBOSE", f"Play random song from '{path}', keyword={keyword}")
-		songlist = self.list_songs(path, keyword)
+		songlist = []
+		for word in keyword.split("|"): songlist.extend(self.list_songs(path, word.strip()))
+
 		if len(songlist) > 0:
 			song = None
 			tries = 0
