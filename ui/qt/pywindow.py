@@ -192,15 +192,16 @@ class PyWindow:
             if not isinstance(geometry, str): raise ValueError("Geometry string must be string")
             import re
             res = re.findall("\d+", geometry)
-            if len(res) == 4: self.qt_window.setGeometry(res[2], res[3], res[0], res[1])
+            if len(res) == 4: width, height, x, y = res
             else: raise ValueError("Invalid geometry string")
-            return
 
         if x is None: x = self.qt_window.x()
         if y is None: y = self.qt_window.y()
         if width is None: width = self.qt_window.width()
         if height is None: height = self.qt_window.height()
-        self.qt_window.setGeometry(x, y, width, height)
+        self.qt_window.setGeometry(x,y,width,height)
+        self.qt_window.move(x, y)
+        self.qt_window.frameGeometry().setSize(QtCore.QSize(width, height))
 
     def center_window(self, size_x=None, size_y=None, fit_to_size=False):
         """
