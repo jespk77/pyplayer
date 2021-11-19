@@ -45,6 +45,9 @@ class VideoPlayer:
             self._vlc.set_pause(pause)
             self._vlc.set_hwnd(self._handle)
 
+    def next_frame(self):
+        self._vlc.next_frame()
+
     def stop_video(self):
         print("VERBOSE", "Stopped video playback")
         self._vlc.stop()
@@ -114,7 +117,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
         pywindow.PyWindow.__init__(self, parent, self.window_id)
         self.title = "Video Player"
         self.icon = "assets/icon_video"
-        self.layout.row(0, weight=1).column(1, weight=1).column(5, weight=1)
+        self.layout.row(0, weight=1).column(1, weight=1).column(6, weight=1)
 
         self.events.EventWindowHide(self._on_hide)
         self.events.EventWindowShow(self._on_show)
@@ -133,9 +136,9 @@ class VideoPlayerWindow(pywindow.PyWindow):
         if video_file is not None: self.play(video_file, show, series_index)
 
     def create_widgets(self):
-        self.add_element("content", element_class=pyelement.PyLabelFrame, columnspan=7)
+        self.add_element("content", element_class=pyelement.PyLabelFrame, columnspan=8)
 
-        progress = self.add_element("progress", element_class=pyelement.PyProgessbar, row=1, columnspan=7)
+        progress = self.add_element("progress", element_class=pyelement.PyProgessbar, row=1, columnspan=8)
         progress.minimum, progress.value, progress.maximum = 0, 0, 10000
         progress.color = module.configuration.get("#progressbar_color")
         @progress.events.EventInteract
@@ -151,11 +154,14 @@ class VideoPlayerWindow(pywindow.PyWindow):
         btn2 = self.add_element("playpause_btn", element_class=pyelement.PyButton, row=2, column=3)
         btn2.text, btn2.accept_input = "Play", True
         btn2.events.EventInteract(self.pause)
-        btn3 = self.add_element("forward_btn", element_class=pyelement.PyButton, row=2, column=4)
+        next_frame_btn = self.add_element("next_frame_btn", element_class=pyelement.PyButton, row=2, column=4)
+        next_frame_btn.text, next_frame_btn.accept_input = "Frame >", False
+        next_frame_btn.events.EventInteract(self.next_frame)
+        btn3 = self.add_element("forward_btn", element_class=pyelement.PyButton, row=2, column=5)
         btn3.text, btn3.accept_input = ">>", False
         btn3.events.EventInteract(self.forward)
 
-        btn4 = self.add_element("next_episode_btn", element_class=pyelement.PyButton, row=2, column=6)
+        btn4 = self.add_element("next_episode_btn", element_class=pyelement.PyButton, row=2, column=7)
         btn4.text, btn4.hidden = "Next episode", True
         btn4.events.EventInteract(lambda : self._add_episode(1))
 
@@ -180,6 +186,11 @@ class VideoPlayerWindow(pywindow.PyWindow):
                 self.forward(self.show_data.get("intro_time", 10))
             return self.events.block_action
 
+        @self.events.EventKeyDown("E")
+        def _next_frame():
+            self.next_frame()
+            return self.events.block_action
+
     def play(self, video_file, show_id=None, series_index=-1):
         self.schedule_task(task_id="play_video", video_file=video_file, show_id=show_id, series_index=series_index)
 
@@ -191,6 +202,8 @@ class VideoPlayerWindow(pywindow.PyWindow):
     def forward(amount=5): module.interpreter.put_command(f"video time +{amount}")
     @staticmethod
     def backward(amount=5): module.interpreter.put_command(f"video time -{amount}")
+    @staticmethod
+    def next_frame(): module.interpreter.put_command("video next_frame")
 
     @property
     def show_data(self): return module.configuration["shows"].get(self._show_id, {})
@@ -259,7 +272,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
     def _on_play(self, _): self.schedule_task(task_id="on_play")
     def _execute_play(self):
         self["playpause_btn"].text = "Pause"
-        self["backward_btn"].accept_input = self["forward_btn"].accept_input = True
+        self["backward_btn"].accept_input = self["forward_btn"].accept_input = self["next_frame_btn"].accept_input = True
         self._playing = True
 
     def _on_pause(self, _): self.schedule_task(task_id="on_pause")
@@ -279,4 +292,4 @@ class VideoPlayerWindow(pywindow.PyWindow):
     def _on_stop(self, _): self.schedule_task(task_id="on_stop")
     def _execute_stop(self):
         self["progress"].value = 10000
-        self["backward_btn"].accept_input = self["forward_btn"].accept_input = False
+        self["backward_btn"].accept_input = self["forward_btn"].accept_input = self["next_frame_btn"].accept_input = False

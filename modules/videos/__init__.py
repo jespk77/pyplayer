@@ -146,6 +146,10 @@ def command_video_time(arg, argc):
         except ValueError: return messagetypes.Reply("Invalid number")
         else: return messagetypes.Reply("Video player time updated")
 
+def command_video_next_frame(arg, argc):
+    video_player.next_frame()
+    return messagetypes.Reply("Video player next frame shown")
+
 
 module.commands = {
     "tvshow": {
@@ -156,6 +160,7 @@ module.commands = {
         "stop": command_tvshow_stop
     },
     "video": {
+        "next_frame": command_video_next_frame,
         "pause": command_video_pause,
         "position": command_video_pos,
         "stop": command_video_stop,
