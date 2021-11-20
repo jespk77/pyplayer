@@ -48,6 +48,10 @@ class VideoPlayer:
     def next_frame(self):
         self._vlc.next_frame()
 
+    def restart_video(self):
+        self._vlc.set_media(self._vlc.get_media())
+        self._vlc.play()
+
     def stop_video(self):
         print("VERBOSE", "Stopped video playback")
         self._vlc.stop()
@@ -130,7 +134,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
         self.add_task("on_stop", self._execute_stop)
         self._register_events()
 
-        self._playing = self._pause_minimize = False
+        self._playing = self._pause_minimize = self._ended = False
         self._show_id = show
         self._updated, self._series_index = True, series_index
         if video_file is not None: self.play(video_file, show, series_index)
@@ -153,7 +157,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
         btn1.events.EventInteract(self.backward)
         btn2 = self.add_element("playpause_btn", element_class=pyelement.PyButton, row=2, column=3)
         btn2.text, btn2.accept_input = "Play", True
-        btn2.events.EventInteract(self.pause)
+        btn2.events.EventInteract(self._on_play_btn)
         next_frame_btn = self.add_element("next_frame_btn", element_class=pyelement.PyButton, row=2, column=4)
         next_frame_btn.text, next_frame_btn.accept_input = "Frame >", False
         next_frame_btn.events.EventInteract(self.next_frame)
@@ -269,11 +273,16 @@ class VideoPlayerWindow(pywindow.PyWindow):
         video_player.EventEndReached(None)
         video_player.EventStop(None)
 
+    def _on_play_btn(self):
+        if self._ended: video_player.restart_video()
+        else: self.pause()
+
     def _on_play(self, _): self.schedule_task(task_id="on_play")
     def _execute_play(self):
         self["playpause_btn"].text = "Pause"
         self["backward_btn"].accept_input = self["forward_btn"].accept_input = self["next_frame_btn"].accept_input = True
         self._playing = True
+        self._ended = False
 
     def _on_pause(self, _): self.schedule_task(task_id="on_pause")
     def _execute_pause(self):
@@ -291,5 +300,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
 
     def _on_stop(self, _): self.schedule_task(task_id="on_stop")
     def _execute_stop(self):
+        self["playpause_btn"].text = "Play"
         self["progress"].value = 10000
         self["backward_btn"].accept_input = self["forward_btn"].accept_input = self["next_frame_btn"].accept_input = False
+        self._ended = True
