@@ -68,6 +68,11 @@ class SoundEffectPlayer:
 			print("VERBOSE", "Cannot determine sound effect from", arg, ", there are", len(effects), "posibilities")
 			return messagetypes.Reply("Cannot determine what sound that should be")
 
+	def play_last_effect(self):
+		if self._media is not None:
+			self._player.set_media(self._media)
+			self._player.play()
+
 	def stop_player(self):
 		self._player.stop()
 		self._media.release()
@@ -85,6 +90,10 @@ def play_effect_loop(arg, argc):
 def play_effect(arg, argc):
 	if argc > 0: return effect_player.play_effect(" ".join(arg), False)
 
+def play_last_effect(arg, argc):
+	effect_player.play_last_effect()
+	return messagetypes.Reply("Replaying last effect")
+
 def stop_effect(arg, argc):
 	if argc == 0: return effect_player.stop_player()
 
@@ -100,6 +109,7 @@ def on_destroy():
 
 module.commands = {
 	"effect":{
+		"last": play_last_effect,
 		"loop": play_effect_loop,
 		"stop": stop_effect,
 		"": play_effect
