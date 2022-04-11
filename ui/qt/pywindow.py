@@ -215,7 +215,7 @@ class PyWindow:
 
         center = QtWidgets.QDesktopWidget().availableGeometry().center()
         geometry = self.qt_window.frameGeometry()
-        geometry.moveTo(center.x() - (.5 * size_x), center.y() - (.5 * size_y))
+        geometry.moveTo(round(center.x() - (.5 * size_x)), round(center.y() - (.5 * size_y)))
         self.qt_window.setGeometry(geometry)
 
     def add_element(self, element_id=None, element=None, element_class=None, **layout_kwargs):
