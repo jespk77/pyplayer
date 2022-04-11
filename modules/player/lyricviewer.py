@@ -22,11 +22,33 @@ class LyricViewer(pywindow.PyWindow):
 		self.can_maximize = self.can_minimize = False
 		self.add_task("set_lyrics", self._set_lyrics)
 
+		@self.events.EventKeyDown("Escape")
+		def _on_escape(): self.destroy()
+
+		@self.events.EventWindowClose
+		def _on_close(): self.configuration["text_size"] = self["lyrics_content"].font_size
+
 	def create_widgets(self):
 		pywindow.PyWindow.create_widgets(self)
-		lyrics = self.add_element("lyrics_content", element_class=pyelement.PyTextField)
+		frame = self.add_element("controls", element_class=pyelement.PyFrame)
+		frame.layout.column(0, weight=0).column(1, weight=0).column(2, weight=1).margins(0)
+		lbl = frame.add_element("lbl", element_class=pyelement.PyTextLabel)
+		lbl.set_alignment("center")
+		lbl.text = "Font size:"
+
+		size_element = frame.add_element(element=pyelement.PyNumberInput(frame, "font_size", all_updates=True), column=1)
+		size_element.min, size_element.step, size_element.max = 8, 2, 48
+		size_element.value = self.configuration.get("text_size", 10)
+
+		self.add_element("separator", element_class=pyelement.PySeparator, row=1)
+
+		lyrics = self.add_element("lyrics_content", element_class=pyelement.PyTextField, row=2)
+		lyrics.font_size = size_element.value
 		lyrics.accept_input = False
 		lyrics.text = "Loading..."
+
+		@size_element.events.EventInteract
+		def _on_size_change(): lyrics.font_size = size_element.value
 
 	def set_lyrics(self, data, lyrics): self.schedule_task(task_id="set_lyrics", data=data, lyrics=lyrics)
 	def _set_lyrics(self, data, lyrics):
