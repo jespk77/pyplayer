@@ -62,10 +62,10 @@ class PyLog:
 			self._file = None
 
 	def _check_date_changed(self):
-		current = datetime.datetime.today()
-		if self._date.day != current.day or self._date.month != current.month or self._date.year != current.year:
+		last = self._date
+		self._date = datetime.datetime.today()
+		if self._date.day != last.day or self._date.month != last.month or self._date.year != last.year:
 			self._close_file()
-			self._date = current
 			self._create_file()
 			print("MESSAGE", f" ===== PyPlayer {self.date_string} =====")
 
@@ -92,18 +92,18 @@ class PyLog:
 		except Exception as e: return "<{}>.{}] ".format(e, level)
 
 	def print_log(self, *objects, sep=" ", end="\n", file=None, flush=True):
+		self._check_date_changed()
 		level = objects[0] if len(objects) > 0 else PyLogLevel.NDEFINE
 		l = PyLogLevel.from_arg(level)
 		if l != PyLogLevel.NDEFINE: objects = objects[1:]
 
 		if self._level.is_match(level):
-			return self._prev_print(datetime.datetime.today().strftime("[%H:%M:%S] ") + f"[{threading.current_thread().name}|" + PyLog._get_traceback_string(level),
+			return self._prev_print(self._date.strftime("[%H:%M:%S.%f] ") + f"[{threading.current_thread().name}|" + PyLog._get_traceback_string(level),
 									*[('\n' + ''.join(traceback.format_exception(type(o), o, o.__traceback__)) + '\n') if isinstance(o, Exception) else o for o in objects],
 									sep=sep, end=end, file=file, flush=flush)
 		return False
 
 	def write(self, data):
-		self._check_date_changed()
 		if self._file is not None:
 			self._file.write(data)
 			self.flush()
