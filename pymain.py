@@ -13,6 +13,7 @@ class PySplashWindow(pywindow.RootPyWindow):
         self.icon = "assets/icon.png"
         self.layout.row(1, weight=1)
 
+        self._update = False
         self._actions = {}
         self._force_configure = False
         self._main_window = None
@@ -46,20 +47,24 @@ class PySplashWindow(pywindow.RootPyWindow):
         try:
             pc = process_command("git pull", stdout=self._git_status)
             if pc.returncode == 0:
-                self.schedule_task(sec=1, func=self._check_modules)
+                if self._update: self._do_restart()
+                else: self.schedule_task(sec=1, func=self._check_modules)
                 return
         except Exception as e: print("ERROR", "Updating program", e)
 
         print("WARNING", "Failed to update, ignoring update...")
         self.status_text = "Failed to update, continuing in 5 seconds..."
-        return self.schedule_task(sec=5, func=self._check_modules)
+        self.schedule_task(sec=5, func=self._check_modules)
 
     # STEP 1: Display git update status
     def _git_status(self, out):
         out = out.split("\n")
         if len(out) > 1:
             for o in out:
-                if o.startswith("Updating"): self.status_text = o; break
+                if o.startswith("Updating"):
+                    self.status_text = o
+                    self._update = True
+                    break
         elif len(out) == 1: self.status_text = out[0]
 
     # STEP 2: Check modules
