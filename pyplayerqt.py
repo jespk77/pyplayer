@@ -37,15 +37,16 @@ class PyPlayer(pywindow.PyWindow):
         import pylogging
         pylogging.get_logger().log_level = self.configuration["loglevel"]
         self._window_tick()
+        self._interp = Interpreter(self)
 
         @self.events.EventWindowOpen
-        def _on_open(): self.parent.hidden = True
+        def _on_open():
+            self.parent.hidden = True
+            self._interp.start()
         @self.events.EventWindowDestroy
         def _on_close():
             self.stop_interpreter()
             self.parent.on_close(self)
-
-        self.start_interpreter()
 
     def create_widgets(self):
         pywindow.PyWindow.create_widgets(self)
@@ -102,10 +103,6 @@ class PyPlayer(pywindow.PyWindow):
 
         @command_output.events.EventFocusGet
         def _on_focus(): inpt.get_focus()
-
-    def start_interpreter(self):
-        self._interp = Interpreter(self)
-        self._interp.start()
 
     def stop_interpreter(self):
         if self._interp:
