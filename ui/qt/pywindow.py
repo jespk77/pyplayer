@@ -272,7 +272,7 @@ class PyWindow:
             use 'window' for attaching a previously created PyWindow instance
             'window_class' must be a subclass of PyWindow, creates an instance of PyWindow if left out
             Supports custom keywords that are passed to the constructor of the window (ignored if window is specified) """
-        self.schedule_task(task_id="_add_window", window_id=window_id, window=window, window_class=window_class, window_args=window_args)
+        self.schedule_task(task_id="_add_window", window_id=window_id, window=window, window_class=window_class, wait=True, window_args=window_args)
 
     def _add_window(self, window_id, window, window_class, window_args):
         if not window:
