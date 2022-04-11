@@ -571,12 +571,16 @@ class PyNumberInput(PyElement):
      Precision can be adjusted during creation
      Interaction event fires when the enter key is pressed or if this element loses focus, no keywords
      If 'return_only' is set to true, interaction event only fires if the enter key is pressed
+     If 'all_updates' is set to true, interaction event updates every time the value changes
     """
-    def __init__(self, parent, element_id, double=False, return_only=False):
+    def __init__(self, parent, element_id, double=False, return_only=False, all_updates=False):
         self._double = double
         self._qt = (QtWidgets.QSpinBox if not double else QtWidgets.QDoubleSpinBox)(parent.qt_element)
         PyElement.__init__(self, parent, element_id)
-        (self.qt_element.returnPressed if return_only else self.qt_element.editingFinished).connect(lambda : self.events.call_event("interact"))
+        if return_only: event = self.qt_element.returnPressed
+        elif all_updates: event = self.qt_element.valueChanged
+        else: event = self.qt_element.editingFinished
+        event.connect(lambda : self.events.call_event("interact"))
         self.min, self.max = -99, 99
 
     @property
