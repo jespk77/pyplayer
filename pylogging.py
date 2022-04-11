@@ -30,7 +30,7 @@ class PyLogLevel(enum.Enum):
 	def __str__(self): return self.name
 
 log_folder = ".log"
-file_format = log_folder + os.path.sep + "pylog_{}{}.log"
+file_format = log_folder + os.path.sep + "pylog_{}.log"
 class PyLog:
 	def __init__(self, log_to_file=True):
 		self._level = PyLogLevel.INFO
@@ -38,12 +38,8 @@ class PyLog:
 
 		date_str = datetime.datetime.today().strftime("%y-%m-%d")
 		if log_to_file:
-			self._file = None
-			attempts = 0
-			while self._file is None:
-				self._filename = file_format.format(date_str, ("_{:02}".format(attempts) if attempts > 0 else ""))
-				try: self._file = open(self._filename, "x")
-				except FileExistsError: attempts += 1
+			self._filename = file_format.format(date_str)
+			self._file = open(self._filename, "a")
 			sys.stdout = self
 		else:
 			self._filename = None
@@ -51,7 +47,7 @@ class PyLog:
 
 		self._prev_print = builtins.print
 		builtins.print = self.print_log
-		print("MESSAGE", "Pyplayer log", str(date_str))
+		print("MESSAGE", f" ===== Pyplayer started {str(date_str)} ===== ")
 
 	def __del__(self):
 		self.on_destroy()
