@@ -32,7 +32,7 @@ class PyQtLauncher:
     """ Helper class that can launch the application from a default Python installation,
         ensures all dependencies are installed and the application is up to date before the main application is run """
     def __init__(self, main_file_to_run=None):
-        self._minimal_dependencies = ["PyQt5==5.14.2"]
+        self._minimal_dependencies = ["PyQt5==5.15.6"]
         self._file = main_file_to_run
         print("PyQtLauncher initialized.")
 
