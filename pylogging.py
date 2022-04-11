@@ -34,24 +34,40 @@ file_format = log_folder + os.path.sep + "pylog_{}.log"
 class PyLog:
 	def __init__(self, log_to_file=True):
 		self._level = PyLogLevel.INFO
+		self._log_to_file = log_to_file
 		if not os.path.isdir(log_folder): os.mkdir(log_folder)
 
-		date_str = datetime.datetime.today().strftime("%y-%m-%d")
-		if log_to_file:
-			self._filename = file_format.format(date_str)
-			self._file = open(self._filename, "a")
+		self._date = datetime.datetime.today()
+		if self._log_to_file:
+			self._create_file()
 			sys.stdout = self
-		else:
-			self._filename = None
-			self._file = None
+		else: self._filename = self._file = None
 
 		self._prev_print = builtins.print
 		builtins.print = self.print_log
-		print("MESSAGE", f" ===== Pyplayer started {str(date_str)} ===== ")
+		print("MESSAGE", f" ===== Pyplayer started {self.date_string} ===== ")
 
 	def __del__(self):
-		self.on_destroy()
+		self._close_file()
 		if builtins: builtins.print = self._prev_print
+
+	def _create_file(self):
+		if self._log_to_file:
+			self._filename = file_format.format(self.date_string)
+			self._file = open(self._filename, "a")
+
+	def _close_file(self):
+		if self._log_to_file and self._file is not None:
+			self._file.close()
+			self._file = None
+
+	def _check_date_changed(self):
+		current = datetime.datetime.today()
+		if self._date.day != current.day or self._date.month != current.month or self._date.year != current.year:
+			self._close_file()
+			self._date = current
+			self._create_file()
+			print("MESSAGE", f" ===== PyPlayer {self.date_string} =====")
 
 	@property
 	def log_level(self): return self._level
@@ -59,6 +75,9 @@ class PyLog:
 	def log_level(self, value): self._level = PyLogLevel.from_arg(value)
 	@property
 	def filename(self): return self._filename
+
+	@property
+	def date_string(self): return self._date.strftime('%y-%m-%d')
 
 	@staticmethod
 	def _get_class_from_stack(stack):
@@ -83,20 +102,18 @@ class PyLog:
 									sep=sep, end=end, file=file, flush=flush)
 		return False
 
-	def write(self, str):
+	def write(self, data):
+		self._check_date_changed()
 		if self._file is not None:
-			self._file.write(str)
+			self._file.write(data)
 			self.flush()
-		else: sys.__stdout__.write(str)
+		else: sys.__stdout__.write(data)
 
 	def flush(self):
 		if self._file is not None:
 			if not self._file.closed: self._file.flush()
 		else: sys.__stdout__.flush()
 
-	def on_destroy(self):
-		if self._file is not None:
-			self._file.close()
 
 logger = None
 def get_logger():
