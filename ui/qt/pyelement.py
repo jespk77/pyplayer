@@ -784,6 +784,14 @@ class PyTextField(PyElement):
     def style_sheet(self, value): self.qt_element.document().setDefaultStyleSheet(str(value))
 
     @property
+    def font_size(self): return self.qt_element.font().pointSize()
+    @font_size.setter
+    def font_size(self, size):
+        font = self.qt_element.font()
+        font.setPointSize(size)
+        self.qt_element.setFont(font)
+
+    @property
     def tabChangesFocus(self): return self.qt_element.tabChangesFocus()
     @tabChangesFocus.setter
     def tabChangesFocus(self, val): self.qt_element.setTabChangesFocus(bool(val))
