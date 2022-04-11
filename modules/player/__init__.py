@@ -400,7 +400,7 @@ def initialize():
 
 	volume = player.add_element("volume_control", element_class=pyelement.PyFrame, row=2, columnspan=2)
 	volume.layout.margins(0)
-	volume.add_element("volume_label", element_class=pyelement.PyTextLabel).with_text("Music volume:").set_alignment("centerV")
+	volume.add_element("volume_label", element_class=pyelement.PyTextLabel).with_text("Volume:").set_alignment("centerV")
 
 	volume_control: pyelement.PyProgessbar = volume.add_element("volume_control", element_class=pyelement.PyProgessbar, column=2)
 	volume_control.min, volume_control.max, volume_control.value = 0, 100, 100
@@ -415,7 +415,7 @@ def initialize():
 	def _on_click_mute(): module.interpreter.put_command("player mute")
 
 	volume_full = volume.add_element("volume_full", element_class=pyelement.PyButton, column=3)
-	volume_full.text, volume_full.width = ">>>", 40
+	volume_full.text, volume_full.width = "Max", 40
 	@volume_full.events.EventInteract
 	def _on_click_full(): module.interpreter.put_command("player volume 100")
 
@@ -505,7 +505,7 @@ def _set_client_title(media, color):
 
 def _set_client_autoplay():
 	global autoplay, autoplay_ignore
-	module.client["player"]["autoplay"].text = f"Autoplay: {autoplay.name.lower()}" + (" - [Skip next]" if autoplay_ignore else "")
+	module.client["player"]["autoplay"].text = f"Autoplay: {autoplay.name.lower()}" + (" - [Stop once]" if autoplay_ignore else "")
 
 def _set_client_filter(path=None):
 	global media_player
@@ -514,7 +514,7 @@ def _set_client_filter(path=None):
 
 	if keyword: keyword = "'" + keyword + "'"
 	else: keyword = "none"
-	module.client["player"]["filter"].text = f"Filter: {keyword} {('in ' + path) if path else ''}"
+	module.client["player"]["filter"].text = f"Shuffle filter: {keyword} {('in ' + path) if path else ''}"
 
 def _set_client_volume(volume):
 	module.client["player"]["volume_control"]["volume_control"].progress = volume
