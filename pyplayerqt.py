@@ -170,7 +170,7 @@ class PyPlayer(pywindow.PyWindow):
             self.schedule_task(task_id="reply_task", reply=reply, tags=tags, prefix=prefix, text=text)
 
     def on_notification(self, message, tags=None):
-        self.schedule_task(task_id="notification_task", message=message, tags=tags)
+        self.schedule_task(task_id="notification_task", message=message, tags=tags, wait=True)
 
     def update_title(self, title):
         if not title: title = self.title
