@@ -45,10 +45,6 @@ class PySplashWindow(pywindow.RootPyWindow):
         self.status_text = "Checking for updates..."
         try:
             pc = process_command("git pull", stdout=self._git_status)
-            if pc.returncode:
-                print("INFO", "Failed to update, there must be local changes, trying to merge them")
-                pc = process_command("git stash && git pull && git stash pop", stdout=self._git_status, shell=True)
-
             if pc.returncode == 0:
                 self.schedule_task(sec=1, func=self._check_modules)
                 return
