@@ -8,11 +8,15 @@ from core import pyconfiguration
 class _ScheduledTask(QtCore.QTimer):
     _schedule_signal = QtCore.pyqtSignal(int, bool, dict)
     _cancel_signal = QtCore.pyqtSignal()
+    _finished_signal = QtCore.pyqtSignal()
 
     def __init__(self, func):
         QtCore.QTimer.__init__(self)
         self._cb = func
         self._kwargs = {}
+        self._complete_event = QtCore.QEventLoop()
+        self._finished_signal.connect(self._complete_event.quit)
+
         self._schedule_signal.connect(self._schedule)
         self._cancel_signal.connect(self._cancel)
         self.timeout.connect(self._run_task)
@@ -28,9 +32,16 @@ class _ScheduledTask(QtCore.QTimer):
     def cancel(self): self._cancel_signal.emit()
     def _cancel(self): self.stop()
 
+    def wait(self):
+        if self.isActive():
+            self._complete_event.exec()
+
     def _run_task(self):
-        try: return self._cb(**self._kwargs)
+        val = None
+        try: val = self._cb(**self._kwargs)
         except Exception as e: log_exception(e)
+        self._finished_signal.emit()
+        return val
 
 
 import threading
@@ -322,15 +333,16 @@ class PyWindow:
         return False
 
     # todo: scheduling tasks from another thread only work if the task was added previously
-    def schedule_task(self, min=0, sec=0, ms=0, func=None, loop=False, task_id=None, **kwargs):
+    def schedule_task(self, min=0, sec=0, ms=0, func=None, loop=False, wait=False, task_id=None, **kwargs):
         """
-        Schedule an operation to be executed at least after the given time, all registered callbacks will stop when the window is closed
-        	- Amount of time to wait can be specified with minutes (keyword 'min'), seconds (keyword 'sec') and/or milliseconds (keyword 'ms')
-        	- The argument passed to func must be callable and accept all extra keywords passed to this function
-        	- The function can be executed repeatedly by setting 'loop' to True;
-        	     in this case it will be executed repeatedly after the given time either until the window is destroyed, an error occurs, or the callback returns False
-        	  Note: If looping is set, the delay must be at least 100 milliseconds
-            - The 'task_id' argument (if proviced) must be a string is used to later cancel, postpone or change the previously scheduled function
+            Schedule an operation to be executed at least after the given time, all registered callbacks will stop when the window is closed
+        	 - Amount of time to wait can be specified with minutes (keyword 'min'), seconds (keyword 'sec') and/or milliseconds (keyword 'ms')
+        	 - The argument passed to func must be callable and accept all extra keywords passed to this function
+        	 - The function can be executed repeatedly by setting 'loop' to True:
+        	     it will be executed repeatedly after the given time either until the window is destroyed, an error occurs, or the callback returns False
+        	     Note: If looping is set, the delay must be at least 100 milliseconds
+             - If 'wait' argument is True the function will wait for any previously scheduled tasks to finish before scheduling, otherwise the function that was scheduled is aborted
+             - The 'task_id' argument (if provided) must be a string is used to later cancel, postpone or change the previously scheduled function
                Note: scheduled tasks without a task_id cannot be looping and cannot be changed once scheduled
         """
         delay = min * 60000 + sec * 1000 + ms
@@ -339,6 +351,7 @@ class PyWindow:
 
         task: _ScheduledTask = self._scheduled_tasks.get(task_id)
         if task and not func:
+            if wait: task.wait()
             task.schedule(delay, loop, kwargs)
             return
 
