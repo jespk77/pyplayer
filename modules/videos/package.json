@@ -1,7 +1,6 @@
 {
   "id": "videos",
   "enabled": false,
-  "dependencies": ["python-vlc==3.0.11115"],
   "platform": null,
   "priority": 65,
   "required": false

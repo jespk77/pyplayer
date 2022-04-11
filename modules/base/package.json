@@ -1,7 +1,6 @@
 {
   "id": "base",
   "enabled": true,
-  "dependencies": ["psutil", "humanize"],
   "platform": null,
   "priority": 0,
   "required": true

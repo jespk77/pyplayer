@@ -1,4 +1,6 @@
+import subprocess
 import sys
+
 def get_python_version(): return "{0.major}.{0.minor}".format(sys.version_info)
 
 def process_command(cmd, stdin=None, stdout=None, stderr=None, timeout=None):
@@ -27,3 +29,23 @@ def process_command(cmd, stdin=None, stdout=None, stderr=None, timeout=None):
 		except Exception as e: print("error communicating:", e); break
 	pc.wait(timeout)
 	return pc
+
+def install_dependencies(dependencies):
+	"""
+		Install one or more dependencies with pip
+		Returns True if the dependencies were successfully installed, False otherwise
+	"""
+	if isinstance(dependencies, list): dependencies = " ".join(dependencies)
+	process = process_command(f"{sys.executable} -m pip install {dependencies}", stderr=_install_error)
+	return process.returncode == 0
+
+def install_dependency_file(dependency_file):
+	"""
+		Install dependencies with pip from a file, this file is installed with the requirements.txt rules
+		Returns True if the dependencies were successfully installed, False otherwise
+	"""
+	process = process_command(f"{sys.executable} -m pip install -r {dependency_file}", stderr=_install_error)
+	return process.returncode == 0
+
+def _install_error(text):
+	print("ERROR", "While installing dependencies with pip\n", text)

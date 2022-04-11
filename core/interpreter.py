@@ -1,4 +1,4 @@
-import importlib, sys
+import sys
 
 from multiprocessing import Queue
 from PyQt5 import QtCore
@@ -33,7 +33,7 @@ class _ModuleData:
 
 	def initialize_module(self, client, interpreter):
 		print("VERBOSE", "Importing module...")
-		mod = importlib.import_module("." + self.name, "modules")
+		mod = pymodules.import_module(self.name)
 		try:
 			module = None
 			print("VERBOSE", "Locating Module instance within module...")

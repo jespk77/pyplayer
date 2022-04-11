@@ -1,7 +1,6 @@
 {
   "id": "twitch",
   "enabled": false,
-  "dependencies": ["requests"],
   "platform": null,
   "priority": 12,
   "required": false

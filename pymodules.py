@@ -1,12 +1,15 @@
 import os, json, sys
+import importlib
 
 from ui.qt import pywindow, pyelement
 from core import pyconfiguration
+from core.commands import install_dependency_file
 
 module_dir = "modules"
 module_cfg = pyconfiguration.ConfigurationFile("module_data")
 
 def configuration_file(module): return os.path.join(f"modules/{module}", "package.json")
+def requirements_file(module): return os.path.join(f"modules/{module}", "requirements.txt")
 
 def scan_for_modules():
     """ Returns a list of names for all modules found in the module folder """
@@ -20,6 +23,27 @@ def check_for_new_modules():
         found_modules = set(scan_for_modules())
         return list(found_modules.difference(modules))
     else: return scan_for_modules()
+
+def import_module(name):
+    """
+        Import a module from the modules folder
+        Installs any dependencies if the directory contains a requirements.txt file
+        Returns the imported module or raises the exception in case of import errors
+    """
+    import_args = f".{name}", module_dir
+    print("VERBOSE", f"Importing module '{name}'...")
+    try: return importlib.import_module(*import_args)
+    except ModuleNotFoundError:
+        req_file = requirements_file(name)
+        if not os.path.isfile(req_file): raise
+
+    print("VERBOSE", "Import failed, trying to install dependencies...")
+    result = install_dependency_file(req_file)
+    if not result: print("ERROR", "Failed to install dependencies", req_file)
+
+    print("VERBOSE", "Dependencies installed, retrying import...")
+    return importlib.import_module(*import_args)
+
 
 class ModuleConfigurationFrame(pyelement.PyLabelFrame):
     """ Frame for configuring a single module """

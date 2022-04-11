@@ -1,7 +1,6 @@
 {
   "id": "effects",
   "enabled": false,
-  "dependencies": ["python-vlc"],
   "platform": null,
   "priority": 4,
   "required": false
