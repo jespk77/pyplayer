@@ -195,6 +195,11 @@ class VideoPlayerWindow(pywindow.PyWindow):
             self.next_frame()
             return self.events.block_action
 
+        @self.events.EventKeyDown("Slash")
+        def _quick_minimize():
+            self.minimized = True
+            return self.events.block_action
+
     def play(self, video_file, show_id=None, series_index=-1):
         self.schedule_task(task_id="play_video", video_file=video_file, show_id=show_id, series_index=series_index)
 
