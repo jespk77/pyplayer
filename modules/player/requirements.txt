@@ -1,3 +1,4 @@
-python-vlc==3.0.11115
+beautifulsoup4
 feedparser
+python-vlc==3.0.11115
 winrt; sys_platform == "win32"
