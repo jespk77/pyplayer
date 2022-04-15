@@ -1,7 +1,6 @@
 {
   "id": "youtube",
   "enabled": false,
-  "dependencies": ["beautifulsoup4","requests","youtube_dl"],
   "platform": null,
   "priority": 10,
   "required": false
