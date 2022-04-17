@@ -2,35 +2,34 @@ import os, json, sys
 import importlib
 
 from ui.qt import pywindow, pyelement
-from core import pyconfiguration
+from core import pyconfiguration, modules
 from core.commands import install_dependency_file
 
-module_dir = "modules"
 module_cfg = pyconfiguration.ConfigurationFile("module_data")
 
-def configuration_file(module): return os.path.join(f"modules/{module}", "package.json")
-def requirements_file(module): return os.path.join(f"modules/{module}", "requirements.txt")
+def configuration_file(module): return os.path.join(modules.module_directory, module, "package.json")
+def requirements_file(module): return os.path.join(modules.module_directory, module, "requirements.txt")
 
 def scan_for_modules():
     """ Returns a list of names for all modules found in the module folder """
-    return [md.name for md in os.scandir(module_dir) if md.is_dir()]
+    return [md.name for md in os.scandir(modules.module_directory) if md.is_dir()]
 
 def check_for_new_modules():
     """ Returns a list of modules not previously configured """
-    modules = module_cfg.get("modules")
-    if modules:
-        modules = set(modules.keys())
+    current_modules = module_cfg.get(modules.module_directory)
+    if current_modules:
+        current_modules = set(current_modules.keys())
         found_modules = set(scan_for_modules())
-        return list(found_modules.difference(modules))
+        return list(found_modules.difference(current_modules))
     else: return scan_for_modules()
 
 def import_module(name):
     """
-        Import a module from the modules folder
+        Import a module from the 'modules' folder
         Installs any dependencies if the directory contains a requirements.txt file
         Returns the imported module or raises the exception in case of import errors
     """
-    import_args = f".{name}", module_dir
+    import_args = f".{name}", modules.module_directory
     print("VERBOSE", f"Importing module '{name}'...")
     try: return importlib.import_module(*import_args)
     except ModuleNotFoundError:
@@ -123,11 +122,11 @@ class PyModuleConfigurationWindow(pywindow.PyWindow):
                 continue
 
     def create_widgets(self):
-        modules = self.add_element("module_list", element_class=pyelement.PyScrollableFrame, columnspan=2)
+        module_list = self.add_element("module_list", element_class=pyelement.PyScrollableFrame, columnspan=2)
         self._load_module_data()
         row=0
         for module_id, module_data in self._module_data.items():
-            modules.add_element(element=ModuleConfigurationFrame(modules, module_id, module_data, self._module_update), row=row)
+            module_list.add_element(element=ModuleConfigurationFrame(modules, module_id, module_data, self._module_update), row=row)
             row += 1
 
         b_enable_all = self.add_element("button_all", element_class=pyelement.PyButton, row=1, column=0)
@@ -135,14 +134,14 @@ class PyModuleConfigurationWindow(pywindow.PyWindow):
         @b_enable_all.events.EventInteract
         def _enable_all():
             print("VERBOSE", "Enabling all modules")
-            for cg in modules.children: cg.set_enabled(True)
+            for cg in module_list.children: cg.set_enabled(True)
 
         b_enable_none = self.add_element("button_none", element_class=pyelement.PyButton, row=1, column=1)
         b_enable_none.text = "Disable all"
         @b_enable_none.events.EventInteract
         def _disable_all():
             print("VERBOSE", "Disabling all modules")
-            for cg in modules.children: cg.set_enabled(False)
+            for cg in module_list.children: cg.set_enabled(False)
 
         b_cancel = self.add_element("button_cancel", element_class=pyelement.PyButton, row=2, column=0)
         b_cancel.text = "Cancel"

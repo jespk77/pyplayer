@@ -1,8 +1,11 @@
+import os.path
 from collections import namedtuple
 CommandResult = namedtuple("CommandResult", ["callback", "args"])
 CommandSuggest = namedtuple("CommandSuggest", ["command", "options", "remainder"])
 
 from . import pyconfiguration
+
+module_directory = "modules"
 
 class Module:
 	_modules = {}
@@ -14,9 +17,19 @@ class Module:
 	def __init__(self, key):
 		if not hasattr(self, "_events"):
 			print("VERBOSE", f"Creating new module '{key}'")
+			self._name = key.split(".", maxsplit=1)[-1]
 			self._events = {}
 			self._client = self._interpreter = self._cmds = None
 			self._cfg = pyconfiguration.ConfigurationFile(f"{key}.cfg")
+
+	@property
+	def name(self):
+		""" The name of this module """
+		return self._name
+	@property
+	def path(self):
+		""" The relative path this module """
+		return os.path.join(module_directory, self.name)
 
 	@property
 	def client(self):
