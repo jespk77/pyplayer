@@ -22,9 +22,9 @@ class SoundEffectPlayer:
 		self._player.event_manager().event_attach(vlc.EventType.MediaPlayerEndReached, self._on_end_reached)
 
 	def _on_end_reached(self, event):
-		if module.configuration.get(pause_music_key): module.interpreter.put_command("player pause false")
 		if self._last_effect[0] and self._last_effect[1]:
 			module.interpreter.put_command(loop_effect_command.format(self._last_effect[0]))
+		elif module.configuration.get(pause_music_key): module.interpreter.put_command("player pause false")
 
 	def play_effect(self, arg, loop=False):
 		if self._player.is_playing() and not self._last_effect[1]:
@@ -60,18 +60,19 @@ class SoundEffectPlayer:
 					self._last_effect = sound_file[0], False
 					self._media = vlc.Media(mrl, "input-repeat=-1" if loop else "input-repeat=0")
 
-			self._player.set_media(self._media)
-			if module.configuration.get(pause_music_key): module.interpreter.put_command("player pause true")
-			self._player.play()
+			self._play()
 			return messagetypes.Reply("Playing sound effect: " + self._last_effect[0])
 		else:
 			print("VERBOSE", "Cannot determine sound effect from", arg, ", there are", len(effects), "posibilities")
 			return messagetypes.Reply("Cannot determine what sound that should be")
 
 	def play_last_effect(self):
-		if self._media is not None:
-			self._player.set_media(self._media)
-			self._player.play()
+		if self._media is not None: self._play()
+
+	def _play(self):
+		self._player.set_media(self._media)
+		if module.configuration.get(pause_music_key): module.interpreter.put_command("player pause true")
+		self._player.play()
 
 	def stop_player(self):
 		self._player.stop()
