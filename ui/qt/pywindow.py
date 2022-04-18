@@ -229,6 +229,10 @@ class PyWindow:
         geometry.moveTo(round(center.x() - (.5 * size_x)), round(center.y() - (.5 * size_y)))
         self.qt_window.setGeometry(geometry)
 
+    def fill_window(self):
+        """ Show this window full screen """
+        self.qt_window.setGeometry(QtWidgets.QDesktopWidget().availableGeometry())
+
     def add_element(self, element_id=None, element=None, element_class=None, **layout_kwargs):
         """ Add new element to this window, closes previously opened element with the same id (if open) """
         if not element:
