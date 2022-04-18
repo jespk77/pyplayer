@@ -68,24 +68,9 @@ class PyWorker:
         """ Executed only on error, either during 'start' or 'run' """
         pass
 
-class PyLock:
-    """ Basic syncronization object, similar to threading.Lock but intended to be used with PyWorkers"""
-    def __init__(self):
-        self._qt = QtCore.QMutex()
-
-    def __enter__(self): self.lock()
-    def __exit__(self, exc_type, exc_val, exc_tb): self.unlock()
-
-    def lock(self, timeout=None):
-        if timeout is not None: self._qt.tryLock(timeout)
-        else: self._qt.lock()
-
-    def unlock(self):
-        self._qt.unlock()
-
 class PyWaitCondition:
     def __init__(self):
-        self._lock = PyLock()
+        self._lock = QtCore.QMutex()
         self._qt = QtCore.QWaitCondition()
 
     def __enter__(self): self.lock()
@@ -94,10 +79,12 @@ class PyWaitCondition:
     def lock(self, ms=0, sec=0):
         """
          Attempt to lock the associated mutex for specified wait time
-         If no or negative delay specified, it will wait forever until locked
-         Returns true if the lock was succesfully obtained
+         If none or negative delay specified, it will wait forever until locked
+         Returns True if the lock was successfully obtained
         """
-        self._lock.lock(sec*1000+ms)
+        time = sec*1000+ms
+        if time > 0: self._lock.tryLock(time)
+        else: self._lock.lock()
 
     def unlock(self):
         """ Unlock associated mutex """
@@ -117,5 +104,5 @@ class PyWaitCondition:
          Note: the lock associated with this instance must be owned by the caller
          Returns true if it was awoken or false if the wait time has passed
         """
-        res = self._qt.wait(self._lock._qt, min*60000+sec*1000+ms)
+        res = self._qt.wait(self._lock, min * 60000 + sec * 1000 + ms)
         return res
