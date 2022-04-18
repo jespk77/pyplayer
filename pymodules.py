@@ -126,7 +126,7 @@ class PyModuleConfigurationWindow(pywindow.PyWindow):
         self._load_module_data()
         row=0
         for module_id, module_data in self._module_data.items():
-            module_list.add_element(element=ModuleConfigurationFrame(modules, module_id, module_data, self._module_update), row=row)
+            module_list.add_element(element=ModuleConfigurationFrame(module_list, module_id, module_data, self._module_update), row=row)
             row += 1
 
         b_enable_all = self.add_element("button_all", element_class=pyelement.PyButton, row=1, column=0)
