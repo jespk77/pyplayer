@@ -184,6 +184,12 @@ class PyWindow:
     @can_minimize.setter
     def can_minimize(self, minimize): self.qt_window.setWindowFlag(QtCore.Qt.WindowMinimizeButtonHint, minimize)
 
+    @property
+    def always_on_top(self): return int(self._qt.windowFlags()) & QtCore.Qt.WindowStaysOnTopHint
+    @always_on_top.setter
+    def always_on_top(self, top): self._qt.setWindowFlag(QtCore.Qt.WindowStaysOnTopHint, top)
+    topmost = always_on_top
+
     def activate(self):
         """ Sets this window to be visible and have keyboard focus """
         self.qt_window.activateWindow()
