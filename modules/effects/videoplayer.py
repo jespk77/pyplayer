@@ -13,10 +13,14 @@ class EffectPlayer(pywindow.PyWindow):
         self.icon = "assets/icon"
 
         self.make_borderless()
-        #self.always_on_top = True
+        self.always_on_top = True
         self.fill_window()
         @self.events.EventWindowClose
-        def _on_close(): self._player.clear_hwnd()
+        def _on_close():
+            if self._player.playing: return self.events.block_action
+
+        @self.events.EventWindowDestroy
+        def _on_destroy(): self._player.clear_hwnd()
 
         self.play()
 

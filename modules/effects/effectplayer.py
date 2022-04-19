@@ -27,6 +27,9 @@ class SoundEffectPlayer:
 		event_manager.event_attach(vlc.EventType.MediaPlayerStopped, self._on_stopped)
 		event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, self._on_end_reached)
 
+	@property
+	def playing(self): return self._player.is_playing()
+
 	def _on_stopped(self, event):
 		videoplayer.close_player()
 
@@ -73,7 +76,7 @@ class SoundEffectPlayer:
 			print("VERBOSE", "Cannot determine sound effect from", arg, ", there are", len(effects), "posibilities")
 			return None
 
-	def play_last_effect(self): self._set_media()
+	def play_last_effect(self): self._set_media(self._mrl)
 
 	def _on_parsed(self, event):
 		if self._media.get_parsed_status() == vlc.MediaParsedStatus.done:
@@ -105,6 +108,7 @@ class SoundEffectPlayer:
 
 	def clear_hwnd(self):
 		self._player.stop()
+		self._media.release()
 		self._player.set_hwnd(0)
 
 	def stop_player(self):
