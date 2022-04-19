@@ -1,7 +1,7 @@
 import os, json
 from interception import ffi, lib as interception
 
-from ui.qt import pyworker
+from ui.qt import pyworker, pythreading
 from core import messagetypes, modules
 module = modules.Module(__package__)
 
@@ -43,7 +43,7 @@ def on_key_down(key):
 class InterceptionWorker(pyworker.PyWorker):
     def __init__(self):
         pyworker.PyWorker.__init__(self, "interception_worker", True)
-        self._lock = pyworker.PyLock()
+        self._lock = pythreading.PyLock()
         self._run = True
         self._ctrl = self._shift = False
 
