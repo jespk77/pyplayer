@@ -1,4 +1,4 @@
-import os, sys
+import os, socket, sys
 
 import pymodules, pyplayerqt
 from ui.qt import pyelement, pywindow, pylauncher
@@ -20,7 +20,7 @@ class PySplashWindow(pywindow.RootPyWindow):
 
         self.make_borderless()
         self.center_window(*resolution, fit_to_size=True)
-        self.schedule_task(sec=1, func=self._check_modules if "no_update" in sys.argv else self._update_program)
+        self.schedule_task(func=self._check_modules if "no_update" in sys.argv else self._check_connection)
 
     def create_widgets(self):
         pywindow.RootPyWindow.create_widgets(self)
@@ -40,15 +40,22 @@ class PySplashWindow(pywindow.RootPyWindow):
     @status_text.setter
     def status_text(self, status): self["status_bar"].text = status
 
-    # STEP 1: Check for updates
+    # STEP 1a: wait for active connection
+    def _check_connection(self):
+        print("VERBOSE", "Waiting for an active internet connection before trying to update")
+        self.status_text = "Checking for updates..."
+        try: socket.create_connection(("https://github.com", 443), 10)
+        except socket.error: pass
+        self.schedule_task(func=self._update_program)
+
+    # STEP 1b: Check for updates
     def _update_program(self):
         print("INFO", "Checking for updates")
-        self.status_text = "Checking for updates..."
         try:
             pc = process_command("git pull", stdout=self._git_status)
             if pc.returncode == 0:
                 if self._update: self._do_restart()
-                else: self.schedule_task(sec=1, func=self._check_modules)
+                else: self.schedule_task(func=self._check_modules)
                 return
         except Exception as e: print("ERROR", "Updating program", e)
 
@@ -56,7 +63,7 @@ class PySplashWindow(pywindow.RootPyWindow):
         self.status_text = "Failed to update, continuing in 5 seconds..."
         self.schedule_task(sec=5, func=self._check_modules)
 
-    # STEP 1: Display git update status
+    # STEP 1c: Display git update status
     def _git_status(self, out):
         out = out.split("\n")
         if len(out) > 1:
