@@ -335,8 +335,12 @@ class PyWindow:
             except KeyError: return
 
     def destroy(self):
-        """ Closes this window along with any open child windows """
-        self.qt_element.close()
+        """
+            Tries to close this window along with any open child windows
+            After calling this function, the window can stay open if (for instance) the window close event was canceled
+            Returns True if the window was closed, False otherwise
+        """
+        return self.qt_element.close()
 
     def add_task(self, task_id, func):
         """ Bind a function to a task id without scheduling it """
@@ -429,11 +433,14 @@ class PyWindow:
         print("VERBOSE", f"Window {self.window_id} closed")
         try:
             if self.events.call_event("window_close") == self.events.block: return event.ignore()
+            for window in self.windows:
+                if not window.destroy():
+                    window.activate()
+                    return event.ignore()
 
             if self._parent:
                 try: del self._parent._children[self.window_id]
                 except KeyError: pass
-            for window in self.windows: window.destroy()
             for element in self.children: element.on_destroy()
 
             self.events.call_event("window_destroy")
