@@ -13,7 +13,7 @@ class EffectPlayer(pywindow.PyWindow):
         self.icon = "assets/icon"
 
         self.make_borderless()
-        self.always_on_top = True
+        #self.always_on_top = True
         self.fill_window()
         @self.events.EventWindowClose
         def _on_close(): self._player.clear_hwnd()
@@ -29,7 +29,6 @@ class EffectPlayer(pywindow.PyWindow):
 module = modules.Module(__package__)
 def open_player(player):
     window = module.client.find_window(EffectPlayer.window_name)
-    print("VERBOSE", "Opening effect player")
     if window is None:
         print("VERBOSE", "No effect player found, creating a new one")
         module.client.add_window(window_class=EffectPlayer, player=player)

@@ -24,7 +24,11 @@ class SoundEffectPlayer:
 		# (effect_id, loop)
 		self._last_effect = None, False
 		event_manager = self._player.event_manager()
+		event_manager.event_attach(vlc.EventType.MediaPlayerStopped, self._on_stopped)
 		event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, self._on_end_reached)
+
+	def _on_stopped(self, event):
+		videoplayer.close_player()
 
 	def _on_end_reached(self, event):
 		if self._last_effect[0] and self._last_effect[1]:
