@@ -9,12 +9,15 @@ class EffectPlayer(pywindow.PyWindow):
         self._player = player
         pywindow.PyWindow.__init__(self, parent, self.window_name)
         self.layout.row(0, weight=1).column(0, weight=1).margins(0)
-        self.make_borderless()
-        #self.always_on_top = True
-        self.maximized = True
-
         self.title = "Effect player"
         self.icon = "assets/icon"
+
+        self.make_borderless()
+        self.always_on_top = True
+        self.fill_window()
+        @self.events.EventWindowClose
+        def _on_close(): self._player.clear_hwnd()
+
         self.play()
 
     def create_widgets(self):

@@ -99,6 +99,10 @@ class SoundEffectPlayer:
 		self._player.set_hwnd(hwnd)
 		self._play()
 
+	def clear_hwnd(self):
+		self._player.stop()
+		self._player.set_hwnd(0)
+
 	def stop_player(self):
 		self._player.stop()
 		self._media.release()
