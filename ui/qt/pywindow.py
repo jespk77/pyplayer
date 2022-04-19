@@ -1,7 +1,7 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 import sys
 
-from . import pyelement, pyevents, pylayout, log_exception
+from . import pyelement, pyevents, pylayout, pythreading, log_exception
 from core import pyconfiguration
 
 
@@ -56,6 +56,7 @@ class PyWindow:
         if not hasattr(self, "_qt"):
             self._qt = QtWidgets.QWidget()
             self._qt.setObjectName("PyWindow")
+        self._window_lock = pythreading.PyLock()
 
         self.qt_window.resizeEvent = self._on_window_resize
         self.qt_window.closeEvent = self._on_window_close
@@ -89,6 +90,7 @@ class PyWindow:
                 if geo[4] == 2: self.maximized = True
                 elif geo[4] == 1: self.minimized = True
         self.add_task("_add_window", func=self._add_window)
+        self.add_task("_close_window", func=self._close_window)
 
     def __del__(self): print("MEMORY", f"PyWindow '{self.window_id}' deleted")
 
@@ -184,6 +186,12 @@ class PyWindow:
     @can_minimize.setter
     def can_minimize(self, minimize): self.qt_window.setWindowFlag(QtCore.Qt.WindowMinimizeButtonHint, minimize)
 
+    @property
+    def always_on_top(self): return int(self._qt.windowFlags()) & QtCore.Qt.WindowStaysOnTopHint
+    @always_on_top.setter
+    def always_on_top(self, top): self._qt.setWindowFlag(QtCore.Qt.WindowStaysOnTopHint, top)
+    topmost = always_on_top
+
     def activate(self):
         """ Sets this window to be visible and have keyboard focus """
         self.qt_window.activateWindow()
@@ -228,6 +236,10 @@ class PyWindow:
         geometry = self.qt_window.frameGeometry()
         geometry.moveTo(round(center.x() - (.5 * size_x)), round(center.y() - (.5 * size_y)))
         self.qt_window.setGeometry(geometry)
+
+    def fill_window(self):
+        """ Show this window full screen """
+        self.qt_window.setGeometry(QtWidgets.QDesktopWidget().availableGeometry())
 
     def add_element(self, element_id=None, element=None, element_class=None, **layout_kwargs):
         """ Add new element to this window, closes previously opened element with the same id (if open) """
@@ -290,29 +302,37 @@ class PyWindow:
         elif isinstance(window, PyWindow): window_id = window.window_id
         else: raise TypeError("'window' parameter must be a PyWindow instance")
 
-        self.close_window(window_id)
-        self._children[window_id] = window
-        self._children[window_id].qt_window.show()
-        self._children[window_id].events.call_event("window_open")
+        self._close_window(window_id)
+        with self._window_lock:
+            self._children[window_id] = window
+            self._children[window_id].qt_window.show()
+            self._children[window_id].events.call_event("window_open")
 
     def get_window(self, window_id):
-        """ Get open window with given id, raises KeyError when no window with this id is open
-            Use find_window instead if this is undesired """
-        window = self._children[window_id]
-        if window.is_closed:
-            del self._children[window_id]
-            raise KeyError(window_id)
-        return window
+        """
+            Get open window with given id, raises KeyError when no window with this id is open
+            Use 'find_window' instead if this is undesired
+        """
+        with self._window_lock:
+            window = self._children[window_id]
+            if window.is_closed:
+                del self._children[window_id]
+                raise KeyError(window_id)
+            return window
 
     def find_window(self, window_id):
         """ Safe alternative to get_window, returns None when no open window exists instead """
-        window = self._children.get(window_id)
-        return window if window is not None and not window.is_closed else None
+        try: return self.get_window(window_id)
+        except KeyError: return None
 
     def close_window(self, window_id):
-        """ CLose window with given id, has no effect if no window with this is is open """
-        window = self.find_window(window_id)
-        if window: window.destroy()
+        """ CLose window with given id, has no effect if no window with the id is open """
+        self.schedule_task(task_id="_close_window", window_id=window_id)
+
+    def _close_window(self, window_id):
+        with self._window_lock:
+            try: self.get_window(window_id).destroy()
+            except KeyError: return
 
     def destroy(self):
         """ Closes this window along with any open child windows """
