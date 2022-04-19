@@ -82,7 +82,7 @@ class PyWindowEvents(EventHandler):
 
     def call_event(self, event_name, **kwargs):
         kwargs["window"] = self._element
-        EventHandler.call_event(self, event_name, **kwargs)
+        return EventHandler.call_event(self, event_name, **kwargs)
 
     def EventWindowOpen(self, cb):
         """
