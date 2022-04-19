@@ -266,7 +266,7 @@ class PyLabelFrame(PyFrame):
     def __init__(self, parent, element_id, layout="grid"):
         self._qt = QtWidgets.QGroupBox(parent.qt_element)
         PyFrame.__init__(self, parent, element_id, layout)
-        self._qt.clicked.connect(lambda checked: self.events.call_event("interact", checked=checked))
+        self.qt_element.clicked.connect(lambda checked: self.events.call_event("interact", checked=checked))
 
     @property
     def label(self): return self.qt_element.title()
@@ -302,7 +302,7 @@ class PyTabFrame(PyElement):
         self._qt = QtWidgets.QTabWidget(parent.qt_element)
         self._tabs = []
         PyElement.__init__(self, parent, element_id)
-        self._qt.currentChanged.connect(lambda index: self.events.call_event("interact", index=index))
+        self.qt_element.currentChanged.connect(lambda index: self.events.call_event("interact", index=index))
 
     def add_tab(self, name, frame=None, frame_class=PyFrame, **frame_args):
         """

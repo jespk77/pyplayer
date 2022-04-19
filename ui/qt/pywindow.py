@@ -187,9 +187,9 @@ class PyWindow:
     def can_minimize(self, minimize): self.qt_window.setWindowFlag(QtCore.Qt.WindowMinimizeButtonHint, minimize)
 
     @property
-    def always_on_top(self): return int(self._qt.windowFlags()) & QtCore.Qt.WindowStaysOnTopHint
+    def always_on_top(self): return int(self.qt_window.windowFlags()) & QtCore.Qt.WindowStaysOnTopHint
     @always_on_top.setter
-    def always_on_top(self, top): self._qt.setWindowFlag(QtCore.Qt.WindowStaysOnTopHint, top)
+    def always_on_top(self, top): self.qt_window.setWindowFlag(QtCore.Qt.WindowStaysOnTopHint, top)
     topmost = always_on_top
 
     def activate(self):
