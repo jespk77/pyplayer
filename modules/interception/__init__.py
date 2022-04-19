@@ -10,6 +10,7 @@ from . import keyconfigurationwindow
 # MODULE SPECIFIC VARIABLES
 trigger_file = "keytriggers"
 loop_effect_command = "effect loop {}"
+effect_device_key = "event_device"
 hook_running = False
 key_cache = {}
 key_cache_date = -1
@@ -48,7 +49,7 @@ class InterceptionWorker(pyworker.PyWorker):
         self._ctrl = self._shift = False
 
     def _on_key_event(self, device, key):
-        if device == 1:
+        if device == module.configuration[effect_device_key]:
             if key.state == 0 or key.state == 2: on_key_down(key.state * 100 + key.code)
             return True
         else:
@@ -116,6 +117,10 @@ def interception_configure(arg, argc):
     if module.client.find_window(keyconfigurationwindow.KeyConfigurationWindow.window_id) is None:
         module.client.add_window(window_class=keyconfigurationwindow.KeyConfigurationWindow)
     return messagetypes.Reply("Interception key configuration window opened")
+
+@module.Initialize
+def initialize():
+    module.configuration.get_or_create(effect_device_key, 1)
 
 module.commands = {
     "interception": {
