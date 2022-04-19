@@ -56,6 +56,15 @@ class VideoPlayer:
         print("VERBOSE", "Stopped video playback")
         self._vlc.stop()
 
+    def reset(self):
+        print("VERBOSE", "Resetting video player")
+        pos, media = self._vlc.get_position(), self._vlc.get_media()
+        self._vlc.stop()
+        if media is not None:
+            self._vlc.set_media(media)
+            self._vlc.play()
+            self._vlc.set_position(pos)
+
     @property
     def time(self): return self._vlc.get_time() / 1000
     @time.setter
@@ -158,6 +167,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
         btn2 = self.add_element("playpause_btn", element_class=pyelement.PyButton, row=2, column=3)
         btn2.text, btn2.accept_input = "Play", True
         btn2.events.EventInteract(self._on_play_btn)
+        btn2.events.EventRightClick(self._reset)
         next_frame_btn = self.add_element("next_frame_btn", element_class=pyelement.PyButton, row=2, column=4)
         next_frame_btn.text, next_frame_btn.accept_input = "Frame >", False
         next_frame_btn.events.EventInteract(self.next_frame)
@@ -277,6 +287,9 @@ class VideoPlayerWindow(pywindow.PyWindow):
         video_player.EventPosition(None)
         video_player.EventEndReached(None)
         video_player.EventStop(None)
+
+    def _reset(self):
+        video_player.reset()
 
     def _on_play_btn(self):
         if self._ended: video_player.restart_video()
