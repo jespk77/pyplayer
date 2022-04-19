@@ -37,6 +37,7 @@ class PyLog:
 		self._log_to_file = log_to_file
 		if not os.path.isdir(log_folder): os.mkdir(log_folder)
 
+		self._print_lock = threading.RLock()
 		self._date = datetime.datetime.today()
 		if self._log_to_file:
 			self._create_file()
@@ -72,7 +73,10 @@ class PyLog:
 	@property
 	def log_level(self): return self._level
 	@log_level.setter
-	def log_level(self, value): self._level = PyLogLevel.from_arg(value)
+	def log_level(self, value):
+		with self._print_lock:
+			self._level = PyLogLevel.from_arg(value)
+
 	@property
 	def filename(self): return self._filename
 
@@ -92,16 +96,17 @@ class PyLog:
 		except Exception as e: return "<{}>.{}] ".format(e, level)
 
 	def print_log(self, *objects, sep=" ", end="\n", file=None, flush=True):
-		self._check_date_changed()
-		level = objects[0] if len(objects) > 0 else PyLogLevel.NDEFINE
-		l = PyLogLevel.from_arg(level)
-		if l != PyLogLevel.NDEFINE: objects = objects[1:]
+		with self._print_lock:
+			self._check_date_changed()
+			level = objects[0] if len(objects) > 0 else PyLogLevel.NDEFINE
+			l = PyLogLevel.from_arg(level)
+			if l != PyLogLevel.NDEFINE: objects = objects[1:]
 
-		if self._level.is_match(level):
-			return self._prev_print(self._date.strftime("[%H:%M:%S.%f] ") + f"[{threading.current_thread().name}|" + PyLog._get_traceback_string(level),
-									*[('\n' + ''.join(traceback.format_exception(type(o), o, o.__traceback__)) + '\n') if isinstance(o, Exception) else o for o in objects],
-									sep=sep, end=end, file=file, flush=flush)
-		return False
+			if self._level.is_match(level):
+				return self._prev_print(self._date.strftime("[%H:%M:%S.%f] ") + f"[{threading.current_thread().name}|" + PyLog._get_traceback_string(level),
+										*[('\n' + ''.join(traceback.format_exception(type(o), o, o.__traceback__)) + '\n') if isinstance(o, Exception) else o for o in objects],
+										sep=sep, end=end, file=file, flush=flush)
+			return False
 
 	def write(self, data):
 		if self._file is not None:
