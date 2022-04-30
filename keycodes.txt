@@ -1,0 +1,2 @@
+# you can put custom key codes here to add to the listener
+# format: [key_name]=[key_code]

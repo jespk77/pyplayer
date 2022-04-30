@@ -2,6 +2,8 @@ class _KeyCodes:
     undefined_key = "Undefined"
     undefined_code = 0
 
+    external_codes_file = "keycodes.txt"
+
     _codes =\
         "Esc|1|2|3|4|5|6|7|8|9|0|-|=|Backspace|Tab|" +\
         "Q|W|E|R|T|Y|U|I|O|P|[|]|Enter|LCtrl|A|S|" +\
@@ -32,13 +34,27 @@ class _KeyCodes:
 
     _name_to_code = _code_to_name = None
 
+    def __init__(self):
+        self._external_codes = {}
+        try:
+            with open(self.external_codes_file, "r") as file:
+                for line in file:
+                    if len(line) > 0 and not line.startswith("#"):
+                        try:
+                            key, code = line.split("=", maxsplit=1)
+                            self._external_codes[key] = int(code, 16 if code.startswith("0x") else 10)
+                        except Exception as e: print("ERROR", "Failed to parse line in keycode file", e)
+        except FileNotFoundError: pass
+
     def _load_name_to_code(self):
         self._name_to_code = { char: index+1 for index, char in enumerate(self._codes.split("|")) if char }
         self._name_to_code.update(self._extra_codes)
+        self._name_to_code.update(self._external_codes)
 
     def _load_code_to_name(self):
         self._code_to_name = { index+1: char for index, char in enumerate(self._codes.split("|")) if char }
         for key, code in self._extra_codes.items(): self._code_to_name[code] = key
+        for key, code in self._external_codes.items(): self._code_to_name[code] = key
 
     def get_name(self, char):
         """ Get the key name from its scancode """
