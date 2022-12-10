@@ -16,14 +16,13 @@ def interception_stop(arg, argc):
     return messagetypes.Reply("Input listener stopped" if result else "Input listener not running")
 
 def interception_configure(arg, argc):
-    module.client.add_window(window_class=configurator.ConfiguratorWindow, keyboard_listener=keyboard_listener)
+    module.client.add_window(window_class=configurator.ConfiguratorWindow)
     return messagetypes.Reply("Interception configurator window opened")
 
 @module.Initialize
 def initialize():
-    device = module.configuration.get_or_create(effect_device_key, 1)
     global keyboard_listener
-    keyboard_listener = KeyboardListener(device)
+    keyboard_listener = KeyboardListener(module.configuration.get_or_create(effect_device_key, 1))
 
 @module.Destroy
 def destroy():

@@ -1,26 +1,15 @@
 from ui.qt import pywindow, pyelement
 
 from .codes import KeyCode
+from .commands import key_commands
 
 class ConfiguratorWindow(pywindow.PyWindow):
     window_name = "input_configurator"
 
-    def __init__(self, parent, keyboard_listener):
+    def __init__(self, parent):
         pywindow.PyWindow.__init__(self, parent, self.window_name)
         self.title = "Input configurator"
         self.layout.row(2, weight=1).column(1, weight=1)
-
-        self._keyboard_listener = keyboard_listener
-        self._keyboard_listener.event_callback = self._on_key_press
-        self._keyboard_listener_active = keyboard_listener.active
-        self._keyboard_listener.start()
-
-        @self.events.EventWindowDestroy
-        def _on_destroy():
-            self._keyboard_listener.event_callback = None
-            if not self._keyboard_listener_active:
-                print("VERBOSE", "Listener was not active before, stop it again")
-                self._keyboard_listener.stop()
 
     def create_widgets(self):
         self.add_element("keyboard", element_class=pyelement.PyLabelFrame).layout.margins(0)
@@ -28,11 +17,9 @@ class ConfiguratorWindow(pywindow.PyWindow):
 
         controls = self.add_element("controls", element_class=pyelement.PyFrame, row=1)
         controls.layout.margins(0)
-        controls.add_element("status", element_class=pyelement.PyTextLabel, columnspan=2).text = "Press a key to configure it..."
+        controls.add_element("status", element_class=pyelement.PyTextLabel).text = "Press a key to configure it..."
         controls.add_element("command", element_class=pyelement.PyTextInput, row=1).accept_input = False
-        btn = controls.add_element("test", element_class=pyelement.PyButton, row=1, column=1)
-        btn.text, btn.accept_input = "Test \u25b6", False
-        btn.events.EventInteract(self._on_test_action)
+        controls["command"].events.EventInteract(self._on_command_change)
 
     def _create_keyboard(self):
         # base keys
@@ -63,22 +50,27 @@ class ConfiguratorWindow(pywindow.PyWindow):
 
     def _add_button(self, key_name, **layout_kwargs):
         if key_name:
+            command = key_commands.get_command_for_key(key_name)
             button = self["keyboard"].add_element(f"key_{key_name}", element_class=pyelement.PyButton, **layout_kwargs)
-            button.text = key_name
+            button.text = f"|{key_name}|" if command else key_name
             if "columnspan" not in layout_kwargs: button.width = 60
             button.events.EventInteract(self._on_button_press)
             return button
 
     def _on_button_press(self, element):
-        print("key pressed:", element.text)
-        self["controls"]["status"].text = f"Pressed key {element.text} (code={hex(KeyCode.get_code(element.text))})"
+        key = element.text.replace("|", "")
+        code = KeyCode.get_code(key)
+        print("VERBOSE", f"Key pressed: key={key}, code={code}")
 
-    def _on_key_press(self, device, key):
-        if self.is_active:
-            print("VERBOSE", f"Received key down event from on code {hex(key.code)}")
-            self["controls"]["status"].text = f"Pressed key {KeyCode.get_name(key.code)} (code={hex(key.code)}) on device {device}"
-            return True
-        return False
+        controls = self["controls"]
+        controls["status"].text = f"Pressed key {key} (code={hex(code)})"
+        controls["command"].code = code
+        controls["command"].text = key_commands.get_command_for_code(code)
+        controls["command"].accept_input = True
 
-    def _on_test_action(self):
-        pass
+    def _on_command_change(self, element):
+        command = element.value
+        print("VERBOSE", f"Key code {hex(element.code)} changed to \"{command}\"")
+        key_name = KeyCode.get_name(element.code)
+        self["keyboard"][f"key_{key_name}"].text = f"|{key_name}|" if command else key_name
+        key_commands[element.code] = element.value

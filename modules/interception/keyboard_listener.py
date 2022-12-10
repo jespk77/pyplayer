@@ -6,45 +6,38 @@ from .codes import KeyCode
 
 class KeyboardListener:
     """ Background thread for listening and handling interception key events """
-    def __init__(self, device_id=-1):
-        self._intercept_device = device_id
+    def __init__(self, effect_device_id):
+        self._effect_device = effect_device_id
         self._interception_context = self._interception_thread = None
+
+        self._key_down_cb = self._effect_key_cb = None
 
         self._lock = threading.RLock()
         self._run = False
-        self._event_callback = None
         self._block_next = False
 
     @property
-    def has_device(self):
-        """ True if this listener has a device to listen to bound, False otherwise """
-        with self._lock: return self._intercept_device >= 0
+    def effect_device_id(self):
+        """ The device id used for generating keypress event, set to < 0 to disable """
+        with self._lock: return self._effect_device
 
-    @property
-    def device_id(self):
-        """ The device id used for generating keypress event, set to -1 to disable """
-        with self._lock: return self._intercept_device
-    @device_id.setter
-    def device_id(self, device_id):
-        with self._lock: self._intercept_device = int(device_id)
-
-    @property
-    def event_callback(self):
-        """
-            The callback to call when key events are received.
-            If this callback is set, it must be a function that takes the device id and key data as arguments
-            If this callback returns True, the event is not processed any further.
-            If the callback returns any other value or if it's set to None, the normal behavior remains
-        """
-        return self._event_callback
-    @event_callback.setter
-    def event_callback(self, cb):
-        with self._lock: self._event_callback = cb
+    @effect_device_id.setter
+    def effect_device_id(self, device_id):
+        device_id = int(device_id)
+        with self._lock: self._effect_device = device_id
 
     @property
     def active(self):
         """ True if the listener is currently active, False otherwise """
         return self._interception_thread is not None
+
+    def EventKeyDown(self, cb):
+        self._key_down_cb = cb
+        return cb
+
+    def EventEffectKey(self, cb):
+        self._effect_key_cb = cb
+        return cb
 
     def start(self):
         """ Start the interception listener, returns True if the listener is running """
@@ -99,15 +92,10 @@ class KeyboardListener:
                     # pressing PAUSE key also generates NumLock event which needs to be ignored
                     if key.code == KeyCode.Key_Pause: self._block_next = True
 
-                    if self._event_callback is not None:
-                        print("VERBOSE", "Key callback set, calling this first")
-                        try:
-                            result = self._event_callback(device, key)
-                            if result is True: continue
-                        except Exception as e: print("ERROR", "Failed to call keylister callback:", e)
+                    if self._on_key_down(device, key) is True: continue
 
-                    if self.device_id == device:
-                        self._on_key_down(device, key)
+                    if self.effect_device_id == device:
+                        self._on_effect_key_down(device, key)
                         continue
 
                 interception.interception_send(context, device, stroke, 1)
@@ -117,4 +105,15 @@ class KeyboardListener:
         return True
 
     def _on_key_down(self, device, key):
-        print("VERBOSE", f"Key {hex(key.code)} pressed on device {device}")
+        code = key.code
+        print("VERBOSE", f"Key {hex(code)} down on device {device}")
+        if self._key_down_cb:
+            try: return self._key_down_cb(device, code)
+            except Exception as e: print("ERROR", f"Processing callback for key {hex(code)}", e)
+
+    def _on_effect_key_down(self, device, key):
+        code = key.code
+        print("VERBOSE", f"Key {hex(code)} down on effect device ({device})")
+        if self._effect_key_cb:
+            try: self._effect_key_cb(code)
+            except Exception as e: print("ERROR", f"Processing effect callback for key {hex(code)}", e)
