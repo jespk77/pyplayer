@@ -84,19 +84,18 @@ class KeyboardListener:
                 if interception.interception_is_keyboard(device):
                     key = ffi.cast("InterceptionKeyStroke*", stroke)
                     # key down events have an even state so only listen to those
-                    if key.state % 2 != 0: continue
+                    if key.state % 2 == 0:
+                        print("VERBOSE", f"Key event received on device {device} with code {hex(key.code)} and state {key.state}")
+                        code = key.code * (key.state + 2) if key.state > 1 else key.code
 
-                    print("VERBOSE", f"Key event received on device {device} with code {hex(key.code)} and state {key.state}")
-                    if key.state > 1: key.code *= key.state + 2
+                        # pressing PAUSE key also generates NumLock event which needs to be ignored
+                        if code == KeyCode.Key_Pause: self._block_next = True
 
-                    # pressing PAUSE key also generates NumLock event which needs to be ignored
-                    if key.code == KeyCode.Key_Pause: self._block_next = True
+                        if self._on_key_down(device, code) is True: continue
 
-                    if self._on_key_down(device, key) is True: continue
-
-                    if self.effect_device_id == device:
-                        self._on_effect_key_down(device, key)
-                        continue
+                        if self.effect_device_id == device:
+                            self._on_effect_key_down(device, code)
+                            continue
 
                 interception.interception_send(context, device, stroke, 1)
 
@@ -104,15 +103,13 @@ class KeyboardListener:
         print("VERBOSE", "Interception thread finished")
         return True
 
-    def _on_key_down(self, device, key):
-        code = key.code
+    def _on_key_down(self, device, code):
         print("VERBOSE", f"Key {hex(code)} down on device {device}")
         if self._key_down_cb:
             try: return self._key_down_cb(device, code)
             except Exception as e: print("ERROR", f"Processing callback for key {hex(code)}", e)
 
-    def _on_effect_key_down(self, device, key):
-        code = key.code
+    def _on_effect_key_down(self, device, code):
         print("VERBOSE", f"Key {hex(code)} down on effect device ({device})")
         if self._effect_key_cb:
             try: self._effect_key_cb(code)
