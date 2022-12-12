@@ -94,7 +94,7 @@ class KeyboardListener:
                         if self._on_key_down(device, code) is True: continue
 
                         if self.effect_device_id == device:
-                            self._on_effect_key_down(device, code)
+                            self._on_effect_key_down(code)
                             continue
 
                 interception.interception_send(context, device, stroke, 1)
@@ -104,13 +104,11 @@ class KeyboardListener:
         return True
 
     def _on_key_down(self, device, code):
-        print("VERBOSE", f"Key {hex(code)} down on device {device}")
         if self._key_down_cb:
             try: return self._key_down_cb(device, code)
             except Exception as e: print("ERROR", f"Processing callback for key {hex(code)}", e)
 
-    def _on_effect_key_down(self, device, code):
-        print("VERBOSE", f"Key {hex(code)} down on effect device ({device})")
+    def _on_effect_key_down(self, code):
         if self._effect_key_cb:
             try: self._effect_key_cb(code)
             except Exception as e: print("ERROR", f"Processing effect callback for key {hex(code)}", e)
