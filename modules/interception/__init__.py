@@ -19,9 +19,17 @@ def interception_configure(arg, argc):
     module.client.add_window(window_class=configurator.ConfiguratorWindow)
     return messagetypes.Reply("Interception configurator window opened")
 
+def interception_device(arg, argc):
+    keyboard_listener.update_device()
+    return messagetypes.Reply("Press any key on the device you want to use for effects")
+
 def _on_effect_key(code):
     command = commands.key_commands.get_command_for_code(code)
     if command: module.interpreter.put_command(command)
+
+def _on_effect_device_change(device):
+    print("VERBOSE", f"Updated effect device to {device}")
+    module.configuration[effect_device_key] = device
 
 @module.Initialize
 def initialize():
@@ -36,6 +44,7 @@ def destroy():
 module.commands = {
     "interception":{
         "configure": interception_configure,
+        "device-update": interception_device,
         "start": interception_start,
         "stop": interception_stop,
     }

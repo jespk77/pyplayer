@@ -9,22 +9,16 @@ class KeyboardListener:
     def __init__(self, effect_device_id):
         self._effect_device = effect_device_id
         self._interception_context = self._interception_thread = None
-
-        self._key_down_cb = self._effect_key_cb = None
+        self._key_down_cb = self._effect_key_cb = self._effect_device_update_cb = None
 
         self._lock = threading.RLock()
         self._run = False
-        self._block_next = False
+        self._block_next = self._update_device = False
 
     @property
     def effect_device_id(self):
         """ The device id used for generating keypress event, set to < 0 to disable """
         with self._lock: return self._effect_device
-
-    @effect_device_id.setter
-    def effect_device_id(self, device_id):
-        device_id = int(device_id)
-        with self._lock: self._effect_device = device_id
 
     @property
     def active(self):
@@ -38,6 +32,18 @@ class KeyboardListener:
     def EventEffectKey(self, cb):
         self._effect_key_cb = cb
         return cb
+
+    def EventEffectDeviceUpdate(self, cb):
+        self._effect_device_update_cb = cb
+        return cb
+
+    def update_device(self):
+        """ Changes the effect device to the device of the next pressed key """
+        with self._lock: self._update_device = True
+
+    def _set_device_id(self, device_id):
+        self._effect_device = device_id
+        self._on_effect_device_update(device_id)
 
     def start(self):
         """ Start the interception listener, returns True if the listener is running """
@@ -81,11 +87,16 @@ class KeyboardListener:
                     self._block_next = False
                     continue
 
+                if self._update_device:
+                    print("VERBOSE", f"Requested device update: using {device} as the new effect device")
+                    self._set_device_id(device)
+                    self._update_device = False
+                    continue
+
                 if interception.interception_is_keyboard(device):
                     key = ffi.cast("InterceptionKeyStroke*", stroke)
                     # key down events have an even state so only listen to those
                     if key.state % 2 == 0:
-                        print("VERBOSE", f"Key event received on device {device} with code {hex(key.code)} and state {key.state}")
                         code = key.code * (key.state + 2) if key.state > 1 else key.code
 
                         # pressing PAUSE key also generates NumLock event which needs to be ignored
@@ -112,3 +123,8 @@ class KeyboardListener:
         if self._effect_key_cb:
             try: self._effect_key_cb(code)
             except Exception as e: print("ERROR", f"Processing effect callback for key {hex(code)}", e)
+
+    def _on_effect_device_update(self, device):
+        if self._effect_device_update_cb:
+            try: self._effect_device_update_cb(device)
+            except Exception as e: print("ERROR", "Processing effect device update", e)
