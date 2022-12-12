@@ -1,5 +1,14 @@
 import datetime
-from traceback import format_exception
+from enum import IntEnum
+
+class Status(IntEnum):
+	Unknown = 0,
+	Error = 1,
+	Success = 2,
+	Failed = 3,
+	Information = 4
+Success = Status.Success
+Failed = Status.Failed
 
 st = "###"
 class Empty():
@@ -7,6 +16,7 @@ class Empty():
 	def __str__(self): return "{}{}".format(type(self).__name__, ["{}={}".format(k,v) for k,v in self.__dict__.items() if not k.startswith("__")])
 	def get_prefix(self): return "< "
 	def get_contents(self): return self.get_prefix() + "Command processed (but no reply added)", ("reply",)
+	def get_status(self): return Status.Unknown
 
 class Pass(Empty):
 	""" Can be used when features are not working yet, while already showing the command exists """
@@ -18,22 +28,26 @@ class Info(Empty):
 		self._date = datetime.datetime.today()
 		self._message = message
 	def get_contents(self): return self.get_prefix() + self._date.strftime("[%I:%M %p] ") + self._message, ("info",)
+	def get_status(self): return Status.Information
 
 class Reply(Empty):
 	""" Display a message to the user about the result of the given command """
-	def __init__(self, message):
+	def __init__(self, message, status=Status.Unknown):
 		self._date = datetime.datetime.today()
 		self._message = message
+		self._status = status
 	def get_contents(self): return self.get_prefix() + self._date.strftime("[%I:%M %p] ") + self._message, ("reply",)
+	def get_status(self): return self._status
 
 class Question(Empty):
 	""" Request more information from the user to process their command without having to re-enter it
 	 	The 'callback' is called with the answer from the user (same arguments as a regular command + extra keywords provided)
 	 	Use the 'text' argument to give the user an initial suggestion for faster selection """
-	def __init__(self, message, callback, text="", **kwargs):
+	def __init__(self, message, callback, text="", status=Status.Unknown, **kwargs):
 		self._message = message
 		self._callback = callback
 		self._text = text
+		self._status = status
 		self._kwargs = kwargs
 
 	def __call__(self, cmd): return self._callback(cmd, len(cmd), **self._kwargs)
@@ -47,10 +61,11 @@ class Select(Question):
 	def __init__(self, message, callback, choices, **kwargs):
 		Question.__init__(self, message, callback, **kwargs)
 		self._choices = choices
+		self._status = Status.Unknown
 
 	def __call__(self, cmd):
 		cmd = " ".join(cmd)
-		if len(cmd) == 0: return Reply("Selection aborted")
+		if len(cmd) == 0: return Reply("Selection aborted", Status.Error)
 
 		try:
 			n = int(cmd)
@@ -59,6 +74,7 @@ class Select(Question):
 		except ValueError:
 			self._choices = [o for o in self._choices if cmd.lower() in o[0].lower()]
 
+		self._status = Status.Success if len(self._choices) == 1 else Status.Error if len(self._choices) == 0 else Status.Unknown
 		res = self._execute_callback()
 		if res is not None: return res
 		else: return self
@@ -77,6 +93,8 @@ class Select(Question):
 		elif len(self._choices) == 0: return "< Nothing found", ("reply",)
 		else: return self.get_prefix() + self._message + "\n" + self._display_options() + "\n < Select item:", ("reply",), self, " - ", self._text
 
+	def get_status(self): return self._status
+
 class Error(Empty):
 	""" Show the user that an error occured while processing their command,
 		the error's traceback gets printed to log """
@@ -93,6 +111,8 @@ class Error(Empty):
 			print("ERROR", "Executing command raised an exception", self._error)
 			self.get_prefix() + str(self._error) + ", see log for details", ("error",)
 
+	def get_status(self): return Status.Error
+
 class URL(Empty):
 	""" Return a url as a result of the command that will be opened in the default browser """
 	def __init__(self, url, message=None):
@@ -103,6 +123,8 @@ class URL(Empty):
 		import webbrowser
 		webbrowser.open(self._url)
 		return self.get_prefix() + self._msg, ("reply",)
+
+	def get_status(self): return Status.Success if self._url else Status.Failed
 
 def from_str(str):
 	str = str.split(st)

@@ -41,40 +41,40 @@ def parse_arg(arg, argc):
 def play_video(video, path, show):
     if video is not None and path is not None:
         show_video_window((video,path), show)
-        return messagetypes.Reply(f"Now playing '{video}'")
-    else: return messagetypes.Reply("No episode found")
+        return messagetypes.Reply(f"Now playing '{video}'", messagetypes.Success)
+    else: return messagetypes.Reply("No episode found", messagetypes.Failed)
 
 def command_tvshow(arg, argc):
     try: show, season, episode = parse_arg(arg, argc)
-    except ValueError: return messagetypes.Reply("Invalid season number")
-    if show is None: return messagetypes.Reply("Unknown show")
+    except ValueError: return messagetypes.Reply("Invalid season number", messagetypes.Failed)
+    if show is None: return messagetypes.Reply("Unknown show", messagetypes.Failed)
 
     videos = get_tvshow_episodes(show, season)
-    if len(videos) == 0: return messagetypes.Reply("No episodes found")
+    if len(videos) == 0: return messagetypes.Reply("No episodes found", messagetypes.Failed)
 
     try: v = videos[int(episode) - 1]
     except (ValueError,IndexError):
         matches = [v for v in videos if episode in v[0].split(" - ", maxsplit=1)[0]]
         if len(matches) > 0: return messagetypes.Select("Multiple episodes found", play_video, matches, show=show)
     else: return play_video(*v, show)
-    return messagetypes.Reply("No episode found")
+    return messagetypes.Reply("No episode found", messagetypes.Failed)
 
 def command_tvshow_random(arg, argc):
     try: show, season, _ = parse_arg(arg, argc)
-    except ValueError: return messagetypes.Reply("Invalid season number")
-    if show is None: return messagetypes.Reply("Unknown show")
+    except ValueError: return messagetypes.Reply("Invalid season number", messagetypes.Failed)
+    if show is None: return messagetypes.Reply("Unknown show", messagetypes.Failed)
 
     videos = get_tvshow_episodes(show, season)
-    if len(videos) == 0: return messagetypes.Reply("No episodes found")
+    if len(videos) == 0: return messagetypes.Reply("No episodes found", messagetypes.Failed)
 
     video = random.choice(videos)
     show_video_window(video, show)
-    return messagetypes.Reply(f"Now playing '{video[0]}'")
+    return messagetypes.Reply(f"Now playing '{video[0]}'", messagetypes.Success)
 
 def command_tvshow_start(arg, argc):
     try: show, _, _ = parse_arg(arg, argc)
-    except ValueError: return messagetypes.Reply("Invalid season number")
-    if show is None: return messagetypes.Reply("Unknown show")
+    except ValueError: return messagetypes.Reply("Invalid season number", messagetypes.Failed)
+    if show is None: return messagetypes.Reply("Unknown show", messagetypes.Failed)
 
     module.configuration[f"shows::{arg[0]}::_episode"] = 0
     module.configuration.save()
@@ -82,8 +82,8 @@ def command_tvshow_start(arg, argc):
 
 def command_tvshow_stop(arg, argc):
     try: show, _, _ = parse_arg(arg, argc)
-    except ValueError: return messagetypes.Reply("Invalid season number")
-    if show is None: return messagetypes.Reply("Unknown show")
+    except ValueError: return messagetypes.Reply("Invalid season number", messagetypes.Failed)
+    if show is None: return messagetypes.Reply("Unknown show", messagetypes.Failed)
     show_data = module.configuration["shows"].get(show)
 
     try:
@@ -91,14 +91,14 @@ def command_tvshow_stop(arg, argc):
         module.configuration.save()
     except KeyError: pass
     name = show_data["display_name"] if show_data["display_name"] else arg[0]
-    return messagetypes.Reply(f"Stopped series for '{name}'")
+    return messagetypes.Reply(f"Stopped series for '{name}'", messagetypes.Success)
 
 def command_tvshow_continue(arg, argc):
     try: show, _, _ = parse_arg(arg, argc)
-    except ValueError: return messagetypes.Reply("Invalid season number")
-    if show is None: return messagetypes.Reply("Unknown show")
+    except ValueError: return messagetypes.Reply("Invalid season number", messagetypes.Failed)
+    if show is None: return messagetypes.Reply("Unknown show", messagetypes.Failed)
     show_data = module.configuration["shows"].get(show)
-    if "_episode" not in show_data: return messagetypes.Reply("No series active")
+    if "_episode" not in show_data: return messagetypes.Reply("No series active", messagetypes.Failed)
 
     try: index = show_data["_episode"]
     except KeyError: index = 0
@@ -107,8 +107,8 @@ def command_tvshow_continue(arg, argc):
     try:
         video = videos[index]
         show_video_window(video, arg[0], index)
-        return messagetypes.Reply(f"Now playing '{video[0]}'")
-    except IndexError: return messagetypes.Reply("End of series reached")
+        return messagetypes.Reply(f"Now playing '{video[0]}'", messagetypes.Success)
+    except IndexError: return messagetypes.Reply("End of series reached", messagetypes.Failed)
 
 def command_video_pause(arg, argc):
     video_player.pause_video(arg[0] if argc > 0 else None)
@@ -118,15 +118,20 @@ def command_video_stop(arg, argc):
     video_player.stop_video()
     return messagetypes.Empty()
 
+def command_tvshow_play(arg, argc):
+    res = command_tvshow_continue(arg, argc)
+    if not res or res.get_status() != messagetypes.Success: res = command_tvshow_random(arg, argc)
+    return res
+
 def _move_cb(arg, callback):
     if arg[0].startswith("+"):
         try: callback(float(arg[1:]))
-        except ValueError: return messagetypes.Reply("Invalid number")
-        else: return messagetypes.Reply("Video player time set forward")
+        except ValueError: return messagetypes.Reply("Invalid number", messagetypes.Failed)
+        else: return messagetypes.Reply("Video player time set forward", messagetypes.Success)
     elif arg[0].startswith("-"):
         try: callback(-float(arg[1:]))
-        except ValueError: return messagetypes.Reply("Invalid number")
-        else: return messagetypes.Reply("Video player time set backward")
+        except ValueError: return messagetypes.Reply("Invalid number", messagetypes.Failed)
+        else: return messagetypes.Reply("Video player time set backward", messagetypes.Success)
 
 def command_video_pos(arg, argc):
     if argc > 0:
@@ -134,8 +139,8 @@ def command_video_pos(arg, argc):
         if move is not None: return move
 
         try: video_player.position = float(arg[0])
-        except ValueError: return messagetypes.Reply("Invalid number")
-        else: return messagetypes.Reply("Video player position updated")
+        except ValueError: return messagetypes.Reply("Invalid number", messagetypes.Failed)
+        else: return messagetypes.Reply("Video player position updated", messagetypes.Success)
 
 def command_video_time(arg, argc):
     if argc > 0:
@@ -143,18 +148,19 @@ def command_video_time(arg, argc):
         if move is not None: return move
 
         try: video_player.time = float(arg[0])
-        except ValueError: return messagetypes.Reply("Invalid number")
-        else: return messagetypes.Reply("Video player time updated")
+        except ValueError: return messagetypes.Reply("Invalid number", messagetypes.Failed)
+        else: return messagetypes.Reply("Video player time updated", messagetypes.Success)
 
 def command_video_next_frame(arg, argc):
     video_player.next_frame()
-    return messagetypes.Reply("Video player next frame shown")
+    return messagetypes.Reply("Video player next frame shown", messagetypes.Success)
 
 
 module.commands = {
     "tvshow": {
         "": command_tvshow,
         "continue": command_tvshow_continue,
+        "play": command_tvshow_play,
         "random": command_tvshow_random,
         "start": command_tvshow_start,
         "stop": command_tvshow_stop

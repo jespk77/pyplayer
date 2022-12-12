@@ -97,7 +97,7 @@ class TwitchSigninWorker(pyworker.PyWorker, socketserver.TCPServer):
 
 class TwitchSigninWindow(pywindow.PyWindow):
     resp_uri = "http://localhost:6767/twitch_auth"
-    scope = ["user:edit", "chat:read", "chat:edit", "channel:moderate", "whispers:read", "whispers:edit"]
+    scope = ["user:edit", "user:read:follows", "chat:read", "chat:edit", "channel:moderate", "whispers:read", "whispers:edit"]
     auth_url = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id={client_id}&redirect_uri={resp_uri}&scope={scope}"
 
     def __init__(self, parent):
@@ -171,8 +171,8 @@ class TwitchSignOutWorker(pyworker.PyWorker):
 
 THUMBNAIL_SIZE = 128, 64
 class TwitchRefreshLiveChannelsWorker(pyworker.PyWorker):
-    followed_stream_url = "https://api.twitch.tv/helix/streams?user_id={ids}"
-    followed_game_url = "https://api.twitch.tv/helix/games?id={ids}"
+    followed_stream_url = "https://api.twitch.tv/helix/streams/followed?user_id={user_id}"
+    stream_info_url = "https://api.twitch.tv/helix/streams?user_login={user_login}"
     def __init__(self, window, auto_active=True):
         pyworker.PyWorker.__init__(self, "twitch_refresh_follows", auto_active)
         self._window = window
@@ -216,6 +216,18 @@ class TwitchRefreshLiveChannelsWorker(pyworker.PyWorker):
     def error(self, error):
         self._window.schedule_task(task_id="twitch_channel_data", error=str(error))
 
+    def _get_watched_channels(self):
+        watched_channels = module.configuration.get_or_create(watched_channel_key, [])
+        if len(watched_channels) > 0:
+            try: req = requests.get(self.stream_info_url.format(user_login="&user_login=".join(watched_channels)), headers=self._logindata)
+            except requests.ConnectionError as e:
+                print("ERROR", "Failed to get watched channels:", e)
+                return []
+
+            if req.ok: return req.json()["data"]
+
+        return []
+
     def _fetch_data(self):
         self._logindata = read_logindata()
         if metadata_expired():
@@ -232,12 +244,7 @@ class TwitchRefreshLiveChannelsWorker(pyworker.PyWorker):
             self._error = "Cannot get user metadata"
             return False
 
-        followed_channels = [c["to_id"] for c in metadata["followed"]]
-        if len(followed_channels) == 0:
-            self._data = []
-            return True
-
-        try: req = requests.get(self.followed_stream_url.format(ids="&user_id=".join(followed_channels)), headers=self._logindata)
+        try: req = requests.get(self.followed_stream_url.format(user_id=metadata["id"]), headers=self._logindata)
         except requests.ConnectionError as e:
             print("ERROR", "Failed to get updated channels:", str(e))
             self._error = "Connection failed"
@@ -263,6 +270,7 @@ class TwitchRefreshLiveChannelsWorker(pyworker.PyWorker):
             self._error = e.msg
             return False
 
+        followed_channels.extend(self._get_watched_channels())
         for channel in followed_channels:
             thumbnail_url = channel["thumbnail_url"]
             req = requests.get(thumbnail_url.format(width=THUMBNAIL_SIZE[0], height=THUMBNAIL_SIZE[1]))
@@ -356,6 +364,7 @@ TwitchOverviewID = "twitch_overview"
 browser_path_key = "&browser_path"
 alternate_player_key = "alternate_player_url"
 channel_live_command_key = "new_channel_live_command"
+watched_channel_key = "watched_channels"
 
 class TwichOverview(pywindow.PyWindow):
     follow_channel_text = "Followed live channels\n"
@@ -529,6 +538,7 @@ def initialize():
     module.configuration.get_or_create(browser_path_key, "")
     module.configuration.get_or_create(alternate_player_key, "")
     module.configuration.get_or_create(channel_live_command_key, "")
+    module.configuration.get_or_create(watched_channel_key, [])
 
 def create_window(client):
     if not read_metadata(): write_metadata(request_metadata())

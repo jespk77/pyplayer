@@ -5,12 +5,13 @@ class VideoPlayer:
     def __init__(self):
         self._vlc = vlc.MediaPlayer()
         self._handle = 0
+        self._spu_index = -1
 
         self._events = {}
         event_manager = self._vlc.event_manager()
         event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, lambda e: self._call_event("end_reached", e))
         event_manager.event_attach(vlc.EventType.MediaPlayerPaused, lambda e: self._call_event("pause", e))
-        event_manager.event_attach(vlc.EventType.MediaPlayerPlaying, lambda e: self._call_event("play", e))
+        event_manager.event_attach(vlc.EventType.MediaPlayerPlaying, self._on_play)
         event_manager.event_attach(vlc.EventType.MediaPlayerPositionChanged, lambda e: self._call_event("pos_changed", e))
         event_manager.event_attach(vlc.EventType.MediaPlayerStopped, lambda e: self._call_event("stopped", e))
 
@@ -82,6 +83,14 @@ class VideoPlayer:
             print("VERBOSE", f"Updating play position to {pos*100}%...")
             self._vlc.set_position(pos)
 
+    @property
+    def subtitle_index(self): return self._vlc.video_get_spu()
+    @subtitle_index.setter
+    def subtitle_index(self, index):
+        self._spu_index = index
+        self._vlc.video_set_spu(index)
+    def subtitle_count(self): return self._vlc.video_get_spu_count()
+
     def move_time(self, time):
         if self._vlc.is_playing():
             time = round(time * 1000)
@@ -98,6 +107,10 @@ class VideoPlayer:
     def EventPlay(self, cb): return self._register_event("play", cb)
     def EventPosition(self, cb): return self._register_event("pos_changed", cb)
     def EventStop(self, cb): return self._register_event("stop", cb)
+
+    def _on_play(self, event):
+        self.subtitle_index = self._spu_index
+        self._call_event("play", event)
 
     def _register_event(self, event_id, cb):
         if cb is not None:
@@ -208,6 +221,11 @@ class VideoPlayerWindow(pywindow.PyWindow):
         @self.events.EventKeyDown("Slash")
         def _quick_minimize():
             self.minimized = True
+            return self.events.block_action
+
+        @self.events.EventKeyDown("V")
+        def _show_subtitles():
+            video_player.subtitle_index = video_player.subtitle_count() if video_player.subtitle_index < 0 else -1
             return self.events.block_action
 
     def play(self, video_file, show_id=None, series_index=-1):
