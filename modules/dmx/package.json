@@ -1,0 +1,7 @@
+{
+  "id": "dmx",
+  "enabled": false,
+  "platform": null,
+  "priority": 100,
+  "required": false
+}
