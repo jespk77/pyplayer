@@ -1299,10 +1299,39 @@ class PyItemlist(PyElement):
         self.qt_element.setModel(self._items)
     value = itemlist
 
+    _selection_modes = {
+        "none": QtWidgets.QListView.NoSelection,
+        "single": QtWidgets.QListView.SingleSelection,
+        "multi": QtWidgets.QListView.MultiSelection
+    }
     @property
-    def auto_select(self): return self.qt_element.selectionMode() == QtWidgets.QListView.SingleSelection
-    @auto_select.setter
-    def auto_select(self, select): self.qt_element.setSelectionMode(QtWidgets.QListView.SingleSelection if select else QtWidgets.QListView.NoSelection)
+    def selection_mode(self):
+        for mode_name, mode in self._selection_modes.items():
+            if mode == self.qt_element.selectionMode(): return mode_name
+    @selection_mode.setter
+    def selection_mode(self, mode):
+        mode = mode.lower()
+        if mode not in self._selection_modes: raise ValueError(f"Unknown selection mode '{mode}', must be one of [{','.join(self._selection_modes.keys())}]")
+        self.qt_element.setSelectionMode(self._selection_modes[mode])
+
+    _edit_modes = {
+        "none": QtWidgets.QListView.NoEditTriggers,
+        "current_change": QtWidgets.QListView.CurrentChanged,
+        "double_click": QtWidgets.QListView.DoubleClicked,
+        "selected_click": QtWidgets.QListView.SelectedClicked,
+        "edit_keypress": QtWidgets.QListView.EditKeyPressed,
+        "keypress": QtWidgets.QListView.AnyKeyPressed,
+        "all": QtWidgets.QListView.AllEditTriggers
+    }
+    @property
+    def edit_mode(self):
+        for mode_name, mode in self._selection_modes.items():
+            if mode == self.qt_element.editTriggers(): return mode_name
+    @edit_mode.setter
+    def edit_mode(self, mode):
+        mode = mode.lower()
+        if mode not in self._edit_modes: raise ValueError(f"Unknown edit mode '{mode}', must be one of [{','.join(self._edit_modes.keys())}]")
+        self.qt_element.setEditTriggers(self._edit_modes[mode])
 
     @property
     def selected_index(self):

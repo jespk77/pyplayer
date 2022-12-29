@@ -210,7 +210,7 @@ class HistoryViewer(pyelement.PyFrame):
 
 	def create_widgets(self):
 		items = self.add_element("history_view", element_class=pyelement.PyItemlist)
-		items.auto_select = False
+		items.selection_mode = "none"
 		self._on_history_update()
 		self._on_index_update()
 
