@@ -5,6 +5,7 @@ from . import pywindow, pyevents, pyimage, pylayout, pydialog
 def valid_check(element):
     if not isinstance(element, PyElement) and not isinstance(element, pywindow.PyWindow): raise ValueError("Parent must be an instance of PyElement or PyWindow")
 
+
 class PyElement:
     """ The base type of all elements, contains all shared logic """
 
@@ -176,6 +177,7 @@ class PyElement:
 
     def on_destroy(self): self.events.call_event("destroy")
 
+
 class PyFrame(PyElement):
     """
         General element class that can contain child widgets
@@ -234,6 +236,7 @@ class PyFrame(PyElement):
         for c in self.children: c.on_destroy()
         PyElement.on_destroy(self)
 
+
 class PyScrollableFrame(PyFrame):
     """
         Similar to PyFrame but uses scrolling instead of resizing the frame
@@ -249,6 +252,8 @@ class PyScrollableFrame(PyFrame):
 
     @property
     def qt_element(self): return self._content
+    @property
+    def qt_container(self): return self._qt
 
     @property
     def show_scrollbar(self):
@@ -257,6 +262,7 @@ class PyScrollableFrame(PyFrame):
     @show_scrollbar.setter
     def show_scrollbar(self, show):
         self.qt_container.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn if show else QtCore.Qt.ScrollBarAsNeeded)
+
 
 class PyLabelFrame(PyFrame):
     """
@@ -267,6 +273,9 @@ class PyLabelFrame(PyFrame):
         self._qt = QtWidgets.QGroupBox(parent.qt_element)
         PyFrame.__init__(self, parent, element_id, layout)
         self.qt_element.clicked.connect(lambda checked: self.events.call_event("interact", checked=checked))
+
+    @property
+    def qt_element(self): return self._qt
 
     @property
     def label(self): return self.qt_element.title()
@@ -303,6 +312,9 @@ class PyTabFrame(PyElement):
         self._tabs = []
         PyElement.__init__(self, parent, element_id)
         self.qt_element.currentChanged.connect(lambda index: self.events.call_event("interact", index=index))
+
+    @property
+    def qt_element(self): return self._qt
 
     def add_tab(self, name, frame=None, frame_class=PyFrame, **frame_args):
         """
@@ -383,6 +395,9 @@ class PyFrameList(PyElement):
         self._pages = []
         PyElement.__init__(self, parent, element_id)
 
+    @property
+    def qt_element(self): return self._qt
+
     def add_frame(self, frame=None, frame_class=None, **frame_args):
         """
          Adds a new frame at the end with given frame instance or class
@@ -459,6 +474,9 @@ class PyTextLabel(PyElement):
         self.qt_element.setAlignment(QtCore.Qt.AlignLeft)
 
     @property
+    def qt_element(self): return self._qt
+
+    @property
     def display_text(self): return self.qt_element.text()
     @display_text.setter
     def display_text(self, txt): self.qt_element.setText(str(txt))
@@ -508,6 +526,7 @@ class PyTextLabel(PyElement):
         except KeyError: pass
         raise ValueError(f"Unknown font style '{style}' specified")
 
+
 class PyTextInput(PyElement):
     """
         Element for entering a single line of data
@@ -519,6 +538,9 @@ class PyTextInput(PyElement):
         self._event_handler = pyevents.PyElementInputEvent(parent, self)
         PyElement.__init__(self, parent, element_id)
         (self.qt_element.returnPressed if return_only else self.qt_element.editingFinished).connect(lambda : self.events.call_event("interact"))
+
+    @property
+    def qt_element(self): return self._qt
 
     @property
     def accept_input(self): return not self.qt_element.isReadOnly()
@@ -582,6 +604,9 @@ class PyNumberInput(PyElement):
         else: event = self.qt_element.editingFinished
         event.connect(lambda : self.events.call_event("interact"))
         self.min, self.max = -99, 99
+
+    @property
+    def qt_element(self): return self._qt
 
     @property
     def accept_input(self): return not self.qt_element.isReadOnly()
@@ -659,6 +684,9 @@ class PyCheckbox(PyElement):
         self.qt_element.clicked.connect(lambda :self.events.call_event("interact"))
 
     @property
+    def qt_element(self): return self._qt
+
+    @property
     def display_text(self): return self.qt_element.text()
     @display_text.setter
     def display_text(self, txt): self.qt_element.setText(str(txt))
@@ -689,6 +717,9 @@ class PyButton(PyElement):
         PyElement.__init__(self, parent, element_id)
         self.qt_element.clicked.connect(lambda : self.events.call_event("interact"))
         self._click_cb = self._img = None
+
+    @property
+    def qt_element(self): return self._qt
 
     @property
     def accept_input(self): return self.qt_element.isEnabled()
@@ -739,11 +770,6 @@ class PyTextField(PyElement):
         Element for displaying and/or entering multiple lines of text
         No interaction event
     """
-
-    start = 0
-    @property
-    def end(self): return len(self.text)
-
     def __init__(self, parent, element_id):
         self._qt = QtWidgets.QTextEdit(parent.qt_element)
         self._event_handler = pyevents.PyElementInputEvent(parent, self)
@@ -751,6 +777,9 @@ class PyTextField(PyElement):
         self.qt_element.keyPressEvent = self._on_key_press
         self.undo = False
         self.tabChangesFocus = True
+
+    @property
+    def qt_element(self): return self._qt
 
     @property
     def accept_input(self): return not self.qt_element.isReadOnly()
@@ -773,6 +802,10 @@ class PyTextField(PyElement):
         self.display_text = txt
         return self
     text = value = display_text
+
+    start = 0
+    @property
+    def end(self): return len(self.text)
 
     @property
     def cursor(self): return self.qt_element.textCursor().position()
@@ -915,6 +948,9 @@ class PyTable(PyElement):
         self._dynamic_column, self._dynamic_row = False, False
         self._horizontal_header, self._vertical_header = False, False
         self.qt_element.cellChanged.connect(self._on_cell_changed)
+
+    @property
+    def qt_element(self): return self._qt
 
     def _update_header_visibility(self):
         self.qt_element.horizontalHeader().setVisible(self.columns > 1 or self._horizontal_header)
@@ -1139,6 +1175,9 @@ class PyProgessbar(PyElement):
         self.qt_element.setTextVisible(False)
 
     @property
+    def qt_element(self): return self._qt
+
+    @property
     def progress(self): return self.qt_element.value()
     @progress.setter
     def progress(self, value): self.qt_element.setValue(int(value))
@@ -1201,6 +1240,9 @@ class PyItemlist(PyElement):
              selection-background-color: #101010; selection-color: {self.qt_element.palette().highlight().color().name()}
             }} """)
         self._items = QtCore.QStringListModel()
+
+    @property
+    def qt_element(self) -> QtWidgets.QListView: return self._qt
 
     @property
     def itemlist(self): return self._items.stringList()
@@ -1277,6 +1319,9 @@ class PySeparator(PyElement):
         self.horizontal, self.thickness = horizontal, 2
 
     @property
+    def qt_element(self): return self._qt
+
+    @property
     def horizontal(self): return self.qt_element.frameShape() == QtWidgets.QFrame.HLine
     @horizontal.setter
     def horizontal(self, horizontal): self.qt_element.setFrameShape(QtWidgets.QFrame.HLine if horizontal else QtWidgets.QFrame.VLine)
@@ -1311,6 +1356,9 @@ class PyColorInput(PyFrame):
         self._color = pydialog.PyColorDialog(self.window)
         self._color.events.EventSubmit(self._on_select_color)
         if color is not None: self.color = color
+
+    @property
+    def qt_element(self): return self._qt
 
     def create_widgets(self):
         txt = self.add_element("txt", element_class=PyTextInput)
@@ -1356,6 +1404,9 @@ class PyPathInput(PyFrame):
         self._path.events.EventSubmit(self._on_path_select)
         if path is not None: self.path = path
 
+    @property
+    def qt_element(self): return self._qt
+
     def create_widgets(self):
         txt = self.add_element("txt", element_class=PyTextInput)
         txt.events.EventInteract(lambda : self._on_path_select(txt.value))
@@ -1397,6 +1448,9 @@ try:
             self._qt = QtWebEngineWidgets.QWebEngineView()
             PyElement.__init__(self, parent, element_id)
             self.html_page = "<html><head></head><body>body</body></html>"
+
+        @property
+        def qt_element(self): return self._qt
 
         @property
         def html_page(self): return ""
