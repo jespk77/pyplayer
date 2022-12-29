@@ -1348,6 +1348,9 @@ class PyItemlist(PyElement):
         """ Removes any selected item """
         self.qt_element.clearSelection()
 
+    def select_all(self):
+        self.qt_element.selectAll()
+
     def set_selection(self, index=None, item=None):
         """ Set the selection to given index or given item, returns the selected item """
         if index is not None:
