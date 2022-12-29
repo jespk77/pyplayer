@@ -948,6 +948,8 @@ class PyTable(PyElement):
         self._dynamic_column, self._dynamic_row = False, False
         self._horizontal_header, self._vertical_header = False, False
         self.qt_element.cellChanged.connect(self._on_cell_changed)
+        self.qt_element.setCornerButtonEnabled(True)
+        self._read_only = False
 
     @property
     def qt_element(self): return self._qt
@@ -996,6 +998,24 @@ class PyTable(PyElement):
         self._update_header_visibility()
 
     @property
+    def accept_input(self): return self.qt_element.isEnabled()
+    @accept_input.setter
+    def accept_input(self, inpt): self.qt_element.setEnabled(inpt)
+
+    @property
+    def read_only(self): return self._read_only
+    @read_only.setter
+    def read_only(self, read_only):
+        self._read_only = read_only
+        for row in range(self.rows):
+            for column in range(self.columns):
+                item = self._qt.item(row, column)
+                if item is not None:
+                    edit_flag = QtCore.Qt.ItemIsEditable
+                    item.setFlags(item.flags() | edit_flag if read_only else item.flags() & ~edit_flag)
+                    self._qt.setItem(row, column, item)
+
+    @property
     def columns(self):
         """ The number of columns in this table """
         return self.qt_element.columnCount()
@@ -1026,6 +1046,11 @@ class PyTable(PyElement):
     def column_header(self, visible):
         self._horizontal_header = bool(visible)
         self._update_header_visibility()
+
+    @property
+    def column_labels(self): return
+    @column_labels.setter
+    def column_labels(self, labels): self._qt.setHorizontalHeaderLabels(labels)
 
     @property
     def dynamic_columns(self):
@@ -1075,6 +1100,11 @@ class PyTable(PyElement):
         self._update_header_visibility()
 
     @property
+    def row_labels(self): return
+    @row_labels.setter
+    def row_labels(self, labels): self._qt.setVerticalHeaderLabels(labels)
+
+    @property
     def row_height(self): return self.qt_element.verticalHeader().sectionSize(0)
     @row_height.setter
     def row_height(self, height):
@@ -1111,6 +1141,23 @@ class PyTable(PyElement):
         if index is None: index = self.rows - 1
         elif index < 0: index += self.rows
         self.qt_element.removeRow(index)
+
+    def resize_fit(self, row=False, column=False):
+        """
+            Resize cells to make the current content fit
+            If 'row' is True, all rows are resized based on their contents
+            If 'column' is True, all columns are resized based on their contents
+        """
+        if row: self._qt.resizeRowsToContents()
+        if column: self._qt.resizeColumnsToContents()
+
+    def resize_row(self, row):
+        """ Resizes a specific row to fit its content """
+        self._qt.resizeRowToContents(row)
+
+    def resize_column(self, column):
+        """ Resizes a specific column to fit its content """
+        self._qt.resizeColumnToContents(column)
 
     def get(self, row=None, column=None):
         """
