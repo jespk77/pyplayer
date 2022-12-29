@@ -5,6 +5,7 @@ from . import pywindow, pyevents, pyimage, pylayout, pydialog
 def valid_check(element):
     if not isinstance(element, PyElement) and not isinstance(element, pywindow.PyWindow): raise ValueError("Parent must be an instance of PyElement or PyWindow")
 
+
 class PyElement:
     """ The base type of all elements, contains all shared logic """
 
@@ -176,6 +177,7 @@ class PyElement:
 
     def on_destroy(self): self.events.call_event("destroy")
 
+
 class PyFrame(PyElement):
     """
         General element class that can contain child widgets
@@ -234,6 +236,7 @@ class PyFrame(PyElement):
         for c in self.children: c.on_destroy()
         PyElement.on_destroy(self)
 
+
 class PyScrollableFrame(PyFrame):
     """
         Similar to PyFrame but uses scrolling instead of resizing the frame
@@ -249,6 +252,8 @@ class PyScrollableFrame(PyFrame):
 
     @property
     def qt_element(self): return self._content
+    @property
+    def qt_container(self): return self._qt
 
     @property
     def show_scrollbar(self):
@@ -257,6 +262,7 @@ class PyScrollableFrame(PyFrame):
     @show_scrollbar.setter
     def show_scrollbar(self, show):
         self.qt_container.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn if show else QtCore.Qt.ScrollBarAsNeeded)
+
 
 class PyLabelFrame(PyFrame):
     """
@@ -267,6 +273,9 @@ class PyLabelFrame(PyFrame):
         self._qt = QtWidgets.QGroupBox(parent.qt_element)
         PyFrame.__init__(self, parent, element_id, layout)
         self.qt_element.clicked.connect(lambda checked: self.events.call_event("interact", checked=checked))
+
+    @property
+    def qt_element(self): return self._qt
 
     @property
     def label(self): return self.qt_element.title()
@@ -303,6 +312,9 @@ class PyTabFrame(PyElement):
         self._tabs = []
         PyElement.__init__(self, parent, element_id)
         self.qt_element.currentChanged.connect(lambda index: self.events.call_event("interact", index=index))
+
+    @property
+    def qt_element(self): return self._qt
 
     def add_tab(self, name, frame=None, frame_class=PyFrame, **frame_args):
         """
@@ -383,6 +395,9 @@ class PyFrameList(PyElement):
         self._pages = []
         PyElement.__init__(self, parent, element_id)
 
+    @property
+    def qt_element(self): return self._qt
+
     def add_frame(self, frame=None, frame_class=None, **frame_args):
         """
          Adds a new frame at the end with given frame instance or class
@@ -459,6 +474,9 @@ class PyTextLabel(PyElement):
         self.qt_element.setAlignment(QtCore.Qt.AlignLeft)
 
     @property
+    def qt_element(self): return self._qt
+
+    @property
     def display_text(self): return self.qt_element.text()
     @display_text.setter
     def display_text(self, txt): self.qt_element.setText(str(txt))
@@ -508,6 +526,7 @@ class PyTextLabel(PyElement):
         except KeyError: pass
         raise ValueError(f"Unknown font style '{style}' specified")
 
+
 class PyTextInput(PyElement):
     """
         Element for entering a single line of data
@@ -519,6 +538,9 @@ class PyTextInput(PyElement):
         self._event_handler = pyevents.PyElementInputEvent(parent, self)
         PyElement.__init__(self, parent, element_id)
         (self.qt_element.returnPressed if return_only else self.qt_element.editingFinished).connect(lambda : self.events.call_event("interact"))
+
+    @property
+    def qt_element(self): return self._qt
 
     @property
     def accept_input(self): return not self.qt_element.isReadOnly()
@@ -582,6 +604,9 @@ class PyNumberInput(PyElement):
         else: event = self.qt_element.editingFinished
         event.connect(lambda : self.events.call_event("interact"))
         self.min, self.max = -99, 99
+
+    @property
+    def qt_element(self): return self._qt
 
     @property
     def accept_input(self): return not self.qt_element.isReadOnly()
@@ -659,6 +684,9 @@ class PyCheckbox(PyElement):
         self.qt_element.clicked.connect(lambda :self.events.call_event("interact"))
 
     @property
+    def qt_element(self): return self._qt
+
+    @property
     def display_text(self): return self.qt_element.text()
     @display_text.setter
     def display_text(self, txt): self.qt_element.setText(str(txt))
@@ -689,6 +717,9 @@ class PyButton(PyElement):
         PyElement.__init__(self, parent, element_id)
         self.qt_element.clicked.connect(lambda : self.events.call_event("interact"))
         self._click_cb = self._img = None
+
+    @property
+    def qt_element(self): return self._qt
 
     @property
     def accept_input(self): return self.qt_element.isEnabled()
@@ -739,11 +770,6 @@ class PyTextField(PyElement):
         Element for displaying and/or entering multiple lines of text
         No interaction event
     """
-
-    start = 0
-    @property
-    def end(self): return len(self.text)
-
     def __init__(self, parent, element_id):
         self._qt = QtWidgets.QTextEdit(parent.qt_element)
         self._event_handler = pyevents.PyElementInputEvent(parent, self)
@@ -751,6 +777,9 @@ class PyTextField(PyElement):
         self.qt_element.keyPressEvent = self._on_key_press
         self.undo = False
         self.tabChangesFocus = True
+
+    @property
+    def qt_element(self): return self._qt
 
     @property
     def accept_input(self): return not self.qt_element.isReadOnly()
@@ -773,6 +802,10 @@ class PyTextField(PyElement):
         self.display_text = txt
         return self
     text = value = display_text
+
+    start = 0
+    @property
+    def end(self): return len(self.text)
 
     @property
     def cursor(self): return self.qt_element.textCursor().position()
@@ -915,6 +948,11 @@ class PyTable(PyElement):
         self._dynamic_column, self._dynamic_row = False, False
         self._horizontal_header, self._vertical_header = False, False
         self.qt_element.cellChanged.connect(self._on_cell_changed)
+        self.qt_element.setCornerButtonEnabled(True)
+        self._read_only = False
+
+    @property
+    def qt_element(self): return self._qt
 
     def _update_header_visibility(self):
         self.qt_element.horizontalHeader().setVisible(self.columns > 1 or self._horizontal_header)
@@ -960,6 +998,24 @@ class PyTable(PyElement):
         self._update_header_visibility()
 
     @property
+    def accept_input(self): return self.qt_element.isEnabled()
+    @accept_input.setter
+    def accept_input(self, inpt): self.qt_element.setEnabled(inpt)
+
+    @property
+    def read_only(self): return self._read_only
+    @read_only.setter
+    def read_only(self, read_only):
+        self._read_only = read_only
+        for row in range(self.rows):
+            for column in range(self.columns):
+                item = self._qt.item(row, column)
+                if item is not None:
+                    edit_flag = QtCore.Qt.ItemIsEditable
+                    item.setFlags(item.flags() | edit_flag if read_only else item.flags() & ~edit_flag)
+                    self._qt.setItem(row, column, item)
+
+    @property
     def columns(self):
         """ The number of columns in this table """
         return self.qt_element.columnCount()
@@ -990,6 +1046,11 @@ class PyTable(PyElement):
     def column_header(self, visible):
         self._horizontal_header = bool(visible)
         self._update_header_visibility()
+
+    @property
+    def column_labels(self): return
+    @column_labels.setter
+    def column_labels(self, labels): self._qt.setHorizontalHeaderLabels(labels)
 
     @property
     def dynamic_columns(self):
@@ -1039,6 +1100,11 @@ class PyTable(PyElement):
         self._update_header_visibility()
 
     @property
+    def row_labels(self): return
+    @row_labels.setter
+    def row_labels(self, labels): self._qt.setVerticalHeaderLabels(labels)
+
+    @property
     def row_height(self): return self.qt_element.verticalHeader().sectionSize(0)
     @row_height.setter
     def row_height(self, height):
@@ -1075,6 +1141,23 @@ class PyTable(PyElement):
         if index is None: index = self.rows - 1
         elif index < 0: index += self.rows
         self.qt_element.removeRow(index)
+
+    def resize_fit(self, row=False, column=False):
+        """
+            Resize cells to make the current content fit
+            If 'row' is True, all rows are resized based on their contents
+            If 'column' is True, all columns are resized based on their contents
+        """
+        if row: self._qt.resizeRowsToContents()
+        if column: self._qt.resizeColumnsToContents()
+
+    def resize_row(self, row):
+        """ Resizes a specific row to fit its content """
+        self._qt.resizeRowToContents(row)
+
+    def resize_column(self, column):
+        """ Resizes a specific column to fit its content """
+        self._qt.resizeColumnToContents(column)
 
     def get(self, row=None, column=None):
         """
@@ -1137,6 +1220,9 @@ class PyProgessbar(PyElement):
         self._qt = QtWidgets.QProgressBar(parent.qt_element)
         PyElement.__init__(self, parent, element_id)
         self.qt_element.setTextVisible(False)
+
+    @property
+    def qt_element(self): return self._qt
 
     @property
     def progress(self): return self.qt_element.value()
@@ -1203,6 +1289,9 @@ class PyItemlist(PyElement):
         self._items = QtCore.QStringListModel()
 
     @property
+    def qt_element(self) -> QtWidgets.QListView: return self._qt
+
+    @property
     def itemlist(self): return self._items.stringList()
     @itemlist.setter
     def itemlist(self, items):
@@ -1210,10 +1299,39 @@ class PyItemlist(PyElement):
         self.qt_element.setModel(self._items)
     value = itemlist
 
+    _selection_modes = {
+        "none": QtWidgets.QListView.NoSelection,
+        "single": QtWidgets.QListView.SingleSelection,
+        "multi": QtWidgets.QListView.MultiSelection
+    }
     @property
-    def auto_select(self): return self.qt_element.selectionMode() == QtWidgets.QListView.SingleSelection
-    @auto_select.setter
-    def auto_select(self, select): self.qt_element.setSelectionMode(QtWidgets.QListView.SingleSelection if select else QtWidgets.QListView.NoSelection)
+    def selection_mode(self):
+        for mode_name, mode in self._selection_modes.items():
+            if mode == self.qt_element.selectionMode(): return mode_name
+    @selection_mode.setter
+    def selection_mode(self, mode):
+        mode = mode.lower()
+        if mode not in self._selection_modes: raise ValueError(f"Unknown selection mode '{mode}', must be one of [{','.join(self._selection_modes.keys())}]")
+        self.qt_element.setSelectionMode(self._selection_modes[mode])
+
+    _edit_modes = {
+        "none": QtWidgets.QListView.NoEditTriggers,
+        "current_change": QtWidgets.QListView.CurrentChanged,
+        "double_click": QtWidgets.QListView.DoubleClicked,
+        "selected_click": QtWidgets.QListView.SelectedClicked,
+        "edit_keypress": QtWidgets.QListView.EditKeyPressed,
+        "keypress": QtWidgets.QListView.AnyKeyPressed,
+        "all": QtWidgets.QListView.AllEditTriggers
+    }
+    @property
+    def edit_mode(self):
+        for mode_name, mode in self._selection_modes.items():
+            if mode == self.qt_element.editTriggers(): return mode_name
+    @edit_mode.setter
+    def edit_mode(self, mode):
+        mode = mode.lower()
+        if mode not in self._edit_modes: raise ValueError(f"Unknown edit mode '{mode}', must be one of [{','.join(self._edit_modes.keys())}]")
+        self.qt_element.setEditTriggers(self._edit_modes[mode])
 
     @property
     def selected_index(self):
@@ -1229,6 +1347,9 @@ class PyItemlist(PyElement):
     def clear_selection(self):
         """ Removes any selected item """
         self.qt_element.clearSelection()
+
+    def select_all(self):
+        self.qt_element.selectAll()
 
     def set_selection(self, index=None, item=None):
         """ Set the selection to given index or given item, returns the selected item """
@@ -1277,6 +1398,9 @@ class PySeparator(PyElement):
         self.horizontal, self.thickness = horizontal, 2
 
     @property
+    def qt_element(self): return self._qt
+
+    @property
     def horizontal(self): return self.qt_element.frameShape() == QtWidgets.QFrame.HLine
     @horizontal.setter
     def horizontal(self, horizontal): self.qt_element.setFrameShape(QtWidgets.QFrame.HLine if horizontal else QtWidgets.QFrame.VLine)
@@ -1311,6 +1435,9 @@ class PyColorInput(PyFrame):
         self._color = pydialog.PyColorDialog(self.window)
         self._color.events.EventSubmit(self._on_select_color)
         if color is not None: self.color = color
+
+    @property
+    def qt_element(self): return self._qt
 
     def create_widgets(self):
         txt = self.add_element("txt", element_class=PyTextInput)
@@ -1356,6 +1483,9 @@ class PyPathInput(PyFrame):
         self._path.events.EventSubmit(self._on_path_select)
         if path is not None: self.path = path
 
+    @property
+    def qt_element(self): return self._qt
+
     def create_widgets(self):
         txt = self.add_element("txt", element_class=PyTextInput)
         txt.events.EventInteract(lambda : self._on_path_select(txt.value))
@@ -1397,6 +1527,9 @@ try:
             self._qt = QtWebEngineWidgets.QWebEngineView()
             PyElement.__init__(self, parent, element_id)
             self.html_page = "<html><head></head><body>body</body></html>"
+
+        @property
+        def qt_element(self): return self._qt
 
         @property
         def html_page(self): return ""
