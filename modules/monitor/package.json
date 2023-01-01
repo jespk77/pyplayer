@@ -1,0 +1,7 @@
+{
+  "id": "monitor",
+  "enabled": false,
+  "platform": null,
+  "priority": 20,
+  "required": false
+}
