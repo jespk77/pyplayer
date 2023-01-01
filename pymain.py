@@ -131,4 +131,5 @@ if __name__ == "__main__":
     try: import winrt
     except: pass
 
+    window_error_handler = pylauncher.PyQtErrorHandler(lambda level, context, message: log.print_log(level, message, context=context))
     PySplashWindow().start()

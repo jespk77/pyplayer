@@ -1,5 +1,7 @@
 import subprocess, sys
 
+from PyQt5 import QtCore
+
 def process_command(cmd, stdin=None, stdout=None, stderr=None, timeout=None, shell=False):
     """ Run a command that can be interacted with using standard IO: 'stdin', 'stdout', 'stderr'
             - If stdin is provided, it must be a bytes object
@@ -27,6 +29,25 @@ def process_command(cmd, stdin=None, stdout=None, stderr=None, timeout=None, she
         except Exception as e: print("error communicating:", e); break
     pc.wait(timeout)
     return pc
+
+class PyQtErrorHandler:
+    def __init__(self, log_callback=print):
+        QtCore.qInstallMessageHandler(self._on_log_message)
+        self._log_cb = log_callback
+
+    _message_types = {
+        QtCore.QtInfoMsg: "INFO",
+        QtCore.QtWarningMsg: "WARNING",
+        QtCore.QtDebugMsg: "VERBOSE"
+    }
+
+    def _on_log_message(self, message_type : QtCore.QtMsgType, context : QtCore.QMessageLogContext, message: str):
+        level = self._message_types.get(message_type, 'ERROR')
+        # only provide context if there's something useful, context from log messages in low level window code is None
+        if context.file or context.function:
+            return self._log_cb(level, f"[{context.file}.{context.function} (line {context.line}).{level}]", message)
+
+        return self._log_cb(level, f"[Qt.{level}]", message)
 
 class PyQtLauncher:
     """ Helper class that can launch the application from a default Python installation,
