@@ -91,11 +91,11 @@ class PyLog:
 	def _get_traceback_string(level):
 		try:
 			stack = inspect.stack()[2]
-			try: return "{}.{}.{}] ".format(PyLog._get_class_from_stack(stack), stack.function, PyLogLevel.from_arg(str(level)))
-			except KeyError: return "{}.{}.{}] ".format("/".join(stack.filename.split("/")[-3:]), stack.function, PyLogLevel.from_arg(level))
-		except Exception as e: return "<{}>.{}] ".format(e, level)
+			try: return "[{}.{}.{}] ".format(PyLog._get_class_from_stack(stack), stack.function, PyLogLevel.from_arg(str(level)))
+			except KeyError: return "[{}.{}.{}] ".format("/".join(stack.filename.split("/")[-3:]), stack.function, PyLogLevel.from_arg(level))
+		except Exception as e: return "[<{}>.{}] ".format(e, level)
 
-	def print_log(self, *objects, sep=" ", end="\n", file=None, flush=True):
+	def print_log(self, *objects, context=None, sep=" ", end="\n", file=None, flush=True):
 		with self._print_lock:
 			self._check_date_changed()
 			level = objects[0] if len(objects) > 0 else PyLogLevel.NDEFINE
@@ -103,7 +103,7 @@ class PyLog:
 			if l != PyLogLevel.NDEFINE: objects = objects[1:]
 
 			if self._level.is_match(level):
-				return self._prev_print(self._date.strftime("[%H:%M:%S.%f] ") + f"[{threading.current_thread().name}|" + PyLog._get_traceback_string(level),
+				return self._prev_print(self._date.strftime("[%H:%M:%S.%f] ") + f"[{threading.current_thread().name}] " + (context if context else PyLog._get_traceback_string(level)),
 										*[('\n' + ''.join(traceback.format_exception(type(o), o, o.__traceback__)) + '\n') if isinstance(o, Exception) else o for o in objects],
 										sep=sep, end=end, file=file, flush=flush)
 			return False
