@@ -36,6 +36,7 @@ def initialize():
     global keyboard_listener
     keyboard_listener = KeyboardListener(module.configuration.get_or_create(effect_device_key, 1))
     keyboard_listener.EventEffectKey(_on_effect_key)
+    keyboard_listener.EventEffectDeviceUpdate(_on_effect_device_change)
 
 @module.Destroy
 def destroy():
