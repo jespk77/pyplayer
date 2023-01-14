@@ -83,12 +83,12 @@ class PyWindow:
             print("ERROR", "Encountered error while creating widgets:")
             log_exception(e)
 
-        geo = self._cfg.get("geometry")
-        if isinstance(geo, list):
-            self.set_geometry(*geo[:4])
-            if len(geo) > 4:
-                if geo[4] == 2: self.maximized = True
-                elif geo[4] == 1: self.minimized = True
+        geometry = self.configuration.get("geometry")
+        if isinstance(geometry, list): self.set_geometry(*geometry[:4])
+
+        window_state = self.configuration.get("window_state")
+        if window_state == 2: self.maximized = True
+        elif window_state == 1: self.minimized = True
         self.add_task("_add_window", func=self._add_window)
         self.add_task("_close_window", func=self._close_window)
 
@@ -412,7 +412,9 @@ class PyWindow:
          Save current configuration options to file (if changed)
          Note: configuration is automatically saved when the window closes, this only needs to be called if changes need to be written beforehand
         """
-        self.cfg['geometry'] = self.qt_window.x(), self.qt_window.y(), self.qt_window.width(), self.qt_window.height(), 2 if self.maximized else 1 if self.minimized else 0
+        if not self.minimized and not self.maximized:
+            self.configuration['geometry'] = self.qt_window.x(), self.qt_window.y(), self.qt_window.width(), self.qt_window.height()
+        self.configuration["window_state"] = 2 if self.maximized else 1 if self.minimized else 0
         self.configuration.save()
 
     def _on_key_down(self, event):
