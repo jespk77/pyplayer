@@ -21,6 +21,7 @@ class SongBrowser(pyelement.PyItemlist):
 		pyelement.PyItemlist.__init__(self, parent, self.element_id)
 		self._path = self._songcounter = None
 		self._path_valid = self._is_dynamic = False
+		self.selection_mode = "none"
 		self.auto_select = False
 
 	@property
