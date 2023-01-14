@@ -87,16 +87,16 @@ class KeyboardListener:
                     self._block_next = False
                     continue
 
-                if self._update_device:
-                    print("VERBOSE", f"Requested device update: using {device} as the new effect device")
-                    self._set_device_id(device)
-                    self._update_device = False
-                    continue
-
                 if interception.interception_is_keyboard(device):
                     key = ffi.cast("InterceptionKeyStroke*", stroke)
                     # key down events have an even state so only listen to those
                     if key.state % 2 == 0:
+                        if self._update_device:
+                            print("VERBOSE", f"Requested device update: using {device} as the new effect device")
+                            self._set_device_id(device)
+                            self._update_device = False
+                            continue
+
                         code = key.code * (key.state + 2) if key.state > 1 else key.code
 
                         # pressing PAUSE key also generates NumLock event which needs to be ignored
