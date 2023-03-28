@@ -132,7 +132,7 @@ class PyElement:
 
     # QWidget.keyPressEvent override
     def _on_key_press(self, event):
-        if self.window._on_key_down(event) or self.events.call_keydown_event(event):
+        if self.window._on_key_down(event) or self.events.call_keydown_event(event, element=self):
             print("VERBOSE", "Key down event blocked and won't be forwarded to the element")
             return True
 

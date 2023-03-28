@@ -418,7 +418,7 @@ class PyWindow:
         self.configuration.save()
 
     def _on_key_down(self, event):
-        if self.events.call_keydown_event(event):
+        if self.events.call_keydown_event(event, window=self):
             print("VERBOSE", "Key event was blocked and won't be forwarded to the window")
             return True
 

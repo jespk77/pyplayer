@@ -29,12 +29,13 @@ class EventHandler(_EventCore):
         self._element = element
 
     _key_modifiers = {QtCore.Qt.NoModifier: None, QtCore.Qt.ShiftModifier: "shift", QtCore.Qt.ControlModifier: "ctrl", QtCore.Qt.AltModifier: "alt"}
-    def call_keydown_event(self, event):
+    def call_keydown_event(self, event, **kwargs):
         cb = self._element._key_cb.get(event.key())
         if not cb: cb = self._element._key_cb.get('*')
 
         if cb:
-            kwargs = {"key": event.key(), "modifiers": [self._key_modifiers[k] for k in self._key_modifiers.keys() if event.modifiers() & k]}
+            kwargs["key"] = event.key()
+            kwargs["modifiers"] = [self._key_modifiers[k] for k in self._key_modifiers.keys() if event.modifiers() & k]
             args = cb.__code__.co_varnames
             try:
                 res = cb(**{key: value for key, value in kwargs.items() if key in args})
