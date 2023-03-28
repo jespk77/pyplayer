@@ -125,11 +125,5 @@ if __name__ == "__main__":
     log = pylogging.get_logger()
     if "dev" in sys.argv: log.log_level = "verbose"
 
-    # workaround in order to be able use this library later
-    # prevents "RuntimeError: Cannot change thread mode after it is set"
-    # error occurs after creating a 'PyQt5.QtWidgets.QApplication' instance (in PyRootWindow)
-    try: import winrt
-    except: pass
-
     window_error_handler = pylauncher.PyQtErrorHandler(lambda level, context, message: log.print_log(level, message, context=context))
     PySplashWindow().start()

@@ -3,8 +3,8 @@ class _MediaController:
     def attach_button(self, event, cb): pass
 
 try:
-    from winrt.windows.media.playback import MediaPlayer as WM
-    from winrt.windows.media import MediaPlaybackStatus, MediaPlaybackType, SystemMediaTransportControlsButton
+    from winsdk.windows.media.playback import MediaPlayer as WM
+    from winsdk.windows.media import MediaPlaybackStatus, MediaPlaybackType, SystemMediaTransportControlsButton
 
     class MediaControllerWin(_MediaController):
         def __init__(self):
