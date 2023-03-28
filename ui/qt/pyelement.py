@@ -933,7 +933,7 @@ class PyTextField(PyElement):
         elif key_code == QtCore.Qt.Key_Down:
             res = self._event_handler.call_event("history", direction=1)
             if res == self._event_handler.block_action: return
-        PyElement._on_key_press(self, event)
+        return PyElement._on_key_press(self, event)
 
 
 class PyTable(PyElement):
