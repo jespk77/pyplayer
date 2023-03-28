@@ -325,7 +325,7 @@ class VideoPlayerWindow(pywindow.PyWindow):
         self["playpause_btn"].text = "Play"
         self._playing = False
 
-    def _on_pos_change(self, e): self.schedule_task(task_id="pos_change", time=e.u.new_position)
+    def _on_pos_change(self, e): self.schedule_task(task_id="pos_change", time=video_player.position)
     def _execute_pos_change(self, time):
         self["progress"].value = time * 10000
         if self._updated and time > self.episode_update_position:

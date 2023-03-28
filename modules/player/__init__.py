@@ -466,7 +466,7 @@ def on_media_change(event, player):
 	module.client.schedule_task(task_id="player_title_update", media=media_player.current_media, color=color)
 
 def on_pos_change(event, player):
-	module.client.schedule_task(task_id="player_progress_update", progress=event.u.new_position)
+	module.client.schedule_task(task_id="player_progress_update", progress=player.get_position())
 
 def on_stopped(event, player):
 	module.client.schedule_task(task_id="player_progress_update", progress=0)
@@ -520,6 +520,7 @@ def _set_client_volume(volume):
 	module.client["player"]["volume_control"]["volume_control"].progress = volume
 
 def _set_client_mute(mute):
+	mute = mute == 1 # ensure other values won't be considered as muted
 	volume = module.client["player"]["volume_control"]
 	volume["volume_control"].color = "#444444" if mute else "green"
 	volume["volume_mute"].checked = mute

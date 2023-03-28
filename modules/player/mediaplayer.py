@@ -198,6 +198,8 @@ class MediaPlayer:
 			self._player1.set_position(self._last_position)
 
 
+	def get_position(self): return self.active_player.get_position()
+
 	def set_position(self, pos):
 		""" Update the position the player is currently at, has no effect if the player is stopped/finished
 		 	Returns true if the position was updated, false otherwise"""
@@ -321,7 +323,7 @@ class MediaPlayer:
 
 	def on_pos_change(self, event, name, player, player_one):
 		if (self._player_one == self._updated) == player_one:
-			pos = event.u.new_position
+			pos = player.get_position()
 			self._last_position = pos
 			if self._updated and pos > MediaPlayer.end_pos:
 				self._player_one = not self._player_one
