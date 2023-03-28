@@ -12,7 +12,7 @@ def requirements_file(module): return os.path.join(modules.module_directory, mod
 
 def scan_for_modules():
     """ Returns a list of names for all modules found in the module folder """
-    return [md.name for md in os.scandir(modules.module_directory) if md.is_dir()]
+    return [md.name for md in os.scandir(modules.module_directory) if md.is_dir() and os.path.isfile(os.path.join(md.path, "package.json"))]
 
 def check_for_new_modules():
     """ Returns a list of modules not previously configured """
