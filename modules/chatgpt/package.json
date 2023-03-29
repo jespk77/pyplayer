@@ -1,0 +1,7 @@
+{
+  "id": "chatgpt",
+  "enabled": false,
+  "platform": null,
+  "priority": 50,
+  "required": false
+}
