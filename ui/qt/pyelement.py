@@ -68,6 +68,16 @@ class PyElement:
     def hidden(self, hide): self.qt_element.setHidden(bool(hide))
 
     @property
+    def tooltip(self): return self.qt_element.toolTip()
+    @tooltip.setter
+    def tooltip(self, tip): self.qt_element.setToolTip(str(tip))
+
+    @property
+    def tooltip_duration(self): return self.qt_element.toolTipDuration()
+    @tooltip_duration.setter
+    def tooltip_duration(self, duration): self.qt_element.setToolTipDuration(duration)
+
+    @property
     def width(self): return self.qt_element.width()
     @width.setter
     def width(self, value): self.qt_element.setFixedWidth(int(value))
