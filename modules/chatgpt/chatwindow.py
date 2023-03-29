@@ -1,4 +1,6 @@
-from ui.qt import pywindow, pyelement
+import json
+
+from ui.qt import pywindow, pyelement, pydialog
 from core import modules
 module = modules.Module(__package__)
 
@@ -18,6 +20,7 @@ class ChatGPTWindow(pywindow.PyWindow):
         self.layout.row(0, weight=1).column(0, weight=1)
         self.title = "AI Assistant: ChatGPT"
         self.icon = "assets/icon_album"
+        self._dialog = None
 
         self._set_parameters()
         self._token_encoder = tiktoken.encoding_for_model(self.model)
@@ -48,13 +51,38 @@ class ChatGPTWindow(pywindow.PyWindow):
         output_frame.layout.row(0, weight=1).column(1, weight=1).margins(3)
         output_frame.label = "Output"
 
-        output = output_frame.add_element("content", element_class=pyelement.PyTextField, columnspan=3)
+        output = output_frame.add_element("content", element_class=pyelement.PyTextField, columnspan=5)
         output.accept_input = False
         output.font_size = 12
         cost_label = output_frame.add_element("status", element_class=pyelement.PyTextLabel, row=1)
         cost_label.set_alignment("centerV")
         cost_label.text = "Ask your question below"
-        reset = output_frame.add_element("reset", element_class=pyelement.PyButton, row=1, column=2)
+
+        load = output_frame.add_element("load", element_class=pyelement.PyButton, row=1, column=2)
+        load.text = "Load"
+        @load.events.EventInteract
+        def _load():
+            if self._dialog is not None: self._dialog.close()
+            self._dialog = pydialog.PyFileDialog(self, "existing", text="Load session", directory=module.configuration.get("$default_save_folder", ""))
+            self._dialog.load = True
+            self._dialog.events.EventSubmit(self._load_output)
+            self._dialog.events.EventCancel(lambda : self._load_output(None))
+            self._dialog.filter = "*.gpt"
+            self._dialog.open()
+
+        save = output_frame.add_element("save", element_class=pyelement.PyButton, row=1, column=3)
+        save.text = "Save"
+        @save.events.EventInteract
+        def _save():
+            if self._dialog is not None: self._dialog.close()
+            self._dialog = pydialog.PyFileDialog(self, "any", text="Save session", directory=module.configuration.get("$default_save_folder", ""))
+            self._dialog.save = True
+            self._dialog.events.EventSubmit(self._save_layout)
+            self._dialog.events.EventCancel(lambda : self._save_layout(None))
+            self._dialog.filter = "*.gpt"
+            self._dialog.open()
+
+        reset = output_frame.add_element("reset", element_class=pyelement.PyButton, row=1, column=4)
         reset.text = "Reset"
         @reset.events.EventInteract
         def _reset_all():
@@ -152,6 +180,38 @@ class ChatGPTWindow(pywindow.PyWindow):
             try: element.accept_input = enabled
             except: pass
 
+    user_to_role = {
+        "user": "You",
+        "assistant": "ChatGPT"
+    }
+    def _set_content_from_message(self):
+        self["output"]["content"].text = "\n".join([f"{self.user_to_role.get(message['role'], message['role'])}: {message['content']}\n" for message in self._messages])
+
+    def _load_output(self, value):
+        self._dialog = None
+        if value is not None:
+            if not value.endswith(".gpt"): value += ".gpt"
+            try:
+                with open(value, "r") as file:
+                    self._messages = json.load(file)
+                self._set_content_from_message()
+                self["output"]["status"].text = f"Loaded from {value}"
+            except Exception as e:
+                print("ERROR", "Failed to load file", e)
+                self["output"]["status"].text = f"Failed to load {value}, see log for details"
+
+    def _save_layout(self, value):
+        self._dialog = None
+        if value is not None:
+            if not value.endswith(".gpt"): value += ".gpt"
+            try:
+                with open(value, "w") as file:
+                    json.dump(self._messages, file, indent=5)
+                self["output"]["status"].text = f"Saved to {value}"
+            except Exception as e:
+                print("ERROR", "Failed to save file", e)
+                self["output"]["status"].text = f"Failed to save {value}, see log for details"
+
     @property
     def model(self): return self.configuration.get_or_create("model", parameters.model.default_value)
     @model.setter
@@ -189,7 +249,7 @@ class ChatGPTWindow(pywindow.PyWindow):
         else: self["input"]["token"].text = "Input cost: 0 tokens"
 
     def _add_response_delta(self, delta):
-        self["output"]["content"].text += f'{delta}'.replace("```", "=============================\n")
+        self["output"]["content"].text += f'{delta}'.replace("``", "=============================\n")
 
     def _complete_response(self, response, reason):
         self._messages.append(response)

@@ -18,5 +18,5 @@ def _open_chat_window():
 
 @module.Initialize
 def inititalize():
-    module.configuration.set_defaults({"api_key": "", "organization_id": ""})
+    module.configuration.set_defaults({"api_key": "", "organization_id": "", "$default_save_folder": ""})
     module.client.add_task(task_id=open_window_id, func=_open_chat_window)
