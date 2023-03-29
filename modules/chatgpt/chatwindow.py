@@ -249,7 +249,7 @@ class ChatGPTWindow(pywindow.PyWindow):
         else: self["input"]["token"].text = "Input cost: 0 tokens"
 
     def _add_response_delta(self, delta):
-        self["output"]["content"].text += f'{delta}'.replace("``", "=============================\n")
+        self["output"]["content"].append(f'{delta}'.replace("``", "=============================\n"), move_cursor=True)
 
     def _complete_response(self, response, reason):
         self._messages.append(response)
