@@ -254,11 +254,11 @@ class ChatGPTWindow(pywindow.PyWindow):
     def _complete_response(self, response, reason):
         self._messages.append(response)
         self._request_worker = None
-        self["output"]["content"].text += f"\n[Completed with reason '{reason}']\n"
+        self["output"]["content"].append(f"\n[Completed with reason '{reason}']\n", move_cursor=True)
         self._set_input_enabled(True)
 
     def _error_response(self):
-        self["output"]["content"].text += "\n[ERROR] Request failed, try again later. See log for more information..."
+        self["output"]["content"].append("\n[ERROR] Request failed, try again later. See log for more information...", move_cursor=True)
         self._set_input_enabled(True)
 
     def _send_message(self):
@@ -268,7 +268,7 @@ class ChatGPTWindow(pywindow.PyWindow):
         if message:
             if self._input_changed:
                 self._messages.append({"role": "user", "content": message})
-                self["output"]["content"].text += f"\nYou: {message}\n\nChatGPT: "
+                self["output"]["content"].append(f"\nYou: {message}\n\nChatGPT: ", move_cursor=True)
                 self._check_token_count(None)
                 self._input_changed = False
 
