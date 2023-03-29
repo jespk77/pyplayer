@@ -613,7 +613,7 @@ class PyNumberInput(PyElement):
         elif all_updates: event = self.qt_element.valueChanged
         else: event = self.qt_element.editingFinished
         event.connect(lambda : self.events.call_event("interact"))
-        self.min, self.max = -99, 99
+        self.min, self.max = -2147483647, 2147483647
 
     @property
     def qt_element(self): return self._qt
