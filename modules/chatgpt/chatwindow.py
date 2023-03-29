@@ -45,12 +45,12 @@ class ChatGPTWindow(pywindow.PyWindow):
 
     def create_widgets(self):
         output_frame = self.add_element("output", element_class=pyelement.PyLabelFrame)
-        output_frame.layout.row(0, weight=1).column(1, weight=1)
+        output_frame.layout.row(0, weight=1).column(1, weight=1).margins(3)
         output_frame.label = "Output"
 
         output = output_frame.add_element("content", element_class=pyelement.PyTextField, columnspan=3)
         output.accept_input = False
-        output.font_size = 13
+        output.font_size = 12
         cost_label = output_frame.add_element("status", element_class=pyelement.PyTextLabel, row=1)
         cost_label.set_alignment("centerV")
         cost_label.text = "Ask your question below"
@@ -63,7 +63,7 @@ class ChatGPTWindow(pywindow.PyWindow):
 
         self.add_element("separator", element_class=pyelement.PySeparator, row=1).drag_resize = True
         input_frame = self.add_element("input", element_class=pyelement.PyLabelFrame, row=2)
-        input_frame.layout.row(6, weight=1).column(1, weight=1)
+        input_frame.layout.row(6, weight=1).column(1, weight=1).margins(3)
         input_frame.label = "Input"
 
         input_frame.add_element("mdlbl", element_class=pyelement.PyTextLabel, column=0).text = "Model:"
@@ -128,7 +128,7 @@ class ChatGPTWindow(pywindow.PyWindow):
         def _reset_freq_penalty(): self.frequency_penalty = freq_penalty.value = parameters.frequency_penalty.default_value
 
         input = input_frame.add_element("content", element_class=pyelement.PyTextField, row=6, columnspan=3)
-        input.font_size = 13
+        input.font_size = 12
         @input.events.EventKeyDown("Return")
         def _send(modifiers):
             if "shift" not in modifiers:
@@ -138,11 +138,11 @@ class ChatGPTWindow(pywindow.PyWindow):
         @input.events.EventKeyDown("all")
         def _check_tokens(element): self._check_token_count(element)
 
-        send = input_frame.add_element("send", element_class=pyelement.PyButton, row=7, column=1)
+        send = input_frame.add_element("send", element_class=pyelement.PyButton, row=7, column=2)
         send.text = "Send"
         send.events.EventInteract(self._send_message)
-        token_text = input_frame.add_element("token", element_class=pyelement.PyTextLabel, row=7, column=2)
-        token_text.text = "0 tokens"
+        token_text = input_frame.add_element("token", element_class=pyelement.PyTextLabel, row=7)
+        token_text.text = "Input cost: 0 tokens"
         token_text.set_alignment("center")
 
     def _set_input_enabled(self, enabled):
@@ -184,18 +184,17 @@ class ChatGPTWindow(pywindow.PyWindow):
 
     def _check_token_count(self, element):
         if element is not None:
-            self["input"]["token"].text = f"{len(self._token_encoder.encode(element.text))} tokens"
+            self["input"]["token"].text = f"Input cost: {len(self._token_encoder.encode(element.text))} tokens"
             self._input_changed = True
-        else: self["input"]["token"].text = "0 tokens"
+        else: self["input"]["token"].text = "Input cost: 0 tokens"
 
     def _add_response_delta(self, delta):
-        self["output"]["content"].text += str(delta).replace("```", "=============================\n")
+        self["output"]["content"].text += f'{delta}'.replace("```", "=============================\n")
 
     def _complete_response(self, response, reason):
-        print("completed response", response)
         self._messages.append(response)
         self._request_worker = None
-        self["output"]["content"].text += f"\n- Completed with reason '{reason}'"
+        self["output"]["content"].text += f"\n[Completed with reason '{reason}']\n"
         self._set_input_enabled(True)
 
     def _error_response(self):
@@ -209,7 +208,7 @@ class ChatGPTWindow(pywindow.PyWindow):
         if message:
             if self._input_changed:
                 self._messages.append({"role": "user", "content": message})
-                self["output"]["content"].text += f"\nYou: {message}"
+                self["output"]["content"].text += f"\nYou: {message}\n\nChatGPT: "
                 self._check_token_count(None)
                 self._input_changed = False
 

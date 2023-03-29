@@ -15,10 +15,10 @@ class ChatGPTRequestWorker(pyworker.PyWorker):
         for chunk in request:
             try:
                 delta = chunk["choices"][0]["delta"]
-                self._messages.append(delta)
+                self._messages.append(delta if delta else chunk["choices"][0])
                 if not delta: break
 
-                content = delta.get("content", "\nChatGPT:")
+                content = delta.get("content", "")
                 self._owner.schedule_task(task_id=self._owner.request_update_task_id, delta=content)
             except Exception as e: self.error(e, False)
 
@@ -30,7 +30,7 @@ class ChatGPTRequestWorker(pyworker.PyWorker):
                 "content": "".join([message.get("content", "") for message in self._messages])
             }
 
-            try: reason = self._messages[-1]["choices"][0]["finish_reason"]
+            try: reason = self._messages[-1]["finish_reason"]
             except KeyError: reason = "unknown"
             self._owner.schedule_task(task_id=self._owner.request_complete_task_id, response=data, reason=reason)
 
