@@ -14,6 +14,7 @@ class PyDialog:
             self._qt = QtWidgets.QMessageBox(parent.qt_window)
             self._qt.setText(message)
         self.qt_dialog.accepted.connect(self._on_submit)
+        self.qt_dialog.rejected.connect(self._on_cancel)
         self._event_handler = pyevents.PyDialogEvent(self)
 
     @property
