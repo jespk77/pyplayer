@@ -1,4 +1,5 @@
 import os, socket, sys
+import traceback
 
 import pymodules, pyplayerqt
 from ui.qt import pyelement, pywindow, pylauncher
@@ -120,10 +121,19 @@ class PySplashWindow(pywindow.RootPyWindow):
         self._force_configure = True
         self.schedule_task(sec=1, func=self._check_modules)
 
+def handle_except(error_type, error_value, error_traceback):
+    print("ERROR", f"Unhandled exception occurred:\n{''.join(traceback.format_exception(error_type, error_value, error_traceback))}")
+
+def handle_unraisable(args):
+    print("ERROR", f"Unraisable exception occurred:\n{''.join(traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback))}")
+
 if __name__ == "__main__":
     import pylogging
     log = pylogging.get_logger()
     if "dev" in sys.argv: log.log_level = "verbose"
+
+    sys.excepthook = handle_except
+    sys.unraisablehook = handle_unraisable
 
     window_error_handler = pylauncher.PyQtErrorHandler(lambda level, context, message: log.print_log(level, message, context=context))
     PySplashWindow().start()
