@@ -1,32 +1,36 @@
 from PyQt5 import QtCore
 
-class _Task(QtCore.QThread):
+class _Task(QtCore.QObject):
     def __init__(self, task):
-        QtCore.QThread.__init__(self)
+        QtCore.QObject.__init__(self)
+        self._thread = QtCore.QThread()
+        self.moveToThread(self._thread)
         self._task = task
         self._error = None
+        self._thread.started.connect(self.run)
+        self._thread.finished.connect(self.deleteLater)
+        self._thread.finished.connect(self._thread.deleteLater)
 
     def start(self, priority=None):
+        if priority is not None: self._thread.start(priority)
+        else: self._thread.start()
+    def isRunning(self): return self._thread.isRunning()
+
+    def _on_start(self):
         try:
             self._task.start()
-            QtCore.QThread.start(self)
         except Exception as e:
             print("ERROR", f"Failed to start worker '{self._task.worker_id}':", e)
             self._on_error(e)
             self._task = None
 
     def run(self):
+        self._on_start()
         try: self._task.run()
         except Exception as e:
             print("ERROR", f"During execution of worker '{self._task.worker_id}':", e)
             self._on_error(e)
-
-        if not self._error:
-            try: self._task.complete()
-            except Exception as e:
-                print("ERROR", f"On completion of worker '{self._task.worker_id}':", e)
-                self._on_error(e)
-        self._task = None
+        self._on_finished()
 
     def _on_error(self, error):
         self._error = error
@@ -35,6 +39,12 @@ class _Task(QtCore.QThread):
             e.__suppress_context__ = True
             print("ERROR", "During handling of previous error:", e)
 
+    def _on_finished(self):
+        if not self._error:
+            try: self._task.complete()
+            except Exception as e:
+                print("ERROR", f"On completion of worker '{self._task.worker_id}':", e)
+                self._on_error(e)
 
 class PyWorker:
     def __init__(self, worker_id, auto_activate=True):
