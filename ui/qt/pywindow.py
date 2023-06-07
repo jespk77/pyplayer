@@ -4,7 +4,6 @@ import sys
 from . import pyelement, pyevents, pylayout, pythreading, log_exception
 from core import pyconfiguration
 
-
 class _ScheduledTask(QtCore.QTimer):
     _schedule_signal = QtCore.pyqtSignal(int, bool, dict)
     _cancel_signal = QtCore.pyqtSignal()
@@ -89,6 +88,7 @@ class PyWindow:
         window_state = self.configuration.get("window_state")
         if window_state == 2: self.maximized = True
         elif window_state == 1: self.minimized = True
+        self.add_task("_schedule_task", func=self._schedule_external_wrapper)
         self.add_task("_add_window", func=self._add_window)
         self.add_task("_close_window", func=self._close_window)
 
@@ -356,7 +356,6 @@ class PyWindow:
         if task: return running == task.isActive() if running else True
         return False
 
-    # todo: scheduling tasks from another thread only work if the task was added previously
     def schedule_task(self, min=0, sec=0, ms=0, func=None, loop=False, wait=False, task_id=None, **kwargs):
         """
             Schedule an operation to be executed at least after the given time, all registered callbacks will stop when the window is closed
@@ -369,6 +368,27 @@ class PyWindow:
              - The 'task_id' argument (if provided) must be a string is used to later cancel, postpone or change the previously scheduled function
                Note: scheduled tasks without a task_id cannot be looping and cannot be changed once scheduled
         """
+
+        # trying to schedule a task from a different thread needs a (previously scheduled) wrapper to work
+        if threading.current_thread() != threading.main_thread():
+            # only single run and unknown task ids actually require the wrapper, otherwise a direct schedule is fine
+            if task_id is None or task_id not in self._scheduled_tasks:
+                args = {
+                    "min": min, "sec": sec, "ms": ms,
+                    "func": func, "loop": loop, "wait": wait,
+                    "task_id": task_id
+                }
+                args.update(kwargs)
+
+                print("VERBOSE", "Task scheduling called from a different thread, using wrapped scheduler")
+                return self._schedule_task(task_id="_schedule_task", args=args)
+
+        self._schedule_task(min, sec, ms, func, loop, wait, task_id, **kwargs)
+
+    def _schedule_external_wrapper(self, args):
+        self._schedule_task(**args)
+
+    def _schedule_task(self, min=0, sec=0, ms=0, func=None, loop=False, wait=False, task_id=None, **kwargs):
         delay = min * 60000 + sec * 1000 + ms
         if delay < 0: raise ValueError("Delay must be positive")
         elif delay < 100 and loop: raise ValueError("Looping task must have some delay")
