@@ -15,12 +15,14 @@ def _check_lyrics(tag):
 	return False
 
 class LyricViewer(pywindow.PyWindow):
-	def __init__(self, parent, window_id):
+	def __init__(self, parent, window_id, artist=None, title=None):
 		pywindow.PyWindow.__init__(self, parent, window_id)
 		self.icon = "assets/icon"
 		self.title = "Lyrics"
 		self.can_maximize = self.can_minimize = False
 		self.add_task("set_lyrics", self._set_lyrics)
+		self._load_worker = None
+		if artist is not None or title is not None: self.load_lyrics(artist, title)
 
 		@self.events.EventKeyDown("Escape")
 		def _on_escape(): self.destroy()
@@ -50,16 +52,20 @@ class LyricViewer(pywindow.PyWindow):
 		@size_element.events.EventInteract
 		def _on_size_change(): lyrics.font_size = size_element.value
 
+	def load_lyrics(self, artist, title):
+		if self._load_worker is None or not self._load_worker.running:
+			self._load_worker = TaskLyrics(self, artist, title)
+
 	def set_lyrics(self, data, lyrics): self.schedule_task(task_id="set_lyrics", data=data, lyrics=lyrics)
 	def _set_lyrics(self, data, lyrics):
 		self.title = f"Lyrics: {data.artist} - {data.title}" if data is not None else "Lyrics"
 		self["lyrics_content"].text = lyrics
 
 class TaskLyrics(pyworker.PyWorker):
-	def __init__(self, artist, title):
+	def __init__(self, window, artist, title):
 		self._data = LyricData(artist, title)
 		self._lyrics = []
-		pyworker.PyWorker.__init__(self, "task_get_lyrics")
+		pyworker.PyWorker.__init__(self, window, "TaskLyrics")
 
 	def start(self):
 		window = module.client.find_window(main_window_id)
@@ -114,9 +120,9 @@ unknown_song = messagetypes.Reply("Unknown song")
 def get_lyrics(song, file=None):
 	artist, title = song.split(" - ", maxsplit=1)
 	if artist and title:
-		if not module.client.find_window(main_window_id):
-			module.client.add_window(main_window_id, window_class=LyricViewer)
-		TaskLyrics(artist, title)
+		if (window := module.client.find_window(main_window_id)) is None:
+			module.client.add_window(main_window_id, window_class=LyricViewer, artist=artist, title=title)
+		else: window.load_lyrics(artist, title)
 		return messagetypes.Reply(f"Lyrics for '{song}' opened")
 	else: return unknown_song
 

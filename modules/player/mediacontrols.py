@@ -68,8 +68,8 @@ try:
             self._win_controls.is_pause_enabled = self._win_controls.is_play_enabled = False
             self._win_controls.playback_status = MediaPlaybackStatus.STOPPED
 
-    print("INFO", "Initializing Windows Media controller")
+    print("VERBOSE", "Initializing Windows Media controller")
     controller = MediaControllerWin()
 except ImportError:
-    print("INFO", "No controller class found, initializing default one")
+    print("VERBOSE", "No controller class found, initializing default one")
     controller = _MediaController()

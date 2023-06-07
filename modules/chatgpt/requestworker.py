@@ -4,7 +4,7 @@ import openai
 
 class ChatGPTRequestWorker(pyworker.PyWorker):
     def __init__(self, owner, request):
-        pyworker.PyWorker.__init__(self, "chatgpt_handle_request")
+        pyworker.PyWorker.__init__(self, owner, "ChatGPTRequestWorker")
         self._owner = owner
         self._request = request
         self._messages = []
