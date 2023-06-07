@@ -526,13 +526,13 @@ class TwitchOverview(pywindow.PyWindow):
     def open_stream_twitch(self, channel):
         print("VERBOSE", "Opening stream for", channel)
         browser_path = module.configuration.get(browser_path_key)
-        if browser_path: subprocess.run(f'"{browser_path}" https://twitch.tv/{channel}', shell=True)
+        if browser_path: os.spawnv(os.P_NOWAIT, browser_path, (browser_path, f"https://twitch.tv/{channel.lower()}"))
 
     def open_stream_alt(self, channel):
         print("VERBOSE", "Opening stream to", channel, "with alternate player")
         browser_path = module.configuration.get(browser_path_key)
         alt_url = module.configuration.get(alternate_player_key)
-        if browser_path and alt_url: subprocess.run(f'"{browser_path}" {alt_url.format(channel=channel)}', shell=True)
+        if browser_path and alt_url: os.spawnv(os.P_NOWAIT, browser_path, (browser_path, alt_url.format(channel=channel.lower())))
 
 def initialize():
     module.configuration.get_or_create(browser_path_key, "")
