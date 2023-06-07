@@ -1,7 +1,7 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 import sys
 
-from . import pyelement, pyevents, pylayout, pythreading, log_exception
+from . import pyelement, pyevents, pylayout, log_exception
 from core import pyconfiguration
 
 class _ScheduledTask(QtCore.QTimer):
@@ -55,7 +55,7 @@ class PyWindow:
         if not hasattr(self, "_qt"):
             self._qt = QtWidgets.QWidget()
             self._qt.setObjectName("PyWindow")
-        self._window_lock = pythreading.PyLock()
+        self._window_lock = threading.RLock()
 
         self.qt_window.resizeEvent = self._on_window_resize
         self.qt_window.closeEvent = self._on_window_close
