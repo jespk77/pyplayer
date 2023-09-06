@@ -46,7 +46,6 @@ def metadata_expired():
     return not os.path.isfile(user_metadata) or time.time() - os.path.getmtime(user_metadata) > cache_expire
 
 user_info_url = "https://api.twitch.tv/helix/users"
-user_follows_url = "https://api.twitch.tv/helix/users/follows?from_id={user_id}"
 def request_metadata():
     login = read_logindata()
     if not login: return
@@ -68,15 +67,7 @@ def request_metadata():
                 print("ERROR", "Received invalid status code:", r.status_code, "\n ->", r.json())
                 return None
 
-        data = r.json()["data"][0]
-        r = requests.get(user_follows_url.format(user_id=data['id']), headers=login)
-        if r.status_code != 200:
-            print("ERROR", "Received invalid status code:", r.status_code, "\n ->", r.json())
-            data["followed"] = []
-            return data
-
-        data["followed"] = r.json()["data"]
-        return data
+        return r.json()["data"][0]
     except Exception as e: print("ERROR", "While requesting user metadata:", e)
 
 def write_metadata(data):
