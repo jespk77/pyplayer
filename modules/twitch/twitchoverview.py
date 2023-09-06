@@ -1,4 +1,4 @@
-import datetime, json, requests, socketserver, subprocess, threading, time
+import datetime, json, requests, socketserver, os, threading, time
 from ui.qt import pywindow, pyelement, pyworker, pyimage
 
 from core import modules
@@ -174,7 +174,7 @@ class TwitchRefreshLiveChannelsWorker(pyworker.PyWorker):
     followed_stream_url = "https://api.twitch.tv/helix/streams/followed?user_id={user_id}"
     stream_info_url = "https://api.twitch.tv/helix/streams?user_login={user_login}"
     def __init__(self, window, auto_active=True):
-        pyworker.PyWorker.__init__(self, "twitch_refresh_follows", auto_active)
+        pyworker.PyWorker.__init__(self, window, "TwitchRefreshLiveChannelsWorker", auto_active)
         self._window = window
         self._data = self._error = self._logindata = None
 
@@ -186,7 +186,7 @@ class TwitchRefreshLiveChannelsWorker(pyworker.PyWorker):
 
     def refresh(self):
         self._window.refresh_worker_refresh_time = 0
-        self.wait.notify_one()
+        self.wait.notify()
 
     def run(self):
         with self.wait:
@@ -210,8 +210,8 @@ class TwitchRefreshLiveChannelsWorker(pyworker.PyWorker):
                     self.wait.wait(min=self.wait_time, sec=round(current-time.time()))
                 else: self.wait.wait(sec=(self.wait_time * 60) - wtime)
 
-    def complete(self):
-        print("VERBOSE", "Auto refresh worker completed")
+    def start(self): print("VERBOSE", "Auto refresh worker started")
+    def complete(self): print("VERBOSE", "Auto refresh worker completed")
 
     def error(self, error):
         self._window.schedule_task(task_id="twitch_channel_data", error=str(error))
@@ -366,7 +366,7 @@ alternate_player_key = "alternate_player_url"
 channel_live_command_key = "new_channel_live_command"
 watched_channel_key = "watched_channels"
 
-class TwichOverview(pywindow.PyWindow):
+class TwitchOverview(pywindow.PyWindow):
     follow_channel_text = "Followed live channels\n"
 
     def __init__(self, parent):
@@ -423,7 +423,7 @@ class TwichOverview(pywindow.PyWindow):
             print("VERBOSE", "Disabling auto refresh worker")
             if self._refresh_task is not None:
                 with self._refresh_task.wait: self._refresh_task.active = False
-                self._refresh_task.wait.notify_one()
+                self._refresh_task.wait.notify()
                 self._refresh_task = None
 
     def _delay_repeated_refresh(self):
@@ -436,7 +436,7 @@ class TwichOverview(pywindow.PyWindow):
             print("VERBOSE", "Updating refresh delay from", self._refresh_task.wait_time, "to", frame.delay)
             with self._refresh_task.wait: self._refresh_task.wait_time = frame.delay
             frame[AutoRefreshFrame.input_id].value = self._refresh_task.wait_time
-            self._refresh_task.wait.notify_one()
+            self._refresh_task.wait.notify()
 
     def _on_refresh_active(self):
         self._set_refresh_status(False)
@@ -478,7 +478,7 @@ class TwichOverview(pywindow.PyWindow):
 
     def sign_out(self):
         print("VERBOSE", "Signing out of account")
-        TwitchSignOutWorker("twitch_signout")
+        TwitchSignOutWorker(self.window, "twitch_signout").wait()
         self.destroy()
 
     def _fill_channel_data(self, data=None, error=None):
@@ -526,13 +526,13 @@ class TwichOverview(pywindow.PyWindow):
     def open_stream_twitch(self, channel):
         print("VERBOSE", "Opening stream for", channel)
         browser_path = module.configuration.get(browser_path_key)
-        if browser_path: subprocess.run(f'"{browser_path}" https://twitch.tv/{channel}', shell=True)
+        if browser_path: os.spawnv(os.P_NOWAIT, browser_path, (browser_path, f"https://twitch.tv/{channel.lower()}"))
 
     def open_stream_alt(self, channel):
         print("VERBOSE", "Opening stream to", channel, "with alternate player")
         browser_path = module.configuration.get(browser_path_key)
         alt_url = module.configuration.get(alternate_player_key)
-        if browser_path and alt_url: subprocess.run(f'"{browser_path}" {alt_url.format(channel=channel)}', shell=True)
+        if browser_path and alt_url: os.spawnv(os.P_NOWAIT, browser_path, (browser_path, alt_url.format(channel=channel.lower())))
 
 def initialize():
     module.configuration.get_or_create(browser_path_key, "")
@@ -542,7 +542,7 @@ def initialize():
 
 def create_window(client):
     if not read_metadata(): write_metadata(request_metadata())
-    if client.find_window(TwitchOverviewID) is None: client.add_window(window_class=TwichOverview)
+    if client.find_window(TwitchOverviewID) is None: client.add_window(window_class=TwitchOverview)
 
 def refresh_overview(client):
     window = client.find_window(TwitchOverviewID)
