@@ -1,4 +1,6 @@
 class _MediaController:
+    @property
+    def can_bind(self): return False
     def bind(self, media_player): pass
     def attach_button(self, event, cb): pass
 
@@ -11,7 +13,8 @@ try:
             self._wplayer = WM()
             self._win_controls = self._wplayer.system_media_transport_controls
             self._win_controls.is_next_enabled = self._win_controls.is_previous_enabled = True
-            self._win_controls.is_pause_enabled = self._win_controls.is_play_enabled = False
+            self._win_controls.is_pause_enabled = False
+            self._win_controls.is_play_enabled = True
             self._win_controls.is_enabled = self._win_controls.is_stop_enabled = True
             self._win_controls.add_button_pressed(self._on_button_press)
 
@@ -19,6 +22,8 @@ try:
             self._win_display.type = MediaPlaybackType.MUSIC
             self._events = {}
             self._update_data("PyPlayer")
+
+        def can_bind(self): return True
 
         def bind(self, media_player):
             media_player.attach_event("media_changed", self._on_update)
@@ -65,7 +70,7 @@ try:
             self._win_controls.playback_status = MediaPlaybackStatus.PAUSED
 
         def _on_stop(self, event, player):
-            self._win_controls.is_pause_enabled = self._win_controls.is_play_enabled = False
+            self._win_controls.is_pause_enabled = False
             self._win_controls.playback_status = MediaPlaybackStatus.STOPPED
 
     print("VERBOSE", "Initializing Windows Media controller")

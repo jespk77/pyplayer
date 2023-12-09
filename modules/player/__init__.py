@@ -211,6 +211,10 @@ def command_pause(arg, argc):
 	media_player.pause_player(arg[0] if argc > 0 else None)
 	return messagetypes.Empty()
 
+def command_play_pause(arg, argc):
+	if media_player.current_media is not None: return command_pause(arg, argc)
+	else: return command_next_song(arg, argc)
+
 def command_position(arg, argc):
 	if argc == 1:
 		try: ps = float(arg[0])
@@ -232,8 +236,8 @@ def command_prev_song(arg, argc):
 	if argc == 0:
 		item = song_history.get_previous(song_history.head)
 		if item is not None:
+			media_player.play_song(path=item[0], song=item[1])
 			set_autoplay_ignore(False)
-			media_player.play_song(item[0], item[1])
 		return messagetypes.Empty()
 
 def command_next_song(arg, argc):
@@ -346,6 +350,7 @@ module.commands = {
 		"mute": command_mute,
 		"next": command_next_song,
 		"pause": command_pause,
+		"play_pause": command_play_pause,
 		"position": command_position,
 		"previous": command_prev_song,
 		"random": command_random,
@@ -423,22 +428,24 @@ def initialize():
 	directory.default_value = {"#color": "", "$path": "", "priority": -1}
 	module.configuration.get_or_create(default_dir_path, "")
 
-	@module.client.events.EventKeyDown("MediaPause")
-	@module.client.events.EventKeyDown("MediaPlay")
-	@module.client.events.EventKeyDown("MediaTogglePlayPause")
-	def _media_play(): module.interpreter.put_command("player pause")
-	media_controller.attach_button("play", _media_play)
-	media_controller.attach_button("pause", _media_play)
-
-	@module.client.events.EventKeyDown("MediaNext")
-	def _media_next(): module.interpreter.put_command("player next")
-	media_controller.attach_button("next", _media_next)
-	@module.client.events.EventKeyDown("MediaPrevious")
-	def _media_previous(): module.interpreter.put_command("player previous")
-	media_controller.attach_button("previous", _media_previous)
-	@module.client.events.EventKeyDown("MediaStop")
-	def _media_stop(): module.interpreter.put_command("player stop")
-	media_controller.attach_button("stop", _media_stop)
+	# only add window media binds when the media controller isn't available, otherwise media key events will happen twice
+	if not media_controller.can_bind:
+		@module.client.events.EventKeyDown("MediaPause")
+		@module.client.events.EventKeyDown("MediaPlay")
+		@module.client.events.EventKeyDown("MediaTogglePlayPause")
+		def _media_play(): module.interpreter.put_command("player play_pause")
+		@module.client.events.EventKeyDown("MediaNext")
+		def _media_next(): module.interpreter.put_command("player next")
+		@module.client.events.EventKeyDown("MediaPrevious")
+		def _media_previous(): module.interpreter.put_command("player previous")
+		@module.client.events.EventKeyDown("MediaStop")
+		def _media_stop(): module.interpreter.put_command("player stop")
+	else:
+		media_controller.attach_button("play", lambda : module.interpreter.put_command("player play_pause"))
+		media_controller.attach_button("pause", lambda : module.interpreter.put_command("player play_pause"))
+		media_controller.attach_button("next", lambda : module.interpreter.put_command("player next"))
+		media_controller.attach_button("previous", lambda : module.interpreter.put_command("player previous"))
+		media_controller.attach_button("stop", lambda : module.interpreter.put_command("player stop"))
 
 	module.client.add_task(task_id="player_progress_update", func=_set_client_progress)
 	module.client.add_task(task_id="player_title_update", func=_set_client_title)
