@@ -315,6 +315,7 @@ class MediaPlayer:
 	def on_song_end(self, event, name, player, player_one):
 		if not self._updated:
 			self._paused = False
+			self._media_data = None
 			self.call_attached_handlers(name, event)
 
 	def on_event_default(self, event, name, player, player_one):
