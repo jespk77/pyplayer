@@ -88,6 +88,7 @@ class PyWindow:
             if len(geo) > 4:
                 if geo[4] == 2: self.maximized = True
                 elif geo[4] == 1: self.minimized = True
+        self.add_task("_schedule_task", func=self._schedule_external_wrapper)
         self.add_task("_add_window", func=self._add_window)
         self.add_task("_close_window", func=self._close_window)
 
