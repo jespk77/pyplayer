@@ -192,6 +192,32 @@ class PyWindow:
     def always_on_top(self, top): self.qt_window.setWindowFlag(QtCore.Qt.WindowStaysOnTopHint, top)
     topmost = always_on_top
 
+    @property
+    def x(self): return self.qt_window.x()
+    @x.setter
+    def x(self, x): self.set_geometry(x=x)
+    @property
+    def y(self): return self.qt_window.y()
+    @y.setter
+    def y(self, y): self.set_geometry(y=y)
+    @property
+    def location(self): return self.x, self.y
+    @location.setter
+    def location(self, location): self.set_geometry(x=location[0], y=location[1])
+
+    @property
+    def width(self): return self.qt_window.width()
+    @width.setter
+    def width(self, width): self.set_geometry(width=width)
+    @property
+    def height(self): return self.qt_window.height()
+    @height.setter
+    def height(self, height): self.set_geometry(height=height)
+    @property
+    def size(self): return self.width, self.height
+    @size.setter
+    def size(self, size): self.set_geometry(width=size[0], height=size[1])
+
     def activate(self):
         """ Sets this window to be visible and have keyboard focus """
         self.qt_window.activateWindow()
