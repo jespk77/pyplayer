@@ -1,3 +1,5 @@
+from typing import Iterable
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from . import pywindow, pyevents, pyimage, pylayout, pydialog
@@ -961,7 +963,7 @@ class PyTable(PyElement):
         self._horizontal_header, self._vertical_header = False, False
         self.qt_element.cellChanged.connect(self._on_cell_changed)
         self.qt_element.setCornerButtonEnabled(True)
-        self._read_only = False
+        self._read_only = self._dirty = False
 
     @property
     def qt_element(self): return self._qt
@@ -969,6 +971,7 @@ class PyTable(PyElement):
     def _update_header_visibility(self):
         self.qt_element.horizontalHeader().setVisible(self.columns > 1 or self._horizontal_header)
         self.qt_element.verticalHeader().setVisible(self.rows > 1 or self._vertical_header)
+
     def _table_update(self):
         if self._dynamic_column and self.columns > 0:
             col = self.columns - 1
@@ -1013,6 +1016,9 @@ class PyTable(PyElement):
     def accept_input(self): return self.qt_element.isEnabled()
     @accept_input.setter
     def accept_input(self, inpt): self.qt_element.setEnabled(inpt)
+    def with_accept_input(self, value):
+        self.accept_input = value
+        return self
 
     @property
     def read_only(self): return self._read_only
@@ -1021,16 +1027,21 @@ class PyTable(PyElement):
         self._read_only = read_only
         for row in range(self.rows):
             for column in range(self.columns):
-                item = self._qt.item(row, column)
+                item = self.qt_element.item(row, column)
                 if item is not None:
                     edit_flag = QtCore.Qt.ItemIsEditable
                     item.setFlags(item.flags() | edit_flag if read_only else item.flags() & ~edit_flag)
-                    self._qt.setItem(row, column, item)
+                    self.qt_element.setItem(row, column, item)
+    def with_read_only(self, value):
+        self.read_only = value
+        return self
 
     @property
     def columns(self):
         """ The number of columns in this table """
-        return self.qt_element.columnCount()
+        columns = self.qt_element.columnCount()
+        # dynamic_columns always adds an empty one at the end so remove that from the count
+        return columns - 1 if self._dynamic_column and not self._dirty else columns
     @columns.setter
     def columns(self, count):
         """ Set a fixed number of columns for this table (disables dynamic column count) """
@@ -1040,15 +1051,21 @@ class PyTable(PyElement):
         self._update_header_visibility()
 
     @property
-    def column_width(self): return self.qt_element.horizontalHeader().sectionSize(0)
+    def column_width(self):
+        """ Get width for each column, set value to 0 to dynamically adjust to contents, or value to -1 to leave current """
+        return [self.qt_element.horizontalHeader().sectionSize(i) for i in range(self.columns)]
     @column_width.setter
     def column_width(self, width):
-        width = int(width)
-        if width <= 0: raise ValueError("column width must be greater than 0")
+        if not isinstance(width, Iterable):
+            width = [int(width) for _ in range(self.columns)]
 
         header = self.qt_element.horizontalHeader()
-        for i in range(self.columns): header.resizeSection(i, width)
-        header.setDefaultSectionSize(width)
+        for i, size in enumerate(width):
+            if size > 0: header.resizeSection(i, size)
+            elif size == 0: header.sectionSizeFromContents(i)
+    def with_column_width(self, value):
+        self.column_width = value
+        return self
 
     @property
     def column_header(self):
@@ -1060,9 +1077,14 @@ class PyTable(PyElement):
         self._update_header_visibility()
 
     @property
-    def column_labels(self): return
+    def column_labels(self): raise AttributeError("reading property 'column_labels' of 'PyTable' object not supported")
     @column_labels.setter
-    def column_labels(self, labels): self._qt.setHorizontalHeaderLabels(labels)
+    def column_labels(self, labels):
+        if self.columns < len(labels): self.qt_element.setColumnCount(len(labels))
+        self.qt_element.setHorizontalHeaderLabels(labels)
+    def with_column_labels(self, value):
+        self.column_labels = value
+        return self
 
     @property
     def dynamic_columns(self):
@@ -1094,7 +1116,9 @@ class PyTable(PyElement):
     @property
     def rows(self):
         """ The number of rows in this table """
-        return self.qt_element.rowCount()
+        rows = self.qt_element.rowCount()
+        # dynamic_rows always adds an empty one at the end so remove that from the count
+        return rows - 1 if self._dynamic_row and not self._dirty else rows
     @rows.setter
     def rows(self, count):
         """ Set a fixed number of rows for this table (disables dynamic row count) """
@@ -1114,7 +1138,12 @@ class PyTable(PyElement):
     @property
     def row_labels(self): raise AttributeError("reading property 'row_labels' of 'PyTable' object not supported")
     @row_labels.setter
-    def row_labels(self, labels): self._qt.setVerticalHeaderLabels(labels)
+    def row_labels(self, labels):
+        if self.rows < len(labels): self.qt_element.setRowCount(len(labels))
+        self.qt_element.setVerticalHeaderLabels(labels)
+    def with_row_labels(self, value):
+        self.row_labels = value
+        return self
 
     @property
     def row_height(self): return self.qt_element.verticalHeader().sectionSize(0)
@@ -1160,16 +1189,24 @@ class PyTable(PyElement):
             If 'row' is True, all rows are resized based on their contents
             If 'column' is True, all columns are resized based on their contents
         """
-        if row: self._qt.resizeRowsToContents()
-        if column: self._qt.resizeColumnsToContents()
+        if row: self.qt_element.resizeRowsToContents()
+        if column: self.qt_element.resizeColumnsToContents()
 
-    def resize_row(self, row):
-        """ Resizes a specific row to fit its content """
-        self._qt.resizeRowToContents(row)
+    def resize_row(self, row, size=0):
+        """
+            Resizes a specific row to specified size
+            If 'size' is <= 0, the row is sized based on their contents
+        """
+        if size > 0: self.qt_element.setRowHeight(row, size)
+        else: self.qt_element.resizeRowToContents(row)
 
-    def resize_column(self, column):
-        """ Resizes a specific column to fit its content """
-        self._qt.resizeColumnToContents(column)
+    def resize_column(self, column, size=0):
+        """
+            Resizes a specific column to specified size
+            If 'size' is <= 0, the column is sized based on their contents
+        """
+        if size > 0: self.qt_element.setColumnWidth(column, size)
+        else: self.qt_element.resizeColumnToContents(column)
 
     def get(self, row=None, column=None):
         """
@@ -1180,22 +1217,23 @@ class PyTable(PyElement):
             Supports negative indices (with the same behavior as builtin types)
             Returns None when a value out of range specified
         """
+        def _get_value_for_position(_row, _column):
+            item = self.qt_element.item(_row, _column)
+            return item.text() if item else ""
+
         if row is not None:
             if row < 0: row += self.rows
 
             if column is not None:
                 if column < 0: column += self.columns
-                item = self.qt_element.item(row, column)
-                return item.text() if item is not None else ""
-            items = [self.qt_element.item(row, i) for i in range(self.columns)] if 0 <= row < self.rows else None
-            return [i.text() if i is not None else "" for i in items] if items is not None else None
+                return _get_value_for_position(row, column) if 0 <= row < self.rows and 0 <= column < self.columns else None
+            return [_get_value_for_position(row, i) for i in range(self.columns)] if 0 <= row < self.rows else None
 
         if column is not None:
             if column < 0: column += self.columns
-            items = [self.qt_element.item(i, column) for i in range(self.rows)] if 0 <= column < self.columns else None
-            return [i.text() if i is not None else "" for i in items] if items is not None else None
+            return [_get_value_for_position(i, column) for i in range(self.rows)] if 0 <= column < self.columns else None
 
-        return ValueError("Must specify at least one of 'row' or 'column'")
+        return [[_get_value_for_position(row, column) for column in range(self.columns)] for row in range(self.rows)]
 
     def set(self, row, column, value):
         """
@@ -1215,7 +1253,9 @@ class PyTable(PyElement):
         else: raise IndexError(f"table index out of range ({row},{column})")
 
     def _on_cell_changed(self, row, column):
+        self._dirty = True
         self._table_update()
+        if row > self.rows or column > self.columns: return
         self.event_handler.call_event("interact", row=row, column=column, new_value=self.get(row, column))
 
 
