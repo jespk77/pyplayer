@@ -213,18 +213,16 @@ class PyFrame(PyElement):
     @property
     def layout(self): return self._layout
 
-    def add_element(self, element_id=None, element=None, element_class=None, **layout_kwargs):
+    def add_element(self, element_id="", element=None, element_class=None, **layout_kwargs):
         if element is None:
-            if not element_id: raise ValueError("Must specify an element id")
-            elif not element_class: raise ValueError("Must specify an element class or element instance")
-            else: element = element_class(self, element_id)
+            if not element_class: raise ValueError("Must specify an element class or element instance")
+            element = element_class(self, element_id)
         else: element_id = element.element_id
 
-        self.remove_element(element_id)
+        if element_id: self.remove_element(element_id)
         self._layout.insert_element(element, **layout_kwargs)
-        self._children[element_id] = element
-        return self._children[element_id]
-    __setitem__ = add_element
+        if element_id: self._children[element_id] = element
+        return element
 
     def get_element(self, element_id) -> PyElement:
         return self._children[element_id]
