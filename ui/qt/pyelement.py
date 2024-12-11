@@ -68,16 +68,25 @@ class PyElement:
     def hidden(self): return self.qt_element.isHidden()
     @hidden.setter
     def hidden(self, hide): self.qt_element.setHidden(bool(hide))
+    def with_hidden(self, value):
+        self.hidden = value
+        return self
 
     @property
     def tooltip(self): return self.qt_element.toolTip()
     @tooltip.setter
     def tooltip(self, tip): self.qt_element.setToolTip(str(tip))
+    def with_tooltip(self, value):
+        self.tooltip = value
+        return self
 
     @property
     def tooltip_duration(self): return self.qt_element.toolTipDuration()
     @tooltip_duration.setter
     def tooltip_duration(self, duration): self.qt_element.setToolTipDuration(duration)
+    def with_tooltip_duration(self, value):
+        self.tooltip_duration = value
+        return self
 
     @property
     def width(self): return self.qt_element.width()
@@ -112,6 +121,10 @@ class PyElement:
     def min_height(self): return self.qt_element.minimumHeight()
     @min_height.setter
     def min_height(self, height): self.qt_element.setMinimumHeight(int(height))
+    def with_min_height(self, value):
+        self.min_height = value
+        return self
+
     @property
     def max_height(self): return self.qt_element.maximumHeight()
     @max_height.setter
@@ -119,11 +132,18 @@ class PyElement:
         height = int(height)
         if height <= 0: height = QtWidgets.QWIDGETSIZE_MAX
         self.qt_element.setMaximumHeight(height)
+    def with_max_height(self, value):
+        self.max_height = value
+        return self
 
     @property
     def min_width(self): return self.qt_element.minimumWidth()
     @min_width.setter
     def min_width(self, width): self.qt_element.setMinimumWidth(int(width))
+    def with_min_width(self, value):
+        self.min_width = value
+        return self
+
     @property
     def max_width(self): return self.qt_element.maximumWidth()
     @max_width.setter
@@ -131,6 +151,8 @@ class PyElement:
         width = int(width)
         if width <= 0: width = QtWidgets.QWIDGETSIZE_MAX
         self.qt_element.setMaximumWidth(width)
+    def with_max_width(self, value):
+        self.max_width = value
 
     def get_key(self, key):
         """ Returns keycode associated with given description, returns None if the description was not found """
@@ -276,6 +298,9 @@ class PyScrollableFrame(PyFrame):
     @show_scrollbar.setter
     def show_scrollbar(self, show):
         self.qt_container.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn if show else QtCore.Qt.ScrollBarAsNeeded)
+    def with_show_scrollbar(self, value):
+        self.show_scrollbar = value
+        return self
 
 
 class PyLabelFrame(PyFrame):
@@ -295,12 +320,18 @@ class PyLabelFrame(PyFrame):
     def label(self): return self.qt_element.title()
     @label.setter
     def label(self, txt): self.qt_element.setTitle(str(txt))
+    def with_label(self, value):
+        self.label = value
+        return self
 
     @property
     def checkbox(self): return self.qt_element.isCheckable()
     @checkbox.setter
     def checkbox(self, check):
         self.qt_element.setCheckable(bool(check))
+    def with_checkbox(self, value):
+        self.checkbox = value
+        return self
 
     @property
     def checked(self): return self.checkbox and self.qt_element.isChecked()
@@ -308,6 +339,9 @@ class PyLabelFrame(PyFrame):
     def checked(self, check):
         if self.checkbox: self.qt_element.setChecked(bool(check))
     value = accept_input = checked
+    def with_checked(self, value):
+        self.checked = value
+        return self
 
     _alignments = {"left": QtCore.Qt.AlignLeft, "center": QtCore.Qt.AlignHCenter, "right": QtCore.Qt.AlignRight}
     def set_label_alignment(self, alignment):
@@ -460,6 +494,9 @@ class PyFrameList(PyElement):
         return self.qt_element.currentIndex()
     @current_index.setter
     def current_index(self, index): self.qt_element.setCurrentIndex(int(index))
+    def with_current_index(self, value):
+        self.current_index = value
+        return self
 
     @property
     def current_frame(self):
@@ -518,6 +555,9 @@ class PyTextLabel(PyElement):
     def wrapping(self): return self.qt_element.wordWrap()
     @wrapping.setter
     def wrapping(self, wrap): self.qt_element.setWordWrap(bool(wrap))
+    def with_wrapping(self, value):
+        self.wrapping = value
+        return self
 
     _alignments = {"left": QtCore.Qt.AlignLeft, "centerH": QtCore.Qt.AlignHCenter, "right": QtCore.Qt.AlignRight,
                    "center": QtCore.Qt.AlignCenter, "centerV": QtCore.Qt.AlignVCenter, "justify": QtCore.Qt.AlignJustify}
@@ -636,8 +676,8 @@ class PyNumberInput(PyElement):
         return self.qt_element.value()
     @value.setter
     def value(self, val): self.qt_element.setValue(val)
-    def with_value(self, val):
-        self.value = val
+    def with_value(self, value):
+        self.value = value
         return self
 
     @property
@@ -647,6 +687,9 @@ class PyNumberInput(PyElement):
     minimum = min
     @min.setter
     def min(self, value): self.qt_element.setMinimum(int(value) if not self._double else float(value))
+    def with_min(self, value):
+        self.min = value
+        return self
 
     @property
     def max(self):
@@ -655,8 +698,13 @@ class PyNumberInput(PyElement):
     maximum = max
     @max.setter
     def max(self, value): self.qt_element.setMaximum(int(value) if not self._double else float(value))
+    def with_max(self, value):
+        self.max = value
+        return self
 
-    def range(self, min_value, max_value): self.qt_element.setRange(min_value, max_value)
+    def with_range(self, min_value, max_value):
+        self.qt_element.setRange(min_value, max_value)
+        return self
 
     @property
     def step(self):
@@ -664,6 +712,9 @@ class PyNumberInput(PyElement):
         return self.qt_element.singleStep()
     @step.setter
     def step(self, amount): self.qt_element.setSingleStep(int(amount) if not self._double else float(amount))
+    def with_step(self, value):
+        self.step = value
+        return self
 
     @property
     def value_base(self):
@@ -671,6 +722,9 @@ class PyNumberInput(PyElement):
         return self.qt_element.displayIntegerBase()
     @value_base.setter
     def value_base(self, base): self.qt_element.setDisplayIntegerBase(int(base))
+    def with_value_base(self, value):
+        self.value_base = value
+        return self
 
     @property
     def prefix(self):
@@ -678,6 +732,9 @@ class PyNumberInput(PyElement):
         return self.qt_element.prefix()
     @prefix.setter
     def prefix(self, txt): self.qt_element.setPrefix(txt)
+    def with_prefix(self, value):
+        self.prefix = value
+        return self
 
     @property
     def suffix(self):
@@ -685,6 +742,9 @@ class PyNumberInput(PyElement):
         return self.qt_element.suffix()
     @suffix.setter
     def suffix(self, txt): self.qt_element.setSuffix(txt)
+    def with_suffix(self, value):
+        self.suffix = value
+        return self
 
 
 class PyCheckbox(PyElement):
@@ -713,12 +773,18 @@ class PyCheckbox(PyElement):
     def checked(self): return self.qt_element.isChecked()
     @checked.setter
     def checked(self, checked): self.qt_element.setChecked(bool(checked))
+    def with_checked(self, value):
+        self.checked = value
+        return self
     value = checked
 
     @property
     def accept_input(self): return self.qt_element.isEnabled()
     @accept_input.setter
     def accept_input(self, check): self.qt_element.setEnabled(bool(check))
+    def with_accept_input(self, value):
+        self.accept_input = value
+        return self
 
 
 class PyButton(PyElement):
@@ -747,11 +813,17 @@ class PyButton(PyElement):
     def checkable(self): return self.qt_element.isCheckable()
     @checkable.setter
     def checkable(self, checkable): self.qt_element.setCheckable(bool(checkable))
+    def with_checkable(self, value):
+        self.checkable = value
+        return self
 
     @property
     def checked(self): return self.qt_element.isChecked()
     @checked.setter
     def checked(self, checked): self.qt_element.setChecked(checked)
+    def with_checked(self, value):
+        self.checked = value
+        return self
 
     @property
     def display_text(self): return self.qt_element.text()
@@ -807,6 +879,9 @@ class PyTextField(PyElement):
     def undo(self): return self.qt_element.isUndoRedoEnabled()
     @undo.setter
     def undo(self, do): self.qt_element.setUndoRedoEnabled(bool(do))
+    def with_undo(self, value):
+        self.undo = value
+        return self
 
     @property
     def display_text(self): return self.qt_element.toPlainText()
@@ -828,11 +903,17 @@ class PyTextField(PyElement):
         cursor = self.qt_element.textCursor()
         cursor.setPosition(value)
         self.qt_element.setTextCursor(cursor)
+    def with_cursor(self, value):
+        self.cursor = value
+        return self
 
     @property
     def style_sheet(self): return self.qt_element.document().defaultStyleSheet()
     @style_sheet.setter
     def style_sheet(self, value): self.qt_element.document().setDefaultStyleSheet(str(value))
+    def with_style_sheet(self, value):
+        self.style_sheet = value
+        return self
 
     @property
     def font_size(self): return self.qt_element.font().pointSize()
@@ -841,11 +922,17 @@ class PyTextField(PyElement):
         font = self.qt_element.font()
         font.setPointSize(size)
         self.qt_element.setFont(font)
+    def with_font_size(self, value):
+        self.font_size = value
+        return self
 
     @property
     def tabChangesFocus(self): return self.qt_element.tabChangesFocus()
     @tabChangesFocus.setter
     def tabChangesFocus(self, val): self.qt_element.setTabChangesFocus(bool(val))
+    def with_tab_changes_focus(self, value):
+        self.tabChangesFocus = value
+        return self
 
     @staticmethod
     def _insert(cursor, text, tags, html):
@@ -1011,6 +1098,7 @@ class PyTable(PyElement):
                         break
                 if empty: self.remove_row()
         self._update_header_visibility()
+        self._dirty = False
 
     @property
     def accept_input(self): return self.qt_element.isEnabled()
@@ -1049,6 +1137,9 @@ class PyTable(PyElement):
         self.dynamic_columns = False
         self.qt_element.setColumnCount(count)
         self._update_header_visibility()
+    def with_columns(self, value):
+        self.columns = value
+        return self
 
     @property
     def column_width(self):
@@ -1075,6 +1166,9 @@ class PyTable(PyElement):
     def column_header(self, visible):
         self._horizontal_header = bool(visible)
         self._update_header_visibility()
+    def with_column_header(self, value):
+        self.column_header = value
+        return self
 
     @property
     def column_labels(self): raise AttributeError("reading property 'column_labels' of 'PyTable' object not supported")
@@ -1094,6 +1188,9 @@ class PyTable(PyElement):
     def dynamic_columns(self, dynamic):
         self._dynamic_column = bool(dynamic)
         self._table_update()
+    def with_dynamic_columns(self, value):
+        self.dynamic_columns = value
+        return self
 
     def insert_column(self, index=None):
         """
@@ -1125,6 +1222,9 @@ class PyTable(PyElement):
         self.dynamic_rows = False
         self.qt_element.setRowCount(count)
         self._update_header_visibility()
+    def with_rows(self, value):
+        self.rows = value
+        return self
 
     @property
     def row_header(self):
@@ -1134,6 +1234,9 @@ class PyTable(PyElement):
     def row_header(self, visible):
         self._vertical_header = bool(visible)
         self._update_header_visibility()
+    def with_row_header(self, value):
+        self.row_header = value
+        return self
 
     @property
     def row_labels(self): raise AttributeError("reading property 'row_labels' of 'PyTable' object not supported")
@@ -1155,6 +1258,9 @@ class PyTable(PyElement):
         header = self.qt_element.verticalHeader()
         for i in range(self.rows): header.resizeSection(i, height)
         header.setDefaultSectionSize(height)
+    def with_row_height(self, value):
+        self.row_height = value
+        return self
 
     @property
     def dynamic_rows(self):
@@ -1164,6 +1270,9 @@ class PyTable(PyElement):
     def dynamic_rows(self, dynamic):
         self._dynamic_row = bool(dynamic)
         self._table_update()
+    def with_dynamic_rows(self, value):
+        self.dynamic_rows = value
+        return self
 
     def insert_row(self, index=None):
         """
@@ -1280,12 +1389,18 @@ class PyProgessbar(PyElement):
     def progress(self): return self.qt_element.value()
     @progress.setter
     def progress(self, value): self.qt_element.setValue(int(value))
+    def with_progress(self, value):
+        self.progress = value
+        return self
     value = progress
 
     @property
     def horizontal(self): return self.qt_element.orientation() == QtCore.Qt.Horizontal
     @horizontal.setter
     def horizontal(self, value): self.qt_element.setOrientation(QtCore.Qt.Horizontal if value else QtCore.Qt.Vertical)
+    def with_horizontal(self, value):
+        self.horizontal = value
+        return self
 
     @property
     def minimum(self): return self.qt_element.minimum()
@@ -1311,6 +1426,9 @@ class PyProgessbar(PyElement):
         pal.setColor(QtGui.QPalette.Active, QtGui.QPalette.Highlight, col)
         pal.setColor(QtGui.QPalette.Inactive, QtGui.QPalette.Highlight, col)
         self.qt_element.setPalette(pal)
+    def with_color(self, value):
+        self.color = value
+        return self
 
     def _on_mouse_press(self, event):
         x, y = event.x(), event.y()
@@ -1349,6 +1467,9 @@ class PyItemlist(PyElement):
     def itemlist(self, items):
         self._items.setStringList(items)
         self.qt_element.setModel(self._items)
+    def with_itemlist(self, value):
+        self.itemlist = value
+        return self
     value = itemlist
 
     _selection_modes = {
@@ -1365,6 +1486,9 @@ class PyItemlist(PyElement):
         mode = mode.lower()
         if mode not in self._selection_modes: raise ValueError(f"Unknown selection mode '{mode}', must be one of [{','.join(self._selection_modes.keys())}]")
         self.qt_element.setSelectionMode(self._selection_modes[mode])
+    def with_selection_mode(self, value):
+        self.selection_mode = value
+        return self
 
     _edit_modes = {
         "none": QtWidgets.QListView.NoEditTriggers,
@@ -1384,6 +1508,9 @@ class PyItemlist(PyElement):
         mode = mode.lower()
         if mode not in self._edit_modes: raise ValueError(f"Unknown edit mode '{mode}', must be one of [{','.join(self._edit_modes.keys())}]")
         self.qt_element.setEditTriggers(self._edit_modes[mode])
+    def with_edit_mode(self, value):
+        self.edit_mode = value
+        return self
 
     @property
     def selected_index(self):
@@ -1395,6 +1522,9 @@ class PyItemlist(PyElement):
         """ Set the current selection to given index, clears the selection if the given index is less than 0 """
         self.clear_selection()
         if index >= 0: self.qt_element.setSelection(self.qt_element.visualRect(self._items.index(index)), QtCore.QItemSelectionModel.Select)
+    def with_selected_index(self, value):
+        self.selected_index = value
+        return self
 
     def clear_selection(self):
         """ Removes any selected item """
@@ -1425,6 +1555,9 @@ class PyItemlist(PyElement):
         items = self.itemlist
         try: self.selected_index = items.index(item)
         except ValueError: self.selected_index = -1
+    def with_selected_item(self, value):
+        self.selected_item = value
+        return self
 
     @property
     def clicked_index(self):
@@ -1432,6 +1565,9 @@ class PyItemlist(PyElement):
         return self.qt_element.currentIndex().row()
     @clicked_index.setter
     def clicked_index(self, index): self.qt_element.setCurrentIndex(index)
+    def with_clicked_index(self, value):
+        self.clicked_index = value
+        return self
 
     def move_to(self, index):
         """ Make sure given index is visible """
@@ -1456,11 +1592,17 @@ class PySeparator(PyElement):
     def horizontal(self): return self.qt_element.frameShape() == QtWidgets.QFrame.HLine
     @horizontal.setter
     def horizontal(self, horizontal): self.qt_element.setFrameShape(QtWidgets.QFrame.HLine if horizontal else QtWidgets.QFrame.VLine)
+    def with_horizontal(self, value):
+        self.horizontal = value
+        return self
 
     @property
     def vertical(self): return not self.horizontal
     @vertical.setter
     def vertical(self, vertical): self.horizontal = not vertical
+    def with_vertical(self, value):
+        self.vertical = value
+        return self
 
     @property
     def thickness(self): return self.max_height if self.horizontal else self.max_width
@@ -1468,11 +1610,17 @@ class PySeparator(PyElement):
     def thickness(self, thickness):
         if self.horizontal: self.max_height = thickness
         else: self.max_width = thickness
+    def with_thickness(self, value):
+        self.thickness = value
+        return self
 
     @property
     def color(self): return self.qt_element.palette().color(QtGui.QPalette.Active, QtGui.QPalette.Highlight).name()
     @color.setter
     def color(self, color): self.qt_element.setStyleSheet(f"QFrame{{ border: {self.thickness}px inset {color} }} """)
+    def with_color(self, value):
+        self.color = value
+        return self
 
 
 class PyColorInput(PyFrame):
@@ -1505,6 +1653,9 @@ class PyColorInput(PyFrame):
     def accept_input(self, inpt):
         self["txt"].accept_input = inpt
         self["select"].hidden = not inpt
+    def with_accept_input(self, value):
+        self.accept_input = value
+        return self
 
     @property
     def dialog(self): return self._color
@@ -1515,6 +1666,9 @@ class PyColorInput(PyFrame):
     def color(self, color):
         self["txt"].text = color
         self.dialog.color = color
+    def with_color(self, value):
+        self.color = value
+        return self
     value = color
 
     def _on_select_color(self, value):
@@ -1552,6 +1706,9 @@ class PyPathInput(PyFrame):
     def accept_input(self, inpt):
         self["txt"].accept_input = inpt
         self["select"].hidden = not inpt
+    def with_accept_input(self, value):
+        self.accept_input = value
+        return self
 
     @property
     def dialog(self): return self._path
@@ -1562,6 +1719,9 @@ class PyPathInput(PyFrame):
     def path(self, path):
         self["txt"].text = path
         self.dialog.value = path
+    def with_path(self, value):
+        self.path = value
+        return self
     value = path
 
     def _on_path_select(self, value):
@@ -1587,11 +1747,17 @@ try:
         def html_page(self): return ""
         @html_page.setter
         def html_page(self, html): self.qt_element.setHtml(html)
+        def with_html_page(self, value):
+            self.html_page = value
+            return self
 
         @property
         def style_sheet(self): return ""
         @style_sheet.setter
         def style_sheet(self, css): self.qt_element.page().runJavaScript(self.insert_css_script.format(css=css))
+        def with_style_sheep(self, value):
+            self.style_sheet = value
+            return self
 
         def append(self, html):
             self.qt_element.page().runJavaScript(self.insert_html_script.format(html=html.replace("\n", "<br/>")))
