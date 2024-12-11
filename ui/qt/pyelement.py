@@ -224,14 +224,18 @@ class PyFrame(PyElement):
         if element_id: self._children[element_id] = element
         return element
 
-    def get_element(self, element_id) -> PyElement:
+    def __setitem__(self, key, value):
+        if not key: raise ValueError("element_id cannot be empty")
+        self.add_element(element_id=key, element=value)
+
+    def get_element(self, element_id : str):
         return self._children[element_id]
     __getitem__ = get_element
 
-    def find_element(self, element_id) -> PyElement:
+    def find_element(self, element_id : str):
         return self._children.get(element_id)
 
-    def remove_element(self, element_id) -> bool:
+    def remove_element(self, element_id):
         element_id = element_id.lower()
         element = self.find_element(element_id)
         if element:
@@ -1108,7 +1112,7 @@ class PyTable(PyElement):
         self._update_header_visibility()
 
     @property
-    def row_labels(self): return
+    def row_labels(self): raise AttributeError("reading property 'row_labels' of 'PyTable' object not supported")
     @row_labels.setter
     def row_labels(self, labels): self._qt.setVerticalHeaderLabels(labels)
 
