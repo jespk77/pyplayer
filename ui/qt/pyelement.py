@@ -542,14 +542,14 @@ class PyTextLabel(PyElement):
 class PyTextInput(PyElement):
     """
         Element for entering a single line of data
-        Interaction event fires when the enter key is pressed or if this element loses focus, no keywords
+        Interaction event fires when the enter key is pressed or if this element loses focus, keyword 'value' with the updated value
         If 'return_only' is set to true, interaction event only fires if the enter key is pressed
     """
     def __init__(self, parent, element_id, return_only=False):
         self._qt = QtWidgets.QLineEdit(parent.qt_element)
         self._event_handler = pyevents.PyElementInputEvent(parent, self)
         PyElement.__init__(self, parent, element_id)
-        (self.qt_element.returnPressed if return_only else self.qt_element.editingFinished).connect(lambda : self.events.call_event("interact"))
+        (self.qt_element.returnPressed if return_only else self.qt_element.editingFinished).connect(lambda : self.events.call_event("interact", value=self.value))
 
     @property
     def qt_element(self): return self._qt
@@ -603,7 +603,7 @@ class PyNumberInput(PyElement):
     """
      Variant of PyTextInput that only accepts numbers
      Precision can be adjusted during creation
-     Interaction event fires when the enter key is pressed or if this element loses focus, no keywords
+     Interaction event fires when the enter key is pressed or if this element loses focus, keyword 'value' with the updated value
      If 'return_only' is set to true, interaction event only fires if the enter key is pressed
      If 'all_updates' is set to true, interaction event updates every time the value changes
     """
@@ -614,7 +614,7 @@ class PyNumberInput(PyElement):
         if return_only: event = self.qt_element.returnPressed
         elif all_updates: event = self.qt_element.valueChanged
         else: event = self.qt_element.editingFinished
-        event.connect(lambda : self.events.call_event("interact"))
+        event.connect(lambda : self.events.call_event("interact", value=self.value))
         self.min, self.max = -2147483647, 2147483647
 
     @property
@@ -688,12 +688,12 @@ class PyNumberInput(PyElement):
 class PyCheckbox(PyElement):
     """
         Adds a simple checkable box
-        Interaction event fires when the element is toggled, no keywords
+        Interaction event fires when the element is toggled, keyword 'checked' with the updated status
     """
     def __init__(self, parent, element_id):
         self._qt = QtWidgets.QCheckBox(parent.qt_element)
         PyElement.__init__(self, parent, element_id)
-        self.qt_element.clicked.connect(lambda :self.events.call_event("interact"))
+        self.qt_element.clicked.connect(lambda :self.events.call_event("interact", checked=self.checked))
 
     @property
     def qt_element(self): return self._qt
