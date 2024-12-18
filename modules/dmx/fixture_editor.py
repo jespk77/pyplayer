@@ -1,21 +1,29 @@
 from ui.qt import pywindow, pyelement
+
+from core import modules
+module = modules.Module(__package__)
+
 from .dmx import DMXValueTable
 from .fixture_data import FixtureData
 
 class DMXFixtureEditorWindow(pywindow.PyWindow):
     main_window_id = "fixture_editor"
 
-    def __init__(self, parent, name):
-        self._fixture = FixtureData(name)
+    def __init__(self, parent, fixture : FixtureData=None):
+        if fixture is None: fixture = FixtureData("")
+        elif not isinstance(fixture, FixtureData): raise TypeError("'fixture' parameter for DMXFixtureEditorWindow must be a FixtureData type")
+        self._fixture = fixture
         pywindow.PyWindow.__init__(self, parent, self.main_window_id)
-        self.title = f"Fixture editor: {name}" if name else "Add new fixture"
+        self.title = f"Fixture editor: {fixture.name}" if fixture.name else "Add new fixture"
         self.set_geometry(x=parent.x, y=parent.y, width=600)
+        self._dirty = False
 
     def create_widgets(self):
-        container = self.add_element("container", element_class=pyelement.PyScrollableFrame, columnspan=2)
+        container : pyelement.PyScrollableFrame = self.add_element("container", element_class=pyelement.PyScrollableFrame)
+        container.show_scrollbar = False
         container.add_element(element_class=pyelement.PyTextLabel, row=0).with_text("Name:")
         fixture_name : pyelement.PyTextInput = container.add_element("fixture_name", element_class=pyelement.PyTextInput, row=0, column=1)
-        fixture_name.value = self._fixture.display_name
+        fixture_name.value = self._fixture.name
         @fixture_name.events.EventInteract
         def _set_fixture_name(value):
             self._fixture.display_name = value
@@ -48,7 +56,7 @@ class DMXFixtureEditorWindow(pywindow.PyWindow):
                 self._fixture.tilt.channel = self._fixture.tilt.extended_channel =\
                 movement_frame["tilt_channel"].value = movement_frame["tilt2_channel"].value = 0
 
-        movement_frame.label, movement_frame.checkbox, movement_frame.checked = "Movement", True, False
+        movement_frame.label, movement_frame.checkbox, movement_frame.checked = "Movement", True, self._fixture.has_pan or self._fixture.has_tilt
         movement_frame.add_element(element_class=pyelement.PyTextLabel).with_text("Pan channel:")
         pan : pyelement.PyNumberInput = movement_frame.add_element("pan_channel", element_class=pyelement.PyNumberInput, column=1).with_range(0, channels.value)
         pan.value = self._fixture.pan.channel if self._fixture.has_pan else 0
@@ -90,9 +98,10 @@ class DMXFixtureEditorWindow(pywindow.PyWindow):
         if self._fixture.has_color:
             row = 0
             colors = self._fixture.color.items
-            color_data.rows = len(colors) + 1
             for data in colors:
-                for i, item in enumerate(data): color_data.set(row, i, item)
+                for i, item in enumerate(data):
+                    if row >= color_data.rows: color_data.insert_row(row)
+                    color_data.set(row, i, item)
                 row += 1
         @color_data.events.EventFocusLost
         def _set_color_data():
@@ -114,9 +123,10 @@ class DMXFixtureEditorWindow(pywindow.PyWindow):
         if self._fixture.has_gobo:
             row = 0
             gobos = self._fixture.gobo.items
-            gobo_data.rows = len(gobos) + 1
             for data in gobos:
-                for i, item in enumerate(data): gobo_data.set(row, i, item)
+                for i, item in enumerate(data):
+                    if row >= gobo_data.rows: gobo_data.insert_row(row)
+                    gobo_data.set(row, i, item)
                 row += 1
         @gobo_data.events.EventFocusLost
         def _set_gobo_data():
@@ -142,12 +152,22 @@ class DMXFixtureEditorWindow(pywindow.PyWindow):
         @intensity.events.EventInteract
         def _set_intensity_channel(value):
             self._fixture.intensity.channel = value
-        self.events.EventWindowClose(self._window_closed)
 
-    def _window_closed(self):
-        text = self["container"]["fixture_name"].text
-        if not text: return
+        error_text = self.add_element("error_text", element_class=pyelement.PyTextLabel, row=1)
+        save_btn = self.add_element("save_btn", element_class=pyelement.PyButton, row=2).with_text("Save")
+        @save_btn.events.EventInteract
+        def _save_fixture():
+            if fixture_name.value:
+                self._fixture._name = fixture_name.value
+                try:
+                    module.save_fixture_type(self._fixture)
+                    self._dirty = True
+                    self.destroy()
+                except Exception as e: error_text.text = f"Save failed: {e}"
+            else: error_text.text = "Save failed: Name needs to be filled in"
 
-        # creating a new fixture starts with an empty name so a name has to be filled in manually
-        self._fixture.save(text.replace(" ", "_").lower())
-        self.parent.reload_fixtures()
+        @self.events.EventWindowClose
+        def _on_close():
+            if self._dirty:
+                print("VERBOSE", "Updated fixture type, reloading parent list")
+                self.parent.reload_fixture_types()

@@ -1,48 +1,10 @@
-import json, os.path
-
 from .dmx import DMXChannel, DMXPositionChannel, DMXValueChannel
 
 class FixtureData:
-    PATH = ".fixtures/data", "{name}.fxt"
-    _fixtures = {}
-
-    @staticmethod
-    def get_fixtures(reload=False):
-        fixtures = []
-        if reload or not FixtureData._fixtures:
-            try:
-                for item in os.scandir(FixtureData.PATH[0]):
-                    if item.is_file() and item.name.endswith(".fxt"):
-                        fixtures.append(FixtureData(item.name.split(".")[0]))
-            except FileNotFoundError: pass
-        else: fixtures.extend(FixtureData._fixtures.values())
-        return fixtures
-
-    @staticmethod
-    def remove_fixture(name):
-        if fixture := FixtureData._fixtures.get(name):
-            fixture.remove()
-
-    def __new__(cls, name, *args, **kwargs):
-        fixture = FixtureData._fixtures.get(name)
-        if fixture: return fixture
-
-        instance = super().__new__(cls)
-        try:
-            with open(FixtureData.get_filename(name), "r") as file:
-                instance.__init__(name, **json.load(file))
-        except FileNotFoundError:
-            instance.__init__(name, *args, **kwargs)
-        FixtureData._fixtures[name] = instance
-        return instance
-
-    def __init__(self, name : str, display_name="", channel_count=1, pan : DMXPositionChannel|dict=None, tilt : DMXPositionChannel|dict=None,
+    def __init__(self, name : str, channel_count=1, pan : DMXPositionChannel|dict=None, tilt : DMXPositionChannel|dict=None,
                  color : DMXValueChannel|dict=None, gobo : DMXValueChannel|dict=None,
                  shutter : DMXChannel|dict=None, strobe : DMXChannel|dict=None, intensity : DMXChannel|dict=None):
-        if hasattr(self, "name"): return # already initialized
-
         self._name = name
-        self.display_name = display_name if display_name else name
         self.channel_count = channel_count
         self._pan = DMXPositionChannel(**pan) if isinstance(pan, dict) else pan
         self._tilt = DMXPositionChannel(**tilt) if isinstance(tilt, dict) else tilt
@@ -54,10 +16,6 @@ class FixtureData:
 
     @property
     def name(self): return self._name
-    @staticmethod
-    def get_filename(name): return os.path.join(FixtureData.PATH[0], FixtureData.PATH[1].format(name=name))
-    @property
-    def filename(self): return self.get_filename(self.name)
 
     @staticmethod
     def _check_property_type(property_name, value, property_type : type):
@@ -152,17 +110,8 @@ class FixtureData:
         value = self._check_property_type("intensity", value, DMXChannel)
         self._intensity = value
 
-    def save(self, name=""):
-        if not self._name:
-            if name: self._name = name
-            else: raise ValueError("Cannot save a fixture without a name")
-
-        for fixture in FixtureData._fixtures.values():
-            if fixture is self: continue
-            if fixture.name == self.name: raise ValueError("Another fixture with the same name already exists")
-
-        data = {}
-        if self.display_name: data["display_name"] = self.display_name
+    def to_json(self):
+        data = { "name": self.name }
         if self.channel_count > 0: data["channel_count"] = self.channel_count
         if self.has_pan: data["pan"] = self.pan.to_json()
         if self.has_tilt: data["tilt"] = self.tilt.to_json()
@@ -171,21 +120,4 @@ class FixtureData:
         if self.has_shutter: data["shutter"] = self.shutter.to_json()
         if self.has_strobe: data["strobe"] = self.strobe.to_json()
         if self.has_intensity: data["intensity"] = self.intensity.to_json()
-        if not data:
-            print("VERBOSE", f"Skip saving fixture '{self.name}' since it has no data")
-            return
-
-        print("VERBOSE", f"Saving fixture '{self.name}' to file...")
-        folder = ""
-        for directory in self.PATH[0].split("/"):
-            folder += f"{directory}/"
-            if not os.path.isdir(folder): os.mkdir(folder)
-
-        with open(self.filename, "w") as file:
-            json.dump(data, file, indent=5)
-
-    def remove(self):
-        try: os.remove(self.filename)
-        except FileNotFoundError: pass
-        try: del FixtureData._fixtures[self.name]
-        except KeyError: pass
+        return data
