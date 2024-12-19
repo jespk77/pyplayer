@@ -2,6 +2,7 @@ from core import modules
 module = modules.Module(__package__)
 
 from ui.qt import pywindow, pyelement
+from .fixture import Fixture
 from .fixture_editor import DMXFixtureEditorWindow
 
 class DMXSetupWindow(pywindow.PyWindow):
@@ -53,3 +54,21 @@ class DMXSetupWindow(pywindow.PyWindow):
         fixtures.column_labels = "Type", "Start channel"
         fixtures.column_width = 200, 100
         fixtures.dynamic_rows = True
+        row = 0
+        for fixture in module.fixtures:
+            if row >= fixtures.rows: fixtures.insert_row(row)
+            fixtures.set(row=row, column=0, value=fixture.data.name)
+            fixtures.set(row=row, column=1, value=str(fixture.start_channel))
+            row += 1
+
+        error_txt : pyelement.PyTextLabel = self.add_element("error_txt", element_class=pyelement.PyTextLabel, row=1)
+        save_btn : pyelement.PyButton = self.add_element("save_btn", element_class=pyelement.PyButton, row=2).with_text("Save && Close")
+        @save_btn.events.EventInteract
+        def _save_changes():
+            try:
+                module.fixtures = [Fixture(*fixtures.get(row=row)) for row in range(fixtures.rows)]
+                module.save_fixtures()
+                self.destroy()
+            except Exception as e:
+                error_txt.text = f"Save failed: {e}"
+                print("INFO", "Failed to save fixure data", e)

@@ -5,8 +5,10 @@ module = modules.Module(__package__)
 
 fixture_folder_key = "$fixture_directory"
 
+from .fixture import Fixture
 from .fixture_data import FixtureData
 
+module.fixtures = set()
 module.fixture_types = set()
 
 def load_fixture_type(filename):
@@ -26,6 +28,14 @@ def load_fixtures():
                 if fxt := load_fixture_type(item.path): module.fixture_types.add(fxt)
     except FileNotFoundError: pass
     print("VERBOSE", f"Loaded {len(module.fixture_types)} fixture types")
+
+    try:
+        with open(os.path.join(directory, "dmx.json"), "r") as file:
+            data = json.load(file)
+        module.fixtures = [Fixture(**item) for item in data.get("fixtures", [])]
+    except FileNotFoundError:
+        module.fixtures.clear()
+    print("VERBOSE", f"Loaded {len(module.fixtures)} fixtures")
 module.load_fixtures = load_fixtures
 
 def get_fixture_type_by_name(name):
@@ -55,8 +65,13 @@ module.save_fixture_type = save_fixture_type
 
 def save_fixtures():
     directory = module.configuration.get(fixture_folder_key)
-    for item in module.fixtures:
-        save_fixture_type(item)
+    data = {
+        "fixtures": [item.to_json() for item in module.fixtures]
+    }
+
+    print("VERBOSE", "Saving DMX data to file...")
+    with open(os.path.join(directory, "dmx.json"), "w") as file:
+        json.dump(data, file, indent=5)
 module.save_fixtures = save_fixtures
 
 def delete_fixture_type(name):
@@ -76,7 +91,6 @@ module.delete_fixture_type = delete_fixture_type
 from .setup_window import DMXSetupWindow
 
 def open_dmx_setup(*_):
-    load_fixtures()
     module.client.schedule_task(func=lambda : module.client.add_window(window_class=DMXSetupWindow))
     return messagetypes.Reply("Opened DMX setup window")
 
@@ -88,4 +102,5 @@ module.commands = {
 
 @module.Initialize
 def initialize():
+    load_fixtures()
     module.configuration.get_or_create(fixture_folder_key, "fixtures")

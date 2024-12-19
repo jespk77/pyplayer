@@ -154,7 +154,7 @@ class DMXFixtureEditorWindow(pywindow.PyWindow):
             self._fixture.intensity.channel = value
 
         error_text = self.add_element("error_text", element_class=pyelement.PyTextLabel, row=1)
-        save_btn = self.add_element("save_btn", element_class=pyelement.PyButton, row=2).with_text("Save")
+        save_btn = self.add_element("save_btn", element_class=pyelement.PyButton, row=2).with_text("Save && Close")
         @save_btn.events.EventInteract
         def _save_fixture():
             if fixture_name.value:
