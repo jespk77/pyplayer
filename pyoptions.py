@@ -1,5 +1,10 @@
 from ui.qt import pywindow, pyelement
 
+number_base_prefix = {
+    "#": 16,
+    "&": 2
+}
+
 def create_element(parent, key, cfg):
     value = cfg.value
     if isinstance(value, dict): return PyOptionsDictFrame(parent, key, cfg)
@@ -7,7 +12,7 @@ def create_element(parent, key, cfg):
 
     element_id = f"option_{key}"
     if isinstance(value, bool): el = pyelement.PyCheckbox(parent, element_id)
-    elif isinstance(value, int): el = pyelement.PyNumberInput(parent, element_id)
+    elif isinstance(value, int): el = pyelement.PyNumberInput(parent, element_id, number_base=number_base_prefix.get(key[0], 10))
     elif isinstance(value, float): el = pyelement.PyNumberInput(parent, element_id, True)
     elif isinstance(value, str):
         if key.startswith("&"): el = pyelement.PyPathInput(parent, element_id, path=value)
@@ -182,7 +187,7 @@ class PyOptionsWindow(pywindow.PyWindow):
         modlist.itemlist = [m[0].upper() + m[1:] for m in self._modules.keys()]
         modlist.max_width = 100
         @modlist.events.EventInteract
-        def _on_module_select(current): self["module_options"].current_index = current
+        def _on_module_select(selected): self["module_options"].current_index = selected
 
         self.add_element("lbl2", element_class=pyelement.PyTextLabel, column=1).text = "Options:"
         options: pyelement.PyFrameList = self.add_element("module_options", element_class=pyelement.PyFrameList, row=1, column=1)
