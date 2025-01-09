@@ -1459,8 +1459,9 @@ class PyProgessbar(PyElement):
 class PyItemlist(PyElement):
     """
      Show a list of items the user can select
-     Interaction event fires when an item is left clicked, updating the selection
-        Keywords: current: int -> the newly selected index, previous: int -> the previously selected index
+     Interaction event fires when the selection is updated
+        Keywords: selected: int | list[int] -> the newly selected index or a list of indices if multi selection is configured,
+                  deselected: int | list[int] -> the previously selected index or a list of indices if multi selection is configured
     """
     def __init__(self, parent, element_id):
         self._qt = QtWidgets.QListView(parent.qt_element)
@@ -1471,7 +1472,7 @@ class PyItemlist(PyElement):
         self.qt_element.setFlow(QtWidgets.QListView.TopToBottom)
         self.qt_element.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.qt_element.setEditTriggers(QtWidgets.QListView.NoEditTriggers)
-        self.qt_element.currentChanged = self._on_selection_change
+        self.qt_element.selectionChanged = self._on_selection_change
         self.qt_element.setStyleSheet(f"""
             QListView {{ 
              selection-background-color: #101010; selection-color: {self.qt_element.palette().highlight().color().name()}
@@ -1497,6 +1498,8 @@ class PyItemlist(PyElement):
         "single": QtWidgets.QListView.SingleSelection,
         "multi": QtWidgets.QListView.MultiSelection
     }
+    @property
+    def is_single_selection(self): return self.qt_element.selectionMode() != self._selection_modes["multi"]
     @property
     def selection_mode(self):
         for mode_name, mode in self._selection_modes.items():
@@ -1535,13 +1538,21 @@ class PyItemlist(PyElement):
     @property
     def selected_index(self):
         """ Returns the index of the currently selected item, or -1 if nothing was selected """
-        try: return self.qt_element.selectedIndexes()[0].row()
-        except IndexError: return -1
+        selection = [item.row() for item in self.qt_element.selectedIndexes()]
+        if self.is_single_selection:
+            try: return selection[0]
+            except IndexError: return -1
+        return selection
     @selected_index.setter
     def selected_index(self, index):
         """ Set the current selection to given index, clears the selection if the given index is less than 0 """
         self.clear_selection()
-        if index >= 0: self.qt_element.setSelection(self.qt_element.visualRect(self._items.index(index)), QtCore.QItemSelectionModel.Select)
+        # when the list only allows one item, the selected index should be an integer instead of a list
+        if self.is_single_selection: index = [index]
+
+        # TODO: adjust so setSelection only happens once
+        for i in index:
+            if i >= 0: self.qt_element.setSelection(self.qt_element.visualRect(self._items.index(i)), QtCore.QItemSelectionModel.Select)
     def with_selected_index(self, value):
         self.selected_index = value
         return self
@@ -1567,14 +1578,23 @@ class PyItemlist(PyElement):
     def selected_item(self):
         """ Returns the string of the currently selected item, or None if nothing was selected """
         index = self.selected_index
-        try: return self.itemlist[index]
-        except IndexError: return None
+        if self.is_single_selection:
+            try: return self.itemlist[index]
+            except IndexError: return None
+        else:
+            items = self.itemlist
+            return [items[i] for i in index if i >= 0]
     @selected_item.setter
     def selected_item(self, item):
         """ Set the selection to given string, clears the selection if the given string wasn't found """
+        self.clear_selection()
         items = self.itemlist
-        try: self.selected_index = items.index(item)
-        except ValueError: self.selected_index = -1
+        if self.is_single_selection:
+            try: self.selected_index = items.index(item)
+            except ValueError: pass
+        else:
+            try: self.selected_index = [items.index(i) for i in item]
+            except ValueError: pass
     def with_selected_item(self, value):
         self.selected_item = value
         return self
@@ -1593,10 +1613,16 @@ class PyItemlist(PyElement):
         """ Make sure given index is visible """
         self.qt_element.scrollTo(self._items.index(index))
 
-    # QListView.currentChanged override
-    def _on_selection_change(self, current, previous):
-        self.events.call_event("interact", current=current.row(), previous=previous.row())
-        return type(self.qt_element).currentChanged(self.qt_element, current, previous)
+    # QListView.selectionChanged override
+    def _on_selection_change(self, selected : QtCore.QItemSelection, deselected : QtCore.QItemSelection):
+        type(self.qt_element).selectionChanged(self.qt_element, selected, deselected)
+        if self.is_single_selection:
+            self.events.call_event("interact",
+                                   selected=selected.indexes()[0].row() if not selected.isEmpty() else -1,
+                                   deselected=deselected.indexes()[0].row() if not deselected.isEmpty() else -1)
+        else:
+            self.events.call_event("interact", selected=[index.row() for index in selected.indexes()],
+                               deselected=[index.row() for index in deselected.indexes()])
 
 class PySeparator(PyElement):
     def __init__(self, parent, element_id, horizontal=True):
