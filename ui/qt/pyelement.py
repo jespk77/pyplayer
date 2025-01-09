@@ -657,13 +657,23 @@ class PyNumberInput(PyElement):
      If 'return_only' is set to true, interaction event only fires if the enter key is pressed
      If 'all_updates' is set to true, interaction event updates every time the value changes
     """
-    def __init__(self, parent, element_id, double=False, return_only=False, all_updates=False):
+    _number_base_prefix = {
+        2: "0b",
+        16: "0x",
+    }
+
+    def __init__(self, parent, element_id, double=False, number_base=10, return_only=False, all_updates=False):
         self._double = double
         self._qt = (QtWidgets.QSpinBox if not double else QtWidgets.QDoubleSpinBox)(parent.qt_element)
         PyElement.__init__(self, parent, element_id)
         if return_only: event = self.qt_element.returnPressed
         elif all_updates: event = self.qt_element.valueChanged
         else: event = self.qt_element.editingFinished
+
+        self.prefix = self._number_base_prefix.get(number_base, "")
+        if double:
+            if number_base != 10: raise ValueError("double with a number base not supported")
+        else: self.qt_element.setDisplayIntegerBase(number_base)
         event.connect(lambda : self.events.call_event("interact", value=self.value))
         self.min, self.max = -2147483647, 2147483647
 
