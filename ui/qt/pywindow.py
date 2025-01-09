@@ -267,20 +267,19 @@ class PyWindow:
         """ Show this window full screen """
         self.qt_window.setGeometry(QtWidgets.QDesktopWidget().availableGeometry())
 
-    def add_element(self, element_id=None, element=None, element_class=None, **layout_kwargs):
+    def add_element(self, element_id="", element=None, element_class=None, **layout_kwargs):
         """ Add new element to this window, closes previously opened element with the same id (if open) """
         if not element:
             if not element_class: raise ValueError("Must specify an element type")
-            elif not element_id: raise ValueError("Must specify an element id")
             elif not issubclass(element_class, pyelement.PyElement): raise TypeError("'element_class' must be a PyElement class")
             element = element_class(self, element_id)
         elif isinstance(element, pyelement.PyElement): element_id = element.element_id
         else: raise TypeError("'element' parameter must be a PyElement instance")
 
-        self.remove_element(element_id)
+        if element_id: self.remove_element(element_id)
         self.layout.insert_element(element, **layout_kwargs)
-        self._elements[element_id] = element
-        return self._elements[element_id]
+        if element_id: self._elements[element_id] = element
+        return element
     __setitem__ = add_element
 
     def get_element(self, element_id) -> pyelement.PyElement:
