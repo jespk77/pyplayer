@@ -292,6 +292,14 @@ class PyScrollableFrame(PyFrame):
     def qt_container(self): return self._qt
 
     @property
+    def hidden(self): return self.qt_element.isHidden() and self.qt_container.isHidden()
+    @hidden.setter
+    def hidden(self, value):
+        hidden = bool(value)
+        self.qt_element.setHidden(hidden)
+        self.qt_container.setHidden(hidden)
+
+    @property
     def show_scrollbar(self):
         """ If True the vertical scrollbar will always be visible, otherwise it's only visible if its content is bigger than the visible area """
         return self.qt_container.verticalScrollBarPolicy() == QtCore.Qt.ScrollBarAlwaysOn
