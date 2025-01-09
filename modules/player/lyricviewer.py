@@ -10,7 +10,7 @@ LyricData = collections.namedtuple("LyricData", ["artist", "title"])
 
 def _check_lyrics(tag):
 	if tag.name == "div":
-		try: return ' '.join(tag["class"]).startswith("Lyrics__Container")
+		try: return tag["data-lyrics-container"] == "true"
 		except KeyError: pass
 	return False
 
@@ -59,7 +59,7 @@ class LyricViewer(pywindow.PyWindow):
 	def set_lyrics(self, data, lyrics): self.schedule_task(task_id="set_lyrics", data=data, lyrics=lyrics)
 	def _set_lyrics(self, data, lyrics):
 		self.title = f"Lyrics: {data.artist} - {data.title}" if data is not None else "Lyrics"
-		self["lyrics_content"].text = lyrics
+		self["lyrics_content"].text = lyrics if lyrics else "Error: No lyrics provided"
 
 class TaskLyrics(pyworker.PyWorker):
 	def __init__(self, window, artist, title):
@@ -108,7 +108,7 @@ class TaskLyrics(pyworker.PyWorker):
 			except Exception as e:
 				print("INFO", "Lyrics failed to parse; html might have changed:", e)
 				self._lyrics.append("Error: Cannot process lyrics page")
-		elif rq.status_code == "404": self._lyrics.append("Error: No lyrics found")
+		elif rq.status_code == 404: self._lyrics.append("Error: No lyrics found")
 		else: self._lyrics.append(f"Error: HTTP code {rq.status_code}")
 
 	def complete(self):
