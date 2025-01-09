@@ -431,6 +431,7 @@ class PyWindow:
             task.schedule(delay, loop, kwargs)
             self._scheduled_tasks[task_id] = task
         else:
+            if loop: raise ValueError("Looping tasks need a task_id")
             def _execute_task():
                 try: func(**kwargs)
                 except Exception as e: log_exception(e)
