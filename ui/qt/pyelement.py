@@ -1450,7 +1450,9 @@ class PyProgessbar(PyElement):
 
     def _on_mouse_press(self, event):
         x, y = event.x(), event.y()
-        self.events.call_event("interact", x=x, y=y, position=x/self.qt_element.width())
+        if self.horizontal: position = x / self.qt_element.width()
+        else: position = 1 - (y / self.qt_element.height())
+        self.events.call_event("interact", x=x, y=y, position=min(max(0, position), 1))
         PyElement._on_mouse_press(self, event)
 
 
