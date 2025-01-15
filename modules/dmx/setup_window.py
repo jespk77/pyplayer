@@ -43,8 +43,8 @@ class DMXSetupWindow(pywindow.PyWindow):
             self.reload_fixture_types()
 
         @fixture_types.events.EventInteract
-        def _selected_fixture_type_change(current):
-            fixture_type_settings["edit"].accept_input = fixture_type_settings["remove"].accept_input = current >= 0
+        def _selected_fixture_type_change(selected):
+            fixture_type_settings["edit"].accept_input = fixture_type_settings["remove"].accept_input = selected >= 0
 
         fixture_list : pyelement.PyLabelFrame = content.add_element("fixture_list", element_class=pyelement.PyLabelFrame, row=1)
         fixture_list.layout.column(0, weight=1).column(1, weight=1).column(2, weight=1)
@@ -60,6 +60,13 @@ class DMXSetupWindow(pywindow.PyWindow):
             fixtures.set(row=row, column=0, value=fixture.data.name)
             fixtures.set(row=row, column=1, value=str(fixture.start_channel))
             row += 1
+        @fixtures.events.EventInteract
+        def _on_update(row, column, new_value):
+            if column == 1 and new_value is not None:
+                try:
+                    value = min(max(1, int(new_value)), 512)
+                    fixtures.set(row=row, column=column, value=str(value))
+                except ValueError: fixtures.set(row=row, column=column, value="")
 
         error_txt : pyelement.PyTextLabel = self.add_element("error_txt", element_class=pyelement.PyTextLabel, row=1)
         save_btn : pyelement.PyButton = self.add_element("save_btn", element_class=pyelement.PyButton, row=2).with_text("Save && Close")

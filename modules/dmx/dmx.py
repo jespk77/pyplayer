@@ -40,15 +40,15 @@ class DMXPositionChannel(DMXChannel):
 
     def get_position_from_value(self, value : int | tuple[int,int]) -> float:
         if self.is_extended:
-            value = value[0] * DMX_MAX_VALUE + value[1]
-            return max(min(value / self.EXTENDED_DMX_MAX_VALUE, 1.0), 0.0)
+            dmx = value[0] * DMX_MAX_VALUE + value[1]
+            return max(min(dmx / self.EXTENDED_DMX_MAX_VALUE, 1.0), 0.0)
         else: return max(min(value / DMX_MAX_VALUE, 1.0), 0.0)
 
     def get_value_from_position(self, position : float) -> int | tuple[int, int]:
         position = max(min(position, 1.0), 0.0)
         if self.is_extended:
-            value = int(position * self.EXTENDED_DMX_MAX_VALUE)
-            return round(value / DMX_MAX_VALUE), value % DMX_MAX_VALUE
+            dmx = int(position * self.EXTENDED_DMX_MAX_VALUE)
+            return round(dmx / DMX_MAX_VALUE), dmx % DMX_MAX_VALUE
         return int(position * DMX_MAX_VALUE)
 
     def to_json(self) -> dict:
@@ -57,14 +57,14 @@ class DMXPositionChannel(DMXChannel):
         return dt
 
 
-class DMXValueChannel(DMXChannel):
+class DMXValueMapChannel(DMXChannel):
     def __init__(self, name, index=0, value_map : list=None):
         DMXChannel.__init__(self, name, index)
         self._values : list[DMXValueItem] = []
         if value_map: self.set_values(value_map)
 
     def set_values(self, value_map : list):
-        self._values = [DMXValueItem(*item) for item in sorted(value_map, key=lambda i: i[0])]
+        self._values = [DMXValueItem(int(item[0]), item[1], item[2]) for item in sorted(value_map, key=lambda i: i[0])]
 
     @property
     def dmx_values(self):

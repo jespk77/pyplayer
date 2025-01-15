@@ -1,15 +1,15 @@
-from .dmx import DMXChannel, DMXPositionChannel, DMXValueChannel
+from .dmx import DMXChannel, DMXPositionChannel, DMXValueMapChannel
 
 class FixtureData:
     def __init__(self, name : str, channel_count=1, pan : DMXPositionChannel|dict=None, tilt : DMXPositionChannel|dict=None,
-                 color : DMXValueChannel|dict=None, gobo : DMXValueChannel|dict=None,
+                 color : DMXValueMapChannel | dict=None, gobo : DMXValueMapChannel | dict=None,
                  shutter : DMXChannel|dict=None, strobe : DMXChannel|dict=None, intensity : DMXChannel|dict=None):
         self._name = name
         self.channel_count = channel_count
         self._pan = DMXPositionChannel(**pan) if isinstance(pan, dict) else pan
         self._tilt = DMXPositionChannel(**tilt) if isinstance(tilt, dict) else tilt
-        self._color = DMXValueChannel(**color) if isinstance(color, dict) else color
-        self._gobo = DMXValueChannel(**gobo) if isinstance(gobo, dict) else gobo
+        self._color = DMXValueMapChannel(**color) if isinstance(color, dict) else color
+        self._gobo = DMXValueMapChannel(**gobo) if isinstance(gobo, dict) else gobo
         self._shutter = DMXChannel(**shutter) if isinstance(shutter, dict) else shutter
         self._strobe = DMXChannel(**strobe) if isinstance(strobe, dict) else strobe
         self._intensity = DMXChannel(**intensity) if isinstance(intensity, dict) else intensity
@@ -55,11 +55,11 @@ class FixtureData:
     @property
     def color(self):
         # make one if it doesn't exist so data can still be set
-        if self._color is None: self._color = DMXValueChannel("color")
+        if self._color is None: self._color = DMXValueMapChannel("color")
         return self._color
     @color.setter
     def color(self, value):
-        value = self._check_property_type("color", value, DMXValueChannel)
+        value = self._check_property_type("color", value, DMXValueMapChannel)
         self._color = value
 
     @property
@@ -67,11 +67,11 @@ class FixtureData:
     @property
     def gobo(self):
         # make one if it doesn't exist so data can still be set
-        if self._gobo is None: self._gobo = DMXValueChannel("gobo")
+        if self._gobo is None: self._gobo = DMXValueMapChannel("gobo")
         return self._gobo
     @gobo.setter
     def gobo(self, value):
-        value = self._check_property_type("gobo", value, DMXValueChannel)
+        value = self._check_property_type("gobo", value, DMXValueMapChannel)
         self._gobo = value
 
     @property
@@ -121,3 +121,5 @@ class FixtureData:
         if self.has_strobe: data["strobe"] = self.strobe.to_json()
         if self.has_intensity: data["intensity"] = self.intensity.to_json()
         return data
+
+    def __repr__(self): return f"FixtureData[name={self.name}, channels={self.channel_count}]"
