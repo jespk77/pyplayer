@@ -43,7 +43,7 @@ class SignInRequestHandler(socketserver.BaseRequestHandler):
 
 class TwitchSigninWorker(pyworker.PyWorker, socketserver.TCPServer):
     def __init__(self, window):
-        pyworker.PyWorker.__init__(self, "twitch_signin", False)
+        pyworker.PyWorker.__init__(self, window, "twitch_signin", False)
         self._window = window
         self._state_event = threading.Lock()
         self._state = None
