@@ -1,5 +1,6 @@
-import collections
+import collections, re
 from bs4 import BeautifulSoup, element
+import requests
 
 from ui.qt import pywindow, pyelement, pyworker
 from core import messagetypes, modules
@@ -7,12 +8,6 @@ module = modules.Module(__package__)
 
 main_window_id = "lyricviewer"
 LyricData = collections.namedtuple("LyricData", ["artist", "title"])
-
-def _check_lyrics(tag):
-	if tag.name == "div":
-		try: return tag["data-lyrics-container"] == "true"
-		except KeyError: pass
-	return False
 
 class LyricViewer(pywindow.PyWindow):
 	def __init__(self, parent, window_id, artist=None, title=None):
@@ -77,39 +72,59 @@ class TaskLyrics(pyworker.PyWorker):
 		elif isinstance(item, element.NavigableString):
 			self._lyrics.append(str(item).replace("\\", ""))
 
-	def run(self):
-		print("VERBOSE", f"Looking for lyrics for artist '{self._data.artist}' and title '{self._data.title}'")
-		import requests, re
-		q = f"{self._data.artist} {self._data.title}"
-		url = "https://genius.com/{}-lyrics".format(re.sub(r"[ =]", "-", re.sub(r"[^a-z0-9= -]", "", q, flags=re.IGNORECASE)))
-		try: rq = requests.get(url)
-		except Exception as e:
-			print("ERROR", "Getting data from url")
-			self._lyrics.append(str(e))
+	@staticmethod
+	def _neat_print(text):
+		return re.sub(r"[^a-z0-9= -]", "", text, flags=re.IGNORECASE)
+
+	def _get_lyrics_genius(self):
+		def _check_lyrics(tag):
+			if tag.name == "div":
+				try: return tag["data-lyrics-container"] == "true"
+				except KeyError: pass
+			return False
+
+		q = re.sub(r"[ =]", "-", f"{self._data.artist} {self._data.title}")
+		url = "https://genius.com/{}-lyrics".format(self._neat_print(q))
+		try:
+			rq = requests.get(url)
+
+			if rq.ok:
+				html = BeautifulSoup(rq.content, features="html.parser")
+				ls = html.find_all(_check_lyrics)
+				try:
+					for page in ls:
+						page = page.contents
+						for item in page:
+							if isinstance(item, element.Tag) and item.name == "a":
+								reference = False
+								for c in item.attrs["class"]:
+									if c.startswith("ReferentFragment"):
+										reference = True
+										break
+
+								if reference:
+									for c in item.next.contents: self._add_element(c)
+							else: self._add_element(item)
+				except Exception as e:
+					print("INFO", "Lyrics failed to parse; html might have changed:", e)
+					self._lyrics.append("Error: Cannot process lyrics page")
+			elif rq.status_code == 404: self._lyrics.append("Error: No lyrics found")
+			else: self._lyrics.append(f"Error: HTTP code {rq.status_code}")
+		except Exception as ex:
+			print("ERROR", f"Getting lyrics from url '{url}':", ex)
+			self._lyrics.append(str(ex))
 			return
 
-		if rq.status_code == 200:
-			html = BeautifulSoup(rq.content, features="html.parser")
-			ls = html.find_all(_check_lyrics)
-			try:
-				for page in ls:
-					page = page.contents
-					for item in page:
-						if isinstance(item, element.Tag) and item.name == "a":
-							reference = False
-							for c in item.attrs["class"]:
-								if c.startswith("ReferentFragment"):
-									reference = True
-									break
+	_lyrics_provider_map = {
+		"genius": _get_lyrics_genius,
+	}
 
-							if reference:
-								for c in item.next.contents: self._add_element(c)
-						else: self._add_element(item)
-			except Exception as e:
-				print("INFO", "Lyrics failed to parse; html might have changed:", e)
-				self._lyrics.append("Error: Cannot process lyrics page")
-		elif rq.status_code == 404: self._lyrics.append("Error: No lyrics found")
-		else: self._lyrics.append(f"Error: HTTP code {rq.status_code}")
+	def run(self):
+		print("VERBOSE", f"Looking for lyrics for artist '{self._data.artist}' and title '{self._data.title}'")
+		provider = module.configuration.get("lyrics_provider")
+		func = self._lyrics_provider_map.get(provider)
+		if func is not None: func(self)
+		else: self._lyrics.append(f"Error: Unknown lyrics provider set: '{provider}'")
 
 	def complete(self):
 		window = module.client.get_window(main_window_id)

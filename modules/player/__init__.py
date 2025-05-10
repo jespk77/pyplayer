@@ -427,6 +427,7 @@ def initialize():
 	directory = module.configuration.get_or_create_configuration("directory", {})
 	directory.default_value = {"#color": "", "$path": "", "priority": -1}
 	module.configuration.get_or_create(default_dir_path, "")
+	module.configuration.get_or_create("lyrics_provider", "genius")
 
 	# only add window media binds when the media controller isn't available, otherwise media key events will happen twice
 	if not media_controller.can_bind:
