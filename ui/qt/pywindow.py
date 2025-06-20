@@ -193,57 +193,39 @@ class PyWindow:
     topmost = always_on_top
 
     @property
-    def x(self): return self.qt_window.x()
+    def x(self): return self.qt_window.geometry().x()
     @x.setter
-    def x(self, x): self.set_geometry(x=x)
+    def x(self, x): self.qt_window.geometry().setX(int(x))
     @property
-    def y(self): return self.qt_window.y()
+    def y(self): return self.qt_window.geometry().y()
     @y.setter
-    def y(self, y): self.set_geometry(y=y)
+    def y(self, y): self.qt_window.geometry().setY(int(y))
     @property
-    def location(self): return self.x, self.y
-    @location.setter
-    def location(self, location): self.set_geometry(x=location[0], y=location[1])
+    def location(self):
+        geometry = self.qt_window.geometry()
+        return geometry.x(), geometry.y()
 
     @property
-    def width(self): return self.qt_window.width()
+    def width(self): return self.qt_window.geometry().width()
     @width.setter
-    def width(self, width): self.set_geometry(width=width)
+    def width(self, width): self.qt_window.geometry().setWidth(int(width))
     @property
-    def height(self): return self.qt_window.height()
+    def height(self): return self.qt_window.geometry().height()
     @height.setter
-    def height(self, height): self.set_geometry(height=height)
+    def height(self, height): self.qt_window.geometry().setHeight(height)
     @property
-    def size(self): return self.width, self.height
-    @size.setter
-    def size(self, size): self.set_geometry(width=size[0], height=size[1])
+    def size(self):
+        geometry = self.qt_window.geometry()
+        return geometry.width(), geometry.height()
 
-    def activate(self):
-        """ Sets this window to be visible and have keyboard focus """
-        self.qt_window.activateWindow()
+    def set_geometry(self, x=None, y=None, width=None, height=None):
+        """ Update the geometry of this window using properties """
+        geometry = self.qt_window.geometry()
+        if x is None: x = geometry.x()
+        if y is None: y = geometry.y()
+        if width is None: width = geometry.width()
+        if height is None: height = geometry.height()
 
-    @property
-    def geometry_string(self):
-        """
-         Returns the geometry of this window using the legacy string format
-         Note: Don't use this if not familiar with the format
-        """
-        geo = self.qt_window.geometry()
-        return f"{geo.width()}x{geo.height()}+{geo.x()}+{geo.y()}"
-
-    def set_geometry(self, x=None, y=None, width=None, height=None, geometry=None):
-        """ Update the geometry of this window using properties or with a legacy style geometry string """
-        if geometry is not None:
-            if not isinstance(geometry, str): raise ValueError("Geometry string must be string")
-            import re
-            res = re.findall("\d+", geometry)
-            if len(res) == 4: width, height, x, y = res
-            else: raise ValueError("Invalid geometry string")
-
-        if x is None: x = self.qt_window.x()
-        if y is None: y = self.qt_window.y()
-        if width is None: width = self.qt_window.width()
-        if height is None: height = self.qt_window.height()
         self.qt_window.setGeometry(x,y,width,height)
         self.qt_window.move(x, y)
         self.qt_window.frameGeometry().setSize(QtCore.QSize(width, height))
@@ -262,6 +244,10 @@ class PyWindow:
         geometry = self.qt_window.frameGeometry()
         geometry.moveTo(round(center.x() - (.5 * size_x)), round(center.y() - (.5 * size_y)))
         self.qt_window.setGeometry(geometry)
+
+    def activate(self):
+        """ Sets this window to be visible and have keyboard focus """
+        self.qt_window.activateWindow()
 
     def fill_window(self):
         """ Show this window full screen """
