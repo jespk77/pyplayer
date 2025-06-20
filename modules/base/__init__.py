@@ -12,6 +12,24 @@ def _load_layout_manager():
 	if layout_manager is None: layout_manager = layoutmanager.LayoutManager()
 	return layout_manager
 
+def command_layout_delete(arg, argc):
+	if argc == 0: return messagetypes.Reply("Missing layout name")
+	layout_name = arg[0]
+	_load_layout_manager()
+
+	matching_layouts = [layout for layout in layout_manager.layouts if layout.endswith(layout_name)]
+	for layout in matching_layouts: layout_manager.delete_layout(layout, False)
+	if len(matching_layouts) > 0: layout_manager.save()
+	return messagetypes.Reply(f"Deleted layout '{layout_name}'")
+
+def _reset_layout_on_windows():
+	module.client.restore_size()
+	for child in module.client.windows: child.restore_size()
+
+def command_layout_reset(arg, argc):
+	module.client.schedule_task(func=_reset_layout_on_windows)
+	return messagetypes.Reply("Restored startup layout on all open windows")
+
 def _set_layout_on_windows(layout_name):
 	def _set_layout(name, window):
 		print("VERBOSE", f"Setting layout '{name}' on window with id '{window.window_id}'")
@@ -40,16 +58,6 @@ def command_layout_update(arg, argc):
 		layout_manager.save_layout_from_window(f"{child.window_id}.{layout_name}", child, False)
 	layout_manager.save()
 	return messagetypes.Reply(f"Saved layout of all open windows as '{layout_name}'")
-
-def command_layout_delete(arg, argc):
-	if argc == 0: return messagetypes.Reply("Missing layout name")
-	layout_name = arg[0]
-	_load_layout_manager()
-
-	matching_layouts = [layout for layout in layout_manager.layouts if layout.endswith(layout_name)]
-	for layout in matching_layouts: layout_manager.delete_layout(layout, False)
-	if len(matching_layouts) > 0: layout_manager.save()
-	return messagetypes.Reply(f"Deleted layout '{layout_name}'")
 
 # === Log commands ===
 def command_log_open(arg, argc):
@@ -180,6 +188,7 @@ def initialize():
 module.commands = {
 	"layout": {
 		"delete": command_layout_delete,
+		"reset": command_layout_reset,
 		"set": command_layout_set,
 		"update": command_layout_update,
 	},

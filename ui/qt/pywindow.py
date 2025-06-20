@@ -82,12 +82,7 @@ class PyWindow:
             print("ERROR", "Encountered error while creating widgets:")
             log_exception(e)
 
-        geo = self._cfg.get("geometry")
-        if isinstance(geo, list):
-            self.set_geometry(*geo[:4])
-            if len(geo) > 4:
-                if geo[4] == 2: self.maximized = True
-                elif geo[4] == 1: self.minimized = True
+        self.restore_size()
         self.add_task("_schedule_task", func=self._schedule_external_wrapper)
         self.add_task("_add_window", func=self._add_window)
         self.add_task("_close_window", func=self._close_window)
@@ -233,6 +228,15 @@ class PyWindow:
         geometry = self.qt_window.frameGeometry()
         geometry.moveTo(round(center.x() - (.5 * size_x)), round(center.y() - (.5 * size_y)))
         self.qt_window.setGeometry(geometry)
+
+    def restore_size(self):
+        """ Resets window geometry to startup location """
+        geo = self._cfg.get("geometry")
+        if isinstance(geo, list):
+            self.set_geometry(*geo[:4])
+            if len(geo) > 4:
+                if geo[4] == 2: self.maximized = True
+                elif geo[4] == 1: self.minimized = True
 
     def activate(self):
         """ Sets this window to be visible and have keyboard focus """
