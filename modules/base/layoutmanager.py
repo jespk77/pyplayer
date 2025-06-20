@@ -1,5 +1,5 @@
 from collections import namedtuple
-LayoutData = namedtuple("LayoutData", ["x", "y", "width", "height", "fullscreen"], defaults=[False])
+LayoutData = namedtuple("LayoutData", ["x", "y", "width", "height", "state"], defaults=[0])
 
 from core import modules
 module = modules.Module(__package__)
@@ -10,10 +10,13 @@ class LayoutManager:
     @staticmethod
     def from_string(value : str): return LayoutData(*value.split(","))
     @staticmethod
-    def to_string(layout : LayoutData): return f"{layout.x},{layout.y},{layout.width},{layout.height},{layout.fullscreen}"
+    def to_string(layout : LayoutData): return f"{layout.x},{layout.y},{layout.width},{layout.height},{layout.state}"
 
     def __init__(self):
-        self._layouts = {key : LayoutManager.from_string(value) for key, value in module.configuration.get_or_create("layout", {}).items()}
+        try: self._layouts = {key : LayoutManager.from_string(value) for key, value in module.configuration.get_or_create("layout", {}).items()}
+        except Exception as ex:
+            print("ERROR", "Failed to load layouts:", ex)
+            self._layouts = {}
 
     def save(self):
         module.configuration["layout"] = {key: LayoutManager.to_string(value) for key, value in self._layouts.items()}
@@ -45,8 +48,13 @@ class LayoutManager:
             return False
 
         window.set_geometry(int(layout.x), int(layout.y), int(layout.width), int(layout.height))
-        window.maximized = layout.fullscreen.lower() == "true" if isinstance(layout.fullscreen, str) else layout.fullscreen
+        try: state = int(layout.state)
+        except ValueError: state = 0
+        if state == 2: window.maximized = True
+        elif state == 1: window.minimized = True
+        else: window.maximized = window.minimized = False
         return True
 
     def save_layout_from_window(self, layout_name : str, window : pywindow.PyWindow, autosave=True):
-        self.set_layout(layout_name, LayoutData(window.x, window.y, window.width, window.height, window.maximized), autosave)
+        window_state = 2 if window.maximized else 1 if window.minimized else 0
+        self.set_layout(layout_name, LayoutData(window.x, window.y, window.width, window.height, window_state), autosave)
