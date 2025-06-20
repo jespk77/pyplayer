@@ -1,28 +1,57 @@
-from core import messagetypes, modules
 import pyoptions
 
+from core import messagetypes, modules
 module = modules.Module(__package__)
 
-def get_time_from_string(delay):
-	try:
-		hour = delay.split("h")
-		if len(hour) > 1:
-			delay = "".join(hour[1:])
-			hour = int(hour[0])
-		else: hour = 0
+# === Layout commands ===
+from . import layoutmanager
+layout_manager : layoutmanager.LayoutManager|None = None
 
-		min = delay.split("m")
-		if len(min) > 1:
-			delay = "".join(min[1:])
-			min = int(min[0])
-		else: min = 0
+def _load_layout_manager():
+	global layout_manager
+	if layout_manager is None: layout_manager = layoutmanager.LayoutManager()
+	return layout_manager
 
-		sec = delay.split("s")
-		if len(sec) > 0 and sec[0] != "": sec = int(sec[0])
-		else: sec = 0
-	except ValueError: return None
-	else: return hour, min, sec
+def _set_layout_on_windows(layout_name):
+	def _set_layout(name, window):
+		print("VERBOSE", f"Setting layout '{name}' on window with id '{window.window_id}'")
+		layout_manager.set_layout_on_window(name, window)
 
+	_set_layout(layout_name, module.client)
+	for child in module.client.windows: _set_layout(f"{child.window_id}.{layout_name}", child)
+
+def command_layout_set(arg, argc):
+	if argc == 0: return messagetypes.Reply("Missing layout name")
+	layout_name = arg[0]
+	_load_layout_manager()
+
+	if not layout_manager.has_layout(layout_name): return messagetypes.Reply(f"Unknown layout name: {layout_name}")
+	# setting layout has to be done from the ui thread
+	module.client.schedule_task(func=lambda: _set_layout_on_windows(layout_name))
+	return messagetypes.Reply(f"Set layout '{layout_name}' on all open windows")
+
+def command_layout_update(arg, argc):
+	if argc == 0: return messagetypes.Reply("Missing layout name")
+	layout_name = arg[0]
+	_load_layout_manager()
+
+	layout_manager.save_layout_from_window(layout_name, module.client, False)
+	for child in module.client.windows:
+		layout_manager.save_layout_from_window(f"{child.window_id}.{layout_name}", child, False)
+	layout_manager.save()
+	return messagetypes.Reply(f"Saved layout of all open windows as '{layout_name}'")
+
+def command_layout_delete(arg, argc):
+	if argc == 0: return messagetypes.Reply("Missing layout name")
+	layout_name = arg[0]
+	_load_layout_manager()
+
+	matching_layouts = [layout for layout in layout_manager.layouts if layout.endswith(layout_name)]
+	for layout in matching_layouts: layout_manager.delete_layout(layout, False)
+	if len(matching_layouts) > 0: layout_manager.save()
+	return messagetypes.Reply(f"Deleted layout '{layout_name}'")
+
+# === Log commands ===
 def command_log_open(arg, argc):
 	if argc == 0:
 		import pylogging
@@ -46,6 +75,7 @@ def command_log_clear(arg, argc, all=False):
 		except IndexError: pass
 		return messagetypes.Reply("Cleared all log files (except for the current)" if all else "Cleaned up log files except for the last 10")
 
+# === Other commands ===
 def command_module_configure(arg, argc):
 	if argc == 0:
 		module.client.close_with_reason("module_configure")
@@ -61,10 +91,31 @@ def command_options(arg, argc):
 		module.client.add_window(window_class=pyoptions.PyOptionsWindow, modules=module.interpreter.modules)
 		return messagetypes.Reply("Opening options window")
 
+
 import datetime
 timer = None
 one_second = datetime.timedelta(seconds=1)
 timer_command_key = "timer_command"
+
+def get_time_from_string(delay):
+	try:
+		hour = delay.split("h")
+		if len(hour) > 1:
+			delay = "".join(hour[1:])
+			hour = int(hour[0])
+		else: hour = 0
+
+		min = delay.split("m")
+		if len(min) > 1:
+			delay = "".join(min[1:])
+			min = int(min[0])
+		else: min = 0
+
+		sec = delay.split("s")
+		if len(sec) > 0 and sec[0] != "": sec = int(sec[0])
+		else: sec = 0
+	except ValueError: return None
+	else: return hour, min, sec
 
 def command_timer(arg, argc):
 	if argc == 1:
@@ -90,6 +141,7 @@ def command_timer(arg, argc):
 			except ValueError as e: return messagetypes.Reply(str(e))
 		else: return messagetypes.Reply("Cannot decode time syntax, try again...")
 
+
 version_command = ["git", "log", "-1", "--pretty=%H//%ci"]
 version_output = None
 def command_version(arg, argc):
@@ -109,6 +161,7 @@ def command_version(arg, argc):
 			print("ERROR", "Processing git version command:", e)
 			return messagetypes.Reply("Unable to get version number")
 
+
 import psutil, humanize
 process = psutil.Process()
 boot_time = datetime.datetime.fromtimestamp(psutil.boot_time())
@@ -125,6 +178,11 @@ def initialize():
 		module.client["header"]["right"].text = f"{str(date - boot_time).split('.')[0]} / {humanize.naturalsize(process.memory_info().rss)}"
 
 module.commands = {
+	"layout": {
+		"delete": command_layout_delete,
+		"set": command_layout_set,
+		"update": command_layout_update,
+	},
 	"log": {
 		"": command_log_open,
 		"clean": command_log_clear,
