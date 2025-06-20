@@ -194,12 +194,8 @@ class PyWindow:
 
     @property
     def x(self): return self.qt_window.geometry().x()
-    @x.setter
-    def x(self, x): self.qt_window.geometry().setX(int(x))
     @property
     def y(self): return self.qt_window.geometry().y()
-    @y.setter
-    def y(self, y): self.qt_window.geometry().setY(int(y))
     @property
     def location(self):
         geometry = self.qt_window.geometry()
@@ -207,12 +203,8 @@ class PyWindow:
 
     @property
     def width(self): return self.qt_window.geometry().width()
-    @width.setter
-    def width(self, width): self.qt_window.geometry().setWidth(int(width))
     @property
     def height(self): return self.qt_window.geometry().height()
-    @height.setter
-    def height(self, height): self.qt_window.geometry().setHeight(height)
     @property
     def size(self):
         geometry = self.qt_window.geometry()
@@ -221,14 +213,11 @@ class PyWindow:
     def set_geometry(self, x=None, y=None, width=None, height=None):
         """ Update the geometry of this window using properties """
         geometry = self.qt_window.geometry()
-        if x is None: x = geometry.x()
-        if y is None: y = geometry.y()
-        if width is None: width = geometry.width()
-        if height is None: height = geometry.height()
-
-        self.qt_window.setGeometry(x,y,width,height)
-        self.qt_window.move(x, y)
-        self.qt_window.frameGeometry().setSize(QtCore.QSize(width, height))
+        if x is not None: geometry.setX(int(x))
+        if y is not None: geometry.setY(int(y))
+        if width is not None: geometry.setWidth(int(width))
+        if height is not None: geometry.setHeight(int(height))
+        self.qt_window.setGeometry(geometry)
 
     def center_window(self, size_x=None, size_y=None, fit_to_size=False):
         """
