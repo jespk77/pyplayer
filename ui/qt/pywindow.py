@@ -237,6 +237,8 @@ class PyWindow:
             if len(geo) > 4:
                 if geo[4] == 2: self.maximized = True
                 elif geo[4] == 1: self.minimized = True
+                else: self.maximized = self.minimized = False
+            self.qt_window.move(geo[0], geo[1])
 
     def activate(self):
         """ Sets this window to be visible and have keyboard focus """
