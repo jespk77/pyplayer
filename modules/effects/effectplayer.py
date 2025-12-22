@@ -36,7 +36,9 @@ class SoundEffectPlayer:
 	def _on_end_reached(self, event):
 		if self._last_effect[0] and self._last_effect[1]:
 			module.interpreter.put_command(loop_effect_command.format(self._last_effect[0]))
-		elif module.configuration.get(pause_music_key): module.interpreter.put_command("player pause false")
+		elif module.configuration.get(pause_music_key):
+			module.interpreter.put_command("player pause false")
+			module.interpreter.put_command("video pause false")
 		videoplayer.close_player()
 
 	def play_effect(self, arg, loop=False):
@@ -99,7 +101,9 @@ class SoundEffectPlayer:
 			self._media.parse_with_options(vlc.MediaParseFlag.local, -1)
 
 	def _play(self):
-		if module.configuration.get(pause_music_key): module.interpreter.put_command("player pause true")
+		if module.configuration.get(pause_music_key): 
+			module.interpreter.put_command("player pause true")
+			module.interpreter.put_command("video pause true")
 		self._player.play()
 
 	def play_on_hwnd(self, hwnd):
@@ -114,7 +118,9 @@ class SoundEffectPlayer:
 		self._player.stop()
 		self._media.release()
 		self._media = self._mrl = None
-		if module.configuration.get(pause_music_key): module.interpreter.put_command("player pause false")
+		if module.configuration.get(pause_music_key): 
+			module.interpreter.put_command("player pause false")
+			module.interpreter.put_command("video pause false")
 
 	def on_destroy(self):
 		self._player.release()
